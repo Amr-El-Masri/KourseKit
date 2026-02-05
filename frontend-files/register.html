@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>KourseKit – Register</title>
+  <link rel="stylesheet" href="auth.css">
+</head>
+<body>
+
+  <div class="auth-card">
+    <h2>Register</h2>
+
+    <input type="email" id="regEmail" placeholder="Email">
+    <input type="password" id="regPassword" placeholder="Password">
+
+    <button onclick="sendCode()">Send Verification Code</button>
+
+    <div id="codeSection" class="hidden">
+      <input type="text" id="codeInput" placeholder="Enter 6-digit code">
+      <p id="timer">Code expires in 60s</p>
+      <button onclick="verifyCode()">Verify & Register</button>
+    </div>
+
+    <p class="muted">Already registered? <a href="login.html">Login</a></p>
+  </div>
+
+  <script src="auth.js"></script>
+</body>
+</html>
