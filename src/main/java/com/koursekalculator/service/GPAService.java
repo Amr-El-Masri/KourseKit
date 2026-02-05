@@ -88,4 +88,46 @@ public class GPAService {
     public Map<String, String> getGradeBoundaries() {
         return GPACalculator.getGradeBoundaries();
     }
+
+    public HighestImpactResponse findHighestImpactCourse(HighestImpactRequest request) {
+        List<GPACalculator.Course> courses = request.getCourses().stream()
+            .map(dto -> new GPACalculator.Course(dto.getCourseCode(), dto.getGrade(), dto.getCredits()))
+            .collect(Collectors.toList());
+
+        int index = GPACalculator.findHighestImpactCourse(courses);
+
+        if (index == -1) {
+            return new HighestImpactResponse(-1, "", "", 0, "No valid courses found");
+        }
+
+        SemesterGPARequest.CourseDTO course = request.getCourses().get(index);
+        String message = String.format("Course '%s' has the highest impact on your GPA (%d credits, grade %s)",
+            course.getCourseCode(), course.getCredits(), course.getGrade());
+
+        return new HighestImpactResponse(index, course.getCourseCode(), course.getGrade(), course.getCredits(), message);
+    }
+
+    public RequiredFutureGPAResponse calculateRequiredFutureGPA(RequiredFutureGPARequest request) {
+        double requiredGPA = GPACalculator.calculateRequiredFutureGPA(
+            request.getCurrentCGPA(),
+            request.getCompletedCredits(),
+            request.getTargetCGPA(),
+            request.getRemainingCredits()
+        );
+
+        boolean isAchievable = requiredGPA >= 0.0 && requiredGPA <= 4.3;
+        String message;
+
+        if (requiredGPA < 0) {
+            message = String.format("You've already exceeded your target CGPA of %.2f!", request.getTargetCGPA());
+        } else if (requiredGPA > 4.3) {
+            message = String.format("Target CGPA of %.2f is not achievable. You would need a %.2f GPA in remaining credits.",
+                request.getTargetCGPA(), requiredGPA);
+        } else {
+            message = String.format("You need a %.2f GPA in your remaining %d credits to achieve a %.2f CGPA",
+                requiredGPA, request.getRemainingCredits(), request.getTargetCGPA());
+        }
+
+        return new RequiredFutureGPAResponse(requiredGPA, isAchievable, message);
+    }
 }
