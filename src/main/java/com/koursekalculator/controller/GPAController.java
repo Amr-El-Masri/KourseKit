@@ -100,4 +100,34 @@ public class GPAController {
     public ResponseEntity<String> healthCheck() {
         return ResponseEntity.ok("GPA Calculator Service is running");
     }
+
+    @PostMapping("/highest-impact")
+    public ResponseEntity<HighestImpactResponse> findHighestImpactCourse(
+            @RequestBody HighestImpactRequest request) {
+        try {
+            HighestImpactResponse response = gpaService.findHighestImpactCourse(request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(new HighestImpactResponse(-1, "", "", 0, "Error: " + e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body(new HighestImpactResponse(-1, "", "", 0, "Server error: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/required-future-gpa")
+    public ResponseEntity<RequiredFutureGPAResponse> calculateRequiredFutureGPA(
+            @RequestBody RequiredFutureGPARequest request) {
+        try {
+            RequiredFutureGPAResponse response = gpaService.calculateRequiredFutureGPA(request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest()
+                .body(new RequiredFutureGPAResponse(0.0, false, "Error: " + e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                .body(new RequiredFutureGPAResponse(0.0, false, "Server error: " + e.getMessage()));
+        }
+    }
 }
