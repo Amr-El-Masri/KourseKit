@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KourseKit GPA Calculator</title>
+    <link rel="stylesheet" href="gpa.css">
+</head>
+
+<body>
+
+<nav class="gpa-navbar">
+  <div class="logo">KourseKit GPA</div>
+</nav>
+
+<div class="widgets-row">
+
+  <!-- GPA Calculator -->
+  <section class="widget calculator-widget gpa-calculator">
+    <h2>GPA Calculator</h2>
+    <label for="courses-label">Course name:</label>
+      <input type = "text" class= "courses" id="courses-label" placeholder="ex: Math 201">
+    <label for="grades-label">Grade:</label>
+      <input type = "number" class = "grades" id="grades-label" placeholder = "ex: A+">
+    <label for="credits-label">Credits:</label>
+      <input type = "number" class = "credits" id="credits-label" placeholder="ex: 3">
+
+    <br>
+
+    <label for="courses-label">Course name:</label>
+      <input type = "text" class= "courses" id="courses-label" placeholder="ex: Math 201">
+    <label for="grades-label">Grade:</label>
+      <input type = "number" class = "grades" id="grades-label" placeholder = "ex: A+">
+    <label for="credits-label">Credits:</label>
+      <input type = "number" class = "credits" id="credits-label" placeholder="ex: 3">
+
+    <br>
+
+    <label for="courses-label">Course name:</label>
+      <input type = "text" class= "courses" id="courses-label" placeholder="ex: Math 201">
+    <label for="grades-label">Grade:</label>
+      <input type = "number" class = "grades" id="grades-label" placeholder = "ex: A+">
+    <label for="credits-label">Credits:</label>
+      <input type = "number" class = "credits" id="credits-label" placeholder="ex: 3">
+
+
+    <br>
+    <br>
+    <button type="button" class="add-btn" onclick="addCourse()">Add Course</button>
+
+    <button type = "button" class = "calculate-btn">Calculate</button>
+  </section>
+
+  <!-- Semester Calculator -->
+  <section class="widget calculator-widget semester-calculator">
+    <h2>Cumulative GPA</h2>
+    <label for="semester-lbl">Semester:</label>
+      <input type = "text" class= "semesters" id="semester-lbl" placeholder="ex: Fall 25-26">
+    <label for="sem-gpa-lbl">Semester GPA:</label>
+      <input type = "number" class = "grades" id="grades-label" placeholder = "ex: A+">
+    <label for="credits-label">Credits:</label>
+      <input type = "number" class = "credits" id="credits-label" placeholder="ex: 3">
+  </section>
+
+  <!-- Target GPA Calculator -->
+  <section class="widget calculator-widget target-calculator">
+    <h2>Target GPA</h2>
+    <!-- target GPA inputs -->
+  </section>
+
+</div>
+
+<script>
+function addCourse() {
+  const coursesDiv = document.getElementById("courses");
+
+  const row = document.createElement("div");
+  row.className = "course-row";
+
+  row.innerHTML = `
+    <input type="text" placeholder="Course name">
+    <select>
+      <option value="">Grade</option>
+      <option>A</option>
+      <option>B</option>
+      <option>C</option>
+      <option>D</option>
+      <option>F</option>
+    </select>
+  `;
+
+  coursesDiv.appendChild(row);
+}
+</script>
+
+
+</body>
+
+</html>
