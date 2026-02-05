@@ -1,0 +1,210 @@
+* {
+  box-sizing: border-box;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background:#4a77d7;
+  color: #e5e7eb;
+}
+
+/* nav bar */
+.navbar {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  height: 64px;
+  background:#0c1972;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  z-index: 1000;
+}
+
+.logo {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.auth button {
+  margin-left: 10px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.login {
+  background: #7c119d;
+  color: white;
+}
+
+.register {
+  background: #a317cd;
+  color: white;
+}
+
+.gpacalc {
+  background: #440956;
+  color: white;
+}
+
+.studyplanner {
+  background: #5c0c74;
+  color: white;
+}
+
+/* DASHBOARD */
+.dashboard {
+  padding: 96px 24px 24px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.widget {
+  background: #020617;
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.4);
+}
+
+.widget.wide {
+  grid-column: span 2;
+}
+
+h3 {
+  margin-top: 0;
+}
+
+/* GPA */
+.gpa {
+  font-size: 2.5rem;
+  color: #93c5fd;
+}
+
+/* TODO */
+input {
+  width: 100%;
+  padding: 8px;
+  margin-top: 6px;
+  background: #1e293b;
+  border: none;
+  border-radius: 8px;
+  color: white;
+}
+
+button {
+  margin-top: 6px;
+}
+
+/* PROGRESS */
+.progress-bar {
+  background: #1e293b;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 10px 0;
+}
+
+.progress {
+  height: 10px;
+  background: #3b82f6;
+}
+
+.review {
+  background: #f8f9fb;
+  color: black;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.stars {
+  color: #f5a623;
+  font-size: 14px;
+}
+
+.regen-btn {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: #1639a1;
+  color: rgb(49, 142, 229);
+  cursor: pointer;
+}
+
+/*course cards*/
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.course-card {
+  background: #8498d5;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.course-card h4 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.course-card .prof {
+  font-size: 13px;
+  color: #221f1f;
+}
+
+.course-card .time {
+  font-size: 12px;
+  color: #531583;
+}
+
+.todo-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.todo-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;        /* thin but clean */
+  background: #8548b4;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.todo-card:hover {
+  background: #412358;
+}
+
+.todo-card.done .todo-text {
+  text-decoration: line-through;
+  color: #000000;
+}
+
+.todo-meta {
+  font-size: 12px;
+  color: #777;
+}
+
