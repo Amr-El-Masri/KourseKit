@@ -1,4 +1,4 @@
-package com.koursekit.entity;
+package com.koursekit.model;
 
 import com.koursekit.entity.Task;
 import com.fasterxml.jackson.annotation.JsonFormat;
