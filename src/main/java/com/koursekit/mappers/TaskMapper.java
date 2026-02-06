@@ -2,7 +2,7 @@ package com.koursekit.mappers;
 
 import com.koursekit.dto.TaskRequestDTO;
 import com.koursekit.dto.TaskResponseDTO;
-import com.koursekit.entity.Task;
+import com.koursekit.model.Task;
 import org.springframework.stereotype.Component;
 
 /*

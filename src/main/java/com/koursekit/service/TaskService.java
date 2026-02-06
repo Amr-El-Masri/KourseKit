@@ -2,7 +2,7 @@ package com.koursekit.service;
 
 import com.koursekit.dto.TaskRequestDTO;
 import com.koursekit.dto.TaskResponseDTO;
-import com.koursekit.entity.Task;
+import com.koursekit.model.Task;
 import com.koursekit.exception.DuplicateTaskException;
 import com.koursekit.exception.TaskNotFoundException;
 import com.koursekit.mappers.TaskMapper;
