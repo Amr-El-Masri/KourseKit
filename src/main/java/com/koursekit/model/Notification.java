@@ -1,6 +1,6 @@
 package com.koursekit.model;
 
-import com.koursekit.entity.Task;
+import com.koursekit.model.Task;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 

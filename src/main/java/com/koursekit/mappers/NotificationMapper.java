@@ -1,7 +1,7 @@
 package com.koursekit.mappers;
 
 import com.koursekit.dto.NotificationDTO;
-import com.koursekit.entity.Notification;
+import com.koursekit.model.Notification;
 import org.springframework.stereotype.Component;
 
 /*
