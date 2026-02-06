@@ -92,13 +92,23 @@ body {
 }
 
 .course-row {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.course-row-cumulative {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .course-row input,
-.course-row select {
+.course-row-cumulative input,
+.course-row select
+.course-row-cumulative select {
   padding: 10px;
   border-radius: 8px;
   border: 1px solid #ccc;
@@ -128,6 +138,8 @@ body {
   font-size: 15px;
   cursor: pointer;
 }
+
+
 
 @media (max-width: 900px) {
   .widgets-row {
