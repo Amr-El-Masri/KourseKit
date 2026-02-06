@@ -76,4 +76,9 @@ public class TaskService {
 
         return taskRepository.findByDeadlineBetween(now, oneDay);
     }
+
+    public void deleteOverdueTasks() {
+        LocalDateTime now = LocalDateTime.now();
+        taskRepository.deleteTasksPastDeadline(now);
+    }
 }

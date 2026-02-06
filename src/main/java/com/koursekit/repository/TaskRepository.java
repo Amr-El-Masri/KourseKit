@@ -19,7 +19,10 @@ public interface TaskRepository  extends JpaRepository<Task, Long> {
 
     List<Task> findByDeadlineBetween(LocalDateTime now, LocalDateTime oneDayLater);
 
-
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Task t WHERE t.deadline < :now")
+    void deleteTasksPastDeadline(@Param("now") LocalDateTime now);
 
 
 
