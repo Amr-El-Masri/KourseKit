@@ -207,3 +207,60 @@ function addGradedComponent() {
 
   container.appendChild(row);
 }
+
+
+const addTaskBtn = document.getElementById("addTaskBtn");
+const taskList = document.getElementById("taskList");
+
+addTaskBtn.addEventListener("click", () => {
+  const course = document.getElementById("courseInput").value.trim();
+  const taskName = document.getElementById("taskInput").value.trim();
+  const due = document.getElementById("dueInput").value;
+
+  if (!course || !taskName || !due) {
+    alert("Please fill all fields");
+    return;
+  }
+
+  const taskDiv = document.createElement("div");
+  taskDiv.className = "task";
+
+  const dueDate = new Date(due);
+  const options = {
+    year: 'numeric',
+    month: 'short',   
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false     
+  };
+  const formattedDate = dueDate.toLocaleString('en-US', options);
+
+  taskDiv.innerHTML = `
+    <span>${course}</span>
+    <span>${taskName}</span>
+    <span>${formattedDate}</span>
+    <button class="delete-btn">X</button>
+  `;
+
+  taskDiv.querySelector(".delete-btn").addEventListener("click", () => {
+    taskDiv.remove();
+    if (!taskList.querySelector(".task")) taskList.classList.add("hidden");
+  });
+
+  taskList.appendChild(taskDiv);
+  taskList.classList.remove("hidden");
+
+  document.getElementById("courseInput").value = "";
+  document.getElementById("taskInput").value = "";
+  document.getElementById("dueInput").value = "";
+});
+
+function checkOverdue(taskDiv, dueDate) {
+  const now = new Date();
+  if (dueDate < now) {
+    taskDiv.classList.add("overdue");
+  } else {
+    taskDiv.classList.remove("overdue");
+  }
+}
