@@ -115,6 +115,16 @@ body {
   font-size: 14px;
 }
 
+.course-row select {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  background: white;
+  appearance: none;
+}
+
+
 .add-btn {
   padding: 10px 16px;
   border-radius: 8px;

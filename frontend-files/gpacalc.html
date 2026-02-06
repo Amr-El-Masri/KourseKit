@@ -57,12 +57,54 @@
   <button type="button" class="calculate-btn">Calculate cumulative</button>
 </section>
 
+  <section class="widget calculator-widget course-grade-calculator">
+  <h2>Course Grade (So Far)</h2>
 
-  <!-- Target GPA Calculator -->
-  <section class="widget calculator-widget target-calculator">
-    <h2>Target GPA</h2>
-    <!-- target GPA inputs -->
-  </section>
+  <div id="components-container">
+    <div class="course-row">
+      <select class="component-type">
+        <option>Exam</option>
+        <option>Assignment</option>
+        <option>Project</option>
+        <option>Quiz</option>
+      </select>
+
+      <input type="number" class="component-weight" placeholder="Weight %">
+      <input type="number" class="component-grade" placeholder="Grade">
+    </div>
+  </div>
+
+  <button class="add-btn" onclick="addComponent()">Add Component</button>
+  <button class="calculate-btn" onclick="calculateCourseGrade()">Calculate</button>
+
+  <p id="course-grade-result"></p>
+</section>
+
+<section class="widget calculator-widget target-grade-calculator">
+  <h2>Target Course Grade</h2>
+
+  <div id="graded-components-container">
+    <div class="course-row">
+      <input type="number" class="tg-grade" placeholder="Grade %">
+      <input type="number" class="tg-weight" placeholder="Weight %">
+    </div>
+  </div>
+
+  <button type="button" class="add-btn" onclick="addGradedComponent()">
+    Add Component
+  </button>
+
+  <div class="course-row">
+    <label>Target Course Grade:</label>
+    <input type="number" id="target-grade" placeholder="ex: 85">
+  </div>
+
+  <button type="button" class="calculate-btn">
+    Calculate
+  </button>
+
+  <p id="target-grade-result"></p>
+</section>
 
 </div>
 

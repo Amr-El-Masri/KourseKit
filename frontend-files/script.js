@@ -189,3 +189,64 @@ function addSemester() {
   container.appendChild(row);
 }
 
+function addComponent() {
+  const container = document.getElementById("components-container");
+
+  const row = document.createElement("div");
+  row.className = "course-row";
+
+  row.innerHTML = `
+    <select class="component-type">
+      <option>Exam</option>
+      <option>Assignment</option>
+      <option>Project</option>
+      <option>Quiz</option>
+    </select>
+
+    <input type="number" class="component-weight" placeholder="Weight %">
+    <input type="number" class="component-grade" placeholder="Grade">
+  `;
+
+  container.appendChild(row);
+}
+
+function calculateCourseGrade() {
+  const weights = document.querySelectorAll(".component-weight");
+  const grades = document.querySelectorAll(".component-grade");
+
+  let total = 0;
+  let weightSum = 0;
+
+  weights.forEach((w, i) => {
+    const weight = parseFloat(w.value);
+    const grade = parseFloat(grades[i].value);
+
+    if (!isNaN(weight) && !isNaN(grade)) {
+      total += (grade * weight);
+      weightSum += weight;
+    }
+  });
+
+  if (weightSum === 0) return;
+
+  const result = (total / weightSum).toFixed(2);
+  document.getElementById("course-grade-result").textContent =
+    `Current Grade: ${result}%`;
+}
+
+
+function addGradedComponent() {
+  const container = document.getElementById("graded-components-container");
+
+  const row = document.createElement("div");
+  row.className = "course-row";
+
+  row.innerHTML = `
+    <input type="number" class="tg-grade" placeholder="Grade %">
+    <input type="number" class="tg-weight" placeholder="Weight %">
+  `;
+
+  container.appendChild(row);
+}
+
+
