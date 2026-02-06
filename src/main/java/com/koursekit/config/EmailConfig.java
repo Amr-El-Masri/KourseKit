@@ -33,8 +33,8 @@ public class EmailConfig {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
         message.setSubject("verify ur acc");  //change it later brah to smth metel l khale2
-        message.setText("http://localhost:8080/verify?token=" + token);
-        
+        String verificationLink = "http://localhost:8080/verify-email.html?token=" + token;
+        message.setText("Click here to verify your account:\n\n" + verificationLink);
         javaMailSender().send(message);
     }
 }
