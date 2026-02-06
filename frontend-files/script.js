@@ -104,50 +104,9 @@ let generatedCode = null;
 let countdown = 60;
 let timerInterval = null;
 
-function sendCode() {
-  const email = document.getElementById("regEmail").value;
-  const password = document.getElementById("regPassword").value;
+function checkEmailNote() {
+  alert("A verification link has been sent to your email. Click on it to verify and proceed with registration."); }
 
-  if (!email || !password) {
-    alert("Fill email and password first");
-    return;
-  }
-
-  generatedCode = Math.floor(100000 + Math.random() * 900000).toString();
-  console.log("Verification code (demo):", generatedCode);
-
-  document.getElementById("codeSection").classList.remove("hidden");
-
-  countdown = 60;
-  updateTimer();
-
-  timerInterval = setInterval(() => {
-    countdown--;
-    updateTimer();
-
-    if (countdown <= 0) {
-      clearInterval(timerInterval);
-      generatedCode = null;
-      alert("Code expired. Please resend.");
-    }
-  }, 1000);
-}
-
-function updateTimer() {
-  document.getElementById("timer").innerText =
-    `Code expires in ${countdown}s`;
-}
-
-function verifyCode() {
-  const input = document.getElementById("codeInput").value;
-
-  if (input === generatedCode) {
-    alert("Registration successful");
-    window.location.href = "login.html";
-  } else {
-    alert("Incorrect code");
-  }
-}
 
 function addCourse() {
   const container = document.getElementById("courses-container");
