@@ -1,13 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8" />
+  <title>KourseKit – Task Manager</title>
+  <link rel="stylesheet" href="tm.css" />
 </head>
 <body>
-    <nav class = "tm-navbar">
-        <div class="logo">KourseKit Task Manager</div>
-    </nav>
+
+  <nav class="tm-navbar">
+    <div class="logo">KourseKit</div>
+    <button class="tm-nav-back-btn" onclick="history.back()">Go Back</button>
+  </nav>
+
+  <div class="page-content">
+
+    <div class="task-widget">
+      <h2>Task Manager</h2>
+
+      <div class="task-input-grid">
+        <div>
+          <label>Course</label>
+          <input id="courseInput" placeholder="ex: Math 201">
+        </div>
+
+        <div>
+          <label>Task</label>
+          <input id="taskInput" placeholder="ex: Homework 3">
+        </div>
+
+        <div>
+          <label>Due Date</label>
+          <input type="datetime-local" id="dueInput">
+        </div>
+
+        <button id="addTaskBtn">Add Task</button>
+      </div>
+
+      <div class="task-list hidden" id="taskList">
+        <div class="task-header">
+          <span>Course</span>
+          <span>Task</span>
+          <span>Due</span>
+          <span>Delete</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>
