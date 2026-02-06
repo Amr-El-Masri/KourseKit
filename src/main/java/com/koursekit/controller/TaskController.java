@@ -2,7 +2,7 @@ package com.koursekit.controller;
 
 import com.koursekit.dto.TaskRequestDTO;
 import com.koursekit.dto.TaskResponseDTO;
-import com.koursekit.entity.Task;
+import com.koursekit.model.Task;
 import com.koursekit.service.TaskService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

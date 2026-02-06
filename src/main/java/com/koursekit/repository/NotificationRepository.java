@@ -1,6 +1,6 @@
 package com.koursekit.repository;
 
-import com.koursekit.entity.Notification;
+import com.koursekit.model.Notification;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
