@@ -87,7 +87,7 @@ public class AuthService {
     }
 
     public AuthResponse login(String email, String password) {
-        User user = userrepo.findemail(email)  
+        User user = userrepo.findByEmail(email)  
             .orElseThrow(() -> new IllegalArgumentException("invalid email or password"));
         if (!user.isver()) { throw new IllegalArgumentException("email not verified"); }
         if (!passhasher.check(password, user.getpass())) { throw new IllegalArgumentException("invalid email or password."); }
