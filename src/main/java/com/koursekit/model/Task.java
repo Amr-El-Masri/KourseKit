@@ -1,4 +1,4 @@
-package com.koursekit.entity;
+package com.koursekit.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
