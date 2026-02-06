@@ -248,5 +248,3 @@ function addGradedComponent() {
 
   container.appendChild(row);
 }
-
-

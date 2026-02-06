@@ -107,8 +107,10 @@ body {
 
 .course-row input,
 .course-row-cumulative input,
+.grade-simulator-widget input,
 .course-row select
-.course-row-cumulative select {
+.course-row-cumulative select
+.grade-simulator-widget select {
   padding: 10px;
   border-radius: 8px;
   border: 1px solid #ccc;
@@ -149,10 +151,90 @@ body {
   cursor: pointer;
 }
 
-
-
 @media (max-width: 900px) {
   .widgets-row {
     flex-direction: column;
   }
 }
+
+/* the widget styling for grade simulator */
+.grade-simulator-widget {
+  flex: 0 0 900px; 
+  height: auto;
+  max-width: 900px;
+  background: #f5f5f5;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  margin: 0 auto 24px auto; 
+}
+
+.grade-simulator-widget h2 {
+  margin-top: 0;
+  margin-bottom: 5px;
+  font-size: 1.5rem;
+  color: #111;
+}
+
+.grade-simulator-widget h4 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-weight: normal;
+  color: #333;
+}
+
+/* for the rows inside widget */
+.grade-simulator-widget .course-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+/* input boxes */
+.grade-simulator-widget input {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+  width: 100%;
+  max-width: 150px;
+  box-sizing: border-box;
+}
+
+/* Add and Calculate buttons */
+.grade-simulator-widget .add-btn,
+.grade-simulator-widget .calculate-btn {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #0c1972; /* same navy as other buttons */
+  color: white;
+  font-size: 15px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.grade-simulator-widget.add-btn:hover,
+.grade-simulator-widget.calculate-btn:hover {
+  opacity: 0.9;
+}
+
+/* Result paragraph */
+.grade-simulator-widget #target-grade-result {
+  margin-top: 10px;
+  font-weight: bold;
+  color: #111;
+}
+
+/* Responsive tweaks */
+@media (max-width: 900px) {
+  .grade-simulator-widget {
+    flex: 1 1 100%;
+  }
+  .grade-simulator-widget .course-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+
