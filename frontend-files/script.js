@@ -149,4 +149,43 @@ function verifyCode() {
   }
 }
 
+function addCourse() {
+  const container = document.getElementById("courses-container");
+
+  const row = document.createElement("div");
+  row.className = "course-row";
+
+  row.innerHTML = `
+    <label>Course:</label>
+    <input type="text" class="course-name" placeholder="ex: Math 201">
+
+    <label>Grade:</label>
+    <input type="number" class="course-grade" placeholder="ex: 3.7">
+
+    <label>Credits:</label>
+    <input type="number" class="course-credits" placeholder="ex: 3">
+  `;
+
+  container.appendChild(row);
+}
+
+function addSemester() {
+  const container = document.getElementById("semesters-container");
+
+  const row = document.createElement("div");
+  row.className = "course-row-cumulative";
+
+  row.innerHTML = `
+    <label>Semester:</label>
+    <input type="text" placeholder="ex: Fall 25-26">
+
+    <label>GPA:</label>
+    <input type="number" placeholder="ex: 3.67">
+
+    <label>Credits:</label>
+    <input type="number" placeholder="ex: 15">
+  `;
+
+  container.appendChild(row);
+}
 
