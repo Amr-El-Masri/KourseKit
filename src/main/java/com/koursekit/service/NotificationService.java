@@ -1,8 +1,8 @@
 package com.koursekit.service;
 
 import com.koursekit.dto.NotificationDTO;
-import com.koursekit.entity.Task;
-import com.koursekit.entity.Notification;
+import com.koursekit.model.Task;
+import com.koursekit.model.Notification;
 import com.koursekit.mappers.NotificationMapper;
 import com.koursekit.repository.NotificationRepository;
 import org.springframework.stereotype.Service;

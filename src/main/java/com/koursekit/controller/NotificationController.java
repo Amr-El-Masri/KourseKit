@@ -1,7 +1,7 @@
 package com.koursekit.controller;
 
 import com.koursekit.dto.NotificationDTO;
-import com.koursekit.entity.Notification;
+import com.koursekit.model.Notification;
 import com.koursekit.service.NotificationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;

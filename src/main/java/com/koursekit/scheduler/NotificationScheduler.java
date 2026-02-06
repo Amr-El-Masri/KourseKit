@@ -1,6 +1,6 @@
 package com.koursekit.scheduler;
 
-import com.koursekit.entity.Task;
+import com.koursekit.model.Task;
 import com.koursekit.repository.NotificationRepository;
 import com.koursekit.service.NotificationService;
 import com.koursekit.service.TaskService;
