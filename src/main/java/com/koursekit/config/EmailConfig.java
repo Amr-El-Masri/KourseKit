@@ -2,6 +2,7 @@ package com.koursekit.config;
 
 import java.util.Properties;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.mail.SimpleMailMessage;
@@ -12,14 +13,19 @@ import org.springframework.stereotype.Component;
 @Configuration
 @Component
 public class EmailConfig {
+    @Value("${email.username}")
+    private String user;
+    @Value("${email.password}")
+    private String pass;
+
     @Bean
     public JavaMailSender javaMailSender() {
         JavaMailSenderImpl sentby = new JavaMailSenderImpl();
         
         sentby.setHost("smtp.gmail.com");
         sentby.setPort(587);
-        sentby.setUsername("koursekit@gmail.com"); 
-        sentby.setPassword("meow237"); 
+        sentby.setUsername(user); 
+        sentby.setPassword(pass); 
         
         Properties props = sentby.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");
