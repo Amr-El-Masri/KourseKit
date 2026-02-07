@@ -37,47 +37,38 @@ public class AuthService {
         LocalDateTime tokenexpiry = LocalDateTime.now().plusMinutes(10);
         
         User user = new User(email, passhash);
-        user.settoken(veriftoken);
-        user.settokenexpiration(tokenexpiry);
-        user.setver(false);
+        user.setToken(veriftoken);
+        user.setTokenExpiration(tokenexpiry);
+        user.setVerified(true); // AUTO-VERIFY FOR DEV - change to false for production
         userrepo.save(user);
-        
-        Token veriftokenEntity = new Token(user, veriftoken, "EMAIL_VERIFICATION", tokenexpiry);
-        tokenrepo.save(veriftokenEntity);
-        
-        try {
-            emailconfig.verificationmail(email, veriftoken);
-        } catch (Exception e) {
-            System.err.println("verification failed" + e.getMessage());
-        }
-        
+
         AuthResponse response = new AuthResponse();
         response.setsuccess(true);
-        response.setmessage("signup successful");
+        response.setmessage("signup successful - you can now login");
         return response;
     } 
     
     // automsticlly logs in after verification
     public AuthResponse verifyemail(String value) {
         Token veriftoken = tokenrepo
-        .findvaluetype(value, "EMAIL_VERIFICATION")
+        .findByValueAndType(value, "EMAIL_VERIFICATION")
         .orElseThrow(() -> new IllegalArgumentException("invalid token"));
-        
-        if (veriftoken.getexpires().isBefore(LocalDateTime.now())) { 
+
+        if (veriftoken.getExpires().isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("token expired"); }
-            
-        if (veriftoken.getused() != null) {
+
+        if (veriftoken.getUsed() != null) {
             throw new IllegalArgumentException("token in use"); }
-            
-        User user = veriftoken.getuser();
-        user.setver(true);
-        user.settokenexpiration(null);
-        
+
+        User user = veriftoken.getUser();
+        user.setVerified(true);
+        user.setTokenExpiration(null);
+
         userrepo.save(user);
         veriftoken.used();
         tokenrepo.save(veriftoken);
-        
-        String jwttoken = jwtutil.generate(user.getid(), user.getemail());
+
+        String jwttoken = jwtutil.generate(user.getId(), user.getEmail());
         
         AuthResponse response = new AuthResponse();
         response.setsuccess(true);
@@ -87,12 +78,12 @@ public class AuthService {
     }
 
     public AuthResponse login(String email, String password) {
-        User user = userrepo.findByEmail(email)  
+        User user = userrepo.findByEmail(email)
             .orElseThrow(() -> new IllegalArgumentException("invalid email or password"));
-        if (!user.isver()) { throw new IllegalArgumentException("email not verified"); }
-        if (!passhasher.check(password, user.getpass())) { throw new IllegalArgumentException("invalid email or password."); }
-        
-        String jwttoken = jwtutil.generate(user.getid(), email);
+        if (!user.isVerified()) { throw new IllegalArgumentException("email not verified"); }
+        if (!passhasher.check(password, user.getPass())) { throw new IllegalArgumentException("invalid email or password."); }
+
+        String jwttoken = jwtutil.generate(user.getId(), email);
         
         AuthResponse response = new AuthResponse();
         response.setsuccess(true);
@@ -103,6 +94,6 @@ public class AuthService {
     
     private boolean isvalidaubmail(String email) { return email.endsWith("@mail.aub.edu"); }
     public void printusers() {
-        for (User user : userrepo.findAll()) { System.out.println(user.getemail() + " verified " + user.isver()); }
+        for (User user : userrepo.findAll()) { System.out.println(user.getEmail() + " verified " + user.isVerified()); }
     }
 }

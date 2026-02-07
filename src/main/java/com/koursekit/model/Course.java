@@ -2,12 +2,10 @@ package com.koursekit.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.Data;
 import java.util.List;
 
 @Entity
 @Table(name = "courses")
-@Data
 public class Course {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,4 +24,16 @@ public class Course {
         this.courseCode = courseCode;
         this.title = title;
     }
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public String getCourseCode() { return courseCode; }
+    public void setCourseCode(String courseCode) { this.courseCode = courseCode; }
+
+    public String getTitle() { return title; }
+    public void setTitle(String title) { this.title = title; }
+
+    public List<Section> getSections() { return sections; }
+    public void setSections(List<Section> sections) { this.sections = sections; }
 }

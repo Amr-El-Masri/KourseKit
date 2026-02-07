@@ -30,6 +30,8 @@ public class Token {
     private boolean expired = false;
 
     
+    public Token() {}
+
     public Token(User user, String value, String type, LocalDateTime expires) {
         this.user = user;
         this.value = value;
@@ -42,27 +44,27 @@ public class Token {
     public void revoke() { this.expired = true; }
     public boolean expired() { return expires.isBefore(LocalDateTime.now()); }
 
-    public Long getid() { return id; }
-    public void setid(Long id) { this.id = id; }
-    
-    public User getuser() { return user; }
-    public void setuser(User user) { this.user = user; }
-    
-    public String getvalue() { return value; }
-    public void setvalue(String value) { this.value = value; }
-    
-    public String gettype() { return type; }
-    public void settype(String type) { this.type = type; }
-    
-    public LocalDateTime getexpires() { return expires; }
-    public void setexpires(LocalDateTime expires) { this.expires = expires; }
-    
-    public LocalDateTime getcreated() { return created; }
-    public void setcreated(LocalDateTime created) { this.created = created; }
-    
-    public LocalDateTime getused() { return used; }
-    public void setused(LocalDateTime used) { this.used = used; }
-    
-    public Boolean getexpired() { return expired; }
-    public void setexpired(Boolean expired) { this.expired = expired; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+
+    public String getValue() { return value; }
+    public void setValue(String value) { this.value = value; }
+
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+
+    public LocalDateTime getExpires() { return expires; }
+    public void setExpires(LocalDateTime expires) { this.expires = expires; }
+
+    public LocalDateTime getCreated() { return created; }
+    public void setCreated(LocalDateTime created) { this.created = created; }
+
+    public LocalDateTime getUsed() { return used; }
+    public void setUsed(LocalDateTime used) { this.used = used; }
+
+    public Boolean getExpired() { return expired; }
+    public void setExpired(Boolean expired) { this.expired = expired; }
 }
