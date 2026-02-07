@@ -17,7 +17,7 @@ import com.koursekit.service.AuthService;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = {"http://localhost:3000"}) // react port ig
+@CrossOrigin(origins = "*") // allow all origins for development
 public class AuthController {
 
     @Autowired
@@ -26,7 +26,7 @@ public class AuthController {
     @PostMapping("/signup")
     public ResponseEntity<AuthResponse> signup(@RequestBody Signup request) {
         try {
-            AuthResponse response = service.signup(request.getemail(), request.getpass());
+            AuthResponse response = service.signup(request.getEmail(), request.getPassword());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
@@ -54,7 +54,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody Login request) {
         try {
-            AuthResponse response = service.login(request.getemail(), request.getpass());
+            AuthResponse response = service.login(request.getEmail(), request.getPassword());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()

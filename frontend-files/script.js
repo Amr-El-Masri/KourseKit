@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 
-function login() {
+async function login() {
   const email = document.getElementById("loginEmail").value;
   const password = document.getElementById("loginPassword").value;
 
@@ -90,22 +90,67 @@ function login() {
     return;
   }
 
-  // fake validation
-  if (password.length < 6) {
-    alert("Invalid credentials");
-    return;
-  }
+  try {
+    const response = await fetch("http://localhost:8080/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email, password })
+    });
 
-  alert("Login successful (frontend only)");
-  window.location.href = "dashboard.html";
+    const data = await response.json();
+
+    if (data.success) {
+      localStorage.setItem("token", data.token);
+      window.location.href = "index.html";
+    } else {
+      alert(data.message || "Login failed");
+    }
+  } catch (error) {
+    alert("Connection error. Is the server running?");
+  }
 }
 
 let generatedCode = null;
 let countdown = 60;
 let timerInterval = null;
 
-function checkEmailNote() {
-  alert("A verification link has been sent to your email. Click on it to verify and proceed with registration."); }
+async function register() {
+  const email = document.getElementById("regEmail").value;
+  const password = document.getElementById("regPassword").value;
+
+  if (!email || !password) {
+    alert("Please fill in all fields");
+    return;
+  }
+
+  if (!email.endsWith("@mail.aub.edu")) {
+    alert("Please use your AUB email (@mail.aub.edu)");
+    return;
+  }
+
+  try {
+    const response = await fetch("http://localhost:8080/api/auth/signup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ email, password })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      alert("Registration successful! You can now login.");
+      window.location.href = "login.html";
+    } else {
+      alert(data.message || "Registration failed");
+    }
+  } catch (error) {
+    alert("Connection error. Is the server running?");
+  }
+}
 
 
 function addCourse() {
@@ -212,6 +257,7 @@ function addGradedComponent() {
 const addTaskBtn = document.getElementById("addTaskBtn");
 const taskList = document.getElementById("taskList");
 
+if (addTaskBtn) {
 addTaskBtn.addEventListener("click", () => {
   const course = document.getElementById("courseInput").value.trim();
   const taskName = document.getElementById("taskInput").value.trim();
@@ -255,6 +301,7 @@ addTaskBtn.addEventListener("click", () => {
   document.getElementById("taskInput").value = "";
   document.getElementById("dueInput").value = "";
 });
+}
 
 function checkOverdue(taskDiv, dueDate) {
   const now = new Date();
