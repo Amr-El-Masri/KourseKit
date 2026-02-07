@@ -102,3 +102,9 @@ body {
   color: red;
 }
 
+.task-input-grid label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  color: #333;
+}
