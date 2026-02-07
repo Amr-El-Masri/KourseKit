@@ -38,26 +38,26 @@ public class User {
         this.pass = pass;
     }
 
-    public String getemail() { return email; }
-    public void setemail(String email) { this.email = email; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public String getpass() { return pass; }
-    public void setpass(String pass) { this.pass = pass; }
+    public String getPass() { return pass; }
+    public void setPass(String pass) { this.pass = pass; }
 
-    public Long getid() { return id; }
-    public void setid(Long id) { this.id=id; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public boolean isver() { return verified; }
-    public void setver(boolean ver) { verified = ver; }
+    public boolean isVerified() { return verified; }
+    public void setVerified(boolean ver) { verified = ver; }
 
-    public String gettoken() { return token; }
-    public void settoken(String token) { this.token = token; }
+    public String getToken() { return token; }
+    public void setToken(String token) { this.token = token; }
 
-    public LocalDateTime gettokenexpiration() { return tokenexpiration; }
-    public void settokenexpiration(LocalDateTime tokenexpiration) { this.tokenexpiration = tokenexpiration; }
+    public LocalDateTime getTokenExpiration() { return tokenexpiration; }
+    public void setTokenExpiration(LocalDateTime tokenexpiration) { this.tokenexpiration = tokenexpiration; }
 
-    public LocalDateTime getcreated() { return createdat; }
-    public void setcreated(LocalDateTime createdat) { this.createdat = createdat; }
+    public LocalDateTime getCreatedAt() { return createdat; }
+    public void setCreatedAt(LocalDateTime createdat) { this.createdat = createdat; }
 
     // integrate microsoft login?
 }
