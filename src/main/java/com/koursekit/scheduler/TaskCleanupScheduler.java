@@ -3,20 +3,20 @@ package com.koursekit.scheduler;
 import com.koursekit.service.TaskService;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
+import org.springframework.stereotype.Component;
 
-@Component
+@Component("taskCleanupScheduler")
 @EnableScheduling
-public class TaskScheduler {
+public class TaskCleanupScheduler {
 
         private final TaskService taskService;
 
-        public TaskScheduler(TaskService taskService) {
+        public TaskCleanupScheduler(TaskService taskService) {
             this.taskService = taskService;
         }
 
 
-        @Scheduled(fixedrate=60000)
+        @Scheduled(fixedRate = 60000)
         public void removeOverdueTasks() {
             taskService.deleteOverdueTasks();
         }
