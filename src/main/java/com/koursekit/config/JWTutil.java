@@ -16,7 +16,7 @@ public class JWTutil {
     @Value("${jwt.secret}")
     private String secret;
     
-    @Value("${jwt.expiration}") // in app properties
+    @Value("${jwt.expiration}") // 10 min in app properties
     private Long expiration;
     
     private Algorithm getalg() { return Algorithm.HMAC256(secret); }
