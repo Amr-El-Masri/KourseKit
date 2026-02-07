@@ -34,7 +34,7 @@ public class AuthService {
         if (userrepo.existsByEmail(email)) { throw new IllegalArgumentException("email already in use"); }
         String passhash = passhasher.hash(password);
         String veriftoken = UUID.randomUUID().toString();
-        LocalDateTime tokenexpiry = LocalDateTime.now().plusMinutes(10);
+        LocalDateTime tokenexpiry = LocalDateTime.now().plusMinutes(10); // token expires if not verified within 10 min
         
         User user = new User(email, passhash);
         user.setToken(veriftoken);
