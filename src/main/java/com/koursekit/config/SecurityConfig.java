@@ -1,13 +1,15 @@
 package com.koursekit.config;
 
 import java.util.Arrays;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;           
+import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;      
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
@@ -15,16 +17,16 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableWebSecurity
 public class SecurityConfig {
     // allowing access to endpoints
+    @Autowired
+    private JWTAuthentication jwtauth;
     @Bean
     public SecurityFilterChain security(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable()) 
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/**").permitAll()
-                .requestMatchers("/**").permitAll()
-                .requestMatchers("/auth/**", "/verify/**", "/public/**").permitAll()
-                .requestMatchers("/tasks/**", "/notifications/**").permitAll()
+                .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/verify").permitAll()
+                .requestMatchers("/*.html", "/css/**", "/js/**", "/images/**").permitAll()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
