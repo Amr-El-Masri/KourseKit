@@ -1,13 +1,13 @@
 package com.koursekit.dto;
 
-public class RequiredFutureGPAResponse {
+public class RequiredFutureGradeResponse {
     private double requiredGPA;
     private boolean isAchievable;
     private String message;
 
-    public RequiredFutureGPAResponse() {}
+    public RequiredFutureGradeResponse() {}
 
-    public RequiredFutureGPAResponse(double requiredGPA, boolean isAchievable, String message) {
+    public RequiredFutureGradeResponse(double requiredGPA, boolean isAchievable, String message) {
         this.requiredGPA = requiredGPA;
         this.isAchievable = isAchievable;
         this.message = message;

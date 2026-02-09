@@ -1,12 +1,12 @@
 package com.koursekit.dto;
 
-public class SemesterGPAResponse {
+public class SemesterGradeResponse {
     private double gpa;
     private String message;
 
-    public SemesterGPAResponse() {}
+    public SemesterGradeResponse() {}
 
-    public SemesterGPAResponse(double gpa, String message) {
+    public SemesterGradeResponse(double gpa, String message) {
         this.gpa = gpa;
         this.message = message;
     }

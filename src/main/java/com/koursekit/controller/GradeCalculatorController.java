@@ -1,7 +1,7 @@
 package com.koursekit.controller;
 
 import com.koursekit.dto.*;
-import com.koursekit.service.GPAService;
+import com.koursekit.service.GradeCalculatorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,40 +9,40 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/gpa")
+@RequestMapping("/api/grades")
 @CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
-public class GPAController {
+public class GradeCalculatorController {
 
     @Autowired
-    private GPAService gpaService;
+    private GradeCalculatorService gradeCalculatorService;
 
     @PostMapping("/semester")
-    public ResponseEntity<SemesterGPAResponse> calculateSemesterGPA(
-            @RequestBody SemesterGPARequest request) {
+    public ResponseEntity<SemesterGradeResponse> calculateSemesterGPA(
+            @RequestBody SemesterGradeRequest request) {
         try {
-            double gpa = gpaService.calculateSemesterGPA(request);
-            return ResponseEntity.ok(new SemesterGPAResponse(gpa, "Success"));
+            double gpa = gradeCalculatorService.calculateSemesterGPA(request);
+            return ResponseEntity.ok(new SemesterGradeResponse(gpa, "Success"));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
-                .body(new SemesterGPAResponse(0.0, "Error: " + e.getMessage()));
+                .body(new SemesterGradeResponse(0.0, "Error: " + e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
-                .body(new SemesterGPAResponse(0.0, "Server error: " + e.getMessage()));
+                .body(new SemesterGradeResponse(0.0, "Server error: " + e.getMessage()));
         }
     }
 
     @PostMapping("/cumulative")
-    public ResponseEntity<CumulativeGPAResponse> calculateCumulativeGPA(
-            @RequestBody CumulativeGPARequest request) {
+    public ResponseEntity<CumulativeGradeResponse> calculateCumulativeGPA(
+            @RequestBody CumulativeGradeRequest request) {
         try {
-            CumulativeGPAResponse response = gpaService.calculateCumulativeGPA(request);
+            CumulativeGradeResponse response = gradeCalculatorService.calculateCumulativeGPA(request);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
-                .body(new CumulativeGPAResponse(0.0, 0, "Error: " + e.getMessage()));
+                .body(new CumulativeGradeResponse(0.0, 0, "Error: " + e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
-                .body(new CumulativeGPAResponse(0.0, 0, "Server error: " + e.getMessage()));
+                .body(new CumulativeGradeResponse(0.0, 0, "Server error: " + e.getMessage()));
         }
     }
 
@@ -50,7 +50,7 @@ public class GPAController {
     public ResponseEntity<CourseGradeResponse> calculateCourseGrade(
             @RequestBody CourseGradeRequest request) {
         try {
-            CourseGradeResponse response = gpaService.calculateCourseGrade(request);
+            CourseGradeResponse response = gradeCalculatorService.calculateCourseGrade(request);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
@@ -65,7 +65,7 @@ public class GPAController {
     public ResponseEntity<SimulationResponse> simulateGradeChange(
             @RequestBody SimulationRequest request) {
         try {
-            SimulationResponse response = gpaService.simulateGradeChange(request);
+            SimulationResponse response = gradeCalculatorService.simulateGradeChange(request);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
@@ -80,7 +80,7 @@ public class GPAController {
     public ResponseEntity<RequiredFinalGradeResponse> calculateRequiredFinalGrade(
             @RequestBody RequiredFinalGradeRequest request) {
         try {
-            RequiredFinalGradeResponse response = gpaService.calculateRequiredFinalGrade(request);
+            RequiredFinalGradeResponse response = gradeCalculatorService.calculateRequiredFinalGrade(request);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
@@ -93,19 +93,24 @@ public class GPAController {
 
     @GetMapping("/grade-boundaries")
     public ResponseEntity<Map<String, String>> getGradeBoundaries() {
-        return ResponseEntity.ok(gpaService.getGradeBoundaries());
+        return ResponseEntity.ok(gradeCalculatorService.getGradeBoundaries());
+    }
+
+    @GetMapping("/quality-points")
+    public ResponseEntity<Map<String, Double>> getQualityPoints() {
+        return ResponseEntity.ok(gradeCalculatorService.getQualityPoints());
     }
 
     @GetMapping("/health")
     public ResponseEntity<String> healthCheck() {
-        return ResponseEntity.ok("GPA Calculator Service is running");
+        return ResponseEntity.ok("Grade Calculator Service is running");
     }
 
     @PostMapping("/highest-impact")
     public ResponseEntity<HighestImpactResponse> findHighestImpactCourse(
             @RequestBody HighestImpactRequest request) {
         try {
-            HighestImpactResponse response = gpaService.findHighestImpactCourse(request);
+            HighestImpactResponse response = gradeCalculatorService.findHighestImpactCourse(request);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
@@ -117,17 +122,17 @@ public class GPAController {
     }
 
     @PostMapping("/required-future-gpa")
-    public ResponseEntity<RequiredFutureGPAResponse> calculateRequiredFutureGPA(
-            @RequestBody RequiredFutureGPARequest request) {
+    public ResponseEntity<RequiredFutureGradeResponse> calculateRequiredFutureGPA(
+            @RequestBody RequiredFutureGradeRequest request) {
         try {
-            RequiredFutureGPAResponse response = gpaService.calculateRequiredFutureGPA(request);
+            RequiredFutureGradeResponse response = gradeCalculatorService.calculateRequiredFutureGPA(request);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
-                .body(new RequiredFutureGPAResponse(0.0, false, "Error: " + e.getMessage()));
+                .body(new RequiredFutureGradeResponse(0.0, false, "Error: " + e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
-                .body(new RequiredFutureGPAResponse(0.0, false, "Server error: " + e.getMessage()));
+                .body(new RequiredFutureGradeResponse(0.0, false, "Server error: " + e.getMessage()));
         }
     }
 }
