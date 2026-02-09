@@ -5,7 +5,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class GPACalculator {
+public class GradeCalculator {
 
     // Letter grade to GPA points mapping (AUB 4.3 scale)
     private static final Map<String, Double> GRADE_POINTS = new HashMap<>();
@@ -22,6 +22,24 @@ public class GPACalculator {
         GRADE_POINTS.put("D+", 1.3);
         GRADE_POINTS.put("D", 1.0);
         GRADE_POINTS.put("F", 0.0);
+    }
+
+    // Letter grade to quality points mapping
+    public static Map<String, Double> getQualityPoints() {
+        Map<String, Double> map = new LinkedHashMap<>();
+        map.put("A+", 4.3);
+        map.put("A", 4.0);
+        map.put("A-", 3.7);
+        map.put("B+", 3.3);
+        map.put("B", 3.0);
+        map.put("B-", 2.7);
+        map.put("C+", 2.3);
+        map.put("C", 2.0);
+        map.put("C-", 1.7);
+        map.put("D+", 1.3);
+        map.put("D", 1.0);
+        map.put("F", 0.0);
+        return map;
     }
 
     // Letter grade to boundaries mapping

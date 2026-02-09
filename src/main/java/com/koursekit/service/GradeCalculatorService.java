@@ -1,7 +1,7 @@
 package com.koursekit.service;
 
 import com.koursekit.dto.*;
-import com.koursekit.model.GPACalculator;
+import com.koursekit.model.GradeCalculator;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -9,51 +9,51 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-public class GPAService {
+public class GradeCalculatorService {
 
-    public double calculateSemesterGPA(SemesterGPARequest request) {
-        List<GPACalculator.Course> courses = request.getCourses().stream()
-            .map(dto -> new GPACalculator.Course(dto.getCourseCode(), dto.getGrade(), dto.getCredits()))
+    public double calculateSemesterGPA(SemesterGradeRequest request) {
+        List<GradeCalculator.Course> courses = request.getCourses().stream()
+            .map(dto -> new GradeCalculator.Course(dto.getCourseCode(), dto.getGrade(), dto.getCredits()))
             .collect(Collectors.toList());
 
-        return GPACalculator.calculateSemesterGPA(courses);
+        return GradeCalculator.calculateSemesterGPA(courses);
     }
 
-    public CumulativeGPAResponse calculateCumulativeGPA(CumulativeGPARequest request) {
-        List<GPACalculator.Semester> semesters = request.getSemesters().stream()
-            .map(dto -> new GPACalculator.Semester(dto.getSemesterName(), dto.getGpa(), dto.getCredits()))
+    public CumulativeGradeResponse calculateCumulativeGPA(CumulativeGradeRequest request) {
+        List<GradeCalculator.Semester> semesters = request.getSemesters().stream()
+            .map(dto -> new GradeCalculator.Semester(dto.getSemesterName(), dto.getGpa(), dto.getCredits()))
             .collect(Collectors.toList());
 
-        double cgpa = GPACalculator.calculateCumulativeGPA(semesters);
+        double cgpa = GradeCalculator.calculateCumulativeGPA(semesters);
 
         int totalCredits = semesters.stream()
             .mapToInt(s -> s.credits)
             .sum();
 
-        return new CumulativeGPAResponse(cgpa, totalCredits, "Success");
+        return new CumulativeGradeResponse(cgpa, totalCredits, "Success");
     }
 
     public CourseGradeResponse calculateCourseGrade(CourseGradeRequest request) {
-        List<GPACalculator.Assessment> assessments = request.getAssessments().stream()
-            .map(dto -> new GPACalculator.Assessment(dto.getName(), dto.getGrade(), dto.getWeight()))
+        List<GradeCalculator.Assessment> assessments = request.getAssessments().stream()
+            .map(dto -> new GradeCalculator.Assessment(dto.getName(), dto.getGrade(), dto.getWeight()))
             .collect(Collectors.toList());
 
-        double numericGrade = GPACalculator.calculateCourseGrade(assessments);
-        String letterGrade = GPACalculator.numericToLetterGrade(numericGrade);
+        double numericGrade = GradeCalculator.calculateCourseGrade(assessments);
+        String letterGrade = GradeCalculator.numericToLetterGrade(numericGrade);
 
         return new CourseGradeResponse(numericGrade, letterGrade, "Success");
     }
 
     public SimulationResponse simulateGradeChange(SimulationRequest request) {
-        List<GPACalculator.Assessment> assessments = request.getModifiedAssessments().stream()
-            .map(dto -> new GPACalculator.Assessment(dto.getName(), dto.getGrade(), dto.getWeight()))
+        List<GradeCalculator.Assessment> assessments = request.getModifiedAssessments().stream()
+            .map(dto -> new GradeCalculator.Assessment(dto.getName(), dto.getGrade(), dto.getWeight()))
             .collect(Collectors.toList());
 
-        List<GPACalculator.Course> courses = request.getAllCourses().stream()
-            .map(dto -> new GPACalculator.Course(dto.getCourseCode(), dto.getGrade(), dto.getCredits()))
+        List<GradeCalculator.Course> courses = request.getAllCourses().stream()
+            .map(dto -> new GradeCalculator.Course(dto.getCourseCode(), dto.getGrade(), dto.getCredits()))
             .collect(Collectors.toList());
 
-        GPACalculator.SimulationResult result = GPACalculator.simulateGradeChange(
+        GradeCalculator.SimulationResult result = GradeCalculator.simulateGradeChange(
             assessments, courses, request.getCourseIndex()
         );
 
@@ -67,11 +67,11 @@ public class GPAService {
     }
 
     public RequiredFinalGradeResponse calculateRequiredFinalGrade(RequiredFinalGradeRequest request) {
-        List<GPACalculator.Assessment> assessments = request.getCompletedAssessments().stream()
-            .map(dto -> new GPACalculator.Assessment(dto.getName(), dto.getGrade(), dto.getWeight()))
+        List<GradeCalculator.Assessment> assessments = request.getCompletedAssessments().stream()
+            .map(dto -> new GradeCalculator.Assessment(dto.getName(), dto.getGrade(), dto.getWeight()))
             .collect(Collectors.toList());
 
-        GPACalculator.FinalGradeRequirement result = GPACalculator.calculateRequiredFinalGrade(
+        GradeCalculator.FinalGradeRequirement result = GradeCalculator.calculateRequiredFinalGrade(
             assessments,
             request.getFinalExamWeight(),
             request.getTargetCourseGrade()
@@ -86,29 +86,33 @@ public class GPAService {
     }
 
     public Map<String, String> getGradeBoundaries() {
-        return GPACalculator.getGradeBoundaries();
+        return GradeCalculator.getGradeBoundaries();
+    }
+
+    public Map<String, Double> getQualityPoints() {
+        return GradeCalculator.getQualityPoints();
     }
 
     public HighestImpactResponse findHighestImpactCourse(HighestImpactRequest request) {
-        List<GPACalculator.Course> courses = request.getCourses().stream()
-            .map(dto -> new GPACalculator.Course(dto.getCourseCode(), dto.getGrade(), dto.getCredits()))
+        List<GradeCalculator.Course> courses = request.getCourses().stream()
+            .map(dto -> new GradeCalculator.Course(dto.getCourseCode(), dto.getGrade(), dto.getCredits()))
             .collect(Collectors.toList());
 
-        int index = GPACalculator.findHighestImpactCourse(courses);
+        int index = GradeCalculator.findHighestImpactCourse(courses);
 
         if (index == -1) {
             return new HighestImpactResponse(-1, "", "", 0, "No valid courses found");
         }
 
-        SemesterGPARequest.CourseDTO course = request.getCourses().get(index);
+        SemesterGradeRequest.CourseDTO course = request.getCourses().get(index);
         String message = String.format("Course '%s' has the highest impact on your GPA (%d credits, grade %s)",
             course.getCourseCode(), course.getCredits(), course.getGrade());
 
         return new HighestImpactResponse(index, course.getCourseCode(), course.getGrade(), course.getCredits(), message);
     }
 
-    public RequiredFutureGPAResponse calculateRequiredFutureGPA(RequiredFutureGPARequest request) {
-        double requiredGPA = GPACalculator.calculateRequiredFutureGPA(
+    public RequiredFutureGradeResponse calculateRequiredFutureGPA(RequiredFutureGradeRequest request) {
+        double requiredGPA = GradeCalculator.calculateRequiredFutureGPA(
             request.getCurrentCGPA(),
             request.getCompletedCredits(),
             request.getTargetCGPA(),
@@ -128,6 +132,6 @@ public class GPAService {
                 requiredGPA, request.getRemainingCredits(), request.getTargetCGPA());
         }
 
-        return new RequiredFutureGPAResponse(requiredGPA, isAchievable, message);
+        return new RequiredFutureGradeResponse(requiredGPA, isAchievable, message);
     }
 }
