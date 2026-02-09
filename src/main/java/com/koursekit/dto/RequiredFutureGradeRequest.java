@@ -1,12 +1,12 @@
 package com.koursekit.dto;
 
-public class RequiredFutureGPARequest {
+public class RequiredFutureGradeRequest {
     private double currentCGPA;
     private int completedCredits;
     private double targetCGPA;
     private int remainingCredits;
 
-    public RequiredFutureGPARequest() {}
+    public RequiredFutureGradeRequest() {}
 
     public double getCurrentCGPA() { return currentCGPA; }
     public void setCurrentCGPA(double currentCGPA) { this.currentCGPA = currentCGPA; }

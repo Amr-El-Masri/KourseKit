@@ -2,10 +2,10 @@ package com.koursekit.dto;
 
 import java.util.List;
 
-public class SemesterGPARequest {
+public class SemesterGradeRequest {
     private List<CourseDTO> courses;
 
-    public SemesterGPARequest() {}
+    public SemesterGradeRequest() {}
 
     public List<CourseDTO> getCourses() { return courses; }
     public void setCourses(List<CourseDTO> courses) { this.courses = courses; }

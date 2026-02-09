@@ -6,7 +6,7 @@ body {
   color: black;
 }
 
-.gpa-navbar {
+.grade-navbar {
   position: fixed;
   top: 0;
   width: 100%;
@@ -68,7 +68,7 @@ body {
   background-color: #3a539b;
 }
 
-.gpa-page {
+.grade-page {
   display: flex;
   gap: 24px;
   justify-content: center;

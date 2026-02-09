@@ -2,10 +2,10 @@ package com.koursekit.dto;
 
 import java.util.List;
 
-public class CumulativeGPARequest {
+public class CumulativeGradeRequest {
     private List<SemesterDTO> semesters;
 
-    public CumulativeGPARequest() {}
+    public CumulativeGradeRequest() {}
 
     public List<SemesterDTO> getSemesters() { return semesters; }
     public void setSemesters(List<SemesterDTO> semesters) { this.semesters = semesters; }

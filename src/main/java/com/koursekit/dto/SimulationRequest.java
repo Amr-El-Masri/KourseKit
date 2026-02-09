@@ -4,7 +4,7 @@ import java.util.List;
 
 public class SimulationRequest {
     private List<AssessmentDTO> modifiedAssessments;
-    private List<SemesterGPARequest.CourseDTO> allCourses;
+    private List<SemesterGradeRequest.CourseDTO> allCourses;
     private int courseIndex;
 
     public SimulationRequest() {}
@@ -14,8 +14,8 @@ public class SimulationRequest {
         this.modifiedAssessments = modifiedAssessments;
     }
 
-    public List<SemesterGPARequest.CourseDTO> getAllCourses() { return allCourses; }
-    public void setAllCourses(List<SemesterGPARequest.CourseDTO> allCourses) {
+    public List<SemesterGradeRequest.CourseDTO> getAllCourses() { return allCourses; }
+    public void setAllCourses(List<SemesterGradeRequest.CourseDTO> allCourses) {
         this.allCourses = allCourses;
     }
 
