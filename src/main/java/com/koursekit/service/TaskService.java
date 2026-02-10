@@ -2,6 +2,7 @@ package com.koursekit.service;
 
 import com.koursekit.dto.TaskRequestDTO;
 import com.koursekit.dto.TaskResponseDTO;
+import com.koursekit.exception.InvalidDeadlineException;
 import com.koursekit.model.Task;
 import com.koursekit.exception.DuplicateTaskException;
 import com.koursekit.exception.TaskNotFoundException;
@@ -32,6 +33,11 @@ public class TaskService {
     }
 
     public TaskResponseDTO addTask(TaskRequestDTO dto){
+        if (dto.deadline().isBefore(LocalDateTime.now())) {
+            throw new InvalidDeadlineException(
+                    "Deadline cannot be in the past"
+            );
+        }
         if (taskRepository.existsByCourseAndTitle(dto.course(), dto.title())) {
             throw new DuplicateTaskException(
                     "Task with same course and title already exists"
@@ -68,6 +74,16 @@ public class TaskService {
 
     public List<TaskResponseDTO> listByCourse(String course){
         return taskRepository.findAllByCourseOrderByDeadlineAscTitleAsc(course).stream().map(taskMapper::toDto).toList();
+    }
+
+    public List<TaskResponseDTO> searchTasks(String keyword) {
+
+        return
+                taskRepository.findByTitleContainingIgnoreCaseOrCourseContainingIgnoreCase(
+                        keyword,
+                        keyword
+                ).stream().map(taskMapper::toDto).toList();
+
     }
 
     public List<Task> findByDeadlineBetween(){
