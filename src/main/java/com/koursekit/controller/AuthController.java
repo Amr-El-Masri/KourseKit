@@ -30,7 +30,7 @@ public class AuthController {
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
-                .body(errormessage("error" + e.getMessage()));
+                .body(errormessage("error: " + e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                 .body(errormessage("server error"));
@@ -44,7 +44,7 @@ public class AuthController {
                 return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
-                .body(errormessage("error" + e.getMessage()));
+                .body(errormessage("error: " + e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                 .body(errormessage("server error"));
@@ -58,7 +58,7 @@ public class AuthController {
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest()
-                .body(errormessage("srror" + e.getMessage()));
+                .body(errormessage("error: " + e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                 .body(errormessage("server error"));
