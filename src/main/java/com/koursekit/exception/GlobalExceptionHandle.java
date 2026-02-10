@@ -35,14 +35,25 @@ public class GlobalExceptionHandle {
                 ));
     }
 
-//    @ExceptionHandler(Exception.class)
-//    public ResponseEntity<?> handleGeneric(Exception ex) {
-//        return ResponseEntity
-//                .status(HttpStatus.BAD_REQUEST)
-//                .body(Map.of(
-//                        "timestamp", LocalDateTime.now(),
-//                        "status", 400,
-//                        "error", "Bad request"
-//                ));
-//    }
+    @ExceptionHandler(InvalidDeadlineException.class)
+    public ResponseEntity<?> handleInvalidDeadline(InvalidDeadlineException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "status", 400,
+                        "error", ex.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<?> handleGeneric(Exception ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "status", 400,
+                        "error", "Bad request"
+                ));
+    }
 }
