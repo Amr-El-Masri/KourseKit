@@ -26,6 +26,10 @@ public interface TaskRepository  extends JpaRepository<Task, Long> {
     @Query("DELETE FROM Task t WHERE t.deadline < :now")
     void deleteTasksPastDeadline(@Param("now") LocalDateTime now);
 
+    List<Task> findByTitleContainingIgnoreCaseOrCourseContainingIgnoreCase(
+            String title,
+            String course
+    );
 
 
 }
