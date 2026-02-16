@@ -8,15 +8,27 @@ public class RequiredFutureGradeRequest {
 
     public RequiredFutureGradeRequest() {}
 
-    public double getCurrentCGPA() { return currentCGPA; }
-    public void setCurrentCGPA(double currentCGPA) { this.currentCGPA = currentCGPA; }
+    public double getCurrentCGPA() { 
+        return currentCGPA; 
+    }
+    public void setCurrentCGPA(double currentCGPA) { 
+        this.currentCGPA = currentCGPA; 
+    }
 
     public int getCompletedCredits() { return completedCredits; }
     public void setCompletedCredits(int completedCredits) { this.completedCredits = completedCredits; }
 
-    public double getTargetCGPA() { return targetCGPA; }
-    public void setTargetCGPA(double targetCGPA) { this.targetCGPA = targetCGPA; }
+    public double getTargetCGPA() { 
+        return targetCGPA; 
+    }
+    public void setTargetCGPA(double targetCGPA) { 
+        this.targetCGPA = targetCGPA; 
+    }
 
-    public int getRemainingCredits() { return remainingCredits; }
-    public void setRemainingCredits(int remainingCredits) { this.remainingCredits = remainingCredits; }
+    public int getRemainingCredits() { 
+        return remainingCredits; 
+    }
+    public void setRemainingCredits(int remainingCredits) { 
+        this.remainingCredits = remainingCredits; 
+    }
 }

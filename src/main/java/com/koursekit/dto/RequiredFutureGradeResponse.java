@@ -13,12 +13,24 @@ public class RequiredFutureGradeResponse {
         this.message = message;
     }
 
-    public double getRequiredGPA() { return requiredGPA; }
-    public void setRequiredGPA(double requiredGPA) { this.requiredGPA = requiredGPA; }
+    public double getRequiredGPA() { 
+        return requiredGPA; 
+    }
+    public void setRequiredGPA(double requiredGPA) { 
+        this.requiredGPA = requiredGPA;
+     }
 
-    public boolean isAchievable() { return isAchievable; }
-    public void setAchievable(boolean achievable) { isAchievable = achievable; }
+    public boolean isAchievable() { 
+        return isAchievable; 
+    }
+    public void setAchievable(boolean achievable) { 
+        isAchievable = achievable; 
+    }
 
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
+    public String getMessage() { 
+        return message; 
+    }
+    public void setMessage(String message) { 
+        this.message = message; 
+    }
 }

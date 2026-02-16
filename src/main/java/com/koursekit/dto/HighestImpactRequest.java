@@ -7,6 +7,10 @@ public class HighestImpactRequest {
 
     public HighestImpactRequest() {}
 
-    public List<SemesterGradeRequest.CourseDTO> getCourses() { return courses; }
-    public void setCourses(List<SemesterGradeRequest.CourseDTO> courses) { this.courses = courses; }
+    public List<SemesterGradeRequest.CourseDTO> getCourses() { 
+        return courses; 
+    }
+    public void setCourses(List<SemesterGradeRequest.CourseDTO> courses) { 
+        this.courses = courses; 
+    }
 }

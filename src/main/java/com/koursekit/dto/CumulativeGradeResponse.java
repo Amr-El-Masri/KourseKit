@@ -13,12 +13,24 @@ public class CumulativeGradeResponse {
         this.message = message;
     }
 
-    public double getCgpa() { return cgpa; }
-    public void setCgpa(double cgpa) { this.cgpa = cgpa; }
+    public double getCgpa() { 
+        return cgpa; 
+    }
+    public void setCgpa(double cgpa) { 
+        this.cgpa = cgpa; 
+    }
 
-    public int getTotalCredits() { return totalCredits; }
-    public void setTotalCredits(int totalCredits) { this.totalCredits = totalCredits; }
+    public int getTotalCredits() { 
+        return totalCredits; 
+    }
+    public void setTotalCredits(int totalCredits) { 
+        this.totalCredits = totalCredits; 
+    }
 
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
+    public String getMessage() { 
+        return message;
+     }
+    public void setMessage(String message) { 
+        this.message = message; 
+    }
 }

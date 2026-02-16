@@ -13,12 +13,24 @@ public class CourseGradeResponse {
         this.message = message;
     }
 
-    public double getNumericGrade() { return numericGrade; }
-    public void setNumericGrade(double numericGrade) { this.numericGrade = numericGrade; }
+    public double getNumericGrade() { 
+        return numericGrade;
+     }
+    public void setNumericGrade(double numericGrade) { 
+        this.numericGrade = numericGrade; 
+    }
 
-    public String getLetterGrade() { return letterGrade; }
-    public void setLetterGrade(String letterGrade) { this.letterGrade = letterGrade; }
+    public String getLetterGrade() { 
+        return letterGrade; 
+    }
+    public void setLetterGrade(String letterGrade) {
+         this.letterGrade = letterGrade; 
+        }
 
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
+    public String getMessage() {
+         return message;
+         }
+    public void setMessage(String message) { 
+        this.message = message; 
+    }
 }
