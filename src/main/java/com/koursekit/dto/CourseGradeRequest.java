@@ -7,6 +7,10 @@ public class CourseGradeRequest {
 
     public CourseGradeRequest() {}
 
-    public List<AssessmentDTO> getAssessments() { return assessments; }
-    public void setAssessments(List<AssessmentDTO> assessments) { this.assessments = assessments; }
+    public List<AssessmentDTO> getAssessments() {
+         return assessments; 
+        }
+    public void setAssessments(List<AssessmentDTO> assessments) { 
+        this.assessments = assessments; 
+    }
 }
