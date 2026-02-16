@@ -16,18 +16,30 @@ public class RequiredFinalGradeResponse {
         this.targetLetterGrade = targetLetterGrade;
     }
 
-    public double getRequiredFinalGrade() { return requiredFinalGrade; }
+    public double getRequiredFinalGrade() { 
+        return requiredFinalGrade;
+     }
     public void setRequiredFinalGrade(double requiredFinalGrade) {
         this.requiredFinalGrade = requiredFinalGrade;
     }
 
-    public boolean isAchievable() { return isAchievable; }
-    public void setAchievable(boolean achievable) { isAchievable = achievable; }
+    public boolean isAchievable() { 
+        return isAchievable; 
+    }
+    public void setAchievable(boolean achievable) { 
+        isAchievable = achievable; 
+    }
 
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
+    public String getMessage() { 
+        return message; 
+    }
+    public void setMessage(String message) { 
+        this.message = message; 
+    }
 
-    public String getTargetLetterGrade() { return targetLetterGrade; }
+    public String getTargetLetterGrade() { 
+        return targetLetterGrade;
+     }
     public void setTargetLetterGrade(String targetLetterGrade) {
         this.targetLetterGrade = targetLetterGrade;
     }

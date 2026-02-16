@@ -17,18 +17,39 @@ public class HighestImpactResponse {
         this.message = message;
     }
 
-    public int getCourseIndex() { return courseIndex; }
-    public void setCourseIndex(int courseIndex) { this.courseIndex = courseIndex; }
+    public int getCourseIndex() { 
+        return courseIndex; 
+    }
+    public void setCourseIndex(int courseIndex) { 
+        this.courseIndex = courseIndex; 
+    }
 
-    public String getCourseName() { return courseName; }
-    public void setCourseName(String courseName) { this.courseName = courseName; }
+    public String getCourseName() { 
+        return courseName; 
+    }
+    public void setCourseName(String courseName) { 
+        this.courseName = courseName; 
+    }
 
-    public String getGrade() { return grade; }
-    public void setGrade(String grade) { this.grade = grade; }
+    public String getGrade() { 
+        return grade; 
 
-    public int getCredits() { return credits; }
-    public void setCredits(int credits) { this.credits = credits; }
+    }
+    public void setGrade(String grade) { 
+        this.grade = grade; 
+    }
 
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
+    public int getCredits() { 
+        return credits; 
+    }
+    public void setCredits(int credits) { 
+        this.credits = credits; 
+    }
+
+    public String getMessage() {
+         return message; 
+        }
+    public void setMessage(String message) { 
+        this.message = message; 
+    }
 }
