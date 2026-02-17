@@ -47,3 +47,6 @@ build/
 
 # Spring Boot
 application-local.properties
+
+# Environment
+.env
