@@ -33,18 +33,24 @@ public class AuthService {
         if (!isvalidaubmail(email)) { throw new IllegalArgumentException("invalid email"); }
         if (userrepo.existsByEmail(email)) { throw new IllegalArgumentException("email already in use"); }
         String passhash = passhasher.hash(password);
-        String veriftoken = UUID.randomUUID().toString();
-        LocalDateTime tokenexpiry = LocalDateTime.now().plusMinutes(10); // token expires if not verified within 10 min
         
         User user = new User(email, passhash);
-        user.setToken(veriftoken);
-        user.setTokenExpiration(tokenexpiry);
-        user.setVerified(true); // AUTO-VERIFY FOR DEV - change to false for production
+        user.setVerified(false); // AUTO-VERIFY FOR DEV - change to false for production
         userrepo.save(user);
+
+        String veriftoken = UUID.randomUUID().toString();
+        Token token = new Token(user, veriftoken, "EMAIL_VERIFICATION", LocalDateTime.now().plusMinutes(10));
+        tokenrepo.save(token);
+
+        emailconfig.verificationmail(email, token.getValue());
+        System.out.println("verification email sent");
+
+        String jwttoken = jwtutil.generate(user.getId(), user.getEmail());
 
         AuthResponse response = new AuthResponse();
         response.setsuccess(true);
         response.setmessage("signup successful - you can now login");
+        response.settoken(jwttoken);
         return response;
     } 
     
@@ -89,6 +95,9 @@ public class AuthService {
         response.setsuccess(true);
         response.setmessage("successful login");
         response.settoken(jwttoken);
+
+        System.out.println("JWT token: " + jwttoken);
+        System.out.println("Response token: " + response.gettoken());
         return response;
     }
     
