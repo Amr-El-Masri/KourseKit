@@ -49,11 +49,11 @@ public class GlobalExceptionHandle {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGeneric(Exception ex) {
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of(
                         "timestamp", LocalDateTime.now(),
                         "status", 400,
-                        "error", "Bad request"
+                        "error", ex.getMessage()
                 ));
     }
 }

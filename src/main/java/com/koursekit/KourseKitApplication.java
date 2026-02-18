@@ -5,12 +5,14 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
-public class ReviewToolApplication {
+@EnableScheduling
+public class KourseKitApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(ReviewToolApplication.class, args);
+        SpringApplication.run(KourseKitApplication.class, args);
     }
 
     @Bean
