@@ -12,6 +12,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;      
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -25,13 +26,18 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable()) 
             .authorizeHttpRequests(auth -> auth
+                // Auth endpoints — no token needed
                 .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/verify").permitAll()
+                // Static files — no token needed
                 .requestMatchers("/*.html", "/css/**", "/js/**", "/images/**").permitAll()
+                // Everything else — token required
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            );
+            )
+            //
+            .addFilterBefore(jwtauth, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
     

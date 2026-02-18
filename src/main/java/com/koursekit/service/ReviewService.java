@@ -16,6 +16,16 @@ public class ReviewService {
         Section section = sectionRepo.findById(sectionId)
                 .orElseThrow(() -> new RuntimeException("Section not found"));
 
+        //check if this user already posted a review for this section
+        boolean alreadyReviewed = reviewRepo.existsByUserIdAndSectionCourseId(
+                userId,
+                section.getCourse().getId()
+        );
+
+        if (alreadyReviewed) {
+            throw new RuntimeException("You have already submitted a review for this course.");
+        }
+
         Review review = new Review();
         review.setSection(section);
         review.setComment(comment);
