@@ -13,17 +13,6 @@ export default function Register({ onRegister, onGoToLogin }) {
     if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
     if (password !== confirm) { setError("Passwords don't match."); return; }
 
-    // ── FRONTEND-ONLY: fake register ─────────────────────────────────────────
-    // When backend is ready, replace this block with a real fetch, e.g.:
-    //   const res  = await fetch("http://localhost:8080/api/auth/signup", {
-    //     method: "POST",
-    //     headers: { "Content-Type": "application/json" },
-    //     body: JSON.stringify({ email, password })
-    //   });
-    //   const data = await res.json();
-    //   if (data.success) { setSuccess(true); }
-    //   else { setError(data.message || "Registration failed"); }
-    // ─────────────────────────────────────────────────────────────────────────
     setSuccess(true);
   };
 
@@ -38,15 +27,13 @@ export default function Register({ onRegister, onGoToLogin }) {
         .reg-input:focus { border-color: #8FB3E2 !important; outline: none; }
       `}</style>
 
-      {/* Left decorative panel */}
       <div style={s.leftPanel}>
         <div style={s.brandMark}>K</div>
         <div style={s.brandName}>KourseKit</div>
         <div style={s.brandTagline}>Join thousands of AUB<br />students staying on track.</div>
 
-        {/* little feature pills */}
         <div style={s.featureList}>
-          {["📊 Grade Calculator", "✅ Task Manager", "📅 Semester Planner", "💬 Anonymous Reviews"].map(f => (
+          {["Grade Calculator", "Task Manager", "Semester Planner", "Anonymous Reviews"].map(f => (
             <div key={f} style={s.featurePill}>{f}</div>
           ))}
         </div>
@@ -55,12 +42,10 @@ export default function Register({ onRegister, onGoToLogin }) {
         <div style={s.decorCircle2} />
       </div>
 
-      {/* Right register form */}
       <div style={s.rightPanel}>
         <div style={s.card}>
 
           {success ? (
-            /* ── Success state ── */
             <div style={{ textAlign: "center", padding: "20px 0" }}>
               <div style={{ fontSize: 52, marginBottom: 16 }}>🎉</div>
               <h2 style={s.title}>You're registered!</h2>
@@ -72,7 +57,6 @@ export default function Register({ onRegister, onGoToLogin }) {
               </button>
             </div>
           ) : (
-            /* ── Register form ── */
             <>
               <h2 style={s.title}>Create an account</h2>
               <p style={s.subtitle}>Register with your AUB email to get started</p>

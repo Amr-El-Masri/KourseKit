@@ -1,6 +1,4 @@
 import { useState } from "react";
-
-// ── Shared helpers ────────────────────────────────────────────────────────────
 function SectionTitle({ children }) {
   return (
     <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
@@ -27,70 +25,50 @@ function InfoBox({ children, color="#31487A", bg="#F0EEF7", border="#7B5EA7" }) 
   );
 }
 
-// ── Grade Calculator page ────────────────────────────────────────────────────
 export default function GradeCalculator() {
   const [activeTab, setActiveTab] = useState("semester");
 
-  // ── Row helpers (UI only) ──
   const addRow    = setter => setter(p => [...p, { id:Date.now(), name:"", grade:"", credits:"", weight:"", type:"Exam", gpa:"" }]);
   const removeRow = (setter, id) => setter(p => p.length > 1 ? p.filter(r => r.id !== id) : p);
   const updateRow = (setter, id, field, val) => setter(p => p.map(r => r.id === id ? { ...r, [field]:val } : r));
 
-  // ── Semester GPA ──
   const [semCourses, setSemCourses] = useState([{ id:1, name:"", grade:"", credits:"" }]);
   const [semResult,  setSemResult]  = useState(null);
   const calcSemGPA = () => {
-    // TODO: replace with API call → POST /api/calculator/semester-gpa
-    // body: { courses: semCourses }  →  response: { gpa: "3.45" }
-    setSemResult("–––");
-  };
+    setSemResult("–––"); };
 
-  // ── Cumulative GPA ──
   const [cumSems,   setCumSems]   = useState([{ id:1, name:"", gpa:"", credits:"" }]);
   const [cumResult, setCumResult] = useState(null);
   const calcCumGPA = () => {
-    // TODO: replace with API call → POST /api/calculator/cumulative-gpa
-    // body: { semesters: cumSems }  →  response: { gpa: "3.52" }
-    setCumResult("–––");
-  };
+    setCumResult("–––"); };
 
-  // ── Course Grade ──
   const [components,   setComponents]   = useState([{ id:1, type:"Exam", weight:"", grade:"" }]);
   const [courseResult, setCourseResult] = useState(null);
   const calcCourse = () => {
-    // TODO: replace with API call → POST /api/calculator/course-grade
-    // body: { components }  →  response: { grade: "87.50" }
-    setCourseResult("–––");
-  };
+    setCourseResult("–––"); };
 
-  // ── Target Grade ──
   const [graded,       setGraded]       = useState([{ id:1, weight:"", grade:"" }]);
   const [targetGoal,   setTargetGoal]   = useState("");
   const [targetResult, setTargetResult] = useState(null);
   const calcTarget = () => {
-    // TODO: replace with API call → POST /api/calculator/target-grade
-    // body: { graded, targetGoal }  →  response: { needed: "78.0", remaining: 40, msg: "..." }
     setTargetResult({ type:"ok", msg:"Result will appear here once connected to the backend." });
   };
 
-  // ── Grade Simulator ──
+
   const [simPast,         setSimPast]         = useState([{ id:1, type:"Exam", weight:"", grade:"" }]);
   const [simFutureGrade,  setSimFutureGrade]  = useState("");
   const [simFutureWeight, setSimFutureWeight] = useState("");
   const [simResult,       setSimResult]       = useState(null);
   const calcSim = () => {
-    // TODO: replace with API call → POST /api/calculator/simulate
-    // body: { past: simPast, futureGrade: simFutureGrade, futureWeight: simFutureWeight }
-    // response: { projected: "85.2", totalWeight: 100, remaining: 0 }
     setSimResult({ type:"ok", projected:"–––", totalWeight:"–––", remaining:"–––", grade: simFutureGrade });
   };
 
   const TABS = [
-    { id:"semester",   label:"Semester GPA",   icon:"📊" },
-    { id:"cumulative", label:"Cumulative GPA",  icon:"📈" },
-    { id:"course",     label:"Course Grade",    icon:"📝" },
-    { id:"target",     label:"Target Grade",    icon:"🎯" },
-    { id:"simulator",  label:"Grade Simulator", icon:"🔮" },
+    { id:"semester",   label:"Semester GPA"},
+    { id:"cumulative", label:"Cumulative GPA"},
+    { id:"course",     label:"Course Grade"},
+    { id:"target",     label:"Target Grade"},
+    { id:"simulator",  label:"Grade Simulator"},
   ];
 
   return (
@@ -105,7 +83,6 @@ export default function GradeCalculator() {
         .gc-calcbtn:hover { background:#221866 !important; }
       `}</style>
 
-      {/* Header */}
       <div style={{ marginBottom:28 }}>
         <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"#31487A", marginBottom:4 }}>
           Grade Calculator
@@ -115,7 +92,6 @@ export default function GradeCalculator() {
         </div>
       </div>
 
-      {/* Tab bar */}
       <div style={gc.tabBar}>
         {TABS.map(t => (
           <button key={t.id} className="gc-tab-hover" onClick={() => setActiveTab(t.id)} style={{
@@ -129,7 +105,7 @@ export default function GradeCalculator() {
         ))}
       </div>
 
-      {/* ── SEMESTER GPA ── */}
+      {/* ── current semester GPA ── */}
       {activeTab==="semester" && (
         <div style={gc.card}>
           <SectionTitle>Current Semester GPA</SectionTitle>
@@ -164,7 +140,7 @@ export default function GradeCalculator() {
         </div>
       )}
 
-      {/* ── CUMULATIVE GPA ── */}
+      {/* ── cumulativbe GPA ── */}
       {activeTab==="cumulative" && (
         <div style={gc.card}>
           <SectionTitle>Cumulative GPA</SectionTitle>
@@ -199,7 +175,7 @@ export default function GradeCalculator() {
         </div>
       )}
 
-      {/* ── COURSE GRADE ── */}
+      {/* ── current course grade ── */}
       {activeTab==="course" && (
         <div style={gc.card}>
           <SectionTitle>Course Grade (So Far)</SectionTitle>
@@ -236,7 +212,7 @@ export default function GradeCalculator() {
         </div>
       )}
 
-      {/* ── TARGET GRADE ── */}
+      {/* ── target grade ── */}
       {activeTab==="target" && (
         <div style={gc.card}>
           <SectionTitle>Target Course Grade</SectionTitle>
@@ -276,7 +252,7 @@ export default function GradeCalculator() {
         </div>
       )}
 
-      {/* ── GRADE SIMULATOR ── */}
+      {/* ── grade simulator aka what if scenarios ── */}
       {activeTab==="simulator" && (
         <div style={gc.card}>
           <SectionTitle>Grade Simulator</SectionTitle>
@@ -284,10 +260,10 @@ export default function GradeCalculator() {
             Enter your grades so far, then simulate a future component to see how it impacts your final grade.
           </p>
 
-          {/* Past components */}
+          {/* past components */}
           <div style={{ marginBottom:22 }}>
             <div style={{ fontSize:12, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:10 }}>
-              📋 Grades So Far
+              Grades So Far
             </div>
             <div style={gc.headerRow}>
               <span style={gc.colHead}>Type</span>
@@ -308,10 +284,10 @@ export default function GradeCalculator() {
             <button className="gc-addbtn" onClick={() => addRow(setSimPast)} style={gc.addRowBtn}>+ Add Component</button>
           </div>
 
-          {/* Future component */}
+          {/* future components */}
           <div style={{ background:"#F7F5FB", border:"1px solid #D4D4DC", borderRadius:14, padding:"18px 20px", marginBottom:20 }}>
             <div style={{ fontSize:12, fontWeight:700, color:"#7B5EA7", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:14 }}>
-              🔮 Future Component — "What if I get…"
+              Future Component — "What if I get…"
             </div>
             <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"center" }}>
               <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
@@ -343,7 +319,7 @@ export default function GradeCalculator() {
             </div>
           </div>
 
-          {/* Simulation result */}
+          {/* simulation result */}
           {simResult && simResult.type === "ok" && (
             <div style={{ background:"#eef2fb", borderRadius:14, border:"1px solid #D4D4DC", padding:"20px 24px" }}>
               <div style={{ fontSize:12, fontWeight:700, color:"#8FB3E2", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:14 }}>
@@ -398,7 +374,7 @@ export default function GradeCalculator() {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+
 const gc = {
   tabBar:    { display:"flex", gap:4, background:"#ffffff", padding:5, borderRadius:14, border:"1px solid #D4D4DC", marginBottom:24, flexWrap:"wrap" },
   tab:       { padding:"9px 16px", border:"none", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s, color .15s", display:"flex", alignItems:"center" },
