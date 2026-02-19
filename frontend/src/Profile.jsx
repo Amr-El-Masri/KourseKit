@@ -1,6 +1,4 @@
 import { useState } from "react";
-
-// ── Constants ─────────────────────────────────────────────────────────────────
 const FACULTIES = [
   "Arts & Sciences",
   "Engineering & Architecture",
@@ -33,7 +31,6 @@ const STUDENT_STATUSES = [
   { id:"E5",        label:"E5",        desc:"Eng. year 5" },
 ];
 
-// ── Default profile ───────────────────────────────────────────────────────────
 const DEFAULT_PROFILE = {
   firstName:   "",
   lastName:    "",
@@ -55,12 +52,8 @@ function loadProfile(email) {
 }
 
 function saveProfile(profile) {
-  // TODO: replace with API call → PUT /api/profile
-  // body: { ...profile }  →  response: { success: true, profile: { ...profile } }
-  localStorage.setItem("kk_profile", JSON.stringify(profile));
-}
+  localStorage.setItem("kk_profile", JSON.stringify(profile));}
 
-// ── GPA color ─────────────────────────────────────────────────────────────────
 const gpaColor = g => {
   const v = parseFloat(g);
   if (isNaN(v)) return "#B8A9C9";
@@ -71,8 +64,6 @@ const gpaColor = g => {
 };
 
 const statusObj = id => STUDENT_STATUSES.find(s=>s.id===id) || STUDENT_STATUSES[0];
-
-// ── Profile page ──────────────────────────────────────────────────────────────
 export default function Profile({ onProfileSave }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const [profile, setProfile] = useState(() => loadProfile(email));
@@ -82,7 +73,6 @@ export default function Profile({ onProfileSave }) {
 
   const set = (k, v) => setDraft(p => {
     const updated = { ...p, [k]:v };
-    // when faculty changes, reset major to first option in that faculty
     if (k === "faculty") updated.major = MAJORS_BY_FACULTY[v]?.[0] || "";
     return updated;
   });
@@ -93,7 +83,7 @@ export default function Profile({ onProfileSave }) {
     setEditing(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
-    if (onProfileSave) onProfileSave(draft); // bubble up to Dashboard
+    if (onProfileSave) onProfileSave(draft); 
   };
 
   const handleCancel = () => { setDraft(profile); setEditing(false); };
@@ -117,16 +107,13 @@ export default function Profile({ onProfileSave }) {
         .pf-status:hover { border-color:#7B5EA7 !important; }
       `}</style>
 
-      {/* Header */}
       <div style={{ marginBottom:28 }}>
         <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"#31487A", marginBottom:4 }}>My Profile</div>
         <div style={{ fontSize:13, color:"#A59AC9" }}>Your info shows up on the dashboard greeting and affects how KourseKit personalizes your experience.</div>
       </div>
 
-      {/* Profile card */}
       <div style={{ background:"#ffffff", borderRadius:20, border:"1px solid #D4D4DC", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", overflow:"hidden", marginBottom:20 }}>
 
-        {/* Avatar + info */}
         <div style={{ padding:"24px 28px 24px" }}>
           <div style={{ display:"flex", alignItems:"flex-end", gap:16, marginBottom:20 }}>
             <div style={{
@@ -147,7 +134,7 @@ export default function Profile({ onProfileSave }) {
                 </div>
               )}
               {!editing
-                ? <button onClick={() => { setDraft(profile); setEditing(true); }} style={pf.editBtn}>✏️ Edit Profile</button>
+                ? <button onClick={() => { setDraft(profile); setEditing(true); }} style={pf.editBtn}>Edit Profile</button>
                 : <>
                     <button onClick={handleSave}   style={pf.saveBtn}>Save</button>
                     <button onClick={handleCancel} style={pf.cancelBtn}>Cancel</button>
@@ -156,7 +143,6 @@ export default function Profile({ onProfileSave }) {
             </div>
           </div>
 
-          {/* Stats row — always visible */}
           <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom: editing ? 24 : 0 }}>
             <StatChip label="Status"       value={`${st.label} · ${st.desc}`} color="#7B5EA7" bg="#F0EEF7" />
             <StatChip label="Major"        value={profile.major || "—"}        color="#31487A" bg="#eef2fb" />
@@ -164,11 +150,9 @@ export default function Profile({ onProfileSave }) {
             {profile.totalCredits && <StatChip label="Credits" value={`${profile.totalCredits} cr`} color="#5A3B7B" bg="#F0EEF7" />}
           </div>
 
-          {/* Edit form */}
           {editing && (
             <div style={{ borderTop:"1px solid #F4F4F8", paddingTop:24 }}>
 
-              {/* Name row */}
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                 <div style={{ flex:1, minWidth:160 }}>
                   <label style={pf.label}>First Name</label>
@@ -180,7 +164,6 @@ export default function Profile({ onProfileSave }) {
                 </div>
               </div>
 
-              {/* Faculty + Major */}
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                 <div style={{ flex:1, minWidth:200 }}>
                   <label style={pf.label}>Faculty</label>
@@ -196,7 +179,6 @@ export default function Profile({ onProfileSave }) {
                 </div>
               </div>
 
-              {/* Status */}
               <label style={pf.label}>Academic Status</label>
               <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:16 }}>
                 {STUDENT_STATUSES.map(s => (
@@ -214,7 +196,6 @@ export default function Profile({ onProfileSave }) {
                 ))}
               </div>
 
-              {/* GPA + credits */}
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                 <div style={{ flex:1, minWidth:140 }}>
                   <label style={pf.label}>Cumulative GPA <span style={{ color:"#B8A9C9", fontWeight:400 }}>(optional)</span></label>
@@ -230,7 +211,6 @@ export default function Profile({ onProfileSave }) {
                 </div>
               </div>
 
-              {/* Bio */}
               <label style={pf.label}>Bio <span style={{ color:"#B8A9C9", fontWeight:400 }}>(optional)</span></label>
               <textarea className="pf-input" value={draft.bio} onChange={e=>set("bio",e.target.value)}
                 placeholder="A short description about yourself..."
@@ -239,12 +219,11 @@ export default function Profile({ onProfileSave }) {
               />
 
               <div style={{ fontSize:11, color:"#B8A9C9", marginTop:-8, marginBottom:16 }}>
-                ⚠️ GPA and credits here are self-reported — once backend is connected, this will sync with your actual academic record.
+                GPA and credits here are self-reported — once backend is connected, this will sync with your actual academic record.
               </div>
             </div>
           )}
 
-          {/* Bio display (not editing) */}
           {!editing && profile.bio && (
             <div style={{ marginTop:16, fontSize:13, color:"#5A3B7B", lineHeight:1.7, borderTop:"1px solid #F4F4F8", paddingTop:16 }}>
               {profile.bio}
@@ -253,7 +232,6 @@ export default function Profile({ onProfileSave }) {
         </div>
       </div>
 
-      {/* Account info card */}
       <div style={{ background:"#ffffff", borderRadius:16, border:"1px solid #D4D4DC", padding:"20px 24px" }}>
         <div style={{ fontSize:12, fontWeight:700, color:"#A59AC9", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>Account</div>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:13 }}>
@@ -262,7 +240,6 @@ export default function Profile({ onProfileSave }) {
         </div>
         <div style={{ height:1, background:"#F4F4F8", margin:"12px 0" }} />
         <div style={{ fontSize:12, color:"#B8A9C9" }}>
-          {/* TODO: add Change Password button → POST /api/auth/change-password */}
           Password changes and account management will be available once the backend is connected.
         </div>
       </div>
@@ -279,7 +256,6 @@ function StatChip({ label, value, color, bg }) {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
 const pf = {
   label:     { display:"block", fontSize:12, fontWeight:600, color:"#2a2050", marginBottom:6 },
   input:     { width:"100%", padding:"10px 14px", border:"1px solid #D4D4DC", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"#2a2050", background:"#F7F5FB", marginBottom:14, display:"block", transition:"border-color .15s", outline:"none" },

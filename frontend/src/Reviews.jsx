@@ -1,6 +1,4 @@
 import { useState } from "react";
-
-// ── Anon names (same pool as dashboard) ──────────────────────────────────────
 const ANON_NAMES = [
   "Apple","Blueberry","Cherry","Elderberry","Fig","Grape","Honeydew","Kiwi",
   "Lemon","Mango","Nectarine","Papaya","Pineapple","Raspberry","Strawberry",
@@ -19,7 +17,6 @@ const timeAgo = ts => {
   return `${Math.floor(s/86400)}d ago`;
 };
 
-// ── Seed data ─────────────────────────────────────────────────────────────────
 const SEED_PROF_REVIEWS = [
   { id:1, target:"Dr. Mohammad Sakr", course:"CMPS 271", stars:4, author:randomAnon(), text:"Honestly lectures were genuinely interesting, but the workload was intense and exams were hard. 3al 2aleele you learn a lot — if he's giving it I recommend, cuz he teaches better than the others that give this course.", upvotes:14, downvotes:2, ts:Date.now()-3*3600000, tags:["Helpful","Heavy Workload"] },
   { id:2, target:"Dr. Mohammad Sakr", course:"CMPS 271", stars:5, author:randomAnon(), text:"He really knows his stuff and makes complex topics click. Office hours are super useful. Exams are fair if you study the slides properly.", upvotes:9, downvotes:0, ts:Date.now()-8*3600000, tags:["Clear Explanations","Exams Are Fair"] },
@@ -42,7 +39,6 @@ const PROF_TAGS  = ["Helpful","Heavy Workload","Clear Explanations","Exams Are F
 const COURSE_TAGS= ["Interesting","Heavy Workload","Annual Only","Important","Builds Up","Practical","Group Work","Challenging","Fair","Disorganized","Easy A","Lab Intensive","Writing Heavy"];
 const DEPTS      = ["CMPS","MATH","ENGL","PSYC","PHIL","ECON","BIOL","CHEM","MECH","ELEC","MGMT","MCOM"];
 
-// ── Sub-components ────────────────────────────────────────────────────────────
 function Stars({ count, interactive, onSet }) {
   return (
     <span style={{ display:"inline-flex", gap:2 }}>
@@ -75,16 +71,13 @@ function ReviewCard({ review, onVote }) {
   const score = review.upvotes - review.downvotes;
   return (
     <div style={rv.card}>
-      {/* vote column */}
       <div style={rv.voteCol}>
         <button onClick={() => onVote(review.id,"up")} style={{ ...rv.voteBtn, color: review.myVote==="up" ? "#31487A" : "#B8A9C9" }}>▲</button>
         <span style={{ fontSize:13, fontWeight:700, color: score>0?"#31487A":score<0?"#c0392b":"#B8A9C9", lineHeight:1 }}>{score}</span>
         <button onClick={() => onVote(review.id,"down")} style={{ ...rv.voteBtn, color: review.myVote==="down" ? "#c0392b" : "#B8A9C9" }}>▼</button>
       </div>
 
-      {/* content */}
       <div style={{ flex:1, minWidth:0 }}>
-        {/* header */}
         <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap", marginBottom:8 }}>
           <div style={rv.avatar}>{review.author[0]}</div>
           <span style={{ fontSize:13, fontWeight:600, color:"#31487A" }}>Anonymous {review.author}</span>
@@ -96,14 +89,9 @@ function ReviewCard({ review, onVote }) {
           </span>
           <div style={{ marginLeft:"auto" }}><Stars count={review.stars} /></div>
         </div>
-
-        {/* target label */}
         <div style={{ fontSize:14, fontWeight:700, color:"#2a2050", marginBottom:6 }}>{review.target}</div>
-
-        {/* body */}
         <p style={{ fontSize:14, color:"#4a3a6a", lineHeight:1.65, margin:0, marginBottom:10 }}>{review.text}</p>
 
-        {/* tags */}
         {review.tags?.length > 0 && (
           <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
             {review.tags.map(t => <TagPill key={t} tag={t} />)}
@@ -114,7 +102,6 @@ function ReviewCard({ review, onVote }) {
   );
 }
 
-// ── Compose form ──────────────────────────────────────────────────────────────
 function ComposeForm({ mode, onSubmit, onCancel }) {
   const [target,   setTarget]   = useState("");
   const [course,   setCourse]   = useState("");
@@ -190,12 +177,11 @@ function ComposeForm({ mode, onSubmit, onCancel }) {
   );
 }
 
-// ── Main Reviews page ─────────────────────────────────────────────────────────
 export default function Reviews() {
-  const [mode,        setMode]        = useState("professor"); // "professor" | "course"
+  const [mode,        setMode]        = useState("professor"); 
   const [profReviews, setProfReviews] = useState(SEED_PROF_REVIEWS.map(r => ({ ...r, myVote:null })));
   const [crsReviews,  setCrsReviews]  = useState(SEED_COURSE_REVIEWS.map(r => ({ ...r, myVote:null })));
-  const [sort,        setSort]        = useState("top");    // "top" | "new"
+  const [sort,        setSort]        = useState("top");    
   const [search,      setSearch]      = useState("");
   const [filterTag,   setFilterTag]   = useState(null);
   const [composing,   setComposing]   = useState(false);
@@ -204,8 +190,6 @@ export default function Reviews() {
   const setReviews= mode === "professor" ? setProfReviews : setCrsReviews;
 
   const vote = (id, dir) => {
-    // TODO: replace with API call → POST /api/reviews/:id/vote  body: { direction: dir }
-    // For now: just toggle the visual highlight so the button feels responsive
     setReviews(prev => prev.map(r => {
       if (r.id !== id) return r;
       const toggled = r.myVote === dir ? null : dir;
@@ -214,9 +198,6 @@ export default function Reviews() {
   };
 
   const addReview = (data) => {
-    // TODO: replace with API call → POST /api/reviews  body: { ...data }
-    // On success: refetch reviews list from backend instead of pushing locally
-    // For now: append a placeholder card so the UI closes and shows feedback
     const newR = {
       id: Date.now(),
       target:    data.target,
@@ -235,7 +216,6 @@ export default function Reviews() {
     setComposing(false);
   };
 
-  // filter + sort
   const uniqueTags = [...new Set(reviews.flatMap(r => r.tags || []))].sort();
   let displayed = reviews
     .filter(r => !search || r.target.toLowerCase().includes(search.toLowerCase()) || r.text.toLowerCase().includes(search.toLowerCase()))
@@ -254,13 +234,11 @@ export default function Reviews() {
         .rv-card:hover { box-shadow:0 4px 20px rgba(49,72,122,0.11) !important; }
       `}</style>
 
-      {/* Header */}
       <div style={{ marginBottom:24 }}>
         <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"#31487A", marginBottom:4 }}>Reviews</div>
         <div style={{ fontSize:13, color:"#A59AC9" }}>Anonymous reviews from AUB students — honest, helpful, no filter.</div>
       </div>
 
-      {/* Mode toggle — big pill tabs */}
       <div style={{ display:"flex", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:14, padding:5, width:"fit-content", gap:4, marginBottom:22 }}>
         {[
           { id:"professor", icon:"🎓", label:"Professor Reviews" },
@@ -280,18 +258,15 @@ export default function Reviews() {
         ))}
       </div>
 
-      {/* Controls bar */}
       <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap", marginBottom:18 }}>
-        {/* search */}
         <div style={{ display:"flex", alignItems:"center", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px", flex:"1 1 200px", maxWidth:300 }}>
           <span style={{ color:"#B8A9C9", marginRight:8, fontSize:14 }}>🔍</span>
           <input className="rv-input" value={search} onChange={e=>setSearch(e.target.value)} placeholder={`Search ${mode==="professor"?"professors":"courses"}…`}
             style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"#333", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
         </div>
 
-        {/* sort */}
         <div style={{ display:"flex", gap:4, background:"#F4F4F8", padding:4, borderRadius:10 }}>
-          {[{id:"top",label:"🔥 Top"},{id:"new",label:"✨ New"}].map(s => (
+          {[{id:"top",label:"Top"},{id:"new",label:"New"}].map(s => (
             <button key={s.id} onClick={()=>setSort(s.id)} style={{
               padding:"6px 14px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
               fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
@@ -301,15 +276,13 @@ export default function Reviews() {
           ))}
         </div>
 
-        {/* write review button */}
         <button onClick={() => setComposing(true)} style={{
           marginLeft:"auto", padding:"9px 20px", background:"#7B5EA7", color:"white",
           border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer",
           fontFamily:"'DM Sans',sans-serif", display:"flex", alignItems:"center", gap:6,
-        }}>✏️ Write a Review</button>
+        }}> Write a Review</button>
       </div>
 
-      {/* Tag filter chips */}
       {uniqueTags.length > 0 && (
         <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:18 }}>
           {uniqueTags.map(t => (
@@ -321,12 +294,10 @@ export default function Reviews() {
         </div>
       )}
 
-      {/* Compose form */}
       {composing && (
         <ComposeForm mode={mode} onSubmit={addReview} onCancel={() => setComposing(false)} />
       )}
 
-      {/* Review list */}
       {displayed.length === 0 ? (
         <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
           <div style={{ fontSize:40, marginBottom:12 }}>🔍</div>
@@ -344,7 +315,6 @@ export default function Reviews() {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
 const rv = {
   card: {
     display:"flex", gap:14, background:"#ffffff", borderRadius:16, padding:"18px 20px",

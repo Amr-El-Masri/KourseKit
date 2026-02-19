@@ -10,13 +10,6 @@ export default function Login({ onLogin, onGoToRegister }) {
     if (!email.endsWith("@mail.aub.edu")) { setError("Please use your AUB email (@mail.aub.edu)."); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
 
-    // ── FRONTEND-ONLY: fake auth ──────────────────────────────────────────────
-    // When backend is ready, replace this block with a real fetch to
-    // your teammate's endpoint, e.g.:
-    //   const res  = await fetch("http://localhost:8080/api/auth/login", { ... })
-    //   const data = await res.json()
-    //   if (data.success) { localStorage.setItem("kk_token", data.token); onLogin(); }
-    // ─────────────────────────────────────────────────────────────────────────
     localStorage.setItem("kk_token", "demo-token");
     localStorage.setItem("kk_email", email);
     onLogin();
@@ -33,7 +26,6 @@ export default function Login({ onLogin, onGoToRegister }) {
         .login-input:focus { border-color: #8FB3E2 !important; outline: none; }
       `}</style>
 
-      {/* Left decorative panel */}
       <div style={s.leftPanel}>
         <div style={s.brandMark}>K</div>
         <div style={s.brandName}>KourseKit</div>
@@ -42,7 +34,6 @@ export default function Login({ onLogin, onGoToRegister }) {
         <div style={s.decorCircle2} />
       </div>
 
-      {/* Right login form */}
       <div style={s.rightPanel}>
         <div style={s.card}>
           <h2 style={s.title}>Welcome back</h2>
