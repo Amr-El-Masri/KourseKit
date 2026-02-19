@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-// ── Constants ─────────────────────────────────────────────────────────────────
 const PRIORITIES = [
   { id:"high",   label:"High",   color:"#c0392b", bg:"#fef0f0", dot:"#e74c3c" },
   { id:"medium", label:"Medium", color:"#b7680a", bg:"#fef9ee", dot:"#f39c12" },
@@ -24,10 +23,8 @@ const daysLeft  = iso => {
   return diff;
 };
 
-// ── Empty form state ──────────────────────────────────────────────────────────
 const EMPTY = { course:"CMPS 271", type:"Assignment", title:"", due:"", priority:"medium", notes:"" };
 
-// ── Sub-components ────────────────────────────────────────────────────────────
 function PriorityDot({ id }) {
   const p = priority(id);
   return <span style={{ width:8, height:8, borderRadius:"50%", background:p.dot, display:"inline-block", flexShrink:0 }} />;
@@ -59,7 +56,6 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
       opacity: task.done ? 0.6 : 1,
     }} className="task-row">
       <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-        {/* checkbox */}
         <button onClick={() => onToggle(task.id)} style={{
           width:20, height:20, borderRadius:6, border:`2px solid ${task.done?"#2d7a4a":"#D4D4DC"}`,
           background: task.done?"#2d7a4a":"white", cursor:"pointer", flexShrink:0,
@@ -68,7 +64,6 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
           {task.done && <span style={{ color:"white", fontSize:11, lineHeight:1 }}>✓</span>}
         </button>
 
-        {/* title + meta */}
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
             <span style={{ fontSize:14, fontWeight:600, color: task.done?"#B8A9C9":"#2a2050", textDecoration: task.done?"line-through":"none" }}>
@@ -83,7 +78,6 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
           )}
         </div>
 
-        {/* actions */}
         <div style={{ display:"flex", gap:6, flexShrink:0 }}>
           <button onClick={() => setExpanded(e=>!e)} style={tm.iconBtn} title="Notes">
             {task.notes ? "📝" : "💬"}
@@ -93,7 +87,6 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
         </div>
       </div>
 
-      {/* expanded notes */}
       {expanded && (
         <div style={{ marginTop:10, paddingTop:10, borderTop:"1px solid #F4F4F8", fontSize:13, color:"#5A3B7B", lineHeight:1.6 }}>
           {task.notes || <span style={{ color:"#B8A9C9" }}>No notes added.</span>}
@@ -110,8 +103,6 @@ function TaskForm({ initial, onSave, onCancel }) {
 
   const save = () => {
     if (!form.title.trim()) { setErr("Please enter a task title."); return; }
-    // TODO: replace with API call → POST /api/tasks (new) or PUT /api/tasks/:id (edit)
-    // body: { ...form }  →  response: { task: { id, ...form } }
     onSave({ ...form, id: initial?.id || Date.now(), done: initial?.done || false });
   };
 
@@ -123,13 +114,11 @@ function TaskForm({ initial, onSave, onCancel }) {
 
       {err && <div style={{ background:"#fef0f0", border:"1px solid #f5c6c6", borderRadius:10, padding:"9px 14px", fontSize:13, color:"#c0392b", marginBottom:14 }}>{err}</div>}
 
-      {/* Title */}
       <label style={tm.label}>Task Title</label>
       <input value={form.title} onChange={e=>set("title",e.target.value)}
         placeholder="e.g. CMPS 271 — Lab 3 Report"
         style={tm.input} className="tm-input" />
 
-      {/* Row: course + type */}
       <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
         <div style={{ flex:1, minWidth:140 }}>
           <label style={tm.label}>Course</label>
@@ -145,7 +134,6 @@ function TaskForm({ initial, onSave, onCancel }) {
         </div>
       </div>
 
-      {/* Row: due + priority */}
       <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
         <div style={{ flex:2, minWidth:180 }}>
           <label style={tm.label}>Due Date & Time</label>
@@ -159,7 +147,6 @@ function TaskForm({ initial, onSave, onCancel }) {
         </div>
       </div>
 
-      {/* Notes */}
       <label style={tm.label}>Notes <span style={{ color:"#B8A9C9", fontWeight:400 }}>(optional)</span></label>
       <textarea value={form.notes} onChange={e=>set("notes",e.target.value)}
         placeholder="Any extra details..."
@@ -177,7 +164,6 @@ function TaskForm({ initial, onSave, onCancel }) {
   );
 }
 
-// ── Main TaskManager page ─────────────────────────────────────────────────────
 export default function TaskManager() {
   const [tasks,     setTasks]     = useState([
     { id:1, course:"CMPS 271", type:"Lab",        title:"Lab 3 Report",          due:"2026-02-25T23:59", priority:"high",   notes:"Submit to Moodle. Include screenshots of output.", done:false },
@@ -189,27 +175,22 @@ export default function TaskManager() {
   ]);
   const [filter,    setFilter]    = useState("All");
   const [search,    setSearch]    = useState("");
-  const [sortBy,    setSortBy]    = useState("due");   // "due" | "priority" | "course"
+  const [sortBy,    setSortBy]    = useState("due"); 
   const [composing, setComposing] = useState(false);
   const [editing,   setEditing]   = useState(null);
 
-  // ── CRUD stubs ──
   const toggleDone = id => {
-    // TODO: PUT /api/tasks/:id/toggle
     setTasks(p => p.map(t => t.id===id ? {...t, done:!t.done} : t));
   };
   const deleteTask = id => {
-    // TODO: DELETE /api/tasks/:id
     setTasks(p => p.filter(t => t.id!==id));
   };
   const saveTask = task => {
-    // TODO: POST /api/tasks  or  PUT /api/tasks/:id
     setTasks(p => p.some(t=>t.id===task.id) ? p.map(t=>t.id===task.id?task:t) : [task,...p]);
     setComposing(false);
     setEditing(null);
   };
 
-  // ── filter + sort ──
   const PRIO_ORDER = { high:0, medium:1, low:2 };
   let displayed = tasks
     .filter(t => {
@@ -223,7 +204,7 @@ export default function TaskManager() {
   displayed = [...displayed].sort((a,b) => {
     if (sortBy==="priority") return PRIO_ORDER[a.priority]-PRIO_ORDER[b.priority];
     if (sortBy==="course")   return a.course.localeCompare(b.course);
-    // due: undated last, overdue first
+
     if (!a.due && !b.due) return 0;
     if (!a.due) return 1;
     if (!b.due) return -1;
@@ -247,7 +228,6 @@ export default function TaskManager() {
         .tm-icon-btn:hover { background:#F0EEF7 !important; }
       `}</style>
 
-      {/* Header */}
       <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:24, flexWrap:"wrap", gap:12 }}>
         <div>
           <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"#31487A", marginBottom:4 }}>Task Manager</div>
@@ -260,7 +240,6 @@ export default function TaskManager() {
         </button>
       </div>
 
-      {/* Compose / Edit form */}
       {(composing || editing) && (
         <TaskForm
           initial={editing}
@@ -269,7 +248,6 @@ export default function TaskManager() {
         />
       )}
 
-      {/* Stat chips */}
       <div style={{ display:"flex", gap:10, marginBottom:20, flexWrap:"wrap" }}>
         {[
           { label:"All",     val:counts.all,     filter:"All"     },
@@ -289,7 +267,6 @@ export default function TaskManager() {
         ))}
       </div>
 
-      {/* Controls */}
       <div style={{ display:"flex", gap:10, marginBottom:18, flexWrap:"wrap", alignItems:"center" }}>
         <div style={{ display:"flex", alignItems:"center", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px", flex:"1 1 200px", maxWidth:300 }}>
           <span style={{ color:"#B8A9C9", marginRight:8 }}>🔍</span>
@@ -311,7 +288,7 @@ export default function TaskManager() {
         </div>
       </div>
 
-      {/* Task list */}
+      
       {displayed.length === 0 ? (
         <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
           <div style={{ fontSize:40, marginBottom:12 }}>✅</div>
@@ -335,7 +312,6 @@ export default function TaskManager() {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
 const tm = {
   formCard:  { background:"#ffffff", borderRadius:18, padding:"24px 26px", border:"1px solid #D4D4DC", boxShadow:"0 4px 20px rgba(49,72,122,0.09)", marginBottom:20 },
   label:     { display:"block", fontSize:12, fontWeight:600, color:"#2a2050", marginBottom:6 },

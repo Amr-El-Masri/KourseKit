@@ -4,7 +4,6 @@ import Reviews from "./Reviews";
 import TaskManager from "./TaskManager";
 import Profile from "./Profile";
 
-// ── Anon names ───────────────────────────────────────────────────────────────
 const ANON_NAMES = [
   "Apple","Blueberry","Cherry","Elderberry","Fig","Grape","Honeydew","Kiwi",
   "Lemon","Mango","Nectarine","Papaya","Pineapple","Raspberry","Strawberry",
@@ -16,7 +15,6 @@ const ANON_NAMES = [
 ];
 const randomAnon = () => ANON_NAMES[Math.floor(Math.random() * ANON_NAMES.length)];
 
-// ── Semester data ─────────────────────────────────────────────────────────────
 const SEMESTERS = {
   "Fall 24-25":   { gpa: 3.67, progress: 100, week: "15 of 15", courses: [
     { id:1, name:"CMPS 271", prof:"Dr. Mohammad Sakr",        time:"Mon & Wed · 12:30–13:45" },
@@ -59,7 +57,6 @@ const EVENT_TYPES  = [
   { label:"Other",   color:"#555",    bg:"#f5f5f5" },
 ];
 
-// ── Widget registry — controls the toggle panel ──────────────────────────────
 const ALL_WIDGETS = [
   { id:"courses",   label:"My Courses",        span:2 },
   { id:"gpa",       label:"GPA",               span:1 },
@@ -78,7 +75,6 @@ const Stars = ({ count }) => (
   </span>
 );
 
-// ── SectionTitle — used by every dashboard widget ─────────────────────────────
 function SectionTitle({ children }) {
   return (
     <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
@@ -90,13 +86,12 @@ function SectionTitle({ children }) {
 
 const NAV_ITEMS = [
   { id:"dashboard", label:"Dashboard",        icon:"⊞" },
-  { id:"grades",    label:"Grade Calculator", icon:"📊" },
-  { id:"tasks",     label:"Task Manager",     icon:"✅" },
-  { id:"reviews",   label:"Reviews",          icon:"💬" },
-  { id:"profile",   label:"My Profile",       icon:"👤" },
+  { id:"grades",    label:"Grade Calculator", icon:"" },
+  { id:"tasks",     label:"Task Manager",     icon:"" },
+  { id:"reviews",   label:"Reviews",          icon:"" },
+  { id:"profile",   label: "Student Profile",       icon:"" },
 ];
 
-// ── Custom semester dropdown ──────────────────────────────────────────────────
 function SemesterSelect({ value, onChange }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -110,7 +105,7 @@ function SemesterSelect({ value, onChange }) {
   return (
     <div ref={ref} style={{ position:"relative" }}>
       <button onClick={() => setOpen(o => !o)} style={sd.trigger}>
-        <span style={{ fontSize:14 }}>📅</span>
+        <span style={{ fontSize:14 }}></span>
         <span style={{ fontWeight:600, color:"#31487A", fontSize:13 }}>{value}</span>
         <span style={{ color:"#A59AC9", fontSize:11, transition:"transform .2s", display:"inline-block", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
       </button>
@@ -129,7 +124,6 @@ function SemesterSelect({ value, onChange }) {
   );
 }
 
-// ── Widget toggle panel ───────────────────────────────────────────────────────
 function WidgetTogglePanel({ visible, onToggle }) {
   return (
     <div style={sd.togglePanel}>
@@ -147,7 +141,6 @@ function WidgetTogglePanel({ visible, onToggle }) {
   );
 }
 
-// ── Pomodoro Timer ────────────────────────────────────────────────────────────
 function PomodoroTimer() {
   const MODES = [
     { label:"Focus",      duration:25*60, color:"#31487A", bg:"#eef2fb" },
@@ -196,7 +189,6 @@ function PomodoroTimer() {
 
   return (
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14,paddingTop:6}}>
-      {/* mode tabs */}
       <div style={{display:"flex",gap:4,background:"#F4F4F8",padding:4,borderRadius:12,width:"100%"}}>
         {MODES.map((m,i) => (
           <button key={m.label} onClick={() => switchMode(i)} style={{
@@ -208,7 +200,6 @@ function PomodoroTimer() {
         ))}
       </div>
 
-      {/* ring + time */}
       <div style={{position:"relative",width:120,height:120}}>
         <svg width="120" height="120" style={{transform:"rotate(-90deg)"}}>
           <circle cx="60" cy="60" r={r} fill="none" stroke="#D9E1F1" strokeWidth="8"/>
@@ -222,7 +213,6 @@ function PomodoroTimer() {
         </div>
       </div>
 
-      {/* controls */}
       <div style={{display:"flex",gap:10}}>
         <button onClick={reset} style={{padding:"7px 14px",background:"#F4F4F8",border:"1px solid #D4D4DC",borderRadius:9,fontSize:12,cursor:"pointer",color:"#A59AC9",fontFamily:"'DM Sans',sans-serif"}}>↺ Reset</button>
         <button onClick={() => setRunning(r => !r)} style={{
@@ -232,9 +222,8 @@ function PomodoroTimer() {
         }}>{running ? "⏸ Pause" : "▶ Start"}</button>
       </div>
 
-      {/* session count */}
       <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"#A59AC9"}}>
-        <span>🍅</span>
+        <span></span>
         <span style={{color:"#31487A",fontWeight:600}}>{sessions}</span>
         <span>session{sessions!==1?"s":""} completed</span>
       </div>
@@ -242,11 +231,10 @@ function PomodoroTimer() {
   );
 }
 
-// ════════════════════════════════════════════════════════════════════════════
+
 export default function Dashboard({ onLogout }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
 
-  // ── Profile state — loads from localStorage, updated by Profile page ──
   const [profile, setProfile] = useState(() => {
     try {
       const saved = localStorage.getItem("kk_profile");
@@ -263,29 +251,24 @@ export default function Dashboard({ onLogout }) {
   const [showToggle,    setShowToggle]    = useState(false);
   const toggleRef = useRef(null);
 
-  // widget visibility
   const [visible, setVisible] = useState(
     Object.fromEntries(ALL_WIDGETS.map(w => [w.id, true]))
   );
   const toggleWidget = id => setVisible(v => ({ ...v, [id]: !v[id] }));
 
-  // close toggle panel on outside click
   useEffect(() => {
     const h = e => { if (toggleRef.current && !toggleRef.current.contains(e.target)) setShowToggle(false); };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  // todos
   const [todos,     setTodos]     = useState([]);
   const [todoInput, setTodoInput] = useState("");
 
-  // calendar
   const today = new Date();
   const [calYear,  setCalYear]  = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
 
-  // schedule
   const [scheduleEvents, setScheduleEvents] = useState([
     { id:1, day:"Mon", label:"CMPS 271", time:"12:30–13:45", type:"Class" },
     { id:2, day:"Wed", label:"CMPS 271", time:"12:30–13:45", type:"Class" },
@@ -339,7 +322,6 @@ export default function Dashboard({ onLogout }) {
         .toggle-opt:hover { background:#F0EEF7; }
       `}</style>
 
-      {/* ══ SIDEBAR ══ */}
       <aside style={{ ...s.sidebar, width:sidebarOpen ? 224 : 66 }}>
         <div style={s.sidebarTop}>
           <div style={s.logoMark}>K</div>
@@ -376,15 +358,13 @@ export default function Dashboard({ onLogout }) {
         </div>
       </aside>
 
-      {/* ══ MAIN ══ */}
       <main style={s.main}>
         <header style={s.topbar}>
           <div>
-            <div style={s.greeting}>Hello, <span style={{fontFamily:"'Fraunces',serif",fontStyle:"italic",color:"#31487A"}}>{displayName}!</span> 👋</div>
+            <div style={s.greeting}>Hello, <span style={{fontFamily:"'Fraunces',serif",fontStyle:"italic",color:"#31487A"}}>{displayName}!</span></div>
             <div style={{fontSize:13,color:"#5A3B7B",marginTop:2}}>{today.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</div>
           </div>
 
-          {/* Semester switcher — ONLY on dashboard */}
           {activePage === "dashboard" && (
             <SemesterSelect value={semester} onChange={setSemester} />
           )}
@@ -394,20 +374,19 @@ export default function Dashboard({ onLogout }) {
             <input placeholder="Search…" style={s.searchInput} />
           </div>
 
-          {/* Widget toggle — ONLY on dashboard */}
+          {/* widget toggle */}
           {activePage === "dashboard" && (
             <div ref={toggleRef} style={{position:"relative"}}>
               <button onClick={() => setShowToggle(o=>!o)} style={sd.toggleBtn} title="Customize widgets">
-                ⚙️ <span style={{fontSize:12,fontWeight:600,color:"#31487A",marginLeft:4}}>Widgets</span>
+                 <span style={{fontSize:12,fontWeight:600,color:"#31487A",marginLeft:4}}>Widgets</span>
               </button>
               {showToggle && <WidgetTogglePanel visible={visible} onToggle={toggleWidget} />}
             </div>
           )}
 
-          <div style={s.bell}>🔔</div>
+          <div style={s.bell}></div>
         </header>
 
-        {/* ══ DASHBOARD PAGE ══ */}
         {activePage === "dashboard" && (
           <div style={s.grid}>
 
@@ -487,7 +466,7 @@ export default function Dashboard({ onLogout }) {
                   {todos.map(t=>(
                     <div key={t.id} className="todo-row" style={s.todoRow}>
                       <span onClick={()=>toggleTodo(t.id)} style={{fontSize:13,flex:1,cursor:"pointer",textDecoration:t.done?"line-through":"none",color:t.done?"#B8A9C9":"#2a2050"}}>
-                        {t.done?"✅":"⬜"} {t.text}
+                        {t.done?"":"⬜"} {t.text}
                       </span>
                       <button onClick={()=>deleteTodo(t.id)} style={{background:"none",border:"none",color:"#B8A9C9",cursor:"pointer",fontSize:12}}>✕</button>
                     </div>
@@ -615,23 +594,17 @@ export default function Dashboard({ onLogout }) {
           </div>
         )}
 
-        {/* ══ GRADE CALCULATOR PAGE ══ */}
+      
         {activePage === "grades" && <GradeCalculator />}
-
-        {/* ══ TASK MANAGER PAGE ══ */}
         {activePage === "tasks" && <TaskManager />}
-
-        {/* ══ REVIEWS PAGE ══ */}
         {activePage === "reviews" && <Reviews />}
-
-        {/* ══ PROFILE PAGE ══ */}
         {activePage === "profile" && (
           <Profile onProfileSave={p => setProfile(p)} />
         )}
 
         {activePage !== "dashboard" && activePage !== "grades" && activePage !== "tasks" && activePage !== "reviews" && activePage !== "profile" && (
           <div style={{padding:40,textAlign:"center",color:"#B8A9C9",marginTop:60}}>
-            <div style={{fontSize:48,marginBottom:16}}>🚧</div>
+            <div style={{fontSize:48,marginBottom:16}}></div>
             <div style={{fontFamily:"'Fraunces',serif",fontSize:22,color:"#31487A"}}>{NAV_ITEMS.find(n=>n.id===activePage)?.label} coming soon!</div>
             <div style={{fontSize:13,marginTop:8}}>This page is next on the build list.</div>
           </div>
@@ -641,7 +614,6 @@ export default function Dashboard({ onLogout }) {
   );
 }
 
-// ── Styles ───────────────────────────────────────────────────────────────────
 const s = {
   root:         { display:"flex", minHeight:"100vh", background:"#F4F4F8", fontFamily:"'DM Sans',sans-serif" },
   sidebar:      { display:"flex", flexDirection:"column", background:"#31487A", height:"100vh", position:"sticky", top:0, transition:"width 0.25s ease", overflow:"hidden", flexShrink:0, zIndex:100 },
@@ -670,7 +642,6 @@ const s = {
   calNavBtn:    { background:"none", border:"1px solid #D4D4DC", borderRadius:8, width:28, height:28, cursor:"pointer", fontSize:16, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center" },
 };
 
-// semester dropdown styles
 const sd = {
   trigger: { display:"flex", alignItems:"center", gap:8, padding:"8px 14px", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:12, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", boxShadow:"0 1px 4px rgba(49,72,122,0.06)" },
   dropdown: { position:"absolute", top:"calc(100% + 8px)", left:0, minWidth:200, background:"#ffffff", borderRadius:14, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid #D4D4DC", zIndex:200, padding:"6px", overflow:"hidden" },
