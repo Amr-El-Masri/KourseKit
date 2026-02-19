@@ -1,4 +1,8 @@
 import { useState, useRef, useEffect } from "react";
+import GradeCalculator from "./GradeCalculator";
+import Reviews from "./Reviews";
+import TaskManager from "./TaskManager";
+import Profile from "./Profile";
 
 // ── Anon names ───────────────────────────────────────────────────────────────
 const ANON_NAMES = [
@@ -21,11 +25,18 @@ const SEMESTERS = {
     { id:4, name:"PSYC 222", prof:"Dr. Arne Dietrich",        time:"Tue & Thu · 9:30–10:45"  },
     { id:5, name:"PSYC 284", prof:"Dr. Sarine Hagopian",      time:"Tue & Thu · 14:00–15:15" },
   ]},
-  "Spring 24-25": { gpa: 3.45, progress: 40, week: "6 of 15", courses: [
+  "Spring 24-25": { gpa: 3.45, progress: 100, week: "15 of 15", courses: [
     { id:1, name:"CMPS 300", prof:"Dr. Ayman Dayeh",    time:"Mon & Wed · 11:00–12:15" },
     { id:2, name:"MATH 201", prof:"Dr. Samer Habre",    time:"Mon & Wed · 14:00–15:15" },
     { id:3, name:"ENGL 203", prof:"Ms. Lara Khouri",    time:"Tue & Thu · 9:30–10:45"  },
     { id:4, name:"CMPS 256", prof:"Dr. Wassim El-Hajj", time:"Tue & Thu · 11:00–12:15" },
+  ]},
+  "Spring 25-26": { gpa: null, progress: 15, week: "3 of 15", courses: [
+    { id:1, name:"CMPS 271", prof:"Dr. Mohammad Sakr",        time:"Mon & Wed · 12:30–13:45" },
+    { id:2, name:"PHIL 210", prof:"Mr. Mahmoud El Hassanieh", time:"Mon & Wed · 14:00–15:15" },
+    { id:3, name:"CMPS 215", prof:"Dr. Mohammad A. Kobeissi", time:"Mon & Wed · 15:30–16:45" },
+    { id:4, name:"PSYC 222", prof:"Dr. Arne Dietrich",        time:"Tue & Thu · 9:30–10:45"  },
+    { id:5, name:"PSYC 284", prof:"Dr. Sarine Hagopian",      time:"Tue & Thu · 14:00–15:15" },
   ]},
   "Fall 25-26":   { gpa: null, progress: 0, week: "0 of 15", courses: [] },
 };
@@ -54,6 +65,7 @@ const ALL_WIDGETS = [
   { id:"gpa",       label:"GPA",               span:1 },
   { id:"progress",  label:"Semester Progress", span:1 },
   { id:"todo",      label:"To-Do List",        span:1 },
+  { id:"pomodoro",  label:"Pomodoro Timer",    span:1 },
   { id:"calendar",  label:"Calendar",          span:1 },
   { id:"schedule",  label:"Weekly Schedule",   span:1 },
   { id:"profrev",   label:"Professor Reviews", span:2 },
@@ -66,11 +78,22 @@ const Stars = ({ count }) => (
   </span>
 );
 
+// ── SectionTitle — used by every dashboard widget ─────────────────────────────
+function SectionTitle({ children }) {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
+      <div style={{ width:3, height:18, background:"#7B5EA7", borderRadius:2 }} />
+      <h3 style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:"#31487A", margin:0 }}>{children}</h3>
+    </div>
+  );
+}
+
 const NAV_ITEMS = [
   { id:"dashboard", label:"Dashboard",        icon:"⊞" },
   { id:"grades",    label:"Grade Calculator", icon:"📊" },
   { id:"tasks",     label:"Task Manager",     icon:"✅" },
   { id:"reviews",   label:"Reviews",          icon:"💬" },
+  { id:"profile",   label:"My Profile",       icon:"👤" },
 ];
 
 // ── Custom semester dropdown ──────────────────────────────────────────────────
@@ -124,13 +147,119 @@ function WidgetTogglePanel({ visible, onToggle }) {
   );
 }
 
+// ── Pomodoro Timer ────────────────────────────────────────────────────────────
+function PomodoroTimer() {
+  const MODES = [
+    { label:"Focus",      duration:25*60, color:"#31487A", bg:"#eef2fb" },
+    { label:"Short Break",duration:5*60,  color:"#2d7a4a", bg:"#eef7f0" },
+    { label:"Long Break", duration:15*60, color:"#5A3B7B", bg:"#F0EEF7" },
+  ];
+  const [modeIdx,   setModeIdx]   = useState(0);
+  const [timeLeft,  setTimeLeft]  = useState(MODES[0].duration);
+  const [running,   setRunning]   = useState(false);
+  const [sessions,  setSessions]  = useState(0);
+  const intervalRef = useRef(null);
+
+  const mode = MODES[modeIdx];
+  const mins = String(Math.floor(timeLeft/60)).padStart(2,"0");
+  const secs = String(timeLeft%60).padStart(2,"0");
+  const pct  = 1 - timeLeft/mode.duration;
+  const r    = 46;
+  const circ = 2*Math.PI*r;
+
+  useEffect(() => {
+    if (running) {
+      intervalRef.current = setInterval(() => {
+        setTimeLeft(t => {
+          if (t <= 1) {
+            clearInterval(intervalRef.current);
+            setRunning(false);
+            if (modeIdx === 0) setSessions(s => s+1);
+            return 0;
+          }
+          return t-1;
+        });
+      }, 1000);
+    } else {
+      clearInterval(intervalRef.current);
+    }
+    return () => clearInterval(intervalRef.current);
+  }, [running, modeIdx]);
+
+  const switchMode = idx => {
+    setRunning(false);
+    setModeIdx(idx);
+    setTimeLeft(MODES[idx].duration);
+  };
+
+  const reset = () => { setRunning(false); setTimeLeft(mode.duration); };
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14,paddingTop:6}}>
+      {/* mode tabs */}
+      <div style={{display:"flex",gap:4,background:"#F4F4F8",padding:4,borderRadius:12,width:"100%"}}>
+        {MODES.map((m,i) => (
+          <button key={m.label} onClick={() => switchMode(i)} style={{
+            flex:1, padding:"6px 0", border:"none", borderRadius:8, fontSize:11, fontWeight:600,
+            cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
+            background: modeIdx===i ? m.color : "transparent",
+            color: modeIdx===i ? "#fff" : "#A59AC9",
+          }}>{m.label}</button>
+        ))}
+      </div>
+
+      {/* ring + time */}
+      <div style={{position:"relative",width:120,height:120}}>
+        <svg width="120" height="120" style={{transform:"rotate(-90deg)"}}>
+          <circle cx="60" cy="60" r={r} fill="none" stroke="#D9E1F1" strokeWidth="8"/>
+          <circle cx="60" cy="60" r={r} fill="none" stroke={mode.color} strokeWidth="8"
+            strokeDasharray={`${pct*circ} ${circ}`} strokeLinecap="round"
+            style={{transition:"stroke-dasharray 0.5s ease"}}/>
+        </svg>
+        <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+          <div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:mode.color,lineHeight:1}}>{mins}:{secs}</div>
+          <div style={{fontSize:10,color:"#A59AC9",marginTop:2}}>{mode.label}</div>
+        </div>
+      </div>
+
+      {/* controls */}
+      <div style={{display:"flex",gap:10}}>
+        <button onClick={reset} style={{padding:"7px 14px",background:"#F4F4F8",border:"1px solid #D4D4DC",borderRadius:9,fontSize:12,cursor:"pointer",color:"#A59AC9",fontFamily:"'DM Sans',sans-serif"}}>↺ Reset</button>
+        <button onClick={() => setRunning(r => !r)} style={{
+          padding:"7px 22px", background:running?"#e07070":mode.color, color:"white",
+          border:"none", borderRadius:9, fontSize:13, fontWeight:600, cursor:"pointer",
+          fontFamily:"'DM Sans',sans-serif", transition:"background .15s",
+        }}>{running ? "⏸ Pause" : "▶ Start"}</button>
+      </div>
+
+      {/* session count */}
+      <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"#A59AC9"}}>
+        <span>🍅</span>
+        <span style={{color:"#31487A",fontWeight:600}}>{sessions}</span>
+        <span>session{sessions!==1?"s":""} completed</span>
+      </div>
+    </div>
+  );
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 export default function Dashboard({ onLogout }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
 
+  // ── Profile state — loads from localStorage, updated by Profile page ──
+  const [profile, setProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem("kk_profile");
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
+  const displayName = profile.firstName || profile.lastName
+    ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim()
+    : "Student";
+
   const [activePage,    setActivePage]    = useState("dashboard");
   const [sidebarOpen,   setSidebarOpen]   = useState(true);
-  const [semester,      setSemester]      = useState("Spring 24-25");
+  const [semester,      setSemester]      = useState("Spring 25-26");
   const [showToggle,    setShowToggle]    = useState(false);
   const toggleRef = useRef(null);
 
@@ -251,7 +380,7 @@ export default function Dashboard({ onLogout }) {
       <main style={s.main}>
         <header style={s.topbar}>
           <div>
-            <div style={s.greeting}>Hello, <span style={{fontFamily:"'Fraunces',serif",fontStyle:"italic",color:"#31487A"}}>Student!</span> 👋</div>
+            <div style={s.greeting}>Hello, <span style={{fontFamily:"'Fraunces',serif",fontStyle:"italic",color:"#31487A"}}>{displayName}!</span> 👋</div>
             <div style={{fontSize:13,color:"#5A3B7B",marginTop:2}}>{today.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</div>
           </div>
 
@@ -364,6 +493,13 @@ export default function Dashboard({ onLogout }) {
                     </div>
                   ))}
                 </div>
+              </section>
+            )}
+
+            {visible.pomodoro && (
+              <section className="card-anim" style={s.card}>
+                <SectionTitle>Pomodoro Timer</SectionTitle>
+                <PomodoroTimer />
               </section>
             )}
 
@@ -482,7 +618,18 @@ export default function Dashboard({ onLogout }) {
         {/* ══ GRADE CALCULATOR PAGE ══ */}
         {activePage === "grades" && <GradeCalculator />}
 
-        {activePage !== "dashboard" && activePage !== "grades" && (
+        {/* ══ TASK MANAGER PAGE ══ */}
+        {activePage === "tasks" && <TaskManager />}
+
+        {/* ══ REVIEWS PAGE ══ */}
+        {activePage === "reviews" && <Reviews />}
+
+        {/* ══ PROFILE PAGE ══ */}
+        {activePage === "profile" && (
+          <Profile onProfileSave={p => setProfile(p)} />
+        )}
+
+        {activePage !== "dashboard" && activePage !== "grades" && activePage !== "tasks" && activePage !== "reviews" && activePage !== "profile" && (
           <div style={{padding:40,textAlign:"center",color:"#B8A9C9",marginTop:60}}>
             <div style={{fontSize:48,marginBottom:16}}>🚧</div>
             <div style={{fontFamily:"'Fraunces',serif",fontSize:22,color:"#31487A"}}>{NAV_ITEMS.find(n=>n.id===activePage)?.label} coming soon!</div>
@@ -490,236 +637,6 @@ export default function Dashboard({ onLogout }) {
           </div>
         )}
       </main>
-    </div>
-  );
-}
-
-// ════════════════════════════════════════════════════════════════════════════
-// GRADE CALCULATOR
-// ════════════════════════════════════════════════════════════════════════════
-function GradeCalculator() {
-  const [activeTab, setActiveTab] = useState("semester");
-
-  // ── Semester GPA ──
-  const [semCourses, setSemCourses] = useState([{ id:1, name:"", grade:"", credits:"" }]);
-  const [semResult,  setSemResult]  = useState(null);
-  const gradeToPoint = g => ({ "A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0 }[g] ?? parseFloat(g));
-  const calcSemGPA = () => {
-    let pts=0, creds=0;
-    semCourses.forEach(c => {
-      const p=gradeToPoint(c.grade), cr=parseFloat(c.credits);
-      if (!isNaN(p) && !isNaN(cr) && cr>0) { pts+=p*cr; creds+=cr; }
-    });
-    setSemResult(creds>0 ? (pts/creds).toFixed(2) : null);
-  };
-
-  // ── Cumulative GPA ──
-  const [cumSems,   setCumSems]   = useState([{ id:1, name:"", gpa:"", credits:"" }]);
-  const [cumResult, setCumResult] = useState(null);
-  const calcCumGPA = () => {
-    let pts=0, creds=0;
-    cumSems.forEach(s => {
-      const g=parseFloat(s.gpa), cr=parseFloat(s.credits);
-      if (!isNaN(g) && !isNaN(cr) && cr>0) { pts+=g*cr; creds+=cr; }
-    });
-    setCumResult(creds>0 ? (pts/creds).toFixed(2) : null);
-  };
-
-  // ── Course grade ──
-  const [components, setComponents] = useState([{ id:1, type:"Exam", weight:"", grade:"" }]);
-  const [courseResult, setCourseResult] = useState(null);
-  const calcCourse = () => {
-    let total=0, wSum=0;
-    components.forEach(c => {
-      const w=parseFloat(c.weight), g=parseFloat(c.grade);
-      if (!isNaN(w) && !isNaN(g)) { total+=w*g; wSum+=w; }
-    });
-    setCourseResult(wSum>0 ? (total/wSum).toFixed(2) : null);
-  };
-
-  // ── Target grade ──
-  const [graded,     setGraded]     = useState([{ id:1, weight:"", grade:"" }]);
-  const [targetGoal, setTargetGoal] = useState("");
-  const [targetResult, setTargetResult] = useState(null);
-  const calcTarget = () => {
-    let earned=0, wUsed=0;
-    graded.forEach(g => {
-      const w=parseFloat(g.weight), gr=parseFloat(g.grade);
-      if (!isNaN(w) && !isNaN(gr)) { earned+=w*gr; wUsed+=w; }
-    });
-    const goal=parseFloat(targetGoal);
-    const remain=100-wUsed;
-    if (remain<=0||isNaN(goal)) { setTargetResult("Please check weights add up to less than 100."); return; }
-    const needed=(goal*100-earned)/remain;
-    setTargetResult(needed>100 ? "Not achievable — needed grade > 100%." : needed<0 ? "You've already achieved this goal!" : `You need ${needed.toFixed(1)}% on the remaining ${remain}% of your grade.`);
-  };
-
-  const TABS = [
-    { id:"semester", label:"Semester GPA"  },
-    { id:"cumulative",label:"Cumulative GPA"},
-    { id:"course",   label:"Course Grade"  },
-    { id:"target",   label:"Target Grade"  },
-  ];
-
-  const addRow = (setter) => setter(p => [...p, { id:Date.now(), name:"", grade:"", credits:"", weight:"", type:"Exam", gpa:"" }]);
-  const removeRow = (setter, id) => setter(p => p.length>1 ? p.filter(r=>r.id!==id) : p);
-  const updateRow = (setter, id, field, val) => setter(p => p.map(r => r.id===id ? {...r,[field]:val} : r));
-
-  return (
-    <div style={{padding:"28px 28px 60px"}}>
-      <div style={{marginBottom:24}}>
-        <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:24,color:"#31487A",marginBottom:4}}>Grade Calculator</div>
-        <div style={{fontSize:13,color:"#A59AC9"}}>Calculate your GPA and plan your grades</div>
-      </div>
-
-      {/* Tabs */}
-      <div style={gc.tabBar}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{
-            ...gc.tab,
-            background: activeTab===t.id ? "#31487A" : "transparent",
-            color:       activeTab===t.id ? "#ffffff"  : "#A59AC9",
-            fontWeight:  activeTab===t.id ? 600 : 400,
-          }}>{t.label}</button>
-        ))}
-      </div>
-
-      {/* ── Semester GPA ── */}
-      {activeTab==="semester" && (
-        <div style={gc.card}>
-          <SectionTitle>Current Semester GPA</SectionTitle>
-          <div style={{marginTop:18}}>
-            <div style={gc.headerRow}>
-              <span style={gc.colHead}>Course Name</span>
-              <span style={gc.colHead}>Grade</span>
-              <span style={gc.colHead}>Credits</span>
-              <span style={{width:32}}/>
-            </div>
-            {semCourses.map(c=>(
-              <div key={c.id} style={gc.row}>
-                <input value={c.name} onChange={e=>updateRow(setSemCourses,c.id,"name",e.target.value)} placeholder="e.g. CMPS 271" style={gc.input}/>
-                <input value={c.grade} onChange={e=>updateRow(setSemCourses,c.id,"grade",e.target.value)} placeholder="e.g. 3.7 or A-" style={{...gc.input,maxWidth:110}}/>
-                <input value={c.credits} onChange={e=>updateRow(setSemCourses,c.id,"credits",e.target.value)} placeholder="e.g. 3" type="number" style={{...gc.input,maxWidth:90}}/>
-                <button onClick={()=>removeRow(setSemCourses,c.id)} style={gc.removeBtn}>✕</button>
-              </div>
-            ))}
-            <button onClick={()=>addRow(setSemCourses)} style={gc.addRowBtn}>+ Add Course</button>
-          </div>
-          <div style={{display:"flex",gap:12,marginTop:20,alignItems:"center",flexWrap:"wrap"}}>
-            <button onClick={calcSemGPA} style={gc.calcBtn}>Calculate GPA</button>
-            {semResult && <ResultBadge value={semResult} label="Semester GPA" />}
-          </div>
-        </div>
-      )}
-
-      {/* ── Cumulative GPA ── */}
-      {activeTab==="cumulative" && (
-        <div style={gc.card}>
-          <SectionTitle>Cumulative GPA</SectionTitle>
-          <div style={{marginTop:18}}>
-            <div style={gc.headerRow}>
-              <span style={gc.colHead}>Semester</span>
-              <span style={gc.colHead}>GPA</span>
-              <span style={gc.colHead}>Credits</span>
-              <span style={{width:32}}/>
-            </div>
-            {cumSems.map(c=>(
-              <div key={c.id} style={gc.row}>
-                <input value={c.name} onChange={e=>updateRow(setCumSems,c.id,"name",e.target.value)} placeholder="e.g. Fall 24-25" style={gc.input}/>
-                <input value={c.gpa}  onChange={e=>updateRow(setCumSems,c.id,"gpa",e.target.value)}  placeholder="e.g. 3.67" type="number" step="0.01" style={{...gc.input,maxWidth:110}}/>
-                <input value={c.credits} onChange={e=>updateRow(setCumSems,c.id,"credits",e.target.value)} placeholder="e.g. 15" type="number" style={{...gc.input,maxWidth:90}}/>
-                <button onClick={()=>removeRow(setCumSems,c.id)} style={gc.removeBtn}>✕</button>
-              </div>
-            ))}
-            <button onClick={()=>addRow(setCumSems)} style={gc.addRowBtn}>+ Add Semester</button>
-          </div>
-          <div style={{display:"flex",gap:12,marginTop:20,alignItems:"center",flexWrap:"wrap"}}>
-            <button onClick={calcCumGPA} style={gc.calcBtn}>Calculate Cumulative GPA</button>
-            {cumResult && <ResultBadge value={cumResult} label="Cumulative GPA" />}
-          </div>
-        </div>
-      )}
-
-      {/* ── Course Grade ── */}
-      {activeTab==="course" && (
-        <div style={gc.card}>
-          <SectionTitle>Course Grade (So Far)</SectionTitle>
-          <p style={{fontSize:13,color:"#A59AC9",marginTop:6,marginBottom:18}}>Enter each graded component, its weight, and your grade to calculate your current course grade.</p>
-          <div style={gc.headerRow}>
-            <span style={gc.colHead}>Type</span>
-            <span style={gc.colHead}>Weight %</span>
-            <span style={gc.colHead}>Grade %</span>
-            <span style={{width:32}}/>
-          </div>
-          {components.map(c=>(
-            <div key={c.id} style={gc.row}>
-              <select value={c.type} onChange={e=>updateRow(setComponents,c.id,"type",e.target.value)} style={{...gc.input,maxWidth:130,cursor:"pointer"}}>
-                {["Exam","Assignment","Project","Quiz","Lab","Other"].map(t=><option key={t}>{t}</option>)}
-              </select>
-              <input value={c.weight} onChange={e=>updateRow(setComponents,c.id,"weight",e.target.value)} placeholder="e.g. 30" type="number" style={{...gc.input,maxWidth:110}}/>
-              <input value={c.grade}  onChange={e=>updateRow(setComponents,c.id,"grade",e.target.value)}  placeholder="e.g. 85" type="number" style={{...gc.input,maxWidth:110}}/>
-              <button onClick={()=>removeRow(setComponents,c.id)} style={gc.removeBtn}>✕</button>
-            </div>
-          ))}
-          <button onClick={()=>addRow(setComponents)} style={gc.addRowBtn}>+ Add Component</button>
-          <div style={{display:"flex",gap:12,marginTop:20,alignItems:"center",flexWrap:"wrap"}}>
-            <button onClick={calcCourse} style={gc.calcBtn}>Calculate Grade</button>
-            {courseResult && <ResultBadge value={`${courseResult}%`} label="Current Grade" color={parseFloat(courseResult)>=90?"#2d7a4a":parseFloat(courseResult)>=70?"#31487A":"#c0392b"}/>}
-          </div>
-        </div>
-      )}
-
-      {/* ── Target Grade ── */}
-      {activeTab==="target" && (
-        <div style={gc.card}>
-          <SectionTitle>Target Course Grade</SectionTitle>
-          <p style={{fontSize:13,color:"#A59AC9",marginTop:6,marginBottom:18}}>Enter grades you've already received, then set your target to find out what you need on the rest.</p>
-          <div style={gc.headerRow}>
-            <span style={gc.colHead}>Weight % (already graded)</span>
-            <span style={gc.colHead}>Grade %</span>
-            <span style={{width:32}}/>
-          </div>
-          {graded.map(g=>(
-            <div key={g.id} style={gc.row}>
-              <input value={g.weight} onChange={e=>updateRow(setGraded,g.id,"weight",e.target.value)} placeholder="e.g. 30" type="number" style={gc.input}/>
-              <input value={g.grade}  onChange={e=>updateRow(setGraded,g.id,"grade",e.target.value)}  placeholder="e.g. 78" type="number" style={gc.input}/>
-              <button onClick={()=>removeRow(setGraded,g.id)} style={gc.removeBtn}>✕</button>
-            </div>
-          ))}
-          <button onClick={()=>addRow(setGraded)} style={gc.addRowBtn}>+ Add Component</button>
-          <div style={{display:"flex",gap:12,marginTop:20,alignItems:"center",flexWrap:"wrap"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,background:"#F4F4F8",border:"1px solid #D4D4DC",borderRadius:10,padding:"8px 14px"}}>
-              <span style={{fontSize:13,color:"#5A3B7B",fontWeight:600}}>Target grade:</span>
-              <input value={targetGoal} onChange={e=>setTargetGoal(e.target.value)} placeholder="e.g. 85" type="number" style={{border:"none",outline:"none",background:"transparent",fontSize:14,fontWeight:600,color:"#31487A",width:60}}/>
-              <span style={{fontSize:13,color:"#A59AC9"}}>%</span>
-            </div>
-            <button onClick={calcTarget} style={gc.calcBtn}>Calculate</button>
-          </div>
-          {targetResult && (
-            <div style={{marginTop:16,padding:"14px 18px",background:"#F0EEF7",borderRadius:12,borderLeft:"3px solid #7B5EA7",fontSize:14,color:"#31487A",fontWeight:500,lineHeight:1.6}}>
-              {targetResult}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ResultBadge({ value, label, color="#31487A" }) {
-  return (
-    <div style={{display:"flex",alignItems:"center",gap:12,background:"#F0EEF7",borderRadius:12,padding:"12px 20px",border:"1px solid #D4D4DC"}}>
-      <div style={{fontFamily:"'Fraunces',serif",fontSize:32,fontWeight:700,color,lineHeight:1}}>{value}</div>
-      <div style={{fontSize:12,color:"#A59AC9"}}>{label}</div>
-    </div>
-  );
-}
-
-function SectionTitle({ children }) {
-  return (
-    <div style={{display:"flex",alignItems:"center",gap:10}}>
-      <div style={{width:3,height:18,background:"#7B5EA7",borderRadius:2}}/>
-      <h3 style={{fontFamily:"'DM Sans',sans-serif",fontWeight:600,fontSize:15,color:"#31487A"}}>{children}</h3>
     </div>
   );
 }
@@ -765,18 +682,4 @@ const sd = {
   miniSelect: { padding:"6px 8px", border:"1px solid #D4D4DC", borderRadius:8, fontSize:12, fontFamily:"'DM Sans',sans-serif", color:"#2a2050", background:"#fff", cursor:"pointer", outline:"none" },
   miniInput: { padding:"6px 10px", border:"1px solid #D4D4DC", borderRadius:8, fontSize:12, fontFamily:"'DM Sans',sans-serif", color:"#2a2050", background:"#fff", outline:"none" },
   miniSaveBtn: { padding:"6px 14px", background:"#31487A", color:"white", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" },
-};
-
-// grade calculator styles
-const gc = {
-  tabBar: { display:"flex", gap:4, background:"#ffffff", padding:5, borderRadius:14, border:"1px solid #D4D4DC", marginBottom:24, width:"fit-content" },
-  tab: { padding:"9px 18px", border:"none", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s, color .15s" },
-  card: { background:"#ffffff", borderRadius:18, padding:"24px 26px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid #D4D4DC", maxWidth:760 },
-  headerRow: { display:"flex", gap:12, marginBottom:8, paddingBottom:8, borderBottom:"1px solid #F4F4F8" },
-  colHead: { fontSize:11, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", flex:1 },
-  row: { display:"flex", gap:12, marginBottom:8, alignItems:"center" },
-  input: { flex:1, padding:"9px 12px", border:"1px solid #D4D4DC", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"#2a2050", background:"#F7F5FB", outline:"none" },
-  removeBtn: { width:28, height:28, border:"none", background:"none", color:"#B8A9C9", cursor:"pointer", fontSize:14, borderRadius:6, flexShrink:0 },
-  addRowBtn: { padding:"7px 14px", background:"#F0EEF7", color:"#7B5EA7", border:"1px solid #D4D4DC", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", marginTop:4 },
-  calcBtn: { padding:"10px 22px", background:"#31487A", color:"white", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
 };
