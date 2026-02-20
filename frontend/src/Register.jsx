@@ -1,19 +1,38 @@
 import { useState } from "react";
 
-export default function Register({ onRegister, onGoToLogin }) {
+export default function Register({ onGoToLogin }) {
   const [email,     setEmail]     = useState("");
   const [password,  setPassword]  = useState("");
   const [confirm,   setConfirm]   = useState("");
   const [error,     setError]     = useState("");
   const [success,   setSuccess]   = useState(false);
 
-  const handle = () => {
+  const [loading, setLoading] = useState(false);
+
+  const handle = async () => {
     if (!email || !password || !confirm) { setError("Please fill in all fields."); return; }
     if (!email.endsWith("@mail.aub.edu")) { setError("Please use your AUB email (@mail.aub.edu)."); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
     if (password !== confirm) { setError("Passwords don't match."); return; }
 
-    setSuccess(true);
+    setLoading(true);
+    try {
+      const res  = await fetch("http://localhost:8080/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccess(true);
+      } else {
+        setError(data.message?.replace(/^error:\s*/i, "") || "Registration failed.");
+      }
+    } catch (e) {
+      setError("Could not connect to server. Make sure the backend is running.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -96,8 +115,8 @@ export default function Register({ onRegister, onGoToLogin }) {
                 onKeyDown={e => e.key === "Enter" && handle()}
               />
 
-              <button className="reg-btn" onClick={handle} style={s.btn}>
-                Create Account
+              <button className="reg-btn" onClick={handle} disabled={loading} style={{ ...s.btn, opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer" }}>
+                {loading ? "Creating account…" : "Create Account"}
               </button>
 
               <p style={s.loginLink}>
