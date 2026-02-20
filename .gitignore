@@ -50,4 +50,3 @@ application-local.properties
 #ignore the environment
 .env
 
-src/main/resources/application.properties
