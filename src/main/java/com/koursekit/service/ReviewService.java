@@ -11,8 +11,10 @@ public class ReviewService {
 
     @Autowired private ReviewRepository reviewRepo;
     @Autowired private SectionRepository sectionRepo;
+    @Autowired private ContentFilterService contentFilterService;
 
     public Review submitReview(Long sectionId, String comment, int rating, String userId) {
+
         Section section = sectionRepo.findById(sectionId)
                 .orElseThrow(() -> new RuntimeException("Section not found"));
 
@@ -26,9 +28,10 @@ public class ReviewService {
             throw new RuntimeException("You have already submitted a review for this course.");
         }
 
+        String filteredComment= contentFilterService.filter(comment);
         Review review = new Review();
         review.setSection(section);
-        review.setComment(comment);
+        review.setComment(filteredComment);
         review.setRating(rating);
         review.setUserId(userId);
 
