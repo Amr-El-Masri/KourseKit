@@ -5,14 +5,28 @@ export default function Login({ onLogin, onGoToRegister }) {
   const [password, setPassword] = useState("");
   const [error, setError]       = useState("");
 
-  const handle = () => {
+  const handle = async () => {
     if (!email || !password) { setError("Please fill in all fields."); return; }
     if (!email.endsWith("@mail.aub.edu")) { setError("Please use your AUB email (@mail.aub.edu)."); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
 
-    localStorage.setItem("kk_token", "demo-token");
-    localStorage.setItem("kk_email", email);
-    onLogin();
+    try {
+      const res  = await fetch("http://localhost:8080/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (data.success && data.token) {
+        localStorage.setItem("kk_token", data.token);
+        localStorage.setItem("kk_email", email);
+        onLogin();
+      } else {
+        setError(data.message || "Invalid email or password.");
+      }
+    } catch (e) {
+      setError("Could not connect to server. Make sure the backend is running.");
+    }
   };
 
   return (
@@ -69,7 +83,7 @@ export default function Login({ onLogin, onGoToRegister }) {
 
           <p style={s.registerLink}>
             Don't have an account?{" "}
-            <span style={{ color: "#31487A", fontWeight: 600, cursor: "pointer" }}>
+            <span onClick={onGoToRegister} style={{ color: "#31487A", fontWeight: 600, cursor: "pointer" }}>
               Register
             </span>
           </p>
