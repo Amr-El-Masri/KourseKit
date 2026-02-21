@@ -8,9 +8,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 
 public interface NotificationRepository extends JpaRepository<Notification,Long> {
+    List<Notification> findByTask_User_Id(Long userId);
+
     boolean existsByTask_Id(Long taskId);
 
     void deleteByTask_Id(long taskId);

@@ -7,7 +7,6 @@ import com.koursekit.mappers.NotificationMapper;
 import com.koursekit.repository.NotificationRepository;
 import org.springframework.stereotype.Service;
 
-import javax.management.NotificationFilter;
 import java.time.LocalDateTime;
 import java.util.List;
 /*
@@ -30,8 +29,11 @@ public class NotificationService {
         return notificationRepository.save(notification);
     }
 
-    public List<NotificationDTO> getAllNotifications() {
-        return notificationRepository.findAll().stream().map(notificationMapper::toDto).toList();
+    public List<NotificationDTO> getAllNotifications(Long userId) {
+        return notificationRepository.findByTask_User_Id(userId)
+                .stream()
+                .map(notificationMapper::toDto)
+                .toList();
     }
 
 

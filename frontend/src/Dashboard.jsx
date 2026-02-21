@@ -3,6 +3,7 @@ import GradeCalculator from "./GradeCalculator";
 import Reviews from "./Reviews";
 import TaskManager from "./TaskManager";
 import Profile from "./Profile";
+import StudyPlanner from "./StudyPlanner";
 
 const ANON_NAMES = [
   "Apple","Blueberry","Cherry","Elderberry","Fig","Grape","Honeydew","Kiwi",
@@ -90,6 +91,7 @@ const NAV_ITEMS = [
   { id:"tasks",     label:"Task Manager",     icon:"" },
   { id:"reviews",   label:"Reviews",          icon:"" },
   { id:"profile",   label: "Student Profile",       icon:"" },
+  { id:"planner", label:"Study Planner", icon:"" },
 ];
 
 function SemesterSelect({ value, onChange }) {
@@ -598,6 +600,7 @@ export default function Dashboard({ onLogout }) {
         {activePage === "grades" && <GradeCalculator />}
         {activePage === "tasks" && <TaskManager />}
         {activePage === "reviews" && <Reviews />}
+        {activePage === "planner" && <StudyPlanner />}
         {activePage === "profile" && (
           <Profile onProfileSave={p => setProfile(p)} />
         )}

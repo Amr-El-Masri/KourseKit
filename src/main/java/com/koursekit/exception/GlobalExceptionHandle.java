@@ -13,6 +13,17 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandle {
 
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<?> handleResourceNotFound(ResourceNotFoundException ex) {
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "status", 404,
+                        "error", ex.getMessage()
+                ));
+    }
+
     @ExceptionHandler(DuplicateTaskException.class)
     public ResponseEntity<?> handleDuplicateTask(DuplicateTaskException ex) {
         return ResponseEntity
@@ -49,11 +60,11 @@ public class GlobalExceptionHandle {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGeneric(Exception ex) {
         return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .status(HttpStatus.BAD_REQUEST)
                 .body(Map.of(
                         "timestamp", LocalDateTime.now(),
                         "status", 400,
-                        "error", ex.getMessage()
+                        "error", "Bad request"
                 ));
     }
 }

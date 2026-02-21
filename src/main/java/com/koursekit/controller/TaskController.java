@@ -2,11 +2,9 @@ package com.koursekit.controller;
 
 import com.koursekit.dto.TaskRequestDTO;
 import com.koursekit.dto.TaskResponseDTO;
-import com.koursekit.model.Task;
 import com.koursekit.service.TaskService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,7 +17,7 @@ import java.util.List;
  */
 
 @RestController
-@RequestMapping("/tasks")
+@RequestMapping("/api/tasks")
 public class TaskController {
 
     private final TaskService taskService;
@@ -28,39 +26,54 @@ public class TaskController {
         this.taskService = taskService;
     }
 
-    @PostMapping("/add")
-    public ResponseEntity<TaskResponseDTO> addTask(@RequestBody TaskRequestDTO dto){
-        TaskResponseDTO saved = taskService.addTask(dto);
+    @PostMapping("/{userId}/add")
+    public ResponseEntity<TaskResponseDTO> addTask(
+            @PathVariable Long userId,
+            @RequestBody TaskRequestDTO dto) {
 
+        TaskResponseDTO saved = taskService.addTask(userId, dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
-
     }
 
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<Void> deleteTask(@PathVariable Long id){
-        taskService.deleteTask(id);
+    @DeleteMapping("/{userId}/delete/{taskId}")
+    public ResponseEntity<Void> deleteTask(
+            @PathVariable Long userId,
+            @PathVariable Long taskId) {
+
+        taskService.deleteTask(userId, taskId);
         return ResponseEntity.noContent().build();
-
     }
-    @PatchMapping("/edit/{id}")
-    public ResponseEntity<TaskResponseDTO> editTask(@PathVariable Long id, @RequestBody TaskRequestDTO dto){
-        TaskResponseDTO saved= taskService.editTask(id, dto);
+
+    @PatchMapping("/{userId}/edit/{taskId}")
+    public ResponseEntity<TaskResponseDTO> editTask(
+            @PathVariable Long userId,
+            @PathVariable Long taskId,
+            @RequestBody TaskRequestDTO dto) {
+
+        TaskResponseDTO saved = taskService.editTask(userId, taskId, dto);
         return ResponseEntity.ok(saved);
     }
 
-    @GetMapping("/list-all")
-    public ResponseEntity<List<TaskResponseDTO>> listAll(){
-        return ResponseEntity.ok(taskService.listByOrderByDeadline());
-
+    @GetMapping("/{userId}/list-all")
+    public ResponseEntity<List<TaskResponseDTO>> listAll(@PathVariable Long userId) {
+        return ResponseEntity.ok(taskService.listByOrderByDeadline(userId));
     }
-    @GetMapping("/list")
-    public ResponseEntity<List<TaskResponseDTO>> listByCourse(@RequestParam String course){
-        return ResponseEntity.ok(taskService.listByCourse(course));
 
+    @GetMapping("/{userId}/list")
+    public ResponseEntity<List<TaskResponseDTO>> listByCourse(
+            @PathVariable Long userId,
+            @RequestParam String course) {
+        System.out.println("listByCourse called with userId=" + userId + ", course=" + course);
+
+        return ResponseEntity.ok(taskService.listByCourse(userId, course));
     }
-    @GetMapping("/search")
-    public ResponseEntity<List<TaskResponseDTO>> searchTasks(@RequestParam String keyword) {
-        return ResponseEntity.ok(taskService.searchTasks(keyword));
+
+    @GetMapping("/{userId}/search")
+    public ResponseEntity<List<TaskResponseDTO>> searchTasks(
+            @PathVariable Long userId,
+            @RequestParam String keyword) {
+
+        return ResponseEntity.ok(taskService.searchTasks(userId, keyword));
     }
 
 }
