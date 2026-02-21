@@ -1,17 +1,16 @@
 package com.koursekit.model;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.temporal.ChronoUnit;
 
 
 @Entity
 @Table(name = "tasks",
-        uniqueConstraints = {@UniqueConstraint(columnNames = {"course", "title"})}
+        uniqueConstraints = {@UniqueConstraint(columnNames = {"course", "title","user_id"})}
 )
 
 public class Task {
@@ -20,8 +19,24 @@ public class Task {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, foreignKey = @ForeignKey(name = "fk_entry_user"))
+    @JsonIgnore
+    private User user;
+
+
     private String course;
     private String title;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Priority priority;
+
+    public enum Priority {
+        HIGH,   // deadline within 3 days
+        MEDIUM, // deadline within 7 days
+        LOW     // deadline beyond 7 days
+    }
 
     @JsonFormat(pattern = "dd-MM-yyyy HH:mm")  // day-month-year hours:minutes
     private LocalDateTime deadline;
@@ -38,6 +53,16 @@ public class Task {
 
     }
 
+    public static Priority calculatePriority(LocalDateTime deadline) {
+        long daysUntilDeadline = ChronoUnit.DAYS.between(LocalDateTime.now(), deadline);
+        if (daysUntilDeadline <= 3) return Priority.HIGH;
+        if (daysUntilDeadline <= 7) return Priority.MEDIUM;
+        return Priority.LOW;
+    }
+    public void recalculatePriority() {
+        this.priority = calculatePriority(this.deadline);
+    }
+
     // setters
     public void setDeadline(LocalDateTime deadline) {
         this.deadline = deadline;
@@ -49,6 +74,15 @@ public class Task {
 
     public void setCourse(String course) {
         this.course = course;
+    }
+
+    public void setPriority(Priority priority) {
+        this.priority = priority;
+    }
+    public void setUserId(Long id){
+        User u = new User();
+        u.setId(id);
+        this.user = u;
     }
 
 
@@ -68,6 +102,14 @@ public class Task {
     public Long getId() {
         return id;
     }
+
+    public Priority getPriority() { return priority; }
+
+    public Long getUserId(){
+        return user.getId();
+    }
+
+
 
     @Override
     public String toString(){

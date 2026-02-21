@@ -19,7 +19,7 @@ public class Notification {
 
     @ManyToOne
     @JoinColumn(name = "task_id", nullable = false)
-      private Task task;
+    private Task task;
 
 
 

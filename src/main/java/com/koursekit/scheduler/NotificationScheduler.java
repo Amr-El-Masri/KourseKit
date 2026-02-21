@@ -9,6 +9,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /*
@@ -31,14 +32,17 @@ public class NotificationScheduler {
 
     }
 
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm");
+
+
     @Scheduled(fixedRate=600000)
-    public void CreateDeadlineNotifications(){
+    public void createDeadlineNotifications(){
         List<Task> tasks= taskService.findByDeadlineBetween();
         for (Task task: tasks){
-           if (!notificationRepository.existsByTask_Id(task.getId())){
-                String message= task.getCourse()+": "+task.getTitle()+" is due on "+ task.getDeadline();
+            if (!notificationRepository.existsByTask_Id(task.getId())){
+                String message= task.getCourse()+": "+task.getTitle()+" is due on "+ task.getDeadline().format(FORMATTER);
                 notificationService.createNotification(task, message);
-           }
+            }
         }
     }
 
