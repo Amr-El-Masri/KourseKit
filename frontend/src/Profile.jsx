@@ -1,4 +1,13 @@
 import { useState } from "react";
+
+const passrequirements = [
+  { label: "At least 8 characters",     test: p => p.length >= 8 },
+  { label: "One uppercase letter (A-Z)", test: p => /[A-Z]/.test(p) },
+  { label: "One lowercase letter (a-z)", test: p => /[a-z]/.test(p) },
+  { label: "One number (0-9)",           test: p => /\d/.test(p) },
+  { label: "One special character",      test: p => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(p) },
+];
+
 const FACULTIES = [
   "Arts & Sciences",
   "Engineering & Architecture",
@@ -10,13 +19,13 @@ const FACULTIES = [
 ];
 
 const MAJORS_BY_FACULTY = {
-  "Arts & Sciences":          ["Computer Science","Mathematics","Physics","Chemistry","Biology","Psychology","Philosophy","Political Science","Economics","English","Arabic","Sociology","Statistics","Geology"],
-  "Engineering & Architecture":["Computer & Communications Engineering","Electrical & Computer Engineering","Civil Engineering","Mechanical Engineering","Chemical Engineering","Architecture","Landscape Architecture"],
-  "Business":                 ["Business Administration","Accounting","Finance","Marketing","Management","Entrepreneurship"],
-  "Health Sciences":          ["Nutrition","Environmental Health","Health Management"],
-  "Medicine":                 ["Medicine (MD)"],
-  "Nursing":                  ["Nursing"],
-  "Education":                ["Education","Early Childhood Education"],
+  "Arts & Sciences":            ["Computer Science","Mathematics","Physics","Chemistry","Biology","Psychology","Philosophy","Political Science","Economics","English","Arabic","Sociology","Statistics","Geology"],
+  "Engineering & Architecture": ["Computer & Communications Engineering","Electrical & Computer Engineering","Civil Engineering","Mechanical Engineering","Chemical Engineering","Architecture","Landscape Architecture"],
+  "Business":                   ["Business Administration","Accounting","Finance","Marketing","Management","Entrepreneurship"],
+  "Health Sciences":            ["Nutrition","Environmental Health","Health Management"],
+  "Medicine":                   ["Medicine (MD)"],
+  "Nursing":                    ["Nursing"],
+  "Education":                  ["Education","Early Childhood Education"],
 };
 
 const STUDENT_STATUSES = [
@@ -32,15 +41,15 @@ const STUDENT_STATUSES = [
 ];
 
 const DEFAULT_PROFILE = {
-  firstName:   "",
-  lastName:    "",
-  email:       "",
-  faculty:     "Arts & Sciences",
-  major:       "Computer Science",
-  status:      "freshman",
-  cumGPA:      "",
-  totalCredits:"",
-  bio:         "",
+  firstName:    "",
+  lastName:     "",
+  email:        "",
+  faculty:      "Arts & Sciences",
+  major:        "Computer Science",
+  status:       "freshman",
+  cumGPA:       "",
+  totalCredits: "",
+  bio:          "",
 };
 
 function loadProfile(email) {
@@ -52,7 +61,8 @@ function loadProfile(email) {
 }
 
 function saveProfile(profile) {
-  localStorage.setItem("kk_profile", JSON.stringify(profile));}
+  localStorage.setItem("kk_profile", JSON.stringify(profile));
+}
 
 const gpaColor = g => {
   const v = parseFloat(g);
@@ -63,7 +73,8 @@ const gpaColor = g => {
   return "#c0392b";
 };
 
-const statusObj = id => STUDENT_STATUSES.find(s=>s.id===id) || STUDENT_STATUSES[0];
+const statusObj = id => STUDENT_STATUSES.find(s => s.id === id) || STUDENT_STATUSES[0];
+
 export default function Profile({ onProfileSave }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const [profile, setProfile] = useState(() => loadProfile(email));
@@ -71,8 +82,50 @@ export default function Profile({ onProfileSave }) {
   const [draft,   setDraft]   = useState(profile);
   const [saved,   setSaved]   = useState(false);
 
+  const [changing,    setchanging]    = useState(false);
+  const [current,     setcurrent]     = useState("");
+  const [newpass,     setnewpass]     = useState("");
+  const [confirm,     setconfirm]     = useState("");
+  const [passerror,   setpasserror]   = useState("");
+  const [passsuccess, setpasssuccess] = useState(false);
+  const [passloading, setpassloading] = useState(false);
+  const [newpass2,    setnewpass2]    = useState(false);
+  const [showCurrent, setshowCurrent] = useState(false);
+  const [showNew,     setshowNew]     = useState(false);
+
+  const newpassok    = passrequirements.every(r => r.test(newpass));
+  const confirmmatch = confirm.length > 0 && newpass === confirm;
+  const confirmwrong = confirm.length > 0 && newpass !== confirm;
+
+  const handlechangepassword = async () => {
+    if (!current || !newpass || !confirm) { setpasserror("Please fill in all fields."); return; }
+    if (!newpassok)          { setpasserror("New password does not meet the requirements."); return; }
+    if (newpass !== confirm) { setpasserror("Passwords don't match."); return; }
+    setpassloading(true);
+    try {
+      const res  = await fetch("http://localhost:8080/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, currentpass: current, newpass }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setpasssuccess(true);
+        setchanging(false);
+        setcurrent(""); setnewpass(""); setconfirm(""); setpasserror("");
+        setTimeout(() => setpasssuccess(false), 3000);
+      } else {
+        setpasserror(data.message || "Failed to change password.");
+      }
+    } catch {
+      setpasserror("Could not connect to server.");
+    } finally {
+      setpassloading(false);
+    }
+  };
+
   const set = (k, v) => setDraft(p => {
-    const updated = { ...p, [k]:v };
+    const updated = { ...p, [k]: v };
     if (k === "faculty") updated.major = MAJORS_BY_FACULTY[v]?.[0] || "";
     return updated;
   });
@@ -83,7 +136,7 @@ export default function Profile({ onProfileSave }) {
     setEditing(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
-    if (onProfileSave) onProfileSave(draft); 
+    if (onProfileSave) onProfileSave(draft);
   };
 
   const handleCancel = () => { setDraft(profile); setEditing(false); };
@@ -113,8 +166,8 @@ export default function Profile({ onProfileSave }) {
       </div>
 
       <div style={{ background:"#ffffff", borderRadius:20, border:"1px solid #D4D4DC", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", overflow:"hidden", marginBottom:20 }}>
-
         <div style={{ padding:"24px 28px 24px" }}>
+
           <div style={{ display:"flex", alignItems:"flex-end", gap:16, marginBottom:20 }}>
             <div style={{
               width:72, height:72, borderRadius:20, border:"3px solid #ffffff",
@@ -144,9 +197,9 @@ export default function Profile({ onProfileSave }) {
           </div>
 
           <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom: editing ? 24 : 0 }}>
-            <StatChip label="Status"       value={`${st.label} · ${st.desc}`} color="#7B5EA7" bg="#F0EEF7" />
-            <StatChip label="Major"        value={profile.major || "—"}        color="#31487A" bg="#eef2fb" />
-            <StatChip label="Cumulative GPA" value={profile.cumGPA || "—"}    color={gpaColor(profile.cumGPA)} bg="#F4F4F8" />
+            <StatChip label="Status"         value={`${st.label} · ${st.desc}`} color="#7B5EA7" bg="#F0EEF7" />
+            <StatChip label="Major"          value={profile.major || "—"}        color="#31487A" bg="#eef2fb" />
+            <StatChip label="Cumulative GPA" value={profile.cumGPA || "—"}      color={gpaColor(profile.cumGPA)} bg="#F4F4F8" />
             {profile.totalCredits && <StatChip label="Credits" value={`${profile.totalCredits} cr`} color="#5A3B7B" bg="#F0EEF7" />}
           </div>
 
@@ -156,24 +209,24 @@ export default function Profile({ onProfileSave }) {
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                 <div style={{ flex:1, minWidth:160 }}>
                   <label style={pf.label}>First Name</label>
-                  <input className="pf-input" value={draft.firstName} onChange={e=>set("firstName",e.target.value)} placeholder="e.g. Sarah" style={pf.input} />
+                  <input className="pf-input" value={draft.firstName} onChange={e => set("firstName", e.target.value)} placeholder="e.g. Sarah" style={pf.input} />
                 </div>
                 <div style={{ flex:1, minWidth:160 }}>
                   <label style={pf.label}>Last Name</label>
-                  <input className="pf-input" value={draft.lastName} onChange={e=>set("lastName",e.target.value)} placeholder="e.g. Khalil" style={pf.input} />
+                  <input className="pf-input" value={draft.lastName} onChange={e => set("lastName", e.target.value)} placeholder="e.g. Khalil" style={pf.input} />
                 </div>
               </div>
 
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                 <div style={{ flex:1, minWidth:200 }}>
                   <label style={pf.label}>Faculty</label>
-                  <select className="pf-input" value={draft.faculty} onChange={e=>set("faculty",e.target.value)} style={{ ...pf.input, cursor:"pointer" }}>
+                  <select className="pf-input" value={draft.faculty} onChange={e => set("faculty", e.target.value)} style={{ ...pf.input, cursor:"pointer" }}>
                     {FACULTIES.map(f => <option key={f}>{f}</option>)}
                   </select>
                 </div>
                 <div style={{ flex:1, minWidth:200 }}>
                   <label style={pf.label}>Major</label>
-                  <select className="pf-input" value={draft.major} onChange={e=>set("major",e.target.value)} style={{ ...pf.input, cursor:"pointer" }}>
+                  <select className="pf-input" value={draft.major} onChange={e => set("major", e.target.value)} style={{ ...pf.input, cursor:"pointer" }}>
                     {(MAJORS_BY_FACULTY[draft.faculty] || []).map(m => <option key={m}>{m}</option>)}
                   </select>
                 </div>
@@ -185,10 +238,10 @@ export default function Profile({ onProfileSave }) {
                   <button key={s.id} className="pf-status" onClick={() => set("status", s.id)} style={{
                     padding:"8px 14px", borderRadius:10, border:"1px solid",
                     cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
-                    borderColor: draft.status===s.id ? "#7B5EA7" : "#D4D4DC",
-                    background:  draft.status===s.id ? "#7B5EA7" : "#F7F5FB",
-                    color:       draft.status===s.id ? "#ffffff" : "#5A3B7B",
-                    fontWeight:  draft.status===s.id ? 600 : 400,
+                    borderColor: draft.status === s.id ? "#7B5EA7" : "#D4D4DC",
+                    background:  draft.status === s.id ? "#7B5EA7" : "#F7F5FB",
+                    color:       draft.status === s.id ? "#ffffff" : "#5A3B7B",
+                    fontWeight:  draft.status === s.id ? 600 : 400,
                   }}>
                     <div style={{ fontSize:13 }}>{s.label}</div>
                     <div style={{ fontSize:10, opacity:.75 }}>{s.desc}</div>
@@ -199,20 +252,20 @@ export default function Profile({ onProfileSave }) {
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                 <div style={{ flex:1, minWidth:140 }}>
                   <label style={pf.label}>Cumulative GPA <span style={{ color:"#B8A9C9", fontWeight:400 }}>(optional)</span></label>
-                  <input className="pf-input" value={draft.cumGPA} onChange={e=>set("cumGPA",e.target.value)}
+                  <input className="pf-input" value={draft.cumGPA} onChange={e => set("cumGPA", e.target.value)}
                     placeholder="e.g. 3.45" type="number" step="0.01" min="0" max="4"
                     style={pf.input} />
                 </div>
                 <div style={{ flex:1, minWidth:140 }}>
                   <label style={pf.label}>Total Credits <span style={{ color:"#B8A9C9", fontWeight:400 }}>(optional)</span></label>
-                  <input className="pf-input" value={draft.totalCredits} onChange={e=>set("totalCredits",e.target.value)}
+                  <input className="pf-input" value={draft.totalCredits} onChange={e => set("totalCredits", e.target.value)}
                     placeholder="e.g. 60" type="number"
                     style={pf.input} />
                 </div>
               </div>
 
               <label style={pf.label}>Bio <span style={{ color:"#B8A9C9", fontWeight:400 }}>(optional)</span></label>
-              <textarea className="pf-input" value={draft.bio} onChange={e=>set("bio",e.target.value)}
+              <textarea className="pf-input" value={draft.bio} onChange={e => set("bio", e.target.value)}
                 placeholder="A short description about yourself..."
                 rows={3}
                 style={{ ...pf.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
@@ -234,14 +287,100 @@ export default function Profile({ onProfileSave }) {
 
       <div style={{ background:"#ffffff", borderRadius:16, border:"1px solid #D4D4DC", padding:"20px 24px" }}>
         <div style={{ fontSize:12, fontWeight:700, color:"#A59AC9", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>Account</div>
+
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:13 }}>
           <span style={{ color:"#5A3B7B" }}>AUB Email</span>
           <span style={{ fontWeight:600, color:"#31487A" }}>{profile.email}</span>
         </div>
+
         <div style={{ height:1, background:"#F4F4F8", margin:"12px 0" }} />
-        <div style={{ fontSize:12, color:"#B8A9C9" }}>
-          Password changes and account management will be available once the backend is connected.
+
+        <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", fontSize:13, gap:8 }}>
+          {passsuccess && <span style={{ fontSize:12, color:"#2d7a4a", fontWeight:600 }}>✓ Updated</span>}
+          <button
+            onClick={() => { setchanging(!changing); setpasserror(""); }}
+            style={{ background:"none", border:"none", color:"#7B5EA7", fontSize:13, fontWeight:600, cursor:"pointer", padding:0 }}
+          >
+            {changing ? "Cancel" : "Change Password"}
+          </button>
         </div>
+
+        {changing && (
+          <div style={{ marginTop:14, borderTop:"1px solid #F4F4F8", paddingTop:14 }}>
+            {passerror && (
+              <div style={{ background:"#fef0f0", border:"1px solid #f5c6c6", borderRadius:8, padding:"8px 12px", fontSize:12, color:"#c0392b", marginBottom:12 }}>
+                {passerror}
+              </div>
+            )}
+
+            <label style={pf.label}>Current Password</label>
+            <div style={{ position:"relative", marginBottom:14 }}>
+              <input className="pf-input"
+                type={showCurrent ? "text" : "password"}
+                value={current}
+                onChange={e => { setcurrent(e.target.value); setpasserror(""); }}
+                placeholder="Enter current password"
+                style={{ ...pf.input, marginBottom:0, paddingRight:40 }}
+              />
+              <button type="button" onClick={() => setshowCurrent(v => !v)}
+                style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"#A59AC9", padding:0, display:"flex", alignItems:"center" }}>
+                {showCurrent
+                  ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                }
+              </button>
+            </div>
+
+            <label style={pf.label}>New Password</label>
+            <div style={{ position:"relative", marginBottom:14 }}>
+              <input className="pf-input"
+                type={showNew ? "text" : "password"}
+                value={newpass}
+                onChange={e => { setnewpass(e.target.value); setpasserror(""); }}
+                onFocus={() => setnewpass2(true)}
+                placeholder="Create a new password"
+                style={{ ...pf.input, marginBottom:0, paddingRight:40 }}
+              />
+              <button type="button" onClick={() => setshowNew(v => !v)}
+                style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"#A59AC9", padding:0, display:"flex", alignItems:"center" }}>
+                {showNew
+                  ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                }
+              </button>
+            </div>
+
+            {(newpass2 || newpass.length > 0) && (
+              <div style={{ background:"#f7f5fb", border:"1px solid #e2ddf0", borderRadius:8, padding:"8px 12px", marginBottom:14, marginTop:-10 }}>
+                {passrequirements.map(r => {
+                  const met = r.test(newpass);
+                  return (
+                    <div key={r.label} style={{ fontSize:11, fontWeight:500, color: met ? "#2e7d32" : "#A59AC9", padding:"2px 0", display:"flex", alignItems:"center", gap:6 }}>
+                      <span>{met ? "✓" : "○"}</span>{r.label}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <label style={pf.label}>Confirm New Password</label>
+            <input className="pf-input"
+              type="password"
+              value={confirm}
+              onChange={e => { setconfirm(e.target.value); setpasserror(""); }}
+              onKeyDown={e => e.key === "Enter" && handlechangepassword()}
+              placeholder="Re-enter your new password"
+              style={{ ...pf.input, borderColor: confirmwrong ? "#e74c3c" : confirmmatch ? "#2e7d32" : "#D4D4DC" }}
+            />
+            {confirmwrong && <p style={{ fontSize:11, color:"#e74c3c", marginTop:-10, marginBottom:12 }}>Passwords don't match</p>}
+            {confirmmatch && <p style={{ fontSize:11, color:"#2e7d32", marginTop:-10, marginBottom:12 }}>Passwords match ✓</p>}
+
+            <button onClick={handlechangepassword} disabled={passloading}
+              style={{ ...pf.saveBtn, fontSize:13, opacity: passloading ? 0.7 : 1 }}>
+              {passloading ? "Saving…" : "Update Password"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
