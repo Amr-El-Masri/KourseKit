@@ -53,7 +53,12 @@ export default function ForgotPassword({ onGoToLogin }) {
         <div style={s.card}>
           {sent ? (
             <div style={{ textAlign: "center", padding: "20px 0" }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>📬</div>
+              <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
+                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#31487A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="4" width="20" height="16" rx="2" fill="#eef2f9" stroke="#31487A"/>
+                  <polyline points="2,4 12,13 22,4"/>
+                </svg>
+              </div>
               <h2 style={s.title}>Check your email</h2>
               <p style={{ fontSize: 14, color: "#7a8fa8", lineHeight: 1.7, marginBottom: 28 }}>
                 A password reset link has been sent to <strong>{email}</strong>.<br />
