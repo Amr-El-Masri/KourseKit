@@ -88,7 +88,7 @@ function CourseSearch({ onSelect }) {
   return (
     <div style={{ position:"relative", marginBottom:20 }}>
       <div style={{ display:"flex", alignItems:"center", background:"#fff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px" }}>
-        <span style={{ color:"#B8A9C9", marginRight:8 }}>🔍</span>
+        <span style={{ color:"#B8A9C9", marginRight:8 }}></span>
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
@@ -327,7 +327,7 @@ export default function Reviews({ token, userEmail }) {
 
       {!loading && !activeCourse && (
         <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
-          <div style={{ fontSize:40, marginBottom:12 }}>🔍</div>
+          <div style={{ fontSize:40, marginBottom:12 }}></div>
           <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Search for a course above</div>
           <div style={{ fontSize:13, marginTop:6 }}>to view or submit reviews</div>
         </div>
