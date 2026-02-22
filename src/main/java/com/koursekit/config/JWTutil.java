@@ -20,12 +20,13 @@ public class JWTutil {
     private Long expiration;
     
     private Algorithm getalg() { return Algorithm.HMAC256(secret); }
-    public String generate(Long userid, String email) {
+    public String generate(Long userid, String email, String role) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expiration);
         return JWT.create()
                 .withSubject(userid.toString())
                 .withClaim("email", email)
+                .withClaim("role", role)
                 .withIssuedAt(now)
                 .withExpiresAt(expiry)
                 .sign(getalg());
@@ -47,5 +48,10 @@ public class JWTutil {
     public String gettokenemail(String token) {
         DecodedJWT jwt = JWT.decode(token);
         return jwt.getClaim("email").asString();
+    }
+
+    public String gettokenrole(String token) {
+        DecodedJWT jwt = JWT.decode(token);
+        return jwt.getClaim("role").asString();
     }
 }
