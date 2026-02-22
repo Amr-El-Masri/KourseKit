@@ -228,12 +228,12 @@ function PomodoroTimer() {
 
 export default function Dashboard({ onLogout }) {
   const NAV_ITEMS = [
-  { id:"dashboard", label:"Dashboard",        icon:"<LayoutDashboard size={17}/>" },
-  { id:"grades",    label:"Grade Calculator", icon:"<Calculator size={17}/>" },
-  { id:"tasks",     label:"Task Manager",     icon:"<CheckSquare size={17}/>" },
-  { id:"reviews",   label:"Reviews",          icon:"<Star size={17}/>" },
-  { id:"profile",   label: "Student Profile",       icon:"<User size={17}/>" },
-  { id:"planner", label:"Study Planner", icon:"<BookOpen size={17}/>" },
+  { id:"dashboard", label:"Dashboard",        icon:<LayoutDashboard size={17}/>},
+  { id:"grades",    label:"Grade Calculator", icon:<Calculator size={17}/> },
+  { id:"tasks",     label:"Task Manager",     icon:<CheckSquare size={17}/> },
+  { id:"reviews",   label:"Reviews",          icon:<Star size={17}/> },
+  { id:"profile",   label: "Student Profile",       icon:<User size={17}/> },
+  { id:"planner", label:"Study Planner", icon:<BookOpen size={17}/> },
 ];
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
 
@@ -253,10 +253,21 @@ export default function Dashboard({ onLogout }) {
   const [showToggle,    setShowToggle]    = useState(false);
   const toggleRef = useRef(null);
 
-  const [visible, setVisible] = useState(
-    Object.fromEntries(ALL_WIDGETS.map(w => [w.id, true]))
-  );
-  const toggleWidget = id => setVisible(v => ({ ...v, [id]: !v[id] }));
+  const [visible, setVisible] = useState(() => {
+  try {
+    const saved = localStorage.getItem("kk_widgets");
+    return saved ? JSON.parse(saved) : Object.fromEntries(ALL_WIDGETS.map(w => [w.id, true]));
+  } catch {
+    return Object.fromEntries(ALL_WIDGETS.map(w => [w.id, true]));}
+});
+
+const toggleWidget = id => {
+  setVisible(v => {
+    const next = { ...v, [id]: !v[id] };
+    localStorage.setItem("kk_widgets", JSON.stringify(next));
+    return next;
+  });
+};
 
   useEffect(() => {
     const h = e => { if (toggleRef.current && !toggleRef.current.contains(e.target)) setShowToggle(false); };
@@ -264,7 +275,13 @@ export default function Dashboard({ onLogout }) {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const [todos,     setTodos]     = useState([]);
+  const [todos, setTodos] = useState(() => {
+  try {
+    const saved = localStorage.getItem("kk_todos");
+    return saved ? JSON.parse(saved) : [];
+  } catch { return []; }
+});
+
   const [todoInput, setTodoInput] = useState("");
 
   const today = new Date();
@@ -282,9 +299,26 @@ export default function Dashboard({ onLogout }) {
 
   const semData = SEMESTERS[semester];
 
-  const addTodo    = () => { if (!todoInput.trim()) return; setTodos(p => [...p, { id:Date.now(), text:todoInput.trim(), done:false }]); setTodoInput(""); };
-  const toggleTodo = id => setTodos(p => p.map(t => t.id===id ? {...t,done:!t.done} : t));
-  const deleteTodo = id => setTodos(p => p.filter(t => t.id!==id));
+  const addTodo = () => {
+  if (!todoInput.trim()) return;
+  const next = [...todos, { id:Date.now(), text:todoInput.trim(), done:false }];
+  setTodos(next);
+  localStorage.setItem("kk_todos", JSON.stringify(next));
+  setTodoInput("");
+};
+
+const toggleTodo = id => {
+  const next = todos.map(t => t.id===id ? {...t,done:!t.done} : t);
+  setTodos(next);
+  localStorage.setItem("kk_todos", JSON.stringify(next));
+};
+
+const deleteTodo = id => {
+  const next = todos.filter(t => t.id!==id);
+  setTodos(next);
+  localStorage.setItem("kk_todos", JSON.stringify(next));
+};
+
   const addEvent   = () => { if (!newEvent.label.trim()) return; setScheduleEvents(p => [...p,{...newEvent,id:Date.now()}]); setNewEvent({day:"Mon",label:"",time:"",type:"Class"}); setShowAddEvent(false); };
   const deleteEvent= id => setScheduleEvents(p => p.filter(e => e.id!==id));
 
