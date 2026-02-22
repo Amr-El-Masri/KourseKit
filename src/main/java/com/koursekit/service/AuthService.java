@@ -37,6 +37,8 @@ public class AuthService {
 
         User user = new User(email, passhash);
         user.setVerified(false);
+        user.setRole("STUDENT");
+        user.setActive(true);
         userrepo.save(user);
 
         String veriftoken = UUID.randomUUID().toString();
@@ -46,7 +48,7 @@ public class AuthService {
         emailconfig.verificationmail(email, token.getValue());
         System.out.println("Veirifcation email sent. Check your inbox.");
 
-        String jwttoken = jwtutil.generate(user.getId(), user.getEmail());
+        String jwttoken = jwtutil.generate(user.getId(), user.getEmail(), user.getRole());
 
         AuthResponse response = new AuthResponse();
         response.setsuccess(true);
@@ -82,9 +84,10 @@ public class AuthService {
         User user = userrepo.findByEmail(email)
             .orElseThrow(() -> new IllegalArgumentException("Invalid email or password."));
         if (!user.isVerified()) { throw new IllegalArgumentException("Email has not been verified."); }
+        if (!user.isActive()) { throw new IllegalArgumentException("Account is deactivated."); }
         if (!passhasher.check(password, user.getPass())) { throw new IllegalArgumentException("Invalid email or password."); }
 
-        String jwttoken = jwtutil.generate(user.getId(), email);
+        String jwttoken = jwtutil.generate(user.getId(), email, user.getRole());
 
         AuthResponse response = new AuthResponse();
         response.setsuccess(true);

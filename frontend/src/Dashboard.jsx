@@ -228,12 +228,12 @@ function PomodoroTimer() {
 
 export default function Dashboard({ onLogout }) {
   const NAV_ITEMS = [
-  { id:"dashboard", label:"Dashboard",        icon:<LayoutDashboard size={17}/>},
+  { id:"dashboard", label:"Dashboard",        icon:<LayoutDashboard size={17}/> },
   { id:"grades",    label:"Grade Calculator", icon:<Calculator size={17}/> },
   { id:"tasks",     label:"Task Manager",     icon:<CheckSquare size={17}/> },
   { id:"reviews",   label:"Reviews",          icon:<Star size={17}/> },
-  { id:"profile",   label: "Student Profile",       icon:<User size={17}/> },
-  { id:"planner", label:"Study Planner", icon:<BookOpen size={17}/> },
+  { id:"profile",   label:"Student Profile",  icon:<User size={17}/> },
+  { id:"planner",   label:"Study Planner",    icon:<BookOpen size={17}/> },
 ];
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
 

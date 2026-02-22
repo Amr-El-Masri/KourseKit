@@ -1,10 +1,15 @@
 package com.koursekit.service;
 
-import com.koursekit.model.*;
-import com.koursekit.repository.*;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.util.List;
+
+import com.koursekit.model.Review;
+import com.koursekit.model.ReviewStatus;
+import com.koursekit.model.Section;
+import com.koursekit.repository.ReviewRepository;
+import com.koursekit.repository.SectionRepository;
 
 @Service
 public class ReviewService {
@@ -41,7 +46,6 @@ public class ReviewService {
     public List<Review> getApprovedReviewsForCourse(Long courseId) {
         return reviewRepo.findBySectionCourseIdAndStatus(courseId, ReviewStatus.APPROVED);
     }
-
 
     public List<Review> getApprovedReviewsForSection(Long sectionId) {
         return reviewRepo.findBySectionIdAndStatus(sectionId, ReviewStatus.APPROVED);
