@@ -300,7 +300,7 @@ export default function Reviews() {
 
       {displayed.length === 0 ? (
         <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
-          <div style={{ fontSize:40, marginBottom:12 }}>🔍</div>
+          <div style={{ fontSize:40, marginBottom:12 }}></div>
           <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>No reviews found</div>
           <div style={{ fontSize:13, marginTop:6 }}>Try adjusting your search or filters</div>
         </div>

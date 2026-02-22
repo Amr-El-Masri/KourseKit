@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
-// ─── Constants ────────────────────────────────────────────────────────────────
 const HOUR_HEIGHT = 80;
 const START_HOUR = 6;
 const END_HOUR = 24;
@@ -14,7 +13,6 @@ const PALETTE = [
   "#a29bfe", "#e17055", "#00b894", "#6c5ce7",
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function getWeekDates(baseDate) {
   const monday = new Date(baseDate);
   const day = monday.getDay();
@@ -42,7 +40,6 @@ function slotsOverlap(a, b) {
   return a.startHour < b.endHour && a.endHour > b.startHour;
 }
 
-// ─── API ──────────────────────────────────────────────────────────────────────
 const API_BASE = "http://localhost:8080";
 const USER_ID = 1;
 
@@ -60,8 +57,6 @@ async function apiFetch(path, options = {}) {
   }
 }
 
-// Build SchedulerSettings payload the backend expects:
-// { availability: { "MONDAY": { slots: [{ start: "09:00", end: "11:00" }] } } }
 function buildSchedulerSettings(availability) {
   const result = {};
   for (const [dayKey, slots] of Object.entries(availability)) {
@@ -76,13 +71,10 @@ function buildSchedulerSettings(availability) {
   return { availability: result };
 }
 
-// Parse weekly view from backend:
-// Backend returns Map<DayOfWeek, List<StudyBlock>>
-// Each StudyBlock has: id, studyPlanEntryId, startTime (array [H,M,S] or "HH:MM:SS"), duration, completed
-// We need startTime as "HH:MM:SS" string for the calendar
+
 function normalizeBlock(block) {
   let startTime = block.startTime;
-  // Jackson may serialize LocalTime as [H, M, S] array
+  
   if (Array.isArray(startTime)) {
     const [h, m, s = 0] = startTime;
     startTime = `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
@@ -98,8 +90,6 @@ function normalizeWeeklyData(data) {
   }
   return normalized;
 }
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
 
 function TimeGutter() {
   return (
@@ -153,7 +143,6 @@ function StudyBlockEvent({ block, color, onComplete, onDelete, onUncomplete, onE
   );
 }
 
-// ─── Edit Block Modal ─────────────────────────────────────────────────────────
 function EditBlockModal({ block, onClose, onSave }) {
   const [startTime, setStartTime] = useState(block.startTime.slice(0, 5));
   const [duration, setDuration]   = useState(String(block.duration));
@@ -306,14 +295,12 @@ function DayColumn({
   );
 }
 
-// ─── Entry Panel ──────────────────────────────────────────────────────────────
 function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId }) {
   const [tasks, setTasks] = useState([]);
   const [selectedTaskId, setSelectedTaskId] = useState("");
   const [hoursPerWeek, setHoursPerWeek] = useState("");
   const [color, setColor] = useState(PALETTE[0]);
 
-  // Load user's tasks from backend for the dropdown
   useEffect(() => {
     apiFetch(`/api/tasks/${userId}/list-all`).then(data => {
       if (data) setTasks(data);
@@ -321,7 +308,6 @@ function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId 
   }, [userId]);
 
   const selectedTask = tasks.find(t => String(t.id) === String(selectedTaskId));
-  // Tasks already added as entries (by taskId) — filter them out of dropdown
   const addedTaskIds = new Set(entries.map(e => String(e.taskId)));
   const availableTasks = tasks.filter(t => !addedTaskIds.has(String(t.id)));
 
@@ -450,7 +436,6 @@ function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId 
   );
 }
 
-// ─── Slot Panel ───────────────────────────────────────────────────────────────
 function SlotPanel({ availability, onDeleteSlot, onClearAll }) {
   const allSlots = Object.entries(availability).flatMap(([dayKey, slots]) =>
       slots.map(s => ({ ...s, dayKey }))
@@ -478,7 +463,6 @@ function SlotPanel({ availability, onDeleteSlot, onClearAll }) {
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 export default function StudyPlanner() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [weekBlocks, setWeekBlocks] = useState({});
@@ -500,14 +484,14 @@ export default function StudyPlanner() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // Load existing backend entries and map to frontend format
+ 
   const loadEntries = useCallback(async () => {
     const data = await apiFetch(`/api/study-plan/${USER_ID}/entries`);
     if (data && data.length > 0) {
       const mapped = data.map((entry, i) => ({
         id: entry.id,
         taskId: entry.task?.id,
-        // Backend: StudyPlanEntry has task.course and task.title
+  
         name: entry.task?.course
             ? `${entry.task.course} — ${entry.task.title}`
             : `Entry ${entry.id}`,
@@ -526,10 +510,8 @@ export default function StudyPlanner() {
     setLoading(true);
     const data = await apiFetch(`/api/study-plan/${USER_ID}/weekly?weekStart=${weekStart}`);
     if (data) {
-      // Normalize startTime: Jackson may return LocalTime as [H,M,S] array
       setWeekBlocks(normalizeWeeklyData(data));
     } else {
-      // Demo data when backend unavailable
       setWeekBlocks({
         MONDAY: [
           { id: 1, studyPlanEntryId: 1, startTime: "09:00:00", duration: 2, completed: false, course: "Mathematics" },
@@ -556,7 +538,6 @@ export default function StudyPlanner() {
   useEffect(() => {
     loadEntries();
     loadWeeklyView();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart]);
 
   const handleCompleteBlock = useCallback(async (blockId) => {
@@ -592,12 +573,10 @@ export default function StudyPlanner() {
   }, [showToast]);
 
   const handleSaveEditedBlock = useCallback(async (blockId, changes) => {
-    // PATCH /api/study-plan/blocks/{blockId} with { startTime, duration }
     const res = await apiFetch(`/api/study-plan/blocks/${blockId}`, {
       method: "PATCH",
       body: JSON.stringify(changes),
     });
-    // Update local state regardless (optimistic)
     setWeekBlocks(prev => {
       const next = {};
       for (const [day, blocks] of Object.entries(prev))
@@ -610,7 +589,6 @@ export default function StudyPlanner() {
   const handleAddSlot = useCallback((dayKey, newSlot) => {
     setAvailability(prev => {
       const existing = prev[dayKey] || [];
-      // prevent overlaps
       const overlaps = existing.some(s => slotsOverlap(s, newSlot));
       if (overlaps) {
         showToast("Slots can't overlap — adjust the existing one first", "error");
@@ -632,24 +610,18 @@ export default function StudyPlanner() {
     showToast("All slots cleared", "info");
   }, [showToast]);
 
-  // Create a StudyPlanEntry on backend: requires a taskId.
-  // The backend endpoint is POST /api/study-plan/{userId}/entries/add?taskId=X&estimatedWorkload=Y
-  // Entry form in frontend collects taskId (from existing tasks) + hoursPerWeek as estimatedWorkload.
   const handleAddEntry = useCallback(async (entry) => {
     if (entry.taskId) {
-      // Try to create on backend
       const data = await apiFetch(
           `/api/study-plan/${USER_ID}/entries/add?taskId=${entry.taskId}&estimatedWorkload=${entry.hoursPerWeek}`,
           { method: "POST" }
       );
       if (data) {
-        // Backend created entry successfully — reload entries list
         await loadEntries();
         showToast(`Added "${entry.name}"`, "success");
         return;
       }
     }
-    // Fallback: local only (demo mode / no backend)
     const id = Date.now();
     setEntries(prev => [...prev, { ...entry, id }]);
     setColorMap(prev => ({ ...prev, [id]: entry.color }));
@@ -657,7 +629,6 @@ export default function StudyPlanner() {
   }, [showToast, loadEntries]);
 
   const handleDeleteEntry = useCallback(async (entryId) => {
-    // Try backend delete
     await apiFetch(`/api/study-plan/entries/${entryId}`, { method: "DELETE" });
     setEntries(prev => prev.filter(e => e.id !== entryId));
     setColorMap(prev => { const next = { ...prev }; delete next[entryId]; return next; });
@@ -665,13 +636,11 @@ export default function StudyPlanner() {
   }, [showToast]);
 
   const handleColorChange = useCallback((entryId, color) => {
-    // Color is frontend-only (backend has no color field)
     setColorMap(prev => ({ ...prev, [entryId]: color }));
     setEntries(prev => prev.map(e => e.id === entryId ? { ...e, color } : e));
   }, []);
 
-  // Build SchedulerSettings matching backend model exactly:
-  // { availability: { "MONDAY": { slots: [{ start: "09:00:00", end: "11:00:00" }] } } }
+ 
   const buildSettingsPayload = useCallback(() => {
     return buildSchedulerSettings(availability);
   }, [availability]);
@@ -1453,9 +1422,7 @@ export default function StudyPlanner() {
             </div>
           </div>
 
-          {/* Body */}
           <div className="sp-body">
-            {/* Sidebar */}
             <div className="sp-sidebar">
               <div className="sp-sidebar-tabs">
                 <button
@@ -1492,7 +1459,6 @@ export default function StudyPlanner() {
               </div>
             </div>
 
-            {/* Calendar */}
             <div className="sp-calendar-area">
               <div className="sp-day-header-row">
                 <div className="sp-gutter-spacer" />
@@ -1532,8 +1498,7 @@ export default function StudyPlanner() {
               </div>
             </div>
           </div>
-
-          {/* Generate modal */}
+          
           {showGenerateModal && (
               <div className="sp-modal-backdrop" onClick={() => setShowGenerateModal(false)}>
                 <div className="sp-modal" onClick={e => e.stopPropagation()}>
