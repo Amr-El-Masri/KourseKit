@@ -1,9 +1,11 @@
 package com.koursekit.repository;
 
+import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
 import com.koursekit.model.Review;
 import com.koursekit.model.ReviewStatus;
-import org.springframework.data.jpa.repository.JpaRepository;
-import java.util.List;
 
 public interface ReviewRepository extends JpaRepository<Review, Long> {
     // This is the "Gatekeeper" method for your View Reviews page

@@ -9,10 +9,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;      
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -26,15 +26,13 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable()) 
             .authorizeHttpRequests(auth -> auth
-                // Auth endpoints — no token needed
                 .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/verify").permitAll()
-                // Static files — no token needed
-                .requestMatchers("/*.html", "/css/**", "/js/**", "/images/**").permitAll()
+                .requestMatchers("/*.html", "/css/**", "/js/**", "/images/**").permitAll() // static files no token need
                 //allow these before login, maybe shilon later??
                 .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/verify").permitAll()
                 .requestMatchers("/api/courses/search", "/api/courses/*/sections").permitAll()
                 .requestMatchers("/api/reviews/course/**", "/api/reviews/section/**").permitAll()
-                // Everything else — token required
+                .requestMatchers("/api/admin/**").hasRole("ADMIN") // admin only
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session

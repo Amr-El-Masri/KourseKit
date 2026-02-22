@@ -224,7 +224,9 @@ function SubmitReview({ token, userEmail, onDone }) {
   );
 }
 
-export default function Reviews({ token, userEmail }) {
+export default function Reviews() {
+  const token = localStorage.getItem("kk_token");
+  const userEmail = localStorage.getItem("kk_email");
   const [reviews,   setReviews]   = useState([]);
   const [loading,   setLoading]   = useState(false);
   const [sort,      setSort]      = useState("new");

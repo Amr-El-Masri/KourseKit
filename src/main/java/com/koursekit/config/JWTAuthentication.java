@@ -1,9 +1,12 @@
 package com.koursekit.config;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -38,8 +41,10 @@ public class JWTAuthentication extends OncePerRequestFilter {
                 String id = jwtutil.gettokenuserid(token);
                 User user = userrepo.findById(Long.parseLong(id)).orElse(null);
                 if (user != null && user.isVerified()) {
-                    UsernamePasswordAuthenticationToken authentication = 
-                        new UsernamePasswordAuthenticationToken(user, null, null);
+                    String role = jwtutil.gettokenrole(token);
+                    List<GrantedAuthority> admins = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+                    UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(user, null, admins);
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             }
