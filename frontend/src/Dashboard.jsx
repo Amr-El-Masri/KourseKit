@@ -86,7 +86,7 @@ function SectionTitle({ children }) {
 }
 
 const NAV_ITEMS = [
-  { id:"dashboard", label:"Dashboard",        icon:"⊞" },
+  { id:"dashboard", label:"Dashboard",        icon:"" },
   { id:"grades",    label:"Grade Calculator", icon:"" },
   { id:"tasks",     label:"Task Manager",     icon:"" },
   { id:"reviews",   label:"Reviews",          icon:"" },
@@ -372,7 +372,7 @@ export default function Dashboard({ onLogout }) {
           )}
 
           <div style={s.searchWrap}>
-            <span style={{color:"#B8A9C9",marginRight:8}}>🔍</span>
+            <span style={{color:"#B8A9C9",marginRight:8}}></span>
             <input placeholder="Search…" style={s.searchInput} />
           </div>
 
@@ -555,40 +555,6 @@ export default function Dashboard({ onLogout }) {
                     );
                   })}
                   {scheduleEvents.length===0 && <div style={{fontSize:13,color:"#B8A9C9",textAlign:"center",padding:"16px 0"}}>No events yet!</div>}
-                </div>
-              </section>
-            )}
-
-            {visible.profrev && (
-              <section className="card-anim" style={{...s.card,gridColumn:"span 2"}}>
-                <SectionTitle>Professor Reviews</SectionTitle>
-                <div style={{display:"flex",gap:14,flexWrap:"wrap",marginTop:14}}>
-                  {PROF_REVIEWS.map(r=>(
-                    <div key={r.id} style={s.reviewCard}>
-                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                        <span style={{fontWeight:600,fontSize:13,color:"#31487A"}}>Anonymous {r.name}</span>
-                        <Stars count={r.stars}/>
-                      </div>
-                      <p style={{fontSize:13,color:"#4a3a6a",lineHeight:1.6}}>{r.text}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {visible.courserev && (
-              <section className="card-anim" style={{...s.card,gridColumn:"span 2"}}>
-                <SectionTitle>Course Reviews</SectionTitle>
-                <div style={{display:"flex",gap:14,flexWrap:"wrap",marginTop:14}}>
-                  {COURSE_REVIEWS.map(r=>(
-                    <div key={r.id} style={s.reviewCard}>
-                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                        <span style={{fontWeight:600,fontSize:13,color:"#31487A"}}>Anonymous {r.name}</span>
-                        <Stars count={r.stars}/>
-                      </div>
-                      <p style={{fontSize:13,color:"#4a3a6a",lineHeight:1.6}}>{r.text}</p>
-                    </div>
-                  ))}
                 </div>
               </section>
             )}
