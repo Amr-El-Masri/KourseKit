@@ -71,7 +71,12 @@ export default function ResetPassword({ token, onGoToLogin }) {
         <div style={s.card}>
           {done ? (
             <div style={{ textAlign: "center", padding: "20px 0" }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+              <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
+                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10" stroke="#2e7d32" fill="#f0faf0"/>
+                  <polyline points="9 12 11 14 15 10"/>
+                </svg>
+              </div>
               <h2 style={s.title}>Password Reset!</h2>
               <p style={{ fontSize: 14, color: "#7a8fa8", lineHeight: 1.7, marginBottom: 28 }}>
                 Your password has been updated. You can now log in with your new password.
