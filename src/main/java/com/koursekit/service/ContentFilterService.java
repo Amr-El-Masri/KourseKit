@@ -103,13 +103,19 @@ public class ContentFilterService {
 
     public String filter(String comment){
         if (comment ==null)return null;
+        //to detect when ppl are using special characters like "SH!t"
+        String normalized = comment
+            .replace("@", "a")
+            .replace("$", "s")
+            .replace("+", "t")
+            .replace("!", "i");
         String filteredReview= comment;
-        for (String word: bannedWords){
-            String masked ="*".repeat(word.length());
-            filteredReview=Pattern.compile(Pattern.quote(word), Pattern.CASE_INSENSITIVE).matcher(filteredReview).replaceAll(masked);
+            for (String word: bannedWords){
+                String masked ="*".repeat(word.length());
+                filteredReview=Pattern.compile(Pattern.quote(word), Pattern.CASE_INSENSITIVE).matcher(filteredReview).replaceAll(masked);
 
+            }
+            return filteredReview;
         }
-        return filteredReview;
-    }
 
 }
