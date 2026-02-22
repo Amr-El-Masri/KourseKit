@@ -38,9 +38,19 @@ public class EmailConfig {
     public void verificationmail(String email, String token) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
-        message.setSubject("verify ur acc");  //change it later brah to smth metel l khale2
-        String verificationLink = "http://localhost:8080/verify-email.html?token=" + token;
+        message.setSubject("KourseKit - Verify Your Email");  
+        String verificationLink = "http://localhost:3000?verify_token=" + token;
         message.setText("Click here to verify your account:\n\n" + verificationLink);
+        javaMailSender().send(message);
+    }
+
+    public void resetpasswordmail(String email, String token) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject("KourseKit - Reset Your Password");
+        String resetLink = "http://localhost:3000?reset_token=" + token;
+        message.setText("Please click the link below to reset your password. \n\n"
+            + resetLink + "\nThe link will expire in 30 minutes. \nIf you didn't request this, you can ignore this email.");
         javaMailSender().send(message);
     }
 }
