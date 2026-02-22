@@ -241,8 +241,8 @@ export default function Reviews() {
 
       <div style={{ display:"flex", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:14, padding:5, width:"fit-content", gap:4, marginBottom:22 }}>
         {[
-          { id:"professor", icon:"🎓", label:"Professor Reviews" },
-          { id:"course",    icon:"📚", label:"Course Reviews"    },
+          { id:"professor", icon:"", label:"Professor Reviews" },
+          { id:"course",    icon:"", label:"Course Reviews"    },
         ].map(m => (
           <button key={m.id} onClick={() => { setMode(m.id); setFilterTag(null); setSearch(""); }} style={{
             padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600,
@@ -260,7 +260,7 @@ export default function Reviews() {
 
       <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap", marginBottom:18 }}>
         <div style={{ display:"flex", alignItems:"center", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px", flex:"1 1 200px", maxWidth:300 }}>
-          <span style={{ color:"#B8A9C9", marginRight:8, fontSize:14 }}>🔍</span>
+          <span style={{ color:"#B8A9C9", marginRight:8, fontSize:14 }}></span>
           <input className="rv-input" value={search} onChange={e=>setSearch(e.target.value)} placeholder={`Search ${mode==="professor"?"professors":"courses"}…`}
             style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"#333", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
         </div>
