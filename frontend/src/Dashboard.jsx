@@ -4,7 +4,7 @@ import Reviews from "./Reviews";
 import TaskManager from "./TaskManager";
 import Profile from "./Profile";
 import StudyPlanner from "./StudyPlanner";
-import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell } from 'lucide-react'
+import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell } from 'lucide-react';
 
 const ANON_NAMES = [
   "Apple","Blueberry","Cherry","Elderberry","Fig","Grape","Honeydew","Kiwi",
@@ -85,15 +85,6 @@ function SectionTitle({ children }) {
     </div>
   );
 }
-
-const NAV_ITEMS = [
-  { id:"dashboard", label:"Dashboard",        icon:"<LayoutDashboard size={17}/>" },
-  { id:"grades",    label:"Grade Calculator", icon:"<Calculator size={17}/>" },
-  { id:"tasks",     label:"Task Manager",     icon:"<CheckSquare size={17}/>" },
-  { id:"reviews",   label:"Reviews",          icon:"<Star size={17}/>" },
-  { id:"profile",   label: "Student Profile",       icon:"<User size={17}/>" },
-  { id:"planner", label:"Study Planner", icon:"<BookOpen size={17}/>" },
-];
 
 function SemesterSelect({ value, onChange }) {
   const [open, setOpen] = useState(false);
@@ -236,6 +227,14 @@ function PomodoroTimer() {
 
 
 export default function Dashboard({ onLogout }) {
+  const NAV_ITEMS = [
+  { id:"dashboard", label:"Dashboard",        icon:"<LayoutDashboard size={17}/>" },
+  { id:"grades",    label:"Grade Calculator", icon:"<Calculator size={17}/>" },
+  { id:"tasks",     label:"Task Manager",     icon:"<CheckSquare size={17}/>" },
+  { id:"reviews",   label:"Reviews",          icon:"<Star size={17}/>" },
+  { id:"profile",   label: "Student Profile",       icon:"<User size={17}/>" },
+  { id:"planner", label:"Study Planner", icon:"<BookOpen size={17}/>" },
+];
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
 
   const [profile, setProfile] = useState(() => {
