@@ -32,6 +32,12 @@ public class User {
     @Column(name = "created_at")
     private LocalDateTime createdat=LocalDateTime.now();
 
+    @Column(name = "role", nullable = false)
+    private String role = "STUDENT";
+
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
+
     public User() {}
     public User(String email, String pass) {
         this.email = email;
@@ -58,6 +64,12 @@ public class User {
 
     public LocalDateTime getCreatedAt() { return createdat; }
     public void setCreatedAt(LocalDateTime createdat) { this.createdat = createdat; }
+
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
 
     // integrate microsoft login?
 }
