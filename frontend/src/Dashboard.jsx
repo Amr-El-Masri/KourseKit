@@ -4,6 +4,7 @@ import Reviews from "./Reviews";
 import TaskManager from "./TaskManager";
 import Profile from "./Profile";
 import StudyPlanner from "./StudyPlanner";
+import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell } from 'lucide-react'
 
 const ANON_NAMES = [
   "Apple","Blueberry","Cherry","Elderberry","Fig","Grape","Honeydew","Kiwi",
@@ -86,12 +87,12 @@ function SectionTitle({ children }) {
 }
 
 const NAV_ITEMS = [
-  { id:"dashboard", label:"Dashboard",        icon:"" },
-  { id:"grades",    label:"Grade Calculator", icon:"" },
-  { id:"tasks",     label:"Task Manager",     icon:"" },
-  { id:"reviews",   label:"Reviews",          icon:"" },
-  { id:"profile",   label: "Student Profile",       icon:"" },
-  { id:"planner", label:"Study Planner", icon:"" },
+  { id:"dashboard", label:"Dashboard",        icon:"<LayoutDashboard size={17}/>" },
+  { id:"grades",    label:"Grade Calculator", icon:"<Calculator size={17}/>" },
+  { id:"tasks",     label:"Task Manager",     icon:"<CheckSquare size={17}/>" },
+  { id:"reviews",   label:"Reviews",          icon:"<Star size={17}/>" },
+  { id:"profile",   label: "Student Profile",       icon:"<User size={17}/>" },
+  { id:"planner", label:"Study Planner", icon:"<BookOpen size={17}/>" },
 ];
 
 function SemesterSelect({ value, onChange }) {
@@ -386,7 +387,7 @@ export default function Dashboard({ onLogout }) {
             </div>
           )}
 
-          <div style={s.bell}></div>
+          <div style={s.bell}><Bell size={18} color="#8FB3E2" /></div>
         </header>
 
         {activePage === "dashboard" && (
@@ -571,13 +572,6 @@ export default function Dashboard({ onLogout }) {
           <Profile onProfileSave={p => setProfile(p)} />
         )}
 
-        {activePage !== "dashboard" && activePage !== "grades" && activePage !== "tasks" && activePage !== "reviews" && activePage !== "profile" && (
-          <div style={{padding:40,textAlign:"center",color:"#B8A9C9",marginTop:60}}>
-            <div style={{fontSize:48,marginBottom:16}}></div>
-            <div style={{fontFamily:"'Fraunces',serif",fontSize:22,color:"#31487A"}}>{NAV_ITEMS.find(n=>n.id===activePage)?.label} coming soon!</div>
-            <div style={{fontSize:13,marginTop:8}}>This page is next on the build list.</div>
-          </div>
-        )}
       </main>
     </div>
   );
