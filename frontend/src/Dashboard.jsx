@@ -4,12 +4,12 @@ import Reviews from "./Reviews";
 import TaskManager from "./TaskManager";
 import Profile from "./Profile";
 import StudyPlanner from "./StudyPlanner";
-import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Magnet, Dog, Telescope, Panda, Turtle } from 'lucide-react';
+import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle } from 'lucide-react';
 
 const AVATAR_ICONS = [
   { id:"Banana", icon: Banana },
   { id:"Telescope", icon: Telescope  },
-  { id:"Magnet", icon: Magnet    },
+  { id:"Eclipse", icon: Eclipse    },
   { id:"Cat", icon: Cat   },
   { id:"Dog", icon: Dog    },
   { id:"Panda", icon: Panda  },

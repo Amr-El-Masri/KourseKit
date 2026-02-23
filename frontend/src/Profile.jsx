@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Banana, Cat, Dog, Magnet, Telescope, Panda, Turtle } from "lucide-react";
+import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle } from "lucide-react";
 
 const AVATAR_ICONS = [
   { id:"Banana", icon: Banana },
   { id:"Telescope", icon: Telescope  },
-  { id:"Magnet", icon: Magnet    },
+  { id:"Eclipse", icon: Eclipse    },
   { id:"Cat", icon: Cat   },
   { id:"Dog", icon: Dog    },
   { id:"Panda", icon: Panda  },
