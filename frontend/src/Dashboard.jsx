@@ -41,6 +41,9 @@ const SEMESTERS = {
     { id:3, name:"ENGL 203", prof:"Ms. Lara Khouri",    time:"Tue & Thu · 9:30–10:45"  },
     { id:4, name:"CMPS 256", prof:"Dr. Wassim El-Hajj", time:"Tue & Thu · 11:00–12:15" },
   ]},
+
+  "Fall 25-26":   { gpa: null, progress: 0, week: "0 of 15", courses: [] },
+
   "Spring 25-26": { gpa: null, progress: 15, week: "3 of 15", courses: [
     { id:1, name:"CMPS 271", prof:"Dr. Mohammad Sakr",        time:"Mon & Wed · 12:30–13:45" },
     { id:2, name:"PHIL 210", prof:"Mr. Mahmoud El Hassanieh", time:"Mon & Wed · 14:00–15:15" },
@@ -48,7 +51,7 @@ const SEMESTERS = {
     { id:4, name:"PSYC 222", prof:"Dr. Arne Dietrich",        time:"Tue & Thu · 9:30–10:45"  },
     { id:5, name:"PSYC 284", prof:"Dr. Sarine Hagopian",      time:"Tue & Thu · 14:00–15:15" },
   ]},
-  "Fall 25-26":   { gpa: null, progress: 0, week: "0 of 15", courses: [] },
+  
 };
 
 const PROF_REVIEWS = [
