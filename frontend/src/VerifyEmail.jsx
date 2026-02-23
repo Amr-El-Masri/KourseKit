@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { LoaderCircle, MailCheck, MailWarning } from "lucide-react";
 
 export default function VerifyEmail({ token, onVerified, onGoToLogin }) {
   const [status, setStatus] = useState("loading"); // loading then success then error
@@ -28,7 +29,7 @@ export default function VerifyEmail({ token, onVerified, onGoToLogin }) {
       });
   }, []);
 
-  const icon    = status === "loading" ? "⏳" : status === "success" ? "✅" : "❌";
+  const icon    = status === "loading" ? <LoaderCircle size={52} color="#A59AC9" /> : status === "success" ? <MailCheck size={52} color="#2d7a4a" /> : <MailWarning size={52} color="#c0392b" />;
   const title   = status === "loading" ? "Verifying your email…"
                 : status === "success" ? "Email Verified!"
                 : "Verification Failed";
@@ -56,7 +57,7 @@ export default function VerifyEmail({ token, onVerified, onGoToLogin }) {
 
       <div style={s.rightPanel}>
         <div style={{ ...s.card, textAlign: "center" }}>
-          <div style={{ fontSize: 52, marginBottom: 16 }}>{icon}</div>
+          <div style={{ marginBottom: 16 }}>{icon}</div>
           <h2 style={s.title}>{title}</h2>
           <p style={s.msg}>{message}</p>
 

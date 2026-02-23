@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PartyPopper } from "lucide-react";
 
 const requirements = [
   { label: "At least 8 characters",       test: p => p.length >= 8 },
@@ -80,7 +81,7 @@ export default function Register({ onGoToLogin }) {
 
           {success ? (
             <div style={{ textAlign: "center", padding: "20px 0" }}>
-              <div style={{ fontSize: 52, marginBottom: 16 }}>🎉</div>
+              <div style={{ marginBottom: 16 }}><PartyPopper size={52} color="#6C63FF" /></div>
               <h2 style={s.title}>You're registered!</h2>
               <p style={{ fontSize: 14, color: "#7a8fa8", marginBottom: 28, lineHeight: 1.6 }}>
                 Your account has been created. You can now log in with your AUB email.

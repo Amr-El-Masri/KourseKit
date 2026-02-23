@@ -4,7 +4,17 @@ import Reviews from "./Reviews";
 import TaskManager from "./TaskManager";
 import Profile from "./Profile";
 import StudyPlanner from "./StudyPlanner";
-import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell } from 'lucide-react';
+import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Magnet, Dog, Telescope, Panda, Turtle } from 'lucide-react';
+
+const AVATAR_ICONS = [
+  { id:"Banana", icon: Banana },
+  { id:"Telescope", icon: Telescope  },
+  { id:"Magnet", icon: Magnet    },
+  { id:"Cat", icon: Cat   },
+  { id:"Dog", icon: Dog    },
+  { id:"Panda", icon: Panda  },
+  { id:"Turtle", icon: Turtle   },
+];
 
 const ANON_NAMES = [
   "Apple","Blueberry","Cherry","Elderberry","Fig","Grape","Honeydew","Kiwi",
@@ -213,7 +223,7 @@ function PomodoroTimer() {
           padding:"7px 22px", background:running?"#e07070":mode.color, color:"white",
           border:"none", borderRadius:9, fontSize:13, fontWeight:600, cursor:"pointer",
           fontFamily:"'DM Sans',sans-serif", transition:"background .15s",
-        }}>{running ? "⏸ Pause" : "▶ Start"}</button>
+        }}>{running ? <><Pause size={13} style={{verticalAlign:"middle",marginRight:4}}/>Pause</> : <><Play size={13} style={{verticalAlign:"middle",marginRight:4}}/>Start</>}</button>
       </div>
 
       <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"#A59AC9"}}>
@@ -365,7 +375,11 @@ const deleteTodo = id => {
         </div>
         {sidebarOpen && (
           <div style={s.userPill}>
-            <div style={s.avatar}>{email[0].toUpperCase()}</div>
+            <div style={s.avatar}>
+              {profile.avatar
+                ? (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={16} color="white" /> : email[0].toUpperCase(); })()
+                : email[0].toUpperCase()}
+            </div>
             <div>
               <div style={{fontWeight:600,fontSize:13,color:"#D9E1F1"}}>Student</div>
               <div style={{fontSize:11,color:"#B8A9C9",maxWidth:130,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{email}</div>
@@ -389,7 +403,7 @@ const deleteTodo = id => {
         </nav>
         <button onClick={() => setSidebarOpen(o=>!o)} style={s.collapseBtn}>{sidebarOpen?"◀":"▶"}</button>
         <div className="nav-btn" onClick={handleLogout} style={{display:"flex",alignItems:"center",padding:"10px 16px",margin:"2px 8px 14px",borderRadius:10,color:"#e07070",justifyContent:sidebarOpen?"flex-start":"center",cursor:"pointer",userSelect:"none"}}>
-          <span style={{fontSize:17,minWidth:22,textAlign:"center"}}>⏻</span>
+          <Power size={17} style={{minWidth:22,flexShrink:0}} />
           {sidebarOpen && <span style={{marginLeft:10,fontSize:14}}>Log out</span>}
         </div>
       </aside>
@@ -502,7 +516,7 @@ const deleteTodo = id => {
                   {todos.map(t=>(
                     <div key={t.id} className="todo-row" style={s.todoRow}>
                       <span onClick={()=>toggleTodo(t.id)} style={{fontSize:13,flex:1,cursor:"pointer",textDecoration:t.done?"line-through":"none",color:t.done?"#B8A9C9":"#2a2050"}}>
-                        {t.done?"":"⬜"} {t.text}
+                        {t.done?"":<LayoutList size={13} style={{verticalAlign:"middle",marginRight:4}}/>}{t.text}
                       </span>
                       <button onClick={()=>deleteTodo(t.id)} style={{background:"none",border:"none",color:"#B8A9C9",cursor:"pointer",fontSize:12}}>✕</button>
                     </div>
