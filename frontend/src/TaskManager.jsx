@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { NotebookPen, Notebook, Pencil, Search, ListChecks } from "lucide-react";
 
 const PRIORITIES = [
   { id:"high",   label:"High",   color:"#c0392b", bg:"#fef0f0", dot:"#e74c3c" },
@@ -80,9 +81,9 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
 
         <div style={{ display:"flex", gap:6, flexShrink:0 }}>
           <button onClick={() => setExpanded(e=>!e)} style={tm.iconBtn} title="Notes">
-            {task.notes ? "📝" : "💬"}
+            {task.notes ? <NotebookPen size={15} /> : <Notebook size={15} />}
           </button>
-          <button onClick={() => onEdit(task)} style={tm.iconBtn} title="Edit">✏️</button>
+          <button onClick={() => onEdit(task)} style={tm.iconBtn} title="Edit"><Pencil size={15} /></button>
           <button onClick={() => onDelete(task.id)} style={{ ...tm.iconBtn, color:"#e07070" }} title="Delete">✕</button>
         </div>
       </div>
@@ -269,7 +270,7 @@ export default function TaskManager() {
 
       <div style={{ display:"flex", gap:10, marginBottom:18, flexWrap:"wrap", alignItems:"center" }}>
         <div style={{ display:"flex", alignItems:"center", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px", flex:"1 1 200px", maxWidth:300 }}>
-          <span style={{ color:"#B8A9C9", marginRight:8 }}>🔍</span>
+          <Search size={15} style={{ color:"#B8A9C9", marginRight:8, flexShrink:0 }} />
           <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tasks…"
             className="tm-input"
             style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"#333", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
@@ -291,7 +292,7 @@ export default function TaskManager() {
       
       {displayed.length === 0 ? (
         <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
-          <div style={{ fontSize:40, marginBottom:12 }}>✅</div>
+          <div style={{ marginBottom:12 }}><ListChecks size={40} color="#B8A9C9" /></div>
           <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>
             {filter==="Done" ? "No completed tasks yet." : filter==="Overdue" ? "Nothing overdue!" : "No tasks found."}
           </div>

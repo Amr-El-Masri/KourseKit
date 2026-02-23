@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Pen, Search, Inbox } from "lucide-react";
 
 const API = "http://localhost:8080";
 
@@ -88,7 +89,7 @@ function CourseSearch({ onSelect }) {
   return (
     <div style={{ position:"relative", marginBottom:20 }}>
       <div style={{ display:"flex", alignItems:"center", background:"#fff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px" }}>
-        <span style={{ color:"#B8A9C9", marginRight:8 }}></span>
+        <Search size={15} style={{ color:"#B8A9C9", marginRight:8, flexShrink:0 }} />
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
@@ -292,16 +293,16 @@ export default function Reviews() {
               </div>
               {token && (
                 <button onClick={() => setComposing(c => !c)} style={{
-                  padding:"9px 20px", background:"#7B5EA7", color:"white",
+                  padding:"9px 20px 9px 12px", background:"#7B5EA7", color:"white",
                   border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer",
-                }}>✏️ Write a Review</button>
+                }}><Pen size={14} style={{ marginRight: 6, verticalAlign: "middle" }} /> Write a Review</button>
               )}
             </div>
           </div>
 
           {/* search within reviews */}
           <div style={{ display:"flex", alignItems:"center", background:"#fff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px", marginBottom:18 }}>
-            <span style={{ color:"#B8A9C9", marginRight:8 }}>🔍</span>
+            <Search size={15} style={{ color:"#B8A9C9", marginRight:8, flexShrink:0 }} />
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search within reviews…"
               style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"#333", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
@@ -321,7 +322,7 @@ export default function Reviews() {
 
       {!loading && activeCourse && displayed.length === 0 && !composing && (
         <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
-          <div style={{ fontSize:40, marginBottom:12 }}>📭</div>
+          <div style={{ marginBottom:12 }}><Inbox size={40} color="#B8A9C9" /></div>
           <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>No reviews yet for this course</div>
           <div style={{ fontSize:13, marginTop:6 }}>Be the first to write one!</div>
         </div>

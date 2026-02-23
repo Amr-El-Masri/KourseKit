@@ -13,6 +13,7 @@ export default function ResetPassword({ token, onGoToLogin }) {
   const [confirm,   setConfirm]   = useState("");
   const [error,     setError]     = useState("");
   const [done,      setDone]      = useState(false);
+  const [email,     setEmail]     = useState("");
   const [loading,   setLoading]   = useState(false);
   const [pwFocused,    setPwFocused]   = useState(false);
   const [showPassword, setShowPw]      = useState(false);
@@ -36,6 +37,7 @@ export default function ResetPassword({ token, onGoToLogin }) {
       });
       const data = await res.json();
       if (data.success) {
+        setEmail(data.email || "");
         setDone(true);
         window.history.replaceState({}, document.title, "/");
       } else {
@@ -81,7 +83,7 @@ export default function ResetPassword({ token, onGoToLogin }) {
               <p style={{ fontSize: 14, color: "#7a8fa8", lineHeight: 1.7, marginBottom: 28 }}>
                 Your password has been updated. You can now log in with your new password.
               </p>
-              <button className="rp-btn" onClick={onGoToLogin} style={s.btn}>
+              <button className="rp-btn" onClick={() => onGoToLogin(email)} style={s.btn}>
                 Go to Login
               </button>
             </div>

@@ -1,5 +1,15 @@
 import { useState } from "react";
+import { Banana, Cat, Dog, Magnet, Telescope, Panda, Turtle } from "lucide-react";
 
+const AVATAR_ICONS = [
+  { id:"Banana", icon: Banana },
+  { id:"Telescope", icon: Telescope  },
+  { id:"Magnet", icon: Magnet    },
+  { id:"Cat", icon: Cat   },
+  { id:"Dog", icon: Dog    },
+  { id:"Panda", icon: Panda  },
+  { id:"Turtle", icon: Turtle   },
+];
 const passrequirements = [
   { label: "At least 8 characters",     test: p => p.length >= 8 },
   { label: "One uppercase letter (A-Z)", test: p => /[A-Z]/.test(p) },
@@ -50,6 +60,7 @@ const DEFAULT_PROFILE = {
   cumGPA:       "",
   totalCredits: "",
   bio:          "",
+  avatar:       null,
 };
 
 function loadProfile(email) {
@@ -77,10 +88,11 @@ const statusObj = id => STUDENT_STATUSES.find(s => s.id === id) || STUDENT_STATU
 
 export default function Profile({ onProfileSave }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
-  const [profile, setProfile] = useState(() => loadProfile(email));
-  const [editing, setEditing] = useState(false);
-  const [draft,   setDraft]   = useState(profile);
-  const [saved,   setSaved]   = useState(false);
+  const [profile,    setProfile]    = useState(() => loadProfile(email));
+  const [editing,    setEditing]    = useState(false);
+  const [draft,      setDraft]      = useState(profile);
+  const [saved,      setSaved]      = useState(false);
+  const [profilepic, setProfilepic] = useState(false);
 
   const [changing,    setchanging]    = useState(false);
   const [current,     setcurrent]     = useState("");
@@ -105,7 +117,7 @@ export default function Profile({ onProfileSave }) {
     try {
       const res  = await fetch("http://localhost:8080/api/auth/change-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("kk_token")}` },
         body: JSON.stringify({ email, currentpass: current, newpass }),
       });
       const data = await res.json();
@@ -141,6 +153,14 @@ export default function Profile({ onProfileSave }) {
 
   const handleCancel = () => { setDraft(profile); setEditing(false); };
 
+  const selectAvatar = (iconId) => {
+    const updated = { ...profile, avatar: iconId };
+    saveProfile(updated);
+    setProfile(updated);
+    setProfilepic(false);
+    if (onProfileSave) onProfileSave(updated);
+  };
+
   const displayName = profile.firstName || profile.lastName
     ? `${profile.firstName} ${profile.lastName}`.trim()
     : "Student";
@@ -169,13 +189,47 @@ export default function Profile({ onProfileSave }) {
         <div style={{ padding:"24px 28px 24px" }}>
 
           <div style={{ display:"flex", alignItems:"flex-end", gap:16, marginBottom:20 }}>
-            <div style={{
-              width:72, height:72, borderRadius:20, border:"3px solid #ffffff",
-              background:"linear-gradient(135deg,#8FB3E2,#7B5EA7)",
-              color:"white", fontWeight:700, fontSize:26,
-              display:"flex", alignItems:"center", justifyContent:"center",
-              fontFamily:"'Fraunces',serif", flexShrink:0, boxShadow:"0 4px 12px rgba(49,72,122,0.18)",
-            }}>{initials}</div>
+            <div style={{ position:"relative", flexShrink:0 }}>
+              <div onClick={() => setProfilepic(o => !o)} style={{
+                width:72, height:72, borderRadius:20, border:"3px solid #ffffff",
+                background:"linear-gradient(135deg,#8FB3E2,#7B5EA7)",
+                color:"white", fontWeight:700, fontSize:26,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontFamily:"'Fraunces',serif", boxShadow:"0 4px 12px rgba(49,72,122,0.18)",
+                cursor:"pointer",
+              }}>
+                {profile.avatar
+                  ? (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={32} color="white" /> : initials; })()
+                  : initials}
+              </div>
+              {profilepic && (
+                <div style={{
+                  position:"absolute", top:80, left:0, zIndex:100,
+                  background:"#ffffff", borderRadius:14, border:"1px solid #D4D4DC",
+                  boxShadow:"0 8px 32px rgba(49,72,122,0.15)", padding:10,
+                  display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:8, width:196,
+                }}>
+                  <div onClick={() => selectAvatar(null)} title="Default (initials)" style={{
+                    width:36, height:36, borderRadius:10, cursor:"pointer",
+                    background: !profile.avatar ? "#7B5EA7" : "linear-gradient(135deg,#8FB3E2,#A59AC9)",
+                    border: !profile.avatar ? "2px solid #31487A" : "2px solid transparent",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    color:"white", fontWeight:700, fontSize:13, fontFamily:"'Fraunces',serif",
+                  }}>{initials}</div>
+                  {AVATAR_ICONS.map(({ id, icon: Icon }) => (
+                    <div key={id} onClick={() => selectAvatar(id)} title={id} style={{
+                      width:36, height:36, borderRadius:10, cursor:"pointer",
+                      background: profile.avatar === id ? "#7B5EA7" : "linear-gradient(135deg,#8FB3E2,#A59AC9)",
+                      border: profile.avatar === id ? "2px solid #31487A" : "2px solid transparent",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      transition:"all .15s",
+                    }}>
+                      <Icon size={18} color="white" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <div style={{ paddingBottom:4 }}>
               <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:22, color:"#31487A" }}>{displayName}</div>
               <div style={{ fontSize:12, color:"#A59AC9" }}>{profile.email}</div>

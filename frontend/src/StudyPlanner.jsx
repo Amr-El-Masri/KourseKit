@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { Pencil, Zap, RotateCcw } from "lucide-react";
 
 const HOUR_HEIGHT = 80;
 const START_HOUR = 6;
@@ -135,7 +136,7 @@ function StudyBlockEvent({ block, color, onComplete, onDelete, onUncomplete, onE
                   ? <button onClick={() => { onComplete(block.id); setShowMenu(false); }}>✓ Complete</button>
                   : <button onClick={() => { onUncomplete(block.id); setShowMenu(false); }}>↩ Undo</button>
               }
-              <button onClick={() => { onEdit(block); setShowMenu(false); }}>✎ Edit</button>
+              <button onClick={() => { onEdit(block); setShowMenu(false); }}><Pencil size={13} style={{verticalAlign:"middle",marginRight:4}}/>Edit</button>
               <button className="danger" onClick={() => { onDelete(block.id); setShowMenu(false); }}>✕ Delete</button>
             </div>
         )}
@@ -1410,13 +1411,13 @@ export default function StudyPlanner() {
                   className={`sp-btn ${isAvailabilityMode ? "sp-btn-active" : "sp-btn-outline"}`}
                   onClick={() => setIsAvailabilityMode(!isAvailabilityMode)}
               >
-                {isAvailabilityMode ? "✎ Editing slots" : "＋ Set availability"}
+                {isAvailabilityMode ? <><Pencil size={13} style={{verticalAlign:"middle",marginRight:4}}/>Editing slots</> : "＋ Set availability"}
                 {slotCount > 0 && <span className="sp-slot-badge">{slotCount}</span>}
               </button>
               {slotCount > 0 && (
                   <>
-                    <button className="sp-btn sp-btn-outline" onClick={handleRebalance}>↺ Rebalance</button>
-                    <button className="sp-btn sp-btn-primary" onClick={() => setShowGenerateModal(true)}>⚡ Generate</button>
+                    <button className="sp-btn sp-btn-outline" onClick={handleRebalance}><RotateCcw size={13} style={{verticalAlign:"middle",marginRight:4}}/>Rebalance</button>
+                    <button className="sp-btn sp-btn-primary" onClick={() => setShowGenerateModal(true)}><Zap size={13} style={{verticalAlign:"middle",marginRight:4}}/>Generate</button>
                   </>
               )}
             </div>

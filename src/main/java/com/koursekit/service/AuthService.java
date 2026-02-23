@@ -10,8 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.koursekit.config.EmailConfig;
 import com.koursekit.config.JWTutil;
 import com.koursekit.dto.AuthResponse;
+import com.koursekit.model.PassHistory;
 import com.koursekit.model.Token;
 import com.koursekit.model.User;
+import com.koursekit.repository.PassRepo;
 import com.koursekit.repository.TokenRepo;
 import com.koursekit.repository.UserRepo;
 
@@ -28,6 +30,8 @@ public class AuthService {
     private TokenRepo tokenrepo;
     @Autowired
     private EmailConfig emailconfig;
+    @Autowired
+    private PassRepo passhistoryrepo;
 
     public AuthResponse signup(String email, String password) {
         if (!isvalidaubmail(email)) { throw new IllegalArgumentException("Invalid email."); }
@@ -40,19 +44,20 @@ public class AuthService {
         user.setRole("STUDENT");
         user.setActive(true);
         userrepo.save(user);
+        passhistoryrepo.save(new PassHistory(user, passhash));
 
         String veriftoken = UUID.randomUUID().toString();
         Token token = new Token(user, veriftoken, "EMAIL_VERIFICATION", LocalDateTime.now().plusMinutes(10));
         tokenrepo.save(token);
 
         emailconfig.verificationmail(email, token.getValue());
-        System.out.println("Veirifcation email sent. Check your inbox.");
+        System.out.println("Veirifcation email sent.\nCheck your inbox.");
 
         String jwttoken = jwtutil.generate(user.getId(), user.getEmail(), user.getRole());
 
         AuthResponse response = new AuthResponse();
         response.setsuccess(true);
-        response.setmessage("Signup Successful.\nYou can login now.");
+        response.setmessage("Signup successful.\nYou can login now.");
         response.settoken(jwttoken);
         return response;
     }
@@ -102,7 +107,7 @@ public class AuthService {
     public AuthResponse forgotpassword(String email) {
         if (!isvalidaubmail(email)) { throw new IllegalArgumentException("Please enter a valid AUB email."); }
         User user = userrepo.findByEmail(email)
-            .orElseThrow(() -> new IllegalArgumentException("Please enter a valid AUBemail"));
+            .orElseThrow(() -> new IllegalArgumentException("Please enter a valid AUB email"));
 
         String resettoken = UUID.randomUUID().toString();
         Token token = new Token(user, resettoken, "PASSWORD_RESET", LocalDateTime.now().plusMinutes(30));
@@ -111,7 +116,7 @@ public class AuthService {
 
         AuthResponse response = new AuthResponse();
         response.setsuccess(true);
-        response.setmessage("Password reset link sent. Check your email.");
+        response.setmessage("Password reset link sent.\nCheck your email.");
         return response;
     }
 
@@ -122,8 +127,11 @@ public class AuthService {
             throw new IllegalArgumentException("Current password is incorrect.");
         }
         validatepassword(newpass);
-        user.setPass(passhasher.hash(newpass));
+        if (waspreviouslyused(user, newpass)) { throw new IllegalArgumentException("You can't use a previously used password."); }
+        String newhash = passhasher.hash(newpass);
+        user.setPass(newhash);
         userrepo.save(user);
+        passhistoryrepo.save(new PassHistory(user, newhash));
 
         AuthResponse response = new AuthResponse();
         response.setsuccess(true);
@@ -139,14 +147,18 @@ public class AuthService {
         validatepassword(newPassword);
 
         User user = resettoken.getUser();
-        user.setPass(passhasher.hash(newPassword));
+        if (waspreviouslyused(user, newPassword)) { throw new IllegalArgumentException("You can't use a previously used password."); }
+        String newhash = passhasher.hash(newPassword);
+        user.setPass(newhash);
         userrepo.save(user);
+        passhistoryrepo.save(new PassHistory(user, newhash));
         resettoken.used();
         tokenrepo.save(resettoken);
 
         AuthResponse response = new AuthResponse();
         response.setsuccess(true);
-        response.setmessage("Password reset successfully. You can now log in.");
+        response.setmessage("Password reset successfully.\nYou can now log in.");
+        response.setemail(user.getEmail());
         return response;
     }
 
@@ -161,6 +173,11 @@ public class AuthService {
             throw new IllegalArgumentException("Password must contain at least one number.");
         if (!password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?].*"))
             throw new IllegalArgumentException("Password must contain at least one special character.");
+    }
+
+    private boolean waspreviouslyused(User user, String plainpassword) {
+        return passhistoryrepo.findByUser(user).stream()
+            .anyMatch(h -> passhasher.check(plainpassword, h.getPassHash()));
     }
 
     private boolean isvalidaubmail(String email) { return email.endsWith("@mail.aub.edu"); }
