@@ -114,7 +114,7 @@ const SEMESTER_OPTIONS = [
 ];
 
 // Grade Calculator page
-export default function GradeCalculator() {
+export default function GradeCalculator({ dashboardCourses = [] }) {
   const [activeTab, setActiveTab] = useState("semester");
 
   // Row helpers (UI only)
@@ -550,7 +550,14 @@ export default function GradeCalculator() {
           </div>
           {semCourses.map(c => (
             <div key={c.id} style={gc.row}>
-              <input className="gc-input" value={c.name}    onChange={e=>updateRow(setSemCourses,c.id,"name",e.target.value)}    placeholder="e.g. CMPS 271"   style={gc.input} />
+              {dashboardCourses.length > 0 ? (
+                <select className="gc-input" value={c.name} onChange={e=>updateRow(setSemCourses,c.id,"name",e.target.value)} style={{ ...gc.input, cursor:"pointer" }}>
+                  <option value="">Select course</option>
+                  {dashboardCourses.map(dc => <option key={dc.id} value={dc.name}>{dc.name}</option>)}
+                </select>
+              ) : (
+                <input className="gc-input" value={c.name} onChange={e=>updateRow(setSemCourses,c.id,"name",e.target.value)} placeholder="e.g. CMPS 271" style={gc.input} />
+              )}
               <select className="gc-input" value={c.grade} onChange={e=>updateRow(setSemCourses,c.id,"grade",e.target.value)} style={{ ...gc.input, maxWidth:150, cursor:"pointer" }}>
                 <option value="">Grade</option>
                 {LETTER_GRADES.map(g => <option key={g} value={g}>{g}</option>)}

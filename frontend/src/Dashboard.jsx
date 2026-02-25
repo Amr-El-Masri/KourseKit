@@ -614,7 +614,7 @@ const deleteTodo = id => {
         )}
 
       
-        {activePage === "grades" && <GradeCalculator />}
+        {activePage === "grades" && <GradeCalculator dashboardCourses={semData?.courses ?? []} />}
         {activePage === "tasks" && <TaskManager />}
         {activePage === "reviews" && <Reviews />}
         {activePage === "planner" && <StudyPlanner />}
