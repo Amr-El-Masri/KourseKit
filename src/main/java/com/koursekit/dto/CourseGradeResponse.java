@@ -1,23 +1,23 @@
 package com.koursekit.dto;
 
 public class CourseGradeResponse {
-    private double numericGrade;
+    private double grade;
     private String letterGrade;
     private String message;
 
     public CourseGradeResponse() {}
 
-    public CourseGradeResponse(double numericGrade, String letterGrade, String message) {
-        this.numericGrade = numericGrade;
+    public CourseGradeResponse(double grade, String letterGrade, String message) {
+        this.grade = grade;
         this.letterGrade = letterGrade;
         this.message = message;
     }
 
-    public double getNumericGrade() { 
-        return numericGrade;
-     }
-    public void setNumericGrade(double numericGrade) { 
-        this.numericGrade = numericGrade; 
+    public double getGrade() {
+        return grade;
+    }
+    public void setGrade(double grade) {
+        this.grade = grade;
     }
 
     public String getLetterGrade() { 

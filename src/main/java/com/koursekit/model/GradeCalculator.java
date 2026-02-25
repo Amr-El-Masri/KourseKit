@@ -209,20 +209,19 @@ public class GradeCalculator {
         }
 
         double totalWeight = 0.0;
-        double finalGrade = 0.0;
+        double weightedSum = 0.0;
 
         for (Assessment a : assessments) {
-            finalGrade += a.grade * (a.weight / 100.0);
+            weightedSum += a.grade * (a.weight / 100.0);
             totalWeight += a.weight;
         }
 
-        if (Math.abs(totalWeight - 100.0) > 0.01) {
-            throw new IllegalArgumentException(
-                String.format("Total assessment weights must sum to 100%% (current: %.2f%%)", totalWeight)
-            );
+        if (totalWeight <= 0) {
+            throw new IllegalArgumentException("Total weight must be greater than 0");
         }
 
-        return roundToTwoDecimals(finalGrade);
+        // Normalize by actual total weight so partial grades work correctly
+        return roundToTwoDecimals((weightedSum / totalWeight) * 100.0);
     }
 
     public static String numericToLetterGrade(double numericGrade) {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const API = "http://localhost:8080";
 const authHeaders = () => ({
@@ -91,6 +91,28 @@ function ErrorBox({ children }) {
   );
 }
 
+function WeightIndicator({ total }) {
+  const pct = isNaN(total) ? 0 : total;
+  const color  = pct === 100 ? "#2d7a4a" : pct > 100 ? "#c0392b" : "#c97d00";
+  const bg     = pct === 100 ? "#eef7f0" : pct > 100 ? "#fef0f0" : "#fffbe6";
+  const border = pct === 100 ? "#2d7a4a33" : pct > 100 ? "#c0392b33" : "#c97d0033";
+  return (
+    <span style={{ fontSize:13, fontWeight:600, color, padding:"5px 11px", background:bg, borderRadius:8, border:`1px solid ${border}` }}>
+      {pct % 1 === 0 ? pct : pct.toFixed(1)}% / 100%
+    </span>
+  );
+}
+
+const LETTER_GRADES = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
+
+const SEMESTER_OPTIONS = [
+  "Fall 25-26","Spring 25-26","Summer 25-26",
+  "Fall 24-25","Spring 24-25","Summer 24-25",
+  "Fall 23-24","Spring 23-24","Summer 23-24",
+  "Fall 22-23","Spring 22-23","Summer 22-23",
+  "Fall 21-22","Spring 21-22","Summer 21-22",
+];
+
 // Grade Calculator page
 export default function GradeCalculator() {
   const [activeTab, setActiveTab] = useState("semester");
@@ -110,6 +132,14 @@ export default function GradeCalculator() {
   const [impactResult,  setImpactResult]  = useState(null);
   const [impactLoading, setImpactLoading] = useState(false);
   const [impactError,   setImpactError]   = useState(null);
+
+  // Save / Load (Semester GPA tab)
+  const [saveLabel,   setSaveLabel]   = useState("");
+  const [saveStatus,  setSaveStatus]  = useState(null); // {type:"ok"|"err", msg}
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [savedList,   setSavedList]   = useState(null); // null = closed, [] = open
+  const [loadLoading, setLoadLoading] = useState(false);
+  const [loadError,   setLoadError]   = useState(null);
 
   const calcSemGPA = async () => {
     setSemError(null);
@@ -168,6 +198,64 @@ export default function GradeCalculator() {
     } finally {
       setSemLoading(false);
     }
+  };
+
+  const saveSemester = async () => {
+    setSaveStatus(null);
+    setSaveLoading(true);
+    try {
+      const res = await fetch(`${API}/api/grades/saved`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          semesterName: saveLabel.trim() || "My Semester",
+          courses: semCourses.map(c => ({
+            courseCode: c.name || "Course",
+            grade: resolveGrade(c.grade),
+            credits: parseInt(c.credits) || 0,
+            assessments: [],
+          })),
+        }),
+      });
+      const data = await parseResponse(res);
+      if (!res.ok || data.message?.startsWith("Error")) throw new Error(data.message || "Save failed.");
+      setSaveStatus({ type:"ok", msg:"Saved successfully!" });
+      setSaveLabel("");
+    } catch (e) {
+      setSaveStatus({ type:"err", msg: e.message || "Failed to save." });
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const loadSemesters = async () => {
+    setLoadError(null);
+    setLoadLoading(true);
+    try {
+      const res = await fetch(`${API}/api/grades/saved`, { headers: authHeaders() });
+      const data = await parseResponse(res);
+      if (!res.ok) throw new Error("Failed to load saved data.");
+      setSavedList(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setLoadError(e.message || "Failed to load.");
+      setSavedList([]);
+    } finally {
+      setLoadLoading(false);
+    }
+  };
+
+  const loadSnapshot = (snapshot) => {
+    setSemCourses(
+      (snapshot.courses ?? []).map((c, i) => ({
+        id: Date.now() + i,
+        name: c.courseCode || "",
+        grade: c.grade || "",
+        credits: String(c.credits || ""),
+      }))
+    );
+    setSemResult(null); setSemError(null);
+    setImpactResult(null); setImpactError(null);
+    setSavedList(null); setSaveStatus(null);
   };
 
   // Cumulative GPA
@@ -384,6 +472,24 @@ export default function GradeCalculator() {
     }
   };
 
+  // Enter-key shortcut — always calls the latest calc function for the active tab
+  const calcRef = useRef({});
+  calcRef.current = { calcSemGPA, calcCumGPA, calcCourse, calcTarget, calcSim };
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key !== "Enter") return;
+      if (["BUTTON","SELECT","TEXTAREA"].includes(e.target.tagName)) return;
+      const fns = calcRef.current;
+      if (activeTab === "semester")   fns.calcSemGPA();
+      else if (activeTab === "cumulative") fns.calcCumGPA();
+      else if (activeTab === "course")     fns.calcCourse();
+      else if (activeTab === "target")     fns.calcTarget();
+      else if (activeTab === "simulator")  fns.calcSim();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [activeTab]);
+
   const TABS = [
     { id:"semester",   label:"Semester GPA"    },
     { id:"cumulative", label:"Cumulative GPA"   },
@@ -445,7 +551,10 @@ export default function GradeCalculator() {
           {semCourses.map(c => (
             <div key={c.id} style={gc.row}>
               <input className="gc-input" value={c.name}    onChange={e=>updateRow(setSemCourses,c.id,"name",e.target.value)}    placeholder="e.g. CMPS 271"   style={gc.input} />
-              <input className="gc-input" value={c.grade}   onChange={e=>updateRow(setSemCourses,c.id,"grade",e.target.value)}   placeholder="e.g. A+ or 93"  style={{ ...gc.input, maxWidth:150 }} />
+              <select className="gc-input" value={c.grade} onChange={e=>updateRow(setSemCourses,c.id,"grade",e.target.value)} style={{ ...gc.input, maxWidth:150, cursor:"pointer" }}>
+                <option value="">Grade</option>
+                {LETTER_GRADES.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
               <input className="gc-input" value={c.credits} onChange={e=>updateRow(setSemCourses,c.id,"credits",e.target.value)} placeholder="e.g. 3" type="number" style={{ ...gc.input, maxWidth:90 }} />
               <button onClick={() => removeRow(setSemCourses,c.id)} style={gc.removeBtn}>✕</button>
             </div>
@@ -454,6 +563,9 @@ export default function GradeCalculator() {
           <div style={{ display:"flex", gap:12, marginTop:20, alignItems:"center", flexWrap:"wrap" }}>
             <button className="gc-calcbtn" onClick={calcSemGPA} disabled={semLoading} style={gc.calcBtn}>
               {semLoading ? "Calculating…" : "Calculate GPA"}
+            </button>
+            <button onClick={() => { setSemCourses([{ id:Date.now(), name:"", grade:"", credits:"" }]); setSemResult(null); setSemError(null); setImpactResult(null); setImpactError(null); setSaveStatus(null); setSavedList(null); }} style={gc.clearBtn}>
+              Clear all
             </button>
             {semResult && !semError && (
               <ResultBadge
@@ -464,6 +576,51 @@ export default function GradeCalculator() {
             )}
           </div>
           {semError && <ErrorBox>{semError}</ErrorBox>}
+
+          {/* Save / Load */}
+          <div style={{ marginTop:24, paddingTop:20, borderTop:"1px solid #F0EEF7" }}>
+            <div style={{ fontSize:12, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:10 }}>Save / Load</div>
+            <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"center" }}>
+              <input
+                className="gc-input"
+                value={saveLabel}
+                onChange={e => { setSaveLabel(e.target.value); setSaveStatus(null); }}
+                placeholder="Semester name (e.g. Fall 24-25)"
+                style={{ ...gc.input, maxWidth:240 }}
+              />
+              <button className="gc-calcbtn" onClick={saveSemester} disabled={saveLoading} style={gc.calcBtn}>
+                {saveLoading ? "Saving…" : "Save"}
+              </button>
+              <button className="gc-calcbtn" onClick={loadSemesters} disabled={loadLoading}
+                style={{ ...gc.calcBtn, background: savedList ? "#5A3B7B" : "#7B5EA7" }}>
+                {loadLoading ? "Loading…" : savedList ? "Close" : "Load Saved"}
+              </button>
+            </div>
+            {saveStatus && (
+              <div style={{ marginTop:8, fontSize:13, fontWeight:500, color: saveStatus.type==="ok"?"#2d7a4a":"#c0392b" }}>
+                {saveStatus.msg}
+              </div>
+            )}
+            {loadError && <ErrorBox>{loadError}</ErrorBox>}
+            {savedList !== null && savedList.length === 0 && (
+              <InfoBox color="#A59AC9" bg="#F4F4F8" border="#D4D4DC">No saved semesters yet.</InfoBox>
+            )}
+            {savedList !== null && savedList.length > 0 && (
+              <div style={{ marginTop:14 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>
+                  Select a saved semester to load:
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                  {savedList.map(s => (
+                    <button key={s.id} onClick={() => loadSnapshot(s)} style={{ padding:"10px 16px", background:"#F7F5FB", border:"1px solid #D4D4DC", borderRadius:10, textAlign:"left", cursor:"pointer", fontSize:13, color:"#31487A", fontFamily:"'DM Sans',sans-serif", fontWeight:500, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <span>{s.semesterName || "Unnamed"}</span>
+                      <span style={{ fontSize:11, color:"#A59AC9" }}>{s.courses?.length ?? 0} course{(s.courses?.length ?? 0) !== 1 ? "s" : ""}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Highest Impact — auto result after GPA calculation */}
           {semResult && !semError && semCourses.length >= 2 && (
@@ -519,7 +676,10 @@ export default function GradeCalculator() {
           </div>
           {cumSems.map(c => (
             <div key={c.id} style={gc.row}>
-              <input className="gc-input" value={c.name}    onChange={e=>updateRow(setCumSems,c.id,"name",e.target.value)}    placeholder="e.g. Fall 24-25"  style={gc.input} />
+              <select className="gc-input" value={c.name} onChange={e=>updateRow(setCumSems,c.id,"name",e.target.value)} style={{ ...gc.input, cursor:"pointer" }}>
+                <option value="">Select semester</option>
+                {SEMESTER_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
               <input className="gc-input" value={c.gpa}     onChange={e=>updateRow(setCumSems,c.id,"gpa",e.target.value)}     placeholder="e.g. 3.67" type="number" step="0.01" style={{ ...gc.input, maxWidth:120 }} />
               <input className="gc-input" value={c.credits} onChange={e=>updateRow(setCumSems,c.id,"credits",e.target.value)} placeholder="e.g. 15"   type="number" style={{ ...gc.input, maxWidth:90 }} />
               <button onClick={() => removeRow(setCumSems,c.id)} style={gc.removeBtn}>✕</button>
@@ -529,6 +689,9 @@ export default function GradeCalculator() {
           <div style={{ display:"flex", gap:12, marginTop:20, alignItems:"center", flexWrap:"wrap" }}>
             <button className="gc-calcbtn" onClick={calcCumGPA} disabled={cumLoading} style={gc.calcBtn}>
               {cumLoading ? "Calculating…" : "Calculate Cumulative GPA"}
+            </button>
+            <button onClick={() => { setCumSems([{ id:Date.now(), name:"", gpa:"", credits:"" }]); setCumResult(null); setCumError(null); setFutureResult(null); setFutureError(null); setFutureTargetGPA(""); setFutureRemainingCreds(""); }} style={gc.clearBtn}>
+              Clear all
             </button>
             {cumResult && !cumError && (
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
@@ -587,7 +750,7 @@ export default function GradeCalculator() {
               {futureError && <ErrorBox>{futureError}</ErrorBox>}
               {futureResult && !futureError && (
                 <>
-                  {futureResult.isAchievable && (
+                  {futureResult.achievable && (
                     <div style={{ display:"flex", gap:12, marginTop:16, flexWrap:"wrap" }}>
                       <ResultBadge
                         value={futureResult.requiredGPA?.toFixed(2)}
@@ -634,9 +797,15 @@ export default function GradeCalculator() {
             </div>
           ))}
           <button className="gc-addbtn" onClick={() => addRow(setComponents)} style={gc.addRowBtn}>+ Add Component</button>
-          <div style={{ display:"flex", gap:12, marginTop:20, alignItems:"center", flexWrap:"wrap" }}>
+          <div style={{ display:"flex", gap:12, marginTop:16, alignItems:"center", flexWrap:"wrap" }}>
+            <WeightIndicator total={components.reduce((s,c) => s + (parseFloat(c.weight)||0), 0)} />
+          </div>
+          <div style={{ display:"flex", gap:12, marginTop:12, alignItems:"center", flexWrap:"wrap" }}>
             <button className="gc-calcbtn" onClick={calcCourse} disabled={courseLoading} style={gc.calcBtn}>
               {courseLoading ? "Calculating…" : "Calculate Grade"}
+            </button>
+            <button onClick={() => { setComponents([{ id:Date.now(), type:"Exam", weight:"", grade:"" }]); setCourseResult(null); setCourseError(null); }} style={gc.clearBtn}>
+              Clear all
             </button>
             {courseResult && !courseError && (
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
@@ -678,11 +847,16 @@ export default function GradeCalculator() {
           ))}
           <button className="gc-addbtn" onClick={() => addRow(setGraded)} style={gc.addRowBtn}>+ Add Component</button>
 
+          {/* Weight indicator (graded components + final exam) */}
+          <div style={{ display:"flex", gap:12, marginTop:16, alignItems:"center", flexWrap:"wrap" }}>
+            <WeightIndicator total={graded.reduce((s,g) => s + (parseFloat(g.weight)||0), 0) + (parseFloat(finalWeight)||0)} />
+          </div>
+
           {/* Final exam weight + target grade row */}
-          <div style={{ display:"flex", gap:12, marginTop:20, alignItems:"center", flexWrap:"wrap" }}>
+          <div style={{ display:"flex", gap:12, marginTop:12, alignItems:"center", flexWrap:"wrap" }}>
             <div style={{ display:"flex", alignItems:"center", gap:10, background:"#F4F4F8", border:"1px solid #D4D4DC", borderRadius:10, padding:"8px 14px" }}>
               <span style={{ fontSize:13, color:"#5A3B7B", fontWeight:600 }}>Final exam weight:</span>
-              <input className="gc-input" value={finalWeight} onChange={e=>setFinalWeight(e.target.value)} placeholder="e.g. 40" type="number" style={{ border:"none", outline:"none", background:"transparent", fontSize:14, fontWeight:600, color:"#31487A", width:60 }} />
+              <input className="gc-input" value={finalWeight} onChange={e=>{ setFinalWeight(e.target.value); }} placeholder="e.g. 40" type="number" style={{ border:"none", outline:"none", background:"transparent", fontSize:14, fontWeight:600, color:"#31487A", width:60 }} />
               <span style={{ fontSize:13, color:"#A59AC9" }}>%</span>
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:10, background:"#F4F4F8", border:"1px solid #D4D4DC", borderRadius:10, padding:"8px 14px" }}>
@@ -691,6 +865,9 @@ export default function GradeCalculator() {
             </div>
             <button className="gc-calcbtn" onClick={calcTarget} disabled={targetLoading} style={gc.calcBtn}>
               {targetLoading ? "Calculating…" : "Calculate"}
+            </button>
+            <button onClick={() => { setGraded([{ id:Date.now(), weight:"", grade:"" }]); setFinalWeight(""); setTargetGoal(""); setTargetResult(null); setTargetError(null); }} style={gc.clearBtn}>
+              Clear all
             </button>
           </div>
 
@@ -785,10 +962,19 @@ export default function GradeCalculator() {
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
                 <label style={{ fontSize:11, fontWeight:600, color:"transparent" }}>.</label>
-                <button className="gc-calcbtn" onClick={calcSim} disabled={simLoading} style={{ ...gc.calcBtn, alignSelf:"flex-end" }}>
-                  {simLoading ? "Simulating…" : "Simulate"}
-                </button>
+                <div style={{ display:"flex", gap:8, alignSelf:"flex-end" }}>
+                  <button className="gc-calcbtn" onClick={calcSim} disabled={simLoading} style={gc.calcBtn}>
+                    {simLoading ? "Simulating…" : "Simulate"}
+                  </button>
+                  <button onClick={() => { setSimPast([{ id:Date.now(), type:"Exam", weight:"", grade:"" }]); setSimFutureGrade(""); setSimFutureWeight(""); setSimResult(null); setSimError(null); }} style={gc.clearBtn}>
+                    Clear all
+                  </button>
+                </div>
               </div>
+            </div>
+            {/* Live weight total for simulator */}
+            <div style={{ marginTop:14 }}>
+              <WeightIndicator total={simPast.reduce((s,c) => s + (parseFloat(c.weight)||0), 0) + (parseFloat(simFutureWeight)||0)} />
             </div>
           </div>
 
@@ -909,4 +1095,5 @@ const gc = {
   removeBtn: { width:28, height:28, border:"none", background:"none", color:"#B8A9C9", cursor:"pointer", fontSize:14, borderRadius:6, flexShrink:0 },
   addRowBtn: { padding:"7px 14px", background:"#F0EEF7", color:"#7B5EA7", border:"1px solid #D4D4DC", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", marginTop:4, transition:"background .15s" },
   calcBtn:   { padding:"10px 22px", background:"#31487A", color:"white", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s" },
+  clearBtn:  { padding:"9px 16px", background:"#F4F4F8", color:"#c0392b", border:"1px solid #f0c0c0", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s" },
 };

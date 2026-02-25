@@ -1,23 +1,23 @@
 package com.koursekit.dto;
 
 public class CumulativeGradeResponse {
-    private double cgpa;
+    private double gpa;
     private int totalCredits;
     private String message;
 
     public CumulativeGradeResponse() {}
 
-    public CumulativeGradeResponse(double cgpa, int totalCredits, String message) {
-        this.cgpa = cgpa;
+    public CumulativeGradeResponse(double gpa, int totalCredits, String message) {
+        this.gpa = gpa;
         this.totalCredits = totalCredits;
         this.message = message;
     }
 
-    public double getCgpa() { 
-        return cgpa; 
+    public double getGpa() {
+        return gpa;
     }
-    public void setCgpa(double cgpa) { 
-        this.cgpa = cgpa; 
+    public void setGpa(double gpa) {
+        this.gpa = gpa;
     }
 
     public int getTotalCredits() { 
