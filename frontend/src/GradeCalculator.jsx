@@ -103,6 +103,25 @@ function WeightIndicator({ total }) {
   );
 }
 
+function letterToGPA(grade) {
+  const map = { "A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0 };
+  return map[String(grade ?? "").trim().toUpperCase()] ?? null;
+}
+function computeSavedGPA(courses) {
+  if (!courses?.length) return null;
+  let pts = 0, creds = 0;
+  for (const c of courses) {
+    const g = letterToGPA(c.grade);
+    if (g !== null && Number(c.credits) > 0) { pts += g * Number(c.credits); creds += Number(c.credits); }
+  }
+  return creds > 0 ? (pts / creds).toFixed(2) : null;
+}
+function fmtDate(iso) {
+  if (!iso) return "";
+  try { return new Date(iso).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }); }
+  catch { return ""; }
+}
+
 const LETTER_GRADES = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
 
 const SEMESTER_OPTIONS = [
@@ -134,12 +153,15 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
   const [impactError,   setImpactError]   = useState(null);
 
   // Save / Load (Semester GPA tab)
-  const [saveLabel,   setSaveLabel]   = useState("");
-  const [saveStatus,  setSaveStatus]  = useState(null); // {type:"ok"|"err", msg}
-  const [saveLoading, setSaveLoading] = useState(false);
-  const [savedList,   setSavedList]   = useState(null); // null = closed, [] = open
-  const [loadLoading, setLoadLoading] = useState(false);
-  const [loadError,   setLoadError]   = useState(null);
+  const [saveLabel,         setSaveLabel]         = useState("");
+  const [saveStatus,        setSaveStatus]        = useState(null); // {type:"ok"|"err", msg}
+  const [saveLoading,       setSaveLoading]       = useState(false);
+  const [savedList,         setSavedList]         = useState([]);
+  const [templateSemester,  setTemplateSemester]  = useState(null);
+  const [templateDismissed, setTemplateDismissed] = useState(false);
+  const [deleteConfirm,     setDeleteConfirm]     = useState(null);
+  const [deleteLoading,     setDeleteLoading]     = useState(false);
+  const [templateLoading,   setTemplateLoading]   = useState(null);
 
   const calcSemGPA = async () => {
     setSemError(null);
@@ -221,6 +243,7 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
       if (!res.ok || data.message?.startsWith("Error")) throw new Error(data.message || "Save failed.");
       setSaveStatus({ type:"ok", msg:"Saved successfully!" });
       setSaveLabel("");
+      fetchSavedList();
     } catch (e) {
       setSaveStatus({ type:"err", msg: e.message || "Failed to save." });
     } finally {
@@ -228,19 +251,45 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
     }
   };
 
-  const loadSemesters = async () => {
-    setLoadError(null);
-    setLoadLoading(true);
+  const fetchSavedList = async () => {
     try {
       const res = await fetch(`${API}/api/grades/saved`, { headers: authHeaders() });
       const data = await parseResponse(res);
-      if (!res.ok) throw new Error("Failed to load saved data.");
-      setSavedList(Array.isArray(data) ? data : []);
-    } catch (e) {
-      setLoadError(e.message || "Failed to load.");
-      setSavedList([]);
+      if (res.ok && Array.isArray(data)) {
+        setSavedList(data);
+        const tpl = data.find(s => s.isTemplate);
+        setTemplateSemester(tpl ?? null);
+      }
+    } catch {}
+  };
+
+  const deleteSemester = async (id) => {
+    setDeleteLoading(true);
+    try {
+      await fetch(`${API}/api/grades/saved/${id}`, { method:"DELETE", headers: authHeaders() });
+      setSavedList(p => p.filter(s => s.id !== id));
+      setTemplateSemester(prev => prev?.id === id ? null : prev);
+      setDeleteConfirm(null);
     } finally {
-      setLoadLoading(false);
+      setDeleteLoading(false);
+    }
+  };
+
+  const toggleTemplate = async (semester) => {
+    setTemplateLoading(semester.id);
+    try {
+      if (semester.isTemplate) {
+        await fetch(`${API}/api/grades/saved/${semester.id}/template`, { method:"DELETE", headers: authHeaders() });
+        setSavedList(p => p.map(s => s.id === semester.id ? { ...s, isTemplate:false } : s));
+        setTemplateSemester(null);
+      } else {
+        const res = await fetch(`${API}/api/grades/saved/${semester.id}/template`, { method:"PUT", headers: authHeaders() });
+        const data = await parseResponse(res);
+        setSavedList(p => p.map(s => ({ ...s, isTemplate: s.id === semester.id })));
+        setTemplateSemester(data);
+      }
+    } finally {
+      setTemplateLoading(null);
     }
   };
 
@@ -490,6 +539,9 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
     return () => document.removeEventListener("keydown", handler);
   }, [activeTab]);
 
+  // Auto-fetch saved semesters + template on mount
+  useEffect(() => { fetchSavedList(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const TABS = [
     { id:"semester",   label:"Semester GPA"    },
     { id:"cumulative", label:"Cumulative GPA"   },
@@ -542,6 +594,24 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
           <p style={{ fontSize:13, color:"#A59AC9", marginTop:6, marginBottom:18 }}>
             Enter each course, your grade (letter or GPA point), and its credit hours.
           </p>
+
+          {/* Template restore banner */}
+          {templateSemester && !templateDismissed && (
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, marginBottom:16, padding:"12px 16px", background:"#EDE8F8", border:"1px solid #C3B4E8", borderRadius:12 }}>
+              <span style={{ fontSize:13, color:"#5A3B7B", fontWeight:500 }}>
+                Restore your template <strong>"{templateSemester.semesterName}"</strong>?
+              </span>
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={() => { loadSnapshot(templateSemester); setTemplateDismissed(true); }} style={{ padding:"6px 14px", background:"#7B5EA7", color:"white", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
+                  Restore
+                </button>
+                <button onClick={() => setTemplateDismissed(true)} style={{ padding:"6px 10px", background:"none", color:"#A59AC9", border:"1px solid #D4D4DC", borderRadius:8, fontSize:12, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
+
           <div style={gc.headerRow}>
             <span style={{ ...gc.colHead, flex:1 }}>Course</span>
             <span style={{ ...gc.colHead, flex:1, maxWidth:150 }}>Grade</span>
@@ -586,7 +656,7 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
 
           {/* Save / Load */}
           <div style={{ marginTop:24, paddingTop:20, borderTop:"1px solid #F0EEF7" }}>
-            <div style={{ fontSize:12, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:10 }}>Save / Load</div>
+            <div style={{ fontSize:12, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:10 }}>Save Semester</div>
             <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"center" }}>
               <input
                 className="gc-input"
@@ -596,11 +666,7 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
                 style={{ ...gc.input, maxWidth:240 }}
               />
               <button className="gc-calcbtn" onClick={saveSemester} disabled={saveLoading} style={gc.calcBtn}>
-                {saveLoading ? "Saving…" : "Save"}
-              </button>
-              <button className="gc-calcbtn" onClick={loadSemesters} disabled={loadLoading}
-                style={{ ...gc.calcBtn, background: savedList ? "#5A3B7B" : "#7B5EA7" }}>
-                {loadLoading ? "Loading…" : savedList ? "Close" : "Load Saved"}
+                {saveLoading ? "Saving…" : "Save Semester"}
               </button>
             </div>
             {saveStatus && (
@@ -608,25 +674,64 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
                 {saveStatus.msg}
               </div>
             )}
-            {loadError && <ErrorBox>{loadError}</ErrorBox>}
-            {savedList !== null && savedList.length === 0 && (
-              <InfoBox color="#A59AC9" bg="#F4F4F8" border="#D4D4DC">No saved semesters yet.</InfoBox>
-            )}
-            {savedList !== null && savedList.length > 0 && (
-              <div style={{ marginTop:14 }}>
-                <div style={{ fontSize:12, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:8 }}>
-                  Select a saved semester to load:
+
+            {/* History panel */}
+            <div style={{ marginTop:20 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:10 }}>Saved Semesters</div>
+              {savedList.length === 0 && (
+                <InfoBox color="#A59AC9" bg="#F4F4F8" border="#D4D4DC">No saved semesters yet. Save one above to get started.</InfoBox>
+              )}
+              {savedList.length > 0 && (
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {savedList.map(s => {
+                    const gpa = computeSavedGPA(s.courses);
+                    const count = s.courses?.length ?? 0;
+                    const isDeleting = deleteConfirm === s.id;
+                    const isTplLoading = templateLoading === s.id;
+                    return (
+                      <div key={s.id} style={{ background: s.isTemplate ? "#F0EEF7" : "#F7F5FB", border:`1px solid ${s.isTemplate?"#C3B4E8":"#D4D4DC"}`, borderRadius:12, padding:"12px 16px" }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:8 }}>
+                          <div>
+                            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                              <span style={{ fontWeight:600, fontSize:14, color:"#31487A", fontFamily:"'DM Sans',sans-serif" }}>{s.semesterName || "Unnamed"}</span>
+                              {s.isTemplate && <span style={{ fontSize:11, fontWeight:700, color:"#7B5EA7", background:"#EDE8F8", borderRadius:6, padding:"2px 7px" }}>Template</span>}
+                            </div>
+                            <div style={{ marginTop:4, display:"flex", gap:14, fontSize:12, color:"#A59AC9" }}>
+                              {gpa && <span>GPA <strong style={{ color:"#31487A" }}>{gpa}</strong></span>}
+                              <span>{count} course{count !== 1 ? "s" : ""}</span>
+                              <span>{fmtDate(s.createdAt)}</span>
+                            </div>
+                          </div>
+                          <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap" }}>
+                            <button onClick={() => loadSnapshot(s)} style={{ padding:"6px 12px", background:"#31487A", color:"white", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
+                              Load
+                            </button>
+                            <button onClick={() => toggleTemplate(s)} disabled={isTplLoading} style={{ padding:"6px 10px", background: s.isTemplate ? "#EDE8F8" : "#F0EEF7", color: s.isTemplate ? "#7B5EA7" : "#B8A9C9", border:`1px solid ${s.isTemplate?"#C3B4E8":"#D4D4DC"}`, borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
+                              {isTplLoading ? "…" : s.isTemplate ? "★ Template" : "☆ Set Template"}
+                            </button>
+                            {!isDeleting ? (
+                              <button onClick={() => setDeleteConfirm(s.id)} style={{ padding:"6px 10px", background:"none", color:"#c0392b", border:"1px solid #f0c0c0", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
+                                Delete
+                              </button>
+                            ) : (
+                              <span style={{ display:"flex", alignItems:"center", gap:6 }}>
+                                <span style={{ fontSize:12, color:"#c0392b", fontWeight:500 }}>Delete?</span>
+                                <button onClick={() => deleteSemester(s.id)} disabled={deleteLoading} style={{ padding:"5px 10px", background:"#c0392b", color:"white", border:"none", borderRadius:7, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
+                                  {deleteLoading ? "…" : "Yes"}
+                                </button>
+                                <button onClick={() => setDeleteConfirm(null)} style={{ padding:"5px 10px", background:"#F4F4F8", color:"#5A3B7B", border:"1px solid #D4D4DC", borderRadius:7, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
+                                  No
+                                </button>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                  {savedList.map(s => (
-                    <button key={s.id} onClick={() => loadSnapshot(s)} style={{ padding:"10px 16px", background:"#F7F5FB", border:"1px solid #D4D4DC", borderRadius:10, textAlign:"left", cursor:"pointer", fontSize:13, color:"#31487A", fontFamily:"'DM Sans',sans-serif", fontWeight:500, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                      <span>{s.semesterName || "Unnamed"}</span>
-                      <span style={{ fontSize:11, color:"#A59AC9" }}>{s.courses?.length ?? 0} course{(s.courses?.length ?? 0) !== 1 ? "s" : ""}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Highest Impact — auto result after GPA calculation */}
