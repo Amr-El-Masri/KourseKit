@@ -88,7 +88,7 @@ const statusObj = id => STUDENT_STATUSES.find(s => s.id === id) || STUDENT_STATU
 
 const API = "http://localhost:8080";
 const semAuthHeaders = () => ({ "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("kk_token")}` });
-const LETTER_GRADES = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
+const LETTER_GRADES = ["","A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
 const fmtDateShort = iso => { try { return new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); } catch { return ""; } };
 
 export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
@@ -114,7 +114,7 @@ export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
   const [semesters,    setSemesters]    = useState([]);
   const [creating,     setCreating]     = useState(false);
   const [newSemName,   setNewSemName]   = useState("");
-  const [newSemCourses, setNewSemCourses] = useState([{ id:1, code:"", credits:"", grade:"A" }]);
+  const [newSemCourses, setNewSemCourses] = useState([{ id:1, code:"", credits:"", grade:"" }]);
   const [editingId,    setEditingId]    = useState(null);
   const [editName,     setEditName]     = useState("");
   const [editCourses,  setEditCourses]  = useState([]);
@@ -538,12 +538,12 @@ export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
                 <input value={c.code} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,code:e.target.value} : r))} placeholder="e.g. CMPS 200" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                 <input value={c.credits} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                 <select value={c.grade} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
-                  {LETTER_GRADES.map(g => <option key={g}>{g}</option>)}
+                  {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}
                 </select>
                 <button onClick={() => setNewSemCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"#B8A9C9", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
               </div>
             ))}
-            <button onClick={() => setNewSemCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"A" }])} style={{ fontSize:12, color:"#7B5EA7", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
+            <button onClick={() => setNewSemCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"" }])} style={{ fontSize:12, color:"#7B5EA7", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
             <div style={{ display:"flex", gap:8, marginTop:12 }}>
               <button onClick={createSemester} disabled={semSaveLoad || !newSemName.trim()} style={{ ...pf.saveBtn, fontSize:13, opacity: semSaveLoad || !newSemName.trim() ? 0.6 : 1 }}>{semSaveLoad ? "Saving…" : "Save Semester"}</button>
               <button onClick={() => { setCreating(false); setNewSemName(""); setNewSemCourses([{ id:1, code:"", credits:"", grade:"A" }]); }} style={{ ...pf.cancelBtn }}>Cancel</button>
@@ -611,12 +611,12 @@ export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
                     <input value={c.code} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,code:e.target.value} : r))} placeholder="e.g. CMPS 200" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                     <input value={c.credits} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                     <select value={c.grade} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
-                      {LETTER_GRADES.map(g => <option key={g}>{g}</option>)}
+                      {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}
                     </select>
                     <button onClick={() => setEditCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"#B8A9C9", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
                   </div>
                 ))}
-                <button onClick={() => setEditCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"A" }])} style={{ fontSize:12, color:"#7B5EA7", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
+                <button onClick={() => setEditCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"" }])} style={{ fontSize:12, color:"#7B5EA7", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
                 <div style={{ display:"flex", gap:8, marginTop:12 }}>
                   <button onClick={saveEdit} disabled={semSaveLoad} style={{ ...pf.saveBtn, fontSize:13, opacity: semSaveLoad ? 0.6 : 1 }}>{semSaveLoad ? "Saving…" : "Save Changes"}</button>
                   <button onClick={() => setEditingId(null)} style={{ ...pf.cancelBtn }}>Cancel</button>
