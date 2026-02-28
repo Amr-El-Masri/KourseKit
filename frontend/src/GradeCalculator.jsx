@@ -304,7 +304,7 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
     );
     setSemResult(null); setSemError(null);
     setImpactResult(null); setImpactError(null);
-    setSavedList(null); setSaveStatus(null);
+    setSaveStatus(null);
   };
 
   // Cumulative GPA
@@ -398,6 +398,8 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
     if (badGrade) { setCourseError(`"${badGrade.grade}" is not a valid grade. Use a letter (A+, B−…) or a number 0–100.`); return; }
     const badWeight = components.find(c => !isValidWeight(c.weight));
     if (badWeight) { setCourseError(`"${badWeight.weight}" is not a valid weight. Enter a number between 1 and 100.`); return; }
+    const totalWeight = components.reduce((s, c) => s + (parseFloat(c.weight) || 0), 0);
+    if (totalWeight > 100) { setCourseError(`Weights add up to ${totalWeight}% — they cannot exceed 100%.`); return; }
     setCourseLoading(true);
     try {
       const res = await fetch(`${API}/api/grades/course-grade`, {
@@ -487,6 +489,8 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
     if (badGrade) { setSimError(`"${badGrade.grade}" is not a valid grade. Use a letter (A+, B−…) or a number 0–100.`); return; }
     const badWeight = simPast.find(c => !isValidWeight(c.weight));
     if (badWeight) { setSimError(`"${badWeight.weight}" is not a valid weight. Enter a number between 1 and 100.`); return; }
+    const totalSimWeight = simPast.reduce((s, c) => s + (parseFloat(c.weight) || 0), 0) + (parseFloat(simFutureWeight) || 0);
+    if (totalSimWeight > 100) { setSimError(`Weights add up to ${totalSimWeight}% — they cannot exceed 100%.`); return; }
     if (!isValidGrade(simFutureGrade)) { setSimError(`"${simFutureGrade}" is not a valid grade. Use a letter (A+, B−…) or a number 0–100.`); return; }
     if (!isValidWeight(simFutureWeight)) { setSimError(`"${simFutureWeight}" is not a valid weight. Enter a number between 1 and 100.`); return; }
     setSimLoading(true);
@@ -641,7 +645,7 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
             <button className="gc-calcbtn" onClick={calcSemGPA} disabled={semLoading} style={gc.calcBtn}>
               {semLoading ? "Calculating…" : "Calculate GPA"}
             </button>
-            <button onClick={() => { setSemCourses([{ id:Date.now(), name:"", grade:"", credits:"" }]); setSemResult(null); setSemError(null); setImpactResult(null); setImpactError(null); setSaveStatus(null); setSavedList(null); }} style={gc.clearBtn}>
+            <button onClick={() => { setSemCourses([{ id:Date.now(), name:"", grade:"", credits:"" }]); setSemResult(null); setSemError(null); setImpactResult(null); setImpactError(null); setSaveStatus(null); }} style={gc.clearBtn}>
               Clear all
             </button>
             {semResult && !semError && (
@@ -903,7 +907,12 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
               <select className="gc-input" value={c.type} onChange={e=>updateRow(setComponents,c.id,"type",e.target.value)} style={{ ...gc.input, maxWidth:140, cursor:"pointer" }}>
                 {["Exam","Assignment","Project","Quiz","Lab","Participation","Other"].map(t=><option key={t}>{t}</option>)}
               </select>
-              <input className="gc-input" value={c.weight} onChange={e=>updateRow(setComponents,c.id,"weight",e.target.value)} placeholder="e.g. 30" type="number" style={{ ...gc.input, maxWidth:110 }} />
+              <input className="gc-input" value={c.weight} onChange={e => {
+                const val = e.target.value;
+                const otherTotal = components.filter(r => r.id !== c.id).reduce((s, r) => s + (parseFloat(r.weight) || 0), 0);
+                if (parseFloat(val) + otherTotal > 100) return;
+                updateRow(setComponents, c.id, "weight", val);
+              }} placeholder="e.g. 30" type="number" style={{ ...gc.input, maxWidth:110 }} />
               <input className="gc-input" value={c.grade}  onChange={e=>updateRow(setComponents,c.id,"grade",e.target.value)}  placeholder="e.g. 85 or A-" style={{ ...gc.input, maxWidth:110 }} />
               <button onClick={() => removeRow(setComponents,c.id)} style={gc.removeBtn}>✕</button>
             </div>
@@ -1037,7 +1046,12 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
                 <select className="gc-input" value={c.type} onChange={e=>updateRow(setSimPast,c.id,"type",e.target.value)} style={{ ...gc.input, maxWidth:140, cursor:"pointer" }}>
                   {["Exam","Assignment","Project","Quiz","Lab","Participation","Other"].map(t=><option key={t}>{t}</option>)}
                 </select>
-                <input className="gc-input" value={c.weight} onChange={e=>updateRow(setSimPast,c.id,"weight",e.target.value)} placeholder="e.g. 30" type="number" style={{ ...gc.input, maxWidth:110 }} />
+                <input className="gc-input" value={c.weight} onChange={e => {
+                  const val = e.target.value;
+                  const otherTotal = simPast.filter(r => r.id !== c.id).reduce((s, r) => s + (parseFloat(r.weight) || 0), 0) + (parseFloat(simFutureWeight) || 0);
+                  if (parseFloat(val) + otherTotal > 100) return;
+                  updateRow(setSimPast, c.id, "weight", val);
+                }} placeholder="e.g. 30" type="number" style={{ ...gc.input, maxWidth:110 }} />
                 <input className="gc-input" value={c.grade}  onChange={e=>updateRow(setSimPast,c.id,"grade",e.target.value)}  placeholder="e.g. 85 or A-" style={{ ...gc.input, maxWidth:110 }} />
                 <button onClick={() => removeRow(setSimPast,c.id)} style={gc.removeBtn}>✕</button>
               </div>
@@ -1066,7 +1080,12 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
                 <input
                   className="gc-input"
                   value={simFutureWeight}
-                  onChange={e => setSimFutureWeight(e.target.value)}
+                  onChange={e => {
+                    const val = e.target.value;
+                    const pastTotal = simPast.reduce((s, c) => s + (parseFloat(c.weight) || 0), 0);
+                    if (parseFloat(val) + pastTotal > 100) return;
+                    setSimFutureWeight(val);
+                  }}
                   placeholder="e.g. 40"
                   type="number"
                   style={{ ...gc.input, maxWidth:120 }}

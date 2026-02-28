@@ -242,11 +242,10 @@ function PomodoroTimer() {
 export default function Dashboard({ onLogout }) {
   const NAV_ITEMS = [
   { id:"dashboard", label:"Dashboard",        icon:<LayoutDashboard size={17}/> },
-  { id:"grades",    label:"Grade Calculator", icon:<Calculator size={17}/> },
   { id:"tasks",     label:"Task Manager",     icon:<CheckSquare size={17}/> },
-  { id:"reviews",   label:"Reviews",          icon:<Star size={17}/> },
-  { id:"profile",   label:"Student Profile",  icon:<User size={17}/> },
   { id:"planner",   label:"Study Planner",    icon:<BookOpen size={17}/> },
+  { id:"grades",    label:"Grade Calculator", icon:<Calculator size={17}/> },
+  { id:"reviews",   label:"Reviews",          icon:<Star size={17}/> },
 ];
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
 
@@ -373,22 +372,9 @@ const deleteTodo = id => {
 
       <aside style={{ ...s.sidebar, width:sidebarOpen ? 224 : 66 }}>
         <div style={s.sidebarTop}>
-          <div style={s.logoMark}>K</div>
+          <img src="/logo.png" alt="KourseKit" style={{ width:36, height:36, objectFit:"contain", flexShrink:0 }} />
           {sidebarOpen && <span style={s.logoLabel}>KourseKit</span>}
         </div>
-        {sidebarOpen && (
-          <div style={s.userPill}>
-            <div style={s.avatar}>
-              {profile.avatar
-                ? (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={16} color="white" /> : email[0].toUpperCase(); })()
-                : email[0].toUpperCase()}
-            </div>
-            <div>
-              <div style={{fontWeight:600,fontSize:13,color:"#D9E1F1"}}>Student</div>
-              <div style={{fontSize:11,color:"#B8A9C9",maxWidth:130,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{email}</div>
-            </div>
-          </div>
-        )}
         <nav style={{flex:1,paddingTop:10}}>
           {NAV_ITEMS.map(item => (
             <div key={item.id} className="nav-btn" onClick={() => setActivePage(item.id)} style={{
@@ -438,6 +424,21 @@ const deleteTodo = id => {
           )}
 
           <div style={s.bell}><Bell size={18} color="#8FB3E2" /></div>
+          <div
+            onClick={() => setActivePage("profile")}
+            title="Student Profile"
+            style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer", flexShrink:0 }}
+          >
+            <div style={{ width:34, height:34, borderRadius:"50%", background:"#31487A", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, border: activePage==="profile" ? "2px solid #7B5EA7" : "2px solid transparent", transition:"border-color .15s" }}>
+              {profile.avatar
+                ? (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={15} color="white" /> : <span style={{fontWeight:700,fontSize:13,color:"white"}}>{email[0].toUpperCase()}</span>; })()
+                : <span style={{fontWeight:700,fontSize:13,color:"white"}}>{email[0].toUpperCase()}</span>}
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", lineHeight:1.3 }}>
+              <span style={{ fontWeight:600, fontSize:13, color:"#31487A" }}>Student Profile</span>
+              <span style={{ fontSize:11, color:"#B8A9C9", maxWidth:160, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{email}</span>
+            </div>
+          </div>
         </header>
 
         {activePage === "dashboard" && (
