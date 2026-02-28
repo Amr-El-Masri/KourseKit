@@ -99,7 +99,7 @@ function SectionTitle({ children }) {
   );
 }
 
-function SemesterSelect({ value, onChange }) {
+function SemesterSelect({ value, onChange, semesters }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -113,12 +113,12 @@ function SemesterSelect({ value, onChange }) {
     <div ref={ref} style={{ position:"relative" }}>
       <button onClick={() => setOpen(o => !o)} style={sd.trigger}>
         <span style={{ fontSize:14 }}></span>
-        <span style={{ fontWeight:600, color:"#31487A", fontSize:13 }}>{value}</span>
+        <span style={{ fontWeight:600, color:"#31487A", fontSize:13 }}>{value || "Select semester"}</span>
         <span style={{ color:"#A59AC9", fontSize:11, transition:"transform .2s", display:"inline-block", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
       </button>
       {open && (
         <div style={sd.dropdown}>
-          {Object.keys(SEMESTERS).map(sem => (
+          {semesters.map(sem => (
             <div key={sem} onClick={() => { onChange(sem); setOpen(false); }}
               style={{ ...sd.option, background: sem === value ? "#F0EEF7" : "transparent", color: sem === value ? "#31487A" : "#4a3a6a", fontWeight: sem === value ? 600 : 400 }}>
               {sem === value && <span style={{ color:"#7B5EA7", marginRight:8, fontSize:12 }}>✓</span>}
@@ -261,8 +261,9 @@ export default function Dashboard({ onLogout }) {
 
   const [activePage,     setActivePage]    = useState("dashboard");
   const [sidebarOpen,    setSidebarOpen]   = useState(true);
-  const [semester,       setSemester]      = useState("Spring 25-26");
+  const [semester,       setSemester]      = useState("");
   const [semesterToLoad, setSemesterToLoad] = useState(null);
+  const [apiSemesters,   setApiSemesters]  = useState([]);
   const [showToggle,    setShowToggle]    = useState(false);
   const toggleRef = useRef(null);
 
@@ -310,7 +311,8 @@ const toggleWidget = id => {
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [newEvent, setNewEvent] = useState({ day:"Mon", label:"", time:"", type:"Class" });
 
-  const semData = SEMESTERS[semester];
+  const selectedSem = apiSemesters.find(s => s.semesterName === semester) ?? { courses: [] };
+  const semCourseList = (selectedSem.courses || []).map(c => ({ id: c.id, name: c.courseCode }));
 
   const addTodo = () => {
   if (!todoInput.trim()) return;
@@ -352,14 +354,18 @@ const deleteTodo = id => {
   const [setupSaving,   setSetupSaving]   = useState(false);
   const [setupError,    setSetupError]    = useState("");
 
-  useEffect(() => {
+  const fetchSemesters = () => {
     const token = localStorage.getItem("kk_token");
-    fetch("http://localhost:8080/api/grades/saved", {
+    return fetch("http://localhost:8080/api/grades/saved", {
       headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
     })
       .then(r => r.json())
-      .then(data => setNeedsSetup(Array.isArray(data) && data.length === 0))
-      .catch(() => setNeedsSetup(false));
+      .then(data => { if (Array.isArray(data)) { setApiSemesters(data); setSemester(s => s || (data[0]?.semesterName ?? "")); return data; } return []; })
+      .catch(() => []);
+  };
+
+  useEffect(() => {
+    fetchSemesters().then(data => setNeedsSetup(data.length === 0));
   }, []);
 
   const handleSetupSubmit = async () => {
@@ -373,10 +379,18 @@ const deleteTodo = id => {
         headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
         body: JSON.stringify({ semesterName: setupName.trim(), courses: courses.map(c => ({ courseCode: c.name.trim(), grade: "A", credits: 0 })) }),
       });
+      await fetchSemesters();
       setNeedsSetup(false);
     } catch { setSetupError("Something went wrong. Please try again."); }
     finally { setSetupSaving(false); }
   };
+
+  // Courses from all saved semesters (deduplicated) for Grade Calculator dropdown
+  const dashboardCourses = [...new Map(
+    apiSemesters.flatMap(s => (s.courses || []).map(c => ({ id: c.id, name: c.courseCode })))
+      .filter(c => c.name)
+      .map(c => [c.name, c])
+  ).values()];
 
   if (needsSetup === null) return (
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#F4F4F8", fontFamily:"'DM Sans',sans-serif" }}>
@@ -502,7 +516,7 @@ const deleteTodo = id => {
           </div>
 
           {activePage === "dashboard" && (
-            <SemesterSelect value={semester} onChange={setSemester} />
+            <SemesterSelect value={semester} onChange={setSemester} semesters={apiSemesters.map(s => s.semesterName)} />
           )}
 
           <div style={s.searchWrap}>
@@ -529,14 +543,12 @@ const deleteTodo = id => {
             {visible.courses && (
               <section className="card-anim" style={{...s.card, gridColumn:"span 2"}}>
                 <SectionTitle>My Courses — {semester}</SectionTitle>
-                {semData.courses.length === 0
+                {semCourseList.length === 0
                   ? <div style={{fontSize:13,color:"#B8A9C9",marginTop:16,textAlign:"center",padding:"20px 0"}}>No courses registered for this semester yet.</div>
                   : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
-                      {semData.courses.map(c => (
+                      {semCourseList.map(c => (
                         <div key={c.id} className="course-card" style={s.courseCard}>
-                          <div style={{fontWeight:700,fontSize:15,color:"#31487A",marginBottom:4}}>{c.name}</div>
-                          <div style={{fontSize:12,color:"#5A3B7B",marginBottom:3}}>{c.prof}</div>
-                          <div style={{fontSize:11,color:"#8FB3E2"}}>{c.time}</div>
+                          <div style={{fontWeight:700,fontSize:15,color:"#31487A"}}>{c.name}</div>
                         </div>
                       ))}
                     </div>
@@ -548,22 +560,7 @@ const deleteTodo = id => {
               <section className="card-anim" style={s.card}>
                 <SectionTitle>GPA — {semester}</SectionTitle>
                 <div style={{textAlign:"center",padding:"14px 0 6px"}}>
-                  {semData.gpa ? (
-                    <>
-                      <div style={{fontFamily:"'Fraunces',serif",fontSize:56,fontWeight:700,color:"#31487A",lineHeight:1}}>{semData.gpa.toFixed(2)}</div>
-                      <div style={{fontSize:12,color:"#5A3B7B",marginTop:8}}>Semester GPA</div>
-                      <div style={{display:"flex",flexDirection:"column",alignItems:"center",marginTop:12}}>
-                        <svg viewBox="0 0 60 60" width="80" height="80">
-                          <circle cx="30" cy="30" r="24" fill="none" stroke="#D9E1F1" strokeWidth="6"/>
-                          <circle cx="30" cy="30" r="24" fill="none" stroke="#8FB3E2" strokeWidth="6"
-                            strokeDasharray={`${(semData.gpa/4)*150.8} 150.8`} strokeLinecap="round" transform="rotate(-90 30 30)"/>
-                        </svg>
-                        <div style={{fontSize:11,color:"#B8A9C9",marginTop:-2}}>of 4.0</div>
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{fontSize:13,color:"#B8A9C9",padding:"30px 0"}}>GPA not yet available for this semester</div>
-                  )}
+                  <div style={{fontSize:13,color:"#B8A9C9",padding:"30px 0"}}>GPA not yet available for this semester</div>
                 </div>
               </section>
             )}
@@ -571,16 +568,8 @@ const deleteTodo = id => {
             {visible.progress && (
               <section className="card-anim" style={s.card}>
                 <SectionTitle>Semester Progress</SectionTitle>
-                <div style={{marginTop:18}}>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:8,color:"#5A3B7B"}}>
-                    <span>Completion</span>
-                    <span style={{fontWeight:600,color:"#31487A"}}>{semData.progress}%</span>
-                  </div>
-                  <div style={s.progressTrack}><div style={{...s.progressFill,width:`${semData.progress}%`}} /></div>
-                  <div style={{fontSize:12,color:"#B8A9C9",marginTop:10}}>Week {semData.week}</div>
-                </div>
                 <div style={{marginTop:18,display:"flex",gap:10}}>
-                  {[{label:"Courses",val:semData.courses.length||"—"},{label:"Progress",val:`${semData.progress}%`},{label:"To-Do",val:todos.filter(t=>!t.done).length}].map(chip=>(
+                  {[{label:"Courses",val:semCourseList.length||"—"},{label:"To-Do",val:todos.filter(t=>!t.done).length}].map(chip=>(
                     <div key={chip.label} style={s.chip}>
                       <div style={{fontSize:11,color:"#A59AC9"}}>{chip.label}</div>
                       <div style={{fontWeight:600,fontSize:13,color:"#31487A"}}>{chip.val}</div>
@@ -697,7 +686,7 @@ const deleteTodo = id => {
         )}
 
       
-        {activePage === "grades" && <GradeCalculator dashboardCourses={semData?.courses ?? []} semesterToLoad={semesterToLoad} onSemesterLoaded={() => setSemesterToLoad(null)} />}
+        {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} semesterToLoad={semesterToLoad} onSemesterLoaded={() => setSemesterToLoad(null)} />}
         {activePage === "tasks" && <TaskManager />}
         {activePage === "reviews" && <Reviews />}
         {activePage === "planner" && <StudyPlanner />}
