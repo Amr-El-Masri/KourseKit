@@ -50,8 +50,13 @@ public class AuthService {
         Token token = new Token(user, veriftoken, "EMAIL_VERIFICATION", LocalDateTime.now().plusMinutes(10));
         tokenrepo.save(token);
 
-        emailconfig.verificationmail(email, token.getValue());
-        System.out.println("Veirifcation email sent.\nCheck your inbox.");
+        System.out.println("Verification link: http://localhost:3000?verify_token=" + token.getValue());
+        try {
+            emailconfig.verificationmail(email, token.getValue());
+            System.out.println("Verification email sent to " + email);
+        } catch (Exception emailEx) {
+            System.err.println("[WARN] Email send failed — use link above to verify: " + emailEx.getMessage());
+        }
 
         String jwttoken = jwtutil.generate(user.getId(), user.getEmail(), user.getRole());
 

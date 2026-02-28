@@ -133,7 +133,7 @@ const SEMESTER_OPTIONS = [
 ];
 
 // Grade Calculator page
-export default function GradeCalculator({ dashboardCourses = [] }) {
+export default function GradeCalculator({ dashboardCourses = [], semesterToLoad, onSemesterLoaded }) {
   const [activeTab, setActiveTab] = useState("semester");
 
   // Row helpers (UI only)
@@ -546,6 +546,15 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
   // Auto-fetch saved semesters + template on mount
   useEffect(() => { fetchSavedList(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Load semester from Profile's "My Semesters"
+  useEffect(() => {
+    if (semesterToLoad) {
+      loadSnapshot(semesterToLoad);
+      setActiveTab("semester");
+      onSemesterLoaded?.();
+    }
+  }, [semesterToLoad]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const TABS = [
     { id:"semester",   label:"Semester GPA"    },
     { id:"cumulative", label:"Cumulative GPA"   },
@@ -573,7 +582,7 @@ export default function GradeCalculator({ dashboardCourses = [] }) {
           Grade Calculator
         </div>
         <div style={{ fontSize:13, color:"#A59AC9" }}>
-          Calculate your GPA, plan your grades, and simulate future scores
+          Calculate your averages, plan your grades, and simulate future scores
         </div>
       </div>
 

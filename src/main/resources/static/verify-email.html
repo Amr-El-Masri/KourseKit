@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KourseKit — Email Verification</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #F4F4F8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 48px 40px;
+      box-shadow: 0 4px 24px rgba(30,58,110,0.1);
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+    }
+    .logo {
+      width: 56px; height: 56px; border-radius: 14px;
+      background: #7B5EA7; color: white;
+      font-family: 'Fraunces', serif; font-weight: 700; font-size: 26px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+    }
+    .brand { font-family: 'Fraunces', serif; font-weight: 700; font-size: 22px; color: #31487A; margin-bottom: 32px; }
+    .icon { font-size: 52px; margin-bottom: 16px; }
+    h2 { font-family: 'Fraunces', serif; font-weight: 700; font-size: 24px; color: #31487A; margin-bottom: 10px; }
+    p  { font-size: 14px; color: #A59AC9; line-height: 1.6; margin-bottom: 28px; }
+    a  {
+      display: inline-block;
+      background: #31487A; color: white;
+      padding: 13px 32px; border-radius: 10px;
+      font-size: 15px; font-weight: 600; text-decoration: none;
+      font-family: 'DM Sans', sans-serif;
+      transition: background 0.15s;
+    }
+    a:hover { background: #221866; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">K</div>
+    <div class="brand">KourseKit</div>
+    <div id="content">
+      <div class="icon">⏳</div>
+      <h2>Verifying your email…</h2>
+      <p>Please wait a moment.</p>
+    </div>
+  </div>
+
+  <script>
+    const token = new URLSearchParams(window.location.search).get("token");
+
+    if (!token) {
+      document.getElementById("content").innerHTML = `
+        <div class="icon">❌</div>
+        <h2>Invalid link</h2>
+        <p>This verification link is missing a token. Please register again.</p>
+        <a href="http://localhost:3000">Go to KourseKit</a>
+      `;
+    } else {
+      fetch("http://localhost:8080/api/auth/verify?token=" + encodeURIComponent(token))
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            document.getElementById("content").innerHTML = `
+              <div class="icon">🎉</div>
+              <h2>Email verified!</h2>
+              <p>Your account is ready. You can now log in with your AUB email.</p>
+              <a href="http://localhost:3000">Log in to KourseKit</a>
+            `;
+          } else {
+            document.getElementById("content").innerHTML = `
+              <div class="icon">❌</div>
+              <h2>Verification failed</h2>
+              <p>${data.message || "This link may have expired. Please register again."}</p>
+              <a href="http://localhost:3000">Go to KourseKit</a>
+            `;
+          }
+        })
+        .catch(() => {
+          document.getElementById("content").innerHTML = `
+            <div class="icon">❌</div>
+            <h2>Something went wrong</h2>
+            <p>Could not reach the server. Make sure the backend is running and try again.</p>
+            <a href="http://localhost:3000">Go to KourseKit</a>
+          `;
+        });
+    }
+  </script>
+</body>
+</html>

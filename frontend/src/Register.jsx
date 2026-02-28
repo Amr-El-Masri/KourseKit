@@ -83,7 +83,7 @@ export default function Register({ onGoToLogin }) {
             <div style={{ textAlign: "center", padding: "20px 0" }}>
               <div style={{ marginBottom: 16 }}><PartyPopper size={52} color="#6C63FF" /></div>
               <h2 style={s.title}>You're registered!</h2>
-              <p style={{ fontSize: 14, color: "#7a8fa8", marginBottom: 28, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 14, color: "#7a8fa8", marginBottom: 12, lineHeight: 1.6 }}>
                 Your account has been created. You can now log in with your AUB email.
               </p>
               <button className="reg-btn" onClick={onGoToLogin} style={s.btn}>

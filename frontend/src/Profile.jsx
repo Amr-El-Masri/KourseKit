@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle } from "lucide-react";
 
 const AVATAR_ICONS = [
@@ -86,7 +86,12 @@ const gpaColor = g => {
 
 const statusObj = id => STUDENT_STATUSES.find(s => s.id === id) || STUDENT_STATUSES[0];
 
-export default function Profile({ onProfileSave, onLogout }) {
+const API = "http://localhost:8080";
+const semAuthHeaders = () => ({ "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("kk_token")}` });
+const LETTER_GRADES = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
+const fmtDateShort = iso => { try { return new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); } catch { return ""; } };
+
+export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const [profile,    setProfile]    = useState(() => loadProfile(email));
   const [editing,    setEditing]    = useState(false);
@@ -104,6 +109,73 @@ export default function Profile({ onProfileSave, onLogout }) {
   const [newpass2,    setnewpass2]    = useState(false);
   const [showCurrent, setshowCurrent] = useState(false);
   const [showNew,     setshowNew]     = useState(false);
+
+  // My Semesters
+  const [semesters,    setSemesters]    = useState([]);
+  const [creating,     setCreating]     = useState(false);
+  const [newSemName,   setNewSemName]   = useState("");
+  const [newSemCourses, setNewSemCourses] = useState([{ id:1, code:"", credits:"", grade:"A" }]);
+  const [editingId,    setEditingId]    = useState(null);
+  const [editName,     setEditName]     = useState("");
+  const [editCourses,  setEditCourses]  = useState([]);
+  const [semSaveLoad,  setSemSaveLoad]  = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  useEffect(() => {
+    fetch(`${API}/api/grades/saved`, { headers: semAuthHeaders() })
+      .then(r => r.json())
+      .then(data => Array.isArray(data) && setSemesters(data))
+      .catch(() => {});
+  }, []);
+
+  const refetchSemesters = () =>
+    fetch(`${API}/api/grades/saved`, { headers: semAuthHeaders() })
+      .then(r => r.json())
+      .then(data => Array.isArray(data) && setSemesters(data))
+      .catch(() => {});
+
+  const createSemester = async () => {
+    if (!newSemName.trim()) return;
+    const courses = newSemCourses.filter(c => c.code.trim());
+    setSemSaveLoad(true);
+    try {
+      await fetch(`${API}/api/grades/saved`, {
+        method: "POST",
+        headers: semAuthHeaders(),
+        body: JSON.stringify({ semesterName: newSemName.trim(), courses: courses.map(c => ({ courseCode: c.code, grade: c.grade, credits: parseInt(c.credits) || 0 })) }),
+      });
+      await refetchSemesters();
+      setCreating(false); setNewSemName(""); setNewSemCourses([{ id:1, code:"", credits:"", grade:"A" }]);
+    } catch {}
+    finally { setSemSaveLoad(false); }
+  };
+
+  const saveEdit = async () => {
+    setSemSaveLoad(true);
+    try {
+      const courses = editCourses.filter(c => c.code.trim());
+      await fetch(`${API}/api/grades/saved/${editingId}`, {
+        method: "PUT",
+        headers: semAuthHeaders(),
+        body: JSON.stringify({ semesterName: editName.trim(), courses: courses.map(c => ({ courseCode: c.code, grade: c.grade, credits: parseInt(c.credits) || 0 })) }),
+      });
+      await refetchSemesters();
+      setEditingId(null);
+    } catch {}
+    finally { setSemSaveLoad(false); }
+  };
+
+  const deleteSemester = async (id) => {
+    await fetch(`${API}/api/grades/saved/${id}`, { method: "DELETE", headers: semAuthHeaders() });
+    setDeleteConfirmId(null);
+    await refetchSemesters();
+  };
+
+  const startEdit = (sem) => {
+    setEditingId(sem.id);
+    setEditName(sem.semesterName);
+    setEditCourses((sem.courses || []).map((c,i) => ({ id: i+1, code: c.courseCode || "", credits: String(c.credits || ""), grade: c.grade || "A" })));
+  };
 
   const newpassok    = passrequirements.every(r => r.test(newpass));
   const confirmmatch = confirm.length > 0 && newpass === confirm;
@@ -436,6 +508,125 @@ export default function Profile({ onProfileSave, onLogout }) {
           </div>
         )}
       </div>
+      {/* My Semesters */}
+      <div style={{ background:"#ffffff", borderRadius:16, border:"1px solid #D4D4DC", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px", marginTop:20 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+          <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"#31487A" }}>My Semesters</div>
+          {!creating && (
+            <button onClick={() => { setCreating(true); setEditingId(null); }} style={{ background:"#31487A", color:"white", border:"none", borderRadius:10, padding:"8px 16px", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+              + New Semester
+            </button>
+          )}
+        </div>
+
+        {/* Create form */}
+        {creating && (
+          <div style={{ background:"#F7F5FB", border:"1px solid #D4D4DC", borderRadius:12, padding:"16px 18px", marginBottom:16 }}>
+            <input
+              value={newSemName} onChange={e => setNewSemName(e.target.value)}
+              placeholder="Semester name (e.g. Fall 24-25)"
+              style={{ ...pf.input, marginBottom:12 }}
+            />
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
+              <span style={{ fontSize:11, fontWeight:700, color:"#A59AC9", textTransform:"uppercase" }}>Course Name</span>
+              <span style={{ fontSize:11, fontWeight:700, color:"#A59AC9", textTransform:"uppercase" }}>Credits</span>
+              <span style={{ fontSize:11, fontWeight:700, color:"#A59AC9", textTransform:"uppercase" }}>Grade</span>
+              <span />
+            </div>
+            {newSemCourses.map(c => (
+              <div key={c.id} style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
+                <input value={c.code} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,code:e.target.value} : r))} placeholder="e.g. CMPS 200" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
+                <input value={c.credits} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
+                <select value={c.grade} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
+                  {LETTER_GRADES.map(g => <option key={g}>{g}</option>)}
+                </select>
+                <button onClick={() => setNewSemCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"#B8A9C9", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
+              </div>
+            ))}
+            <button onClick={() => setNewSemCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"A" }])} style={{ fontSize:12, color:"#7B5EA7", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
+            <div style={{ display:"flex", gap:8, marginTop:12 }}>
+              <button onClick={createSemester} disabled={semSaveLoad || !newSemName.trim()} style={{ ...pf.saveBtn, fontSize:13, opacity: semSaveLoad || !newSemName.trim() ? 0.6 : 1 }}>{semSaveLoad ? "Saving…" : "Save Semester"}</button>
+              <button onClick={() => { setCreating(false); setNewSemName(""); setNewSemCourses([{ id:1, code:"", credits:"", grade:"A" }]); }} style={{ ...pf.cancelBtn }}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {/* Semester list */}
+        {semesters.length === 0 && !creating && (
+          <div style={{ textAlign:"center", padding:"24px 0", color:"#B8A9C9", fontSize:13 }}>No semesters yet. Create one above.</div>
+        )}
+        {semesters.map(sem => (
+          <div key={sem.id} style={{ border:"1px solid #D4D4DC", borderRadius:12, marginBottom:10, overflow:"hidden" }}>
+            {/* Card header */}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", background:"#F7F5FB" }}>
+              <div>
+                <span style={{ fontWeight:700, fontSize:14, color:"#31487A" }}>{sem.semesterName}</span>
+                <span style={{ fontSize:11, color:"#B8A9C9", marginLeft:10 }}>{(sem.courses||[]).length} course{(sem.courses||[]).length !== 1 ? "s" : ""} · {fmtDateShort(sem.createdAt)}</span>
+              </div>
+              <div style={{ display:"flex", gap:6 }}>
+                <button onClick={() => editingId === sem.id ? setEditingId(null) : startEdit(sem)} style={{ fontSize:12, fontWeight:600, padding:"5px 12px", border:"1px solid #D4D4DC", borderRadius:8, background:"white", color:"#31487A", cursor:"pointer" }}>
+                  {editingId === sem.id ? "Close" : "Edit"}
+                </button>
+                {onLoadSemester && (
+                  <button onClick={() => onLoadSemester(sem)} style={{ fontSize:12, fontWeight:600, padding:"5px 12px", border:"none", borderRadius:8, background:"#31487A", color:"white", cursor:"pointer" }}>
+                    Load into Calculator
+                  </button>
+                )}
+                {deleteConfirmId === sem.id ? (
+                  <>
+                    <button onClick={() => deleteSemester(sem.id)} style={{ fontSize:12, fontWeight:600, padding:"5px 12px", border:"none", borderRadius:8, background:"#c0392b", color:"white", cursor:"pointer" }}>Confirm</button>
+                    <button onClick={() => setDeleteConfirmId(null)} style={{ fontSize:12, padding:"5px 10px", border:"1px solid #D4D4DC", borderRadius:8, background:"white", color:"#A59AC9", cursor:"pointer" }}>Cancel</button>
+                  </>
+                ) : (
+                  <button onClick={() => setDeleteConfirmId(sem.id)} style={{ fontSize:12, padding:"5px 10px", border:"1px solid #f5c6c6", borderRadius:8, background:"white", color:"#c0392b", cursor:"pointer" }}>Delete</button>
+                )}
+              </div>
+            </div>
+
+            {/* Course list (view mode) */}
+            {editingId !== sem.id && (sem.courses||[]).length > 0 && (
+              <div style={{ padding:"10px 16px", display:"flex", flexDirection:"column", gap:4 }}>
+                {(sem.courses||[]).map((c,i) => (
+                  <div key={i} style={{ display:"flex", gap:12, fontSize:13, color:"#4a3a6a" }}>
+                    <span style={{ fontWeight:600, minWidth:100 }}>{c.courseCode}</span>
+                    <span style={{ color:"#A59AC9" }}>{c.credits} cr</span>
+                    <span style={{ color:"#7B5EA7", fontWeight:600 }}>{c.grade}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Edit mode */}
+            {editingId === sem.id && (
+              <div style={{ padding:"14px 16px" }}>
+                <input value={editName} onChange={e => setEditName(e.target.value)} style={{ ...pf.input, marginBottom:10 }} />
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
+                  <span style={{ fontSize:11, fontWeight:700, color:"#A59AC9", textTransform:"uppercase" }}>Course Name</span>
+                  <span style={{ fontSize:11, fontWeight:700, color:"#A59AC9", textTransform:"uppercase" }}>Credits</span>
+                  <span style={{ fontSize:11, fontWeight:700, color:"#A59AC9", textTransform:"uppercase" }}>Grade</span>
+                  <span />
+                </div>
+                {editCourses.map(c => (
+                  <div key={c.id} style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
+                    <input value={c.code} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,code:e.target.value} : r))} placeholder="e.g. CMPS 200" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
+                    <input value={c.credits} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
+                    <select value={c.grade} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
+                      {LETTER_GRADES.map(g => <option key={g}>{g}</option>)}
+                    </select>
+                    <button onClick={() => setEditCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"#B8A9C9", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
+                  </div>
+                ))}
+                <button onClick={() => setEditCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"A" }])} style={{ fontSize:12, color:"#7B5EA7", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
+                <div style={{ display:"flex", gap:8, marginTop:12 }}>
+                  <button onClick={saveEdit} disabled={semSaveLoad} style={{ ...pf.saveBtn, fontSize:13, opacity: semSaveLoad ? 0.6 : 1 }}>{semSaveLoad ? "Saving…" : "Save Changes"}</button>
+                  <button onClick={() => setEditingId(null)} style={{ ...pf.cancelBtn }}>Cancel</button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
       <div style={{ marginTop:24 }}>
         <button onClick={onLogout} style={{ display:"flex", alignItems:"center", gap:8, background:"#fff0f0", border:"1px solid #f5c6c6", borderRadius:10, padding:"10px 20px", color:"#c0392b", fontWeight:600, fontSize:14, cursor:"pointer" }}>
           Log out
