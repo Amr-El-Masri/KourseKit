@@ -244,7 +244,7 @@ export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
   const st = statusObj(profile.status);
 
   return (
-    <div style={{ padding:"28px 28px 60px", maxWidth:760 }}>
+    <div style={{ padding:"28px 28px 60px" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; }

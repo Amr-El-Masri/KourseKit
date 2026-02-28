@@ -133,7 +133,7 @@ const SEMESTER_OPTIONS = [
 ];
 
 // Grade Calculator page
-export default function GradeCalculator({ dashboardCourses = [], semesterToLoad, onSemesterLoaded }) {
+export default function GradeCalculator({ dashboardCourses = [], savedSemesters = [], semesterToLoad, onSemesterLoaded }) {
   const [activeTab, setActiveTab] = useState("semester");
 
   // Row helpers (UI only)
@@ -801,9 +801,18 @@ export default function GradeCalculator({ dashboardCourses = [], semesterToLoad,
           </div>
           {cumSems.map(c => (
             <div key={c.id} style={gc.row}>
-              <select className="gc-input" value={c.name} onChange={e=>updateRow(setCumSems,c.id,"name",e.target.value)} style={{ ...gc.input, cursor:"pointer" }}>
+              <select className="gc-input" value={c.name} onChange={e => {
+                const name = e.target.value;
+                const sem = savedSemesters.find(s => s.semesterName === name);
+                const autoGpa = sem ? computeSavedGPA(sem.courses) : null;
+                const autoCredits = sem ? (sem.courses || []).reduce((sum, sc) => sum + (Number(sc.credits) || 0), 0) : null;
+                setCumSems(p => p.map(r => r.id === c.id ? { ...r, name, gpa: autoGpa != null ? Number(autoGpa).toFixed(2) : r.gpa, credits: autoCredits != null && autoCredits > 0 ? String(autoCredits) : r.credits } : r));
+              }} style={{ ...gc.input, cursor:"pointer" }}>
                 <option value="">Select semester</option>
-                {SEMESTER_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                {savedSemesters.length > 0
+                  ? savedSemesters.map(s => <option key={s.id} value={s.semesterName}>{s.semesterName}</option>)
+                  : SEMESTER_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)
+                }
               </select>
               <input className="gc-input" value={c.gpa}     onChange={e=>updateRow(setCumSems,c.id,"gpa",e.target.value)}     placeholder="e.g. 3.67" type="number" step="0.01" style={{ ...gc.input, maxWidth:120 }} />
               <input className="gc-input" value={c.credits} onChange={e=>updateRow(setCumSems,c.id,"credits",e.target.value)} placeholder="e.g. 15"   type="number" style={{ ...gc.input, maxWidth:90 }} />

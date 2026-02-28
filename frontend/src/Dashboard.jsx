@@ -686,7 +686,7 @@ const deleteTodo = id => {
         )}
 
       
-        {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} semesterToLoad={semesterToLoad} onSemesterLoaded={() => setSemesterToLoad(null)} />}
+        {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} semesterToLoad={semesterToLoad} onSemesterLoaded={() => setSemesterToLoad(null)} />}
         {activePage === "tasks" && <TaskManager />}
         {activePage === "reviews" && <Reviews />}
         {activePage === "planner" && <StudyPlanner />}
