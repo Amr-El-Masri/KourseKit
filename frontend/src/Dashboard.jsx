@@ -391,9 +391,18 @@ const deleteTodo = id => {
           ))}
         </nav>
         <button onClick={() => setSidebarOpen(o=>!o)} style={s.collapseBtn}>{sidebarOpen?"◀":"▶"}</button>
-        <div className="nav-btn" onClick={handleLogout} style={{display:"flex",alignItems:"center",padding:"10px 16px",margin:"2px 8px 14px",borderRadius:10,color:"#e07070",justifyContent:sidebarOpen?"flex-start":"center",cursor:"pointer",userSelect:"none"}}>
-          <Power size={17} style={{minWidth:22,flexShrink:0}} />
-          {sidebarOpen && <span style={{marginLeft:10,fontSize:14}}>Log out</span>}
+        <div className="nav-btn" onClick={() => setActivePage("profile")} style={{display:"flex",alignItems:"center",padding:"10px 16px",margin:"2px 8px 4px",borderRadius:10,justifyContent:sidebarOpen?"flex-start":"center",cursor:"pointer",userSelect:"none",background:activePage==="profile"?"rgba(255,255,255,0.15)":"transparent"}}>
+          <div style={{width:28,height:28,borderRadius:"50%",background:"#31487A",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,border:activePage==="profile"?"2px solid #7B5EA7":"2px solid transparent",transition:"border-color .15s"}}>
+            {profile.avatar
+              ? (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={13} color="white" /> : <span style={{fontWeight:700,fontSize:11,color:"white"}}>{email[0].toUpperCase()}</span>; })()
+              : <span style={{fontWeight:700,fontSize:11,color:"white"}}>{email[0].toUpperCase()}</span>}
+          </div>
+          {sidebarOpen && (
+            <div style={{marginLeft:10,display:"flex",flexDirection:"column",lineHeight:1.3,overflow:"hidden"}}>
+              <span style={{fontSize:13,fontWeight:600,color:activePage==="profile"?"#ffffff":"#D9E1F1"}}>Student Profile</span>
+              <span style={{fontSize:11,color:"#B8A9C9",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{email}</span>
+            </div>
+          )}
         </div>
       </aside>
 
@@ -424,21 +433,6 @@ const deleteTodo = id => {
           )}
 
           <div style={s.bell}><Bell size={18} color="#8FB3E2" /></div>
-          <div
-            onClick={() => setActivePage("profile")}
-            title="Student Profile"
-            style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer", flexShrink:0 }}
-          >
-            <div style={{ width:34, height:34, borderRadius:"50%", background:"#31487A", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, border: activePage==="profile" ? "2px solid #7B5EA7" : "2px solid transparent", transition:"border-color .15s" }}>
-              {profile.avatar
-                ? (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={15} color="white" /> : <span style={{fontWeight:700,fontSize:13,color:"white"}}>{email[0].toUpperCase()}</span>; })()
-                : <span style={{fontWeight:700,fontSize:13,color:"white"}}>{email[0].toUpperCase()}</span>}
-            </div>
-            <div style={{ display:"flex", flexDirection:"column", lineHeight:1.3 }}>
-              <span style={{ fontWeight:600, fontSize:13, color:"#31487A" }}>Student Profile</span>
-              <span style={{ fontSize:11, color:"#B8A9C9", maxWidth:160, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{email}</span>
-            </div>
-          </div>
         </header>
 
         {activePage === "dashboard" && (
@@ -620,7 +614,7 @@ const deleteTodo = id => {
         {activePage === "reviews" && <Reviews />}
         {activePage === "planner" && <StudyPlanner />}
         {activePage === "profile" && (
-          <Profile onProfileSave={p => setProfile(p)} />
+          <Profile onProfileSave={p => setProfile(p)} onLogout={handleLogout} />
         )}
 
       </main>

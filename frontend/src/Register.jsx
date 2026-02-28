@@ -62,7 +62,7 @@ export default function Register({ onGoToLogin }) {
       `}</style>
 
       <div style={s.leftPanel}>
-        <div style={s.brandMark}>K</div>
+        <img src="/logo.png" alt="KourseKit" style={{ width:72, height:72, objectFit:"contain", marginBottom:4 }} />
         <div style={s.brandName}>KourseKit</div>
         <div style={s.brandTagline}>Join thousands of AUB<br />students staying on track.</div>
 

@@ -86,7 +86,7 @@ const gpaColor = g => {
 
 const statusObj = id => STUDENT_STATUSES.find(s => s.id === id) || STUDENT_STATUSES[0];
 
-export default function Profile({ onProfileSave }) {
+export default function Profile({ onProfileSave, onLogout }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const [profile,    setProfile]    = useState(() => loadProfile(email));
   const [editing,    setEditing]    = useState(false);
@@ -435,6 +435,11 @@ export default function Profile({ onProfileSave }) {
             </button>
           </div>
         )}
+      </div>
+      <div style={{ marginTop:24 }}>
+        <button onClick={onLogout} style={{ display:"flex", alignItems:"center", gap:8, background:"#fff0f0", border:"1px solid #f5c6c6", borderRadius:10, padding:"10px 20px", color:"#c0392b", fontWeight:600, fontSize:14, cursor:"pointer" }}>
+          Log out
+        </button>
       </div>
     </div>
   );

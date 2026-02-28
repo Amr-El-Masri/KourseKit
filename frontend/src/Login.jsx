@@ -42,7 +42,7 @@ export default function Login({ onLogin, onGoToRegister, onGoToForgotPassword, p
       `}</style>
 
       <div style={s.leftPanel}>
-        <div style={s.brandMark}>K</div>
+        <img src="/logo.png" alt="KourseKit" style={{ width:72, height:72, objectFit:"contain", marginBottom:4 }} />
         <div style={s.brandName}>KourseKit</div>
         <div style={s.brandTagline}>Your academic life,<br />organized.</div>
         <div style={s.decorCircle1} />
