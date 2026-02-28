@@ -64,7 +64,7 @@ export default function Register({ onGoToLogin }) {
       <div style={s.leftPanel}>
         <img src="/logo.png" alt="KourseKit" style={{ width:72, height:72, objectFit:"contain", marginBottom:4 }} />
         <div style={s.brandName}>KourseKit</div>
-        <div style={s.brandTagline}>Join thousands of AUB<br />students staying on track.</div>
+        <div style={s.brandTagline}>Your AUB academic life,<br />organized.</div>
 
         <div style={s.featureList}>
           {["Grade Calculator", "Task Manager", "Semester Planner", "Anonymous Reviews"].map(f => (

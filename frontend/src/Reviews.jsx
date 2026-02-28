@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Pen, Search, Inbox } from "lucide-react";
+import { Pen, Search, Inbox, CheckCircle } from "lucide-react";
 
 const API = "http://localhost:8080";
 
@@ -117,8 +117,8 @@ function CourseSearch({ onSelect }) {
   );
 }
 
-function SubmitReview({ token, userEmail, onDone }) {
-  const [selectedCourse,  setSelectedCourse]  = useState(null);
+function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
+  const [selectedCourse,  setSelectedCourse]  = useState(preselectedCourse || null);
   const [sections,        setSections]        = useState([]);
   const [selectedSection, setSelectedSection] = useState("");
   const [rating,          setRating]          = useState(0);
@@ -126,6 +126,15 @@ function SubmitReview({ token, userEmail, onDone }) {
   const [err,             setErr]             = useState("");
   const [submitting,      setSubmitting]       = useState(false);
   const [success,         setSuccess]         = useState(false);
+
+  useEffect(() => {
+    if (preselectedCourse) {
+      fetch(`${API}/api/courses/${preselectedCourse.id}/sections`)
+        .then(r => r.json())
+        .then(data => setSections(data))
+        .catch(() => setSections([]));
+    }
+  }, [preselectedCourse]);
 
   const selectCourse = async (course) => {
     setSelectedCourse(course);
@@ -166,7 +175,7 @@ function SubmitReview({ token, userEmail, onDone }) {
 
   if (success) return (
     <div style={{ ...rv.composeCard, textAlign:"center", padding:40 }}>
-      <div style={{ fontSize:32, marginBottom:12 }}>✅</div>
+      <div style={{ marginBottom:12 }}><CheckCircle size={40} color="#2d7a4a" /></div>
       <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Review submitted!</div>
     </div>
   );
@@ -179,8 +188,12 @@ function SubmitReview({ token, userEmail, onDone }) {
 
       {err && <div style={{ background:"#fef0f0", border:"1px solid #f5c6c6", borderRadius:10, padding:"9px 14px", fontSize:13, color:"#c0392b", marginBottom:14 }}>{err}</div>}
 
-      <label style={rv.label}>Search for a Course</label>
-      <CourseSearch onSelect={selectCourse} />
+      {!preselectedCourse && (
+        <>
+          <label style={rv.label}>Search for a Course</label>
+          <CourseSearch onSelect={selectCourse} />
+        </>
+      )}
 
       {selectedCourse && (
         <>
@@ -314,6 +327,7 @@ export default function Reviews() {
         <SubmitReview
           token={token}
           userEmail={userEmail}
+          preselectedCourse={activeCourse}
           onDone={() => { setComposing(false); activeCourse && loadReviews(activeCourse.id); }}
         />
       )}
