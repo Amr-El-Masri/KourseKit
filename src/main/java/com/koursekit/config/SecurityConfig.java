@@ -5,6 +5,7 @@ import java.util.Arrays;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -28,9 +29,11 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/verify", "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
                 .requestMatchers("/*.html", "/css/**", "/js/**", "/images/**").permitAll() // static files no token need
-                .requestMatchers("/api/courses/search", "/api/courses/*/sections").permitAll()
+                .requestMatchers("/api/courses/search", "/api/courses/*/sections", "/api/courses/professors").permitAll()
                 .requestMatchers("/api/reviews/course/**", "/api/reviews/section/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN") // admin only
+                .requestMatchers(HttpMethod.GET, "/api/professor-reviews").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/professor-reviews/submit").authenticated()//only aauthenticated users can post prof reviews
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
