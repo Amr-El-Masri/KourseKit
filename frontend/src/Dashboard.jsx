@@ -302,6 +302,8 @@ const toggleWidget = id => {
   const [calYear,  setCalYear]  = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
 
+  const [hoveredTask, setHoveredTask] = useState(null);
+
   const [scheduleEvents, setScheduleEvents] = useState([
     { id:1, day:"Mon", label:"CMPS 271", time:"12:30–13:45", type:"Class" },
     { id:2, day:"Wed", label:"CMPS 271", time:"12:30–13:45", type:"Class" },
@@ -334,6 +336,22 @@ const deleteTodo = id => {
   localStorage.setItem("kk_todos", JSON.stringify(next));
 };
 
+const [tasks, setTasks] = useState(() => {
+   try {
+    const saved = localStorage.getItem("kk_tasks");
+    return saved ? JSON.parse(saved) : [];
+  } catch { return []; }
+});
+
+const saveTasks = (next) => {
+  setTasks(next);
+  localStorage.setItem("kk_tasks", JSON.stringify(next));
+};
+
+const toggleTask = id  => saveTasks(tasks.map(t => t.id===id ? {...t, done:!t.done} : t));
+const deleteTask = id  => saveTasks(tasks.filter(t => t.id!==id));
+const upsertTask = task => saveTasks(tasks.some(t=>t.id===task.id) ? tasks.map(t=>t.id===task.id?task:t) : [task,...tasks]);
+
   const addEvent   = () => { if (!newEvent.label.trim()) return; setScheduleEvents(p => [...p,{...newEvent,id:Date.now()}]); setNewEvent({day:"Mon",label:"",time:"",type:"Class"}); setShowAddEvent(false); };
   const deleteEvent= id => setScheduleEvents(p => p.filter(e => e.id!==id));
 
@@ -344,6 +362,18 @@ const deleteTodo = id => {
   const isToday     = d => d===today.getDate() && calMonth===today.getMonth() && calYear===today.getFullYear();
   const prevMonth   = () => calMonth===0  ? (setCalMonth(11),setCalYear(y=>y-1)) : setCalMonth(m=>m-1);
   const nextMonth   = () => calMonth===11 ? (setCalMonth(0), setCalYear(y=>y+1)) : setCalMonth(m=>m+1);
+
+  const tasksByDate = tasks.reduce((acc, t) => {
+  if (!t.due) return acc;
+  const key = t.due.slice(0, 10);
+  acc[key] = acc[key] ? [...acc[key], t] : [t];
+  return acc;},
+  {});
+
+const calKey = (d) => {
+  const mm = String(calMonth + 1).padStart(2, "0");
+  const dd = String(d).padStart(2, "0");
+  return `${calYear}-${mm}-${dd}`;};
 
   const handleLogout = () => { localStorage.removeItem("kk_token"); localStorage.removeItem("kk_email"); onLogout(); };
 
@@ -400,7 +430,15 @@ const deleteTodo = id => {
 
   if (needsSetup) return (
     <div style={{ minHeight:"100vh", background:"#F4F4F8", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'DM Sans',sans-serif", padding:24 }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap'); * { box-sizing:border-box; margin:0; padding:0; } .setup-input:focus { border-color:#8FB3E2 !important; outline:none; } .setup-btn:hover { background:#221866 !important; } .setup-btn { transition:background 0.15s; }`}</style>
+     <style>{`
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
+  * { box-sizing:border-box; margin:0; padding:0; }
+  .setup-input:focus { border-color:#8FB3E2 !important; outline:none; }
+  .setup-btn:hover { background:#221866 !important; }
+  .setup-btn { transition:background 0.15s; }
+  .cal-task-line:hover { height: 5px !important; }
+`}
+</style>
       <div style={{ background:"#fff", borderRadius:20, padding:"40px 36px", boxShadow:"0 4px 24px rgba(49,72,122,0.1)", width:"100%", maxWidth:480 }}>
         <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:24 }}>
           <img src="/logo.png" alt="KourseKit" style={{ width:36, height:36, objectFit:"contain" }} />
@@ -535,6 +573,7 @@ const deleteTodo = id => {
           )}
 
           <div style={s.bell}><Bell size={18} color="#8FB3E2" /></div>
+          
         </header>
 
         {activePage === "dashboard" && (
@@ -569,7 +608,7 @@ const deleteTodo = id => {
               <section className="card-anim" style={s.card}>
                 <SectionTitle>Semester Progress</SectionTitle>
                 <div style={{marginTop:18,display:"flex",gap:10}}>
-                  {[{label:"Courses",val:semCourseList.length||"—"},{label:"To-Do",val:todos.filter(t=>!t.done).length}].map(chip=>(
+                  {[{label:"Courses",val:semCourseList.length||"—"},{label:"To-Do",val:todos.filter(t=>!t.done).length},{label:"Due Today", val: tasks.filter(t => !t.done && t.due?.slice(0,10) === new Date().toISOString().slice(0,10)).length}].map(chip=>(
                     <div key={chip.label} style={s.chip}>
                       <div style={{fontSize:11,color:"#A59AC9"}}>{chip.label}</div>
                       <div style={{fontWeight:600,fontSize:13,color:"#31487A"}}>{chip.val}</div>
@@ -607,32 +646,119 @@ const deleteTodo = id => {
               </section>
             )}
 
-            {visible.calendar && (
-              <section className="card-anim" style={s.card}>
-                <SectionTitle>Calendar</SectionTitle>
-                <div style={{marginTop:14}}>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                    <button onClick={prevMonth} style={s.calNavBtn}>‹</button>
-                    <span style={{fontWeight:600,fontSize:14,color:"#31487A"}}>{monthName} {calYear}</span>
-                    <button onClick={nextMonth} style={s.calNavBtn}>›</button>
-                  </div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
-                    {["Mo","Tu","We","Th","Fr","Sa","Su"].map(d=>(
-                      <div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"#B8A9C9",padding:"2px 0"}}>{d}</div>
-                    ))}
-                  </div>
-                  <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
-                    {calCells.map((d,i)=>(
-                      <div key={i} className={d?"cal-day":""} style={{height:30,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,borderRadius:6,cursor:d?"pointer":"default",background:isToday(d)?"#31487A":"transparent",color:isToday(d)?"#fff":d?"#2a2050":"transparent",fontWeight:isToday(d)?700:400}}>
-                        {d||""}
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{marginTop:10,fontSize:11,color:"#B8A9C9",textAlign:"center"}}>Today is {today.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</div>
-                </div>
-              </section>
-            )}
+{visible.calendar && (
+  <section className="card-anim" style={{...s.card, position:"relative"}}>
+    <SectionTitle>Calendar</SectionTitle>
+    <div style={{marginTop:14}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+        <button onClick={prevMonth} style={s.calNavBtn}>‹</button>
+        <span style={{fontWeight:600,fontSize:14,color:"#31487A"}}>{monthName} {calYear}</span>
+        <button onClick={nextMonth} style={s.calNavBtn}>›</button>
+      </div>
 
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
+        {["Mo","Tu","We","Th","Fr","Sa","Su"].map(d=>(
+          <div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"#B8A9C9",padding:"2px 0"}}>{d}</div>
+        ))}
+      </div>
+
+      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+        {calCells.map((d,i) => {
+          const dayTasks = d ? (tasksByDate[calKey(d)] || []) : [];
+          return (
+            <div key={i} className={d?"cal-day":""} style={{
+              display:"flex", flexDirection:"column", alignItems:"center",
+              borderRadius:6, cursor:d?"pointer":"default",
+              background:isToday(d)?"#31487A":"transparent",
+              paddingBottom: dayTasks.length ? 3 : 0,
+            }}>
+              {/* day number */}
+              <div style={{
+                height:28, display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:12, width:"100%",
+                color:isToday(d)?"#fff":d?"#2a2050":"transparent",
+                fontWeight:isToday(d)?700:400,
+              }}>
+                {d||""}
+              </div>
+
+              {/* colored task lines */}
+              {dayTasks.map((t, ti) => {
+                const color = t.done ? "#27ae60"
+                  : new Date(t.due) < new Date() ? "#c0392b"
+                  : t.priority==="high"   ? "#e74c3c"
+                  : t.priority==="medium" ? "#f39c12"
+                  : "#27ae60";
+                const typeLabel = t.type || "Task";
+                return (
+                  <div
+                    key={ti}
+                    onMouseEnter={e => {
+                      const rect = e.target.getBoundingClientRect();
+                      const cardRect = e.target.closest("section").getBoundingClientRect();
+                      setHoveredTask({
+                        task: t,
+                        x: rect.left - cardRect.left,
+                        y: rect.bottom - cardRect.top + 4,
+                      });
+                    }}
+                    onMouseLeave={() => setHoveredTask(null)}
+                    style={{
+                      width:"90%", height:3, borderRadius:2,
+                      background: color, marginBottom:1,
+                      cursor:"pointer", transition:"height .1s",
+                    }}
+                    className="cal-task-line"
+                  />
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
+      <div style={{marginTop:10,fontSize:11,color:"#B8A9C9",textAlign:"center"}}>
+        Today is {today.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+      </div>
+    </div>
+
+    {/* Hover tooltip */}
+    {hoveredTask && (
+      <div style={{
+        position:"absolute",
+        left: Math.min(hoveredTask.x, 220),
+        top: hoveredTask.y,
+        background:"#ffffff",
+        border:"1px solid #D4D4DC",
+        borderRadius:10,
+        padding:"9px 13px",
+        boxShadow:"0 6px 24px rgba(49,72,122,0.13)",
+        zIndex:300,
+        minWidth:170,
+        maxWidth:220,
+        pointerEvents:"none",
+      }}>
+        <div style={{fontSize:11,fontWeight:700,color:"#A59AC9",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>
+          {hoveredTask.task.type} · {hoveredTask.task.course}
+        </div>
+        <div style={{fontSize:13,fontWeight:600,color:"#2a2050",marginBottom:4,lineHeight:1.3}}>
+          {hoveredTask.task.title}
+        </div>
+        <div style={{fontSize:11,color:"#B8A9C9"}}>
+          {hoveredTask.task.due
+            ? new Date(hoveredTask.task.due).toLocaleDateString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false})
+            : "No due date"}
+        </div>
+        {hoveredTask.task.done && (
+          <div style={{fontSize:11,color:"#27ae60",fontWeight:600,marginTop:4}}>✓ Completed</div>
+        )}
+        {!hoveredTask.task.done && new Date(hoveredTask.task.due) < new Date() && (
+          <div style={{fontSize:11,color:"#c0392b",fontWeight:600,marginTop:4}}>Overdue</div>
+        )}
+      </div>
+    )}
+  </section>
+)}
             {visible.schedule && (
               <section className="card-anim" style={s.card}>
                 <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
@@ -687,7 +813,7 @@ const deleteTodo = id => {
 
       
         {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} semesterToLoad={semesterToLoad} onSemesterLoaded={() => setSemesterToLoad(null)} />}
-        {activePage === "tasks" && <TaskManager />}
+        {activePage === "tasks" && (<TaskManager tasks={tasks}onToggle={toggleTask} onDelete={deleteTask} onSave={upsertTask}/>)}
         {activePage === "reviews" && <Reviews />}
         {activePage === "planner" && <StudyPlanner />}
         {activePage === "profile" && (
