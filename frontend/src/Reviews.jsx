@@ -241,6 +241,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
 export default function Reviews() {
   const token = localStorage.getItem("kk_token");
   const userEmail = localStorage.getItem("kk_email");
+  const [tab, setTab] = useState("course");
   const [reviews,   setReviews]   = useState([]);
   const [loading,   setLoading]   = useState(false);
   const [sort,      setSort]      = useState("new");
@@ -278,10 +279,27 @@ export default function Reviews() {
       `}</style>
 
       <div style={{ marginBottom:24 }}>
-        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"#31487A", marginBottom:4 }}>Course Reviews</div>
-        <div style={{ fontSize:13, color:"#A59AC9" }}>Anonymous reviews from AUB students — honest and helpful.</div>
+        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"#31487A", marginBottom:12 }}>Reviews</div>
+        <div style={{ display:"flex", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:14, padding:5, width:"fit-content", gap:4 }}>
+          {[
+            { id:"course",    icon:"", label:"Course Reviews"    },
+            { id:"professor", icon:"", label:"Professor Reviews" },
+          ].map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} style={{
+              padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600,
+              cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
+              background: tab===t.id ? "#31487A" : "transparent",
+              color:       tab===t.id ? "#ffffff" : "#A59AC9",
+            }}>
+              {t.icon} {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {tab === "professor" && <ProfessorReviewsTab token={token} userEmail={userEmail} />}
+
+      {tab === "course" && <>
       {/* Course search to browse reviews */}
       <div style={{ marginBottom:20 }}>
         <label style={rv.label}>Browse reviews by course</label>
@@ -353,6 +371,207 @@ export default function Reviews() {
       {!loading && displayed.length > 0 && (
         <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
           {displayed.map(r => <ReviewCard key={r.id} review={r} />)}
+        </div>
+      )}
+      </>}
+    </div>
+  );
+}
+
+function ProfessorSearch({ onSelect }) {
+  const [query,   setQuery]   = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (query.trim().length < 2) { setResults([]); return; }
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API}/api/courses/professors?query=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        setResults(data);
+      } catch { setResults([]); }
+      finally { setLoading(false); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  return (
+    <div style={{ position:"relative", marginBottom:20 }}>
+      <div style={{ display:"flex", alignItems:"center", background:"#fff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px" }}>
+        <Search size={15} style={{ color:"#B8A9C9", marginRight:8, flexShrink:0 }} />
+        <input value={query} onChange={e => setQuery(e.target.value)}
+          placeholder="Search by professor name (e.g. Dr. Sakr)…"
+          style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"#333", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
+        {loading && <span style={{ fontSize:11, color:"#B8A9C9" }}>searching…</span>}
+      </div>
+      {results.length > 0 && (
+        <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#fff", border:"1px solid #D4D4DC", borderRadius:12, boxShadow:"0 4px 20px rgba(0,0,0,0.1)", zIndex:100, maxHeight:240, overflowY:"auto", marginTop:4 }}>
+          {results.map(name => (
+            <div key={name} onClick={() => { onSelect(name); setQuery(""); setResults([]); }}
+              style={{ padding:"12px 16px", cursor:"pointer", borderBottom:"1px solid #F0EEF7" }}
+              onMouseEnter={e => e.currentTarget.style.background = "#F7F5FB"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+              <span style={{ fontWeight:700, color:"#31487A", fontSize:13 }}> {name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
+  const [rating,     setRating]     = useState(0);
+  const [comment,    setComment]    = useState("");
+  const [err,        setErr]        = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [success,    setSuccess]    = useState(false);
+
+  const submit = async () => {
+    if (rating === 0)               { setErr("Please select a rating."); return; }
+    if (comment.trim().length < 20) { setErr("Review must be at least 20 characters."); return; }
+    if (!token)                     { setErr("You must be logged in."); return; }
+    setSubmitting(true); setErr("");
+    try {
+      const res = await fetch(
+        `${API}/api/professor-reviews/submit?professorName=${encodeURIComponent(professorName)}&comment=${encodeURIComponent(comment)}&rating=${rating}&userId=${encodeURIComponent(userEmail)}`,
+        { method:"POST", headers:{ "Authorization": `Bearer ${token}` } }
+      );
+      if (res.ok) { setSuccess(true); setTimeout(() => { setSuccess(false); onDone(); }, 2000); }
+      else { const msg = await res.text(); setErr(msg || "Failed to submit."); }
+    } catch { setErr("Network error. Please try again."); }
+    finally { setSubmitting(false); }
+  };
+
+  if (success) return (
+    <div style={{ ...rv.composeCard, textAlign:"center", padding:40 }}>
+      <CheckCircle size={32} color="#7B5EA7" style={{ marginBottom:12 }} />
+      <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Review submitted!</div>
+    </div>
+  );
+
+  return (
+    <div style={rv.composeCard}>
+      <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"#31487A", marginBottom:16 }}>
+        Write a Review for {professorName}
+      </div>
+      {err && <div style={{ background:"#fef0f0", border:"1px solid #f5c6c6", borderRadius:10, padding:"9px 14px", fontSize:13, color:"#c0392b", marginBottom:14 }}>{err}</div>}
+      <label style={rv.label}>Rating</label>
+      <div style={{ marginBottom:16 }}>
+        <Stars count={rating} interactive onSet={r => { setRating(r); setErr(""); }} />
+      </div>
+      <label style={rv.label}>Your Review</label>
+      <textarea value={comment} onChange={e => { setComment(e.target.value); setErr(""); }}
+        placeholder="Share your honest experience with this professor..."
+        rows={4}
+        style={{ ...rv.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
+      />
+      <div style={{ fontSize:11, color:"#B8A9C9", marginTop:-10, marginBottom:16 }}>{comment.length} chars</div>
+      <div style={{ display:"flex", gap:10 }}>
+        <button onClick={submit} disabled={submitting} style={rv.submitBtn}>
+          {submitting ? "Submitting…" : "Post Review"}
+        </button>
+        <button onClick={onDone} style={rv.cancelBtn}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+function ProfessorReviewsTab({ token, userEmail }) {
+  const [selected,  setSelected]  = useState(null);
+  const [reviews,   setReviews]   = useState([]);
+  const [loading,   setLoading]   = useState(false);
+  const [composing, setComposing] = useState(false);
+  const [sort,      setSort]      = useState("new");
+  const [search,    setSearch]    = useState("");
+
+  const selectProfessor = async (name) => {
+    setSelected(name);
+    setComposing(false);
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/professor-reviews?professorName=${encodeURIComponent(name)}`);
+      const data = await res.json();
+      setReviews(data);
+    } catch { setReviews([]); }
+    finally { setLoading(false); }
+  };
+
+  let displayed = reviews
+    .filter(r => !search || r.comment?.toLowerCase().includes(search.toLowerCase()));
+  displayed = sort === "top"
+    ? [...displayed].sort((a,b) => b.rating - a.rating)
+    : [...displayed].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  return (
+    <div>
+      <div style={{ marginBottom:20 }}>
+        <label style={rv.label}>Browse reviews by professor</label>
+        <ProfessorSearch onSelect={selectProfessor} />
+      </div>
+
+      {selected && (
+        <>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, marginBottom:18 }}>
+            <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}> {selected}</div>
+            <div style={{ display:"flex", gap:8 }}>
+              <div style={{ display:"flex", gap:4, background:"#F4F4F8", padding:4, borderRadius:10 }}>
+                {[{id:"top",label:"Top"},{id:"new",label:"New"}].map(s => (
+                  <button key={s.id} onClick={() => setSort(s.id)} style={{
+                    padding:"6px 14px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
+                    background: sort===s.id ? "#31487A" : "transparent",
+                    color:      sort===s.id ? "#ffffff" : "#A59AC9",
+                  }}>{s.label}</button>
+                ))}
+              </div>
+              {token && (
+                <button onClick={() => setComposing(c => !c)} style={{
+                  padding:"9px 20px 9px 12px", background:"#7B5EA7", color:"white",
+                  border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer",
+                }}><Pen size={14} style={{ marginRight:6, verticalAlign:"middle" }} />Write a Review</button>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display:"flex", alignItems:"center", background:"#fff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px", marginBottom:18 }}>
+            <Search size={15} style={{ color:"#B8A9C9", marginRight:8, flexShrink:0 }} />
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search within reviews…"
+              style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"#333", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
+          </div>
+
+          {composing && (
+            <SubmitProfessorReview
+              token={token} userEmail={userEmail} professorName={selected}
+              onDone={() => { setComposing(false); selectProfessor(selected); }}
+            />
+          )}
+
+          {loading && <div style={{ textAlign:"center", padding:40, color:"#B8A9C9" }}>Loading reviews…</div>}
+
+          {!loading && displayed.length === 0 && !composing && (
+            <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
+              <div style={{ marginBottom:12 }}><Inbox size={40} color="#B8A9C9" /></div>
+              <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>No reviews yet for this professor</div>
+              <div style={{ fontSize:13, marginTop:6 }}>Be the first to write one!</div>
+            </div>
+          )}
+
+          {!loading && displayed.length > 0 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              {displayed.map(r => <ReviewCard key={r.id} review={r} />)}
+            </div>
+          )}
+        </>
+      )}
+
+      {!selected && (
+        <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
+          <div style={{ fontSize:40, marginBottom:12 }}></div>
+          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Search for a professor above</div>
+          <div style={{ fontSize:13, marginTop:6 }}>to view or submit reviews</div>
         </div>
       )}
     </div>

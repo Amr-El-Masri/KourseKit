@@ -25,4 +25,10 @@ public class CourseController {
     public List<Section> getSections(@PathVariable Long courseId) {
         return sectionRepo.findByCourseId(courseId);
     }
+
+    // GET http://localhost:8080/api/courses/professors?query=sakr
+    @GetMapping("/professors")
+    public List<String> searchProfessors(@RequestParam String query) {
+        return sectionRepo.findDistinctProfessorNamesByQuery(query);
+    }
 }
