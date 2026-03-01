@@ -26,6 +26,9 @@ public class SavedSemester {
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(name = "is_template", nullable = false)
+    private boolean isTemplate = false;
+
     public SavedSemester() {}
 
     public SavedSemester(String name, User user) {
@@ -61,10 +64,17 @@ public class SavedSemester {
         this.courses = courses; 
     }
 
-    public LocalDateTime getCreatedAt() { 
+    public LocalDateTime getCreatedAt() {
         return createdAt;
      }
-    public void setCreatedAt(LocalDateTime createdAt) { 
-        this.createdAt = createdAt; 
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public boolean isTemplate() {
+        return isTemplate;
+    }
+    public void setTemplate(boolean isTemplate) {
+        this.isTemplate = isTemplate;
     }
 }
