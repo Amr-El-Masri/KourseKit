@@ -65,6 +65,14 @@ public class StudyBlock{
         return null;
     }
 
+    @Transient
+    public String getTaskTitle() {
+        if (studyPlanEntry != null && studyPlanEntry.getTask() != null) {
+            return studyPlanEntry.getTask().getTitle();
+        }
+        return null;
+    }
+
     //setters
     public void setStudyPlanEntry(StudyPlanEntry entry){this.studyPlanEntry= entry;}
     public void setDay(LocalDate day) {
