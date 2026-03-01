@@ -165,7 +165,7 @@ function TaskForm({ initial, onSave, onCancel }) {
   );
 }
 
-export default function TaskManager() {
+export default function TaskManager({ tasks: propTasks, onToggle, onDelete, onSave }) {
   const [tasks,     setTasks]     = useState([
     { id:1, course:"CMPS 271", type:"Lab",        title:"Lab 3 Report",          due:"2026-02-25T23:59", priority:"high",   notes:"Submit to Moodle. Include screenshots of output.", done:false },
     { id:2, course:"PHIL 210", type:"Reading",    title:"Read Chapters 4–5",     due:"2026-02-22T12:00", priority:"medium", notes:"Focus on the argument structure in Ch. 5.",         done:false },
@@ -181,12 +181,15 @@ export default function TaskManager() {
   const [editing,   setEditing]   = useState(null);
 
   const toggleDone = id => {
+    if (onToggle) onToggle(id);
     setTasks(p => p.map(t => t.id===id ? {...t, done:!t.done} : t));
   };
   const deleteTask = id => {
+    if (onDelete) onDelete(id);
     setTasks(p => p.filter(t => t.id!==id));
   };
   const saveTask = task => {
+    if (onSave) onSave(task);
     setTasks(p => p.some(t=>t.id===task.id) ? p.map(t=>t.id===task.id?task:t) : [task,...p]);
     setComposing(false);
     setEditing(null);
