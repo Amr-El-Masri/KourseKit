@@ -123,14 +123,14 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
   );
 }
 
-function TaskForm({ initial, onSave, onCancel, backendError }) {
+function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
   const [form, setForm] = useState(initial || EMPTY);
   const [err,  setErr]  = useState("");
   const set = (k, v) => { setForm(p => ({ ...p, [k]:v })); setErr(""); };
 
   const save = () => {
     if (!form.title.trim()) { setErr("Please enter a task title."); return; }
-    if (!form.course.trim()) { setErr("Please enter a course."); return; }
+    if (!form.course.trim()) { setErr("Please select a course."); return; }
     if (!form.due) { setErr("Please select a due date."); return; }
     if (new Date(form.due) < new Date()) { setErr("Deadline cannot be in the past."); return; }
     onSave({ ...form, id: initial?.id || Date.now(), done: initial?.done || false }, setErr);
@@ -152,9 +152,16 @@ function TaskForm({ initial, onSave, onCancel, backendError }) {
         <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
           <div style={{ flex:1, minWidth:140 }}>
             <label style={tm.label}>Course</label>
-            <input value={form.course} onChange={e=>set("course",e.target.value)}
-                   placeholder="e.g. CMPS 271"
-                   style={tm.input} className="tm-input" />
+            {courses.length > 0 ? (
+              <select value={form.course} onChange={e=>set("course",e.target.value)} style={{ ...tm.input, cursor:"pointer" }}>
+                <option value="">Select course…</option>
+                {courses.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            ) : (
+              <input value={form.course} onChange={e=>set("course",e.target.value)}
+                     placeholder="e.g. CMPS 271"
+                     style={tm.input} className="tm-input" />
+            )}
           </div>
           <div style={{ flex:1, minWidth:140 }}>
             <label style={tm.label}>Type</label>
@@ -199,7 +206,24 @@ export default function TaskManager() {
 
   const USER_ID = getUserId();
 
-  const [allCourses, setAllCourses] = useState([]);
+  const [allCourses,   setAllCourses]   = useState([]);
+  const [savedCourses, setSavedCourses] = useState([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("kk_token");
+    fetch(`${API_BASE}/api/grades/saved`, {
+      headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          const current = data[data.length - 1];
+          const names = (current.courses || []).map(c => c.courseCode).filter(Boolean).sort();
+          setSavedCourses(names);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const loadTasks = useCallback(async () => {
     const data = await apiFetch(`/api/tasks/${USER_ID}/list-all`);
@@ -325,6 +349,7 @@ export default function TaskManager() {
                 initial={editing}
                 onSave={saveTask}
                 onCancel={() => { setComposing(false); setEditing(null); }}
+                courses={savedCourses}
             />
         )}
 
