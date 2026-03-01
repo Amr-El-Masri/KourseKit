@@ -16,53 +16,6 @@ const AVATAR_ICONS = [
   { id:"Turtle", icon: Turtle   },
 ];
 
-const ANON_NAMES = [
-  "Apple","Blueberry","Cherry","Elderberry","Fig","Grape","Honeydew","Kiwi",
-  "Lemon","Mango","Nectarine","Papaya","Pineapple","Raspberry","Strawberry",
-  "Starfruit","Tangerine","Watermelon","Bazella","Koussa","Batata 7arra",
-  "Kafta","Tawouk","Shawarma","Falafel","Hummus","Tabbouleh","Fattoush",
-  "Labneh","Man2oushe","Knefeh","Baklewa","Maamoul","Qatayef","Matte",
-  "Sa7lab","Shish Barak","Loubyeh","Mloukhiyye","Wara2 3enab","Mjaddara",
-  "Kibbeh","Sambousek","Fatteh","Zaatar","Sfee7a","Jibneh","Bemye","Makloubeh",
-];
-const randomAnon = () => ANON_NAMES[Math.floor(Math.random() * ANON_NAMES.length)];
-
-const SEMESTERS = {
-  "Fall 24-25":   { gpa: 3.67, progress: 100, week: "15 of 15", courses: [
-    { id:1, name:"CMPS 271", prof:"Dr. Mohammad Sakr",        time:"Mon & Wed · 12:30–13:45" },
-    { id:2, name:"PHIL 210", prof:"Mr. Mahmoud El Hassanieh", time:"Mon & Wed · 14:00–15:15" },
-    { id:3, name:"CMPS 215", prof:"Dr. Mohammad A. Kobeissi", time:"Mon & Wed · 15:30–16:45" },
-    { id:4, name:"PSYC 222", prof:"Dr. Arne Dietrich",        time:"Tue & Thu · 9:30–10:45"  },
-    { id:5, name:"PSYC 284", prof:"Dr. Sarine Hagopian",      time:"Tue & Thu · 14:00–15:15" },
-  ]},
-  "Spring 24-25": { gpa: 3.45, progress: 100, week: "15 of 15", courses: [
-    { id:1, name:"CMPS 300", prof:"Dr. Ayman Dayeh",    time:"Mon & Wed · 11:00–12:15" },
-    { id:2, name:"MATH 201", prof:"Dr. Samer Habre",    time:"Mon & Wed · 14:00–15:15" },
-    { id:3, name:"ENGL 203", prof:"Ms. Lara Khouri",    time:"Tue & Thu · 9:30–10:45"  },
-    { id:4, name:"CMPS 256", prof:"Dr. Wassim El-Hajj", time:"Tue & Thu · 11:00–12:15" },
-  ]},
-
-  "Fall 25-26":   { gpa: null, progress: 0, week: "0 of 15", courses: [] },
-
-  "Spring 25-26": { gpa: null, progress: 15, week: "3 of 15", courses: [
-    { id:1, name:"CMPS 271", prof:"Dr. Mohammad Sakr",        time:"Mon & Wed · 12:30–13:45" },
-    { id:2, name:"PHIL 210", prof:"Mr. Mahmoud El Hassanieh", time:"Mon & Wed · 14:00–15:15" },
-    { id:3, name:"CMPS 215", prof:"Dr. Mohammad A. Kobeissi", time:"Mon & Wed · 15:30–16:45" },
-    { id:4, name:"PSYC 222", prof:"Dr. Arne Dietrich",        time:"Tue & Thu · 9:30–10:45"  },
-    { id:5, name:"PSYC 284", prof:"Dr. Sarine Hagopian",      time:"Tue & Thu · 14:00–15:15" },
-  ]},
-  
-};
-
-const PROF_REVIEWS = [
-  { id:1, name:randomAnon(), stars:4, text:"Lectures were genuinely interesting, but the workload was intense and exams were hard. 3al 2aleele you learn a lot — if he's giving it I recommend." },
-  { id:2, name:randomAnon(), stars:3, text:"He rushes too much and erases before everyone finishes writing, but explains really well — you just have to keep up (w the course aslan ktir sa3eb)." },
-];
-const COURSE_REVIEWS = [
-  { id:1, name:randomAnon(), stars:5, text:"Super interesting course, genuinely highly recommend — and it's only given annually fa traw7ou 3alaykon." },
-  { id:2, name:randomAnon(), stars:3, text:"I found it interesting bas ken lezem ykoon elective, and it had heavier workload than it should've had." },
-];
-
 const DAYS_OF_WEEK = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const EVENT_TYPES  = [
   { label:"Class",   color:"#31487A", bg:"#eef2fb" },
@@ -84,11 +37,6 @@ const ALL_WIDGETS = [
   { id:"courserev", label:"Course Reviews",    span:2 },
 ];
 
-const Stars = ({ count }) => (
-  <span style={{ color:"#A59AC9", fontSize:13 }}>
-    {"★".repeat(count)}{"☆".repeat(5-count)}
-  </span>
-);
 
 function SectionTitle({ children }) {
   return (
