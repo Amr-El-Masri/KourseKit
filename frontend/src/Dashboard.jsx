@@ -399,7 +399,7 @@ const calKey = (d) => {
   }, []);
 
   const handleSetupSubmit = async () => {
-    if (!setupName.trim()) { setSetupError("Please enter a semester name."); return; }
+    if (!setupName.trim()) { setSetupError("Please select your current semester."); return; }
     const courses = setupCourses.filter(c => c.name.trim());
     setSetupSaving(true); setSetupError("");
     try {
@@ -450,10 +450,23 @@ const calKey = (d) => {
 
         {setupError && <div style={{ background:"#fef0f0", border:"1px solid #f5c6c6", borderRadius:10, padding:"10px 14px", fontSize:13, color:"#c0392b", marginBottom:16 }}>{setupError}</div>}
 
-        <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#2a2050", marginBottom:6 }}>Semester Name</label>
-        <input className="setup-input" value={setupName} onChange={e => setSetupName(e.target.value)}
-          placeholder="e.g. Spring 25-26"
-          style={{ width:"100%", padding:"11px 14px", border:"1px solid #D4D4DC", borderRadius:10, fontSize:14, fontFamily:"'DM Sans',sans-serif", color:"#2a2050", background:"#F7F5FB", marginBottom:20, display:"block", transition:"border-color 0.15s" }} />
+        <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#2a2050", marginBottom:6 }}>Current Semester</label>
+        <select className="setup-input" value={setupName} onChange={e => setSetupName(e.target.value)}
+          style={{ width:"100%", padding:"11px 14px", border:"1px solid #D4D4DC", borderRadius:10, fontSize:14, fontFamily:"'DM Sans',sans-serif", color: setupName ? "#2a2050" : "#A59AC9", background:"#F7F5FB", marginBottom:20, display:"block", cursor:"pointer", appearance:"none" }}>
+          <option value="">Select your semester…</option>
+          <option>Spring 25-26</option>
+          <option>Summer 25-26</option>
+          <option>Fall 25-26</option>
+          <option>Spring 24-25</option>
+          <option>Summer 24-25</option>
+          <option>Fall 24-25</option>
+          <option>Spring 23-24</option>
+          <option>Summer 23-24</option>
+          <option>Fall 23-24</option>
+          <option>Spring 22-23</option>
+          <option>Summer 22-23</option>
+          <option>Fall 22-23</option>
+        </select>
 
         <label style={{ display:"block", fontSize:13, fontWeight:600, color:"#2a2050", marginBottom:8 }}>Your Courses</label>
         <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:8 }}>
