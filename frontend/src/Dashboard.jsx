@@ -304,12 +304,7 @@ const toggleWidget = id => {
 
   const [hoveredTask, setHoveredTask] = useState(null);
 
-  const [scheduleEvents, setScheduleEvents] = useState([
-    { id:1, day:"Mon", label:"CMPS 271", time:"12:30–13:45", type:"Class" },
-    { id:2, day:"Wed", label:"CMPS 271", time:"12:30–13:45", type:"Class" },
-    { id:3, day:"Tue", label:"Gym",      time:"7:00–8:30",   type:"Gym"   },
-    { id:4, day:"Thu", label:"Study",    time:"16:00–18:00", type:"Study" },
-  ]);
+  const [scheduleEvents, setScheduleEvents] = useState([]);
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [newEvent, setNewEvent] = useState({ day:"Mon", label:"", time:"", type:"Class" });
 
