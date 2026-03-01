@@ -10,4 +10,6 @@ public interface ProfessorReviewRepository extends JpaRepository<ProfessorReview
     List<ProfessorReview> findByProfessorNameAndStatus(String professorName, ReviewStatus status);
 
     boolean existsByUserIdAndProfessorName(String userId, String professorName);
+    List<ProfessorReview> findByStatus(ReviewStatus status);
+    List<ProfessorReview> findByUserId(String userId);
 }

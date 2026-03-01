@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
 import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle } from "lucide-react";
+import AdminDashboard from "./AdminDashboard";
+
+function getTokenRole() {
+  try {
+    const token = localStorage.getItem("kk_token");
+    if (!token) return null;
+    return JSON.parse(atob(token.split(".")[1])).role || null;
+  } catch { return null; }
+}
 
 const AVATAR_ICONS = [
   { id:"Banana", icon: Banana },
@@ -93,6 +102,8 @@ const fmtDateShort = iso => { try { return new Date(iso).toLocaleDateString("en-
 
 export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
+  const isAdmin = getTokenRole() === "ADMIN";
+  const [section, setSection] = useState("profile");
   const [profile,    setProfile]    = useState(() => loadProfile(email));
   const [editing,    setEditing]    = useState(false);
   const [draft,      setDraft]      = useState(profile);
@@ -252,6 +263,24 @@ export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
         .pf-status:hover { border-color:#7B5EA7 !important; }
       `}</style>
 
+      {isAdmin && (
+        <div style={{ display:"flex", gap:4, background:"#F4F4F8", padding:4, borderRadius:10, marginBottom:24, width:"fit-content" }}>
+          {[{ id:"profile", label:"My Profile" }, { id:"admin", label:"Admin" }].map(t => (
+            <button key={t.id} onClick={() => setSection(t.id)} style={{
+              padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer",
+              fontFamily:"'DM Sans',sans-serif",
+              background: section === t.id ? "#31487A" : "transparent",
+              color:      section === t.id ? "#fff"    : "#A59AC9",
+            }}>{t.label}</button>
+          ))}
+        </div>
+      )}
+
+      {isAdmin && section === "admin" && (
+        <AdminDashboard token={localStorage.getItem("kk_token")} />
+      )}
+
+      {section === "profile" && <>
       <div style={{ marginBottom:28 }}>
         <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"#31487A", marginBottom:4 }}>My Profile</div>
         <div style={{ fontSize:13, color:"#A59AC9" }}>Your info shows up on the dashboard greeting and affects how KourseKit personalizes your experience.</div>
@@ -632,6 +661,7 @@ export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
           Log out
         </button>
       </div>
+      </>}
     </div>
   );
 }
