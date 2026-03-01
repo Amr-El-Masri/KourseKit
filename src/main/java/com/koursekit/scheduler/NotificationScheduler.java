@@ -35,7 +35,7 @@ public class NotificationScheduler {
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm");
 
 
-    @Scheduled(fixedRate=600000)
+    @Scheduled(fixedRate=60000)
     public void createDeadlineNotifications(){
         List<Task> tasks= taskService.findByDeadlineBetween();
         for (Task task: tasks){

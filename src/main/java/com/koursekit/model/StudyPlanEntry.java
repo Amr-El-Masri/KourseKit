@@ -19,13 +19,12 @@ public class StudyPlanEntry {
     @JsonIgnore
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(
             name = "task_id",
             nullable = false,
             foreignKey = @ForeignKey(name = "fk_entry_task")
     )
-    @JsonIgnore
     private Task task;
 
     private double estimatedWorkload;

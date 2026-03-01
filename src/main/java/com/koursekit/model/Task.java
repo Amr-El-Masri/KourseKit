@@ -7,12 +7,10 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
-
 @Entity
 @Table(name = "tasks",
-        uniqueConstraints = {@UniqueConstraint(columnNames = {"course", "title","user_id"})}
+        uniqueConstraints = {@UniqueConstraint(columnNames = {"course", "title", "user_id"})}
 )
-
 public class Task {
 
     @Id
@@ -24,33 +22,32 @@ public class Task {
     @JsonIgnore
     private User user;
 
-
     private String course;
     private String title;
+    private String type;
+    private String notes;
+    private boolean completed = false;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Priority priority;
 
     public enum Priority {
-        HIGH,   // deadline within 3 days
-        MEDIUM, // deadline within 7 days
-        LOW     // deadline beyond 7 days
+        HIGH,
+        MEDIUM,
+        LOW
     }
 
-    @JsonFormat(pattern = "dd-MM-yyyy HH:mm")  // day-month-year hours:minutes
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
     private LocalDateTime deadline;
 
-    //constructor
     public Task(String course, String title, LocalDateTime deadline) {
         this.course = course;
         this.title = title;
         this.deadline = deadline;
     }
 
-    // no arg constructor
     public Task() {
-
     }
 
     public static Priority calculatePriority(LocalDateTime deadline) {
@@ -59,62 +56,36 @@ public class Task {
         if (daysUntilDeadline <= 7) return Priority.MEDIUM;
         return Priority.LOW;
     }
+
     public void recalculatePriority() {
         this.priority = calculatePriority(this.deadline);
     }
 
-    // setters
-    public void setDeadline(LocalDateTime deadline) {
-        this.deadline = deadline;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public void setCourse(String course) {
-        this.course = course;
-    }
-
-    public void setPriority(Priority priority) {
-        this.priority = priority;
-    }
-    public void setUserId(Long id){
+    public void setDeadline(LocalDateTime deadline) { this.deadline = deadline; }
+    public void setTitle(String title) { this.title = title; }
+    public void setCourse(String course) { this.course = course; }
+    public void setPriority(Priority priority) { this.priority = priority; }
+    public void setType(String type) { this.type = type; }
+    public void setNotes(String notes) { this.notes = notes; }
+    public void setCompleted(boolean completed) { this.completed = completed; }
+    public void setUserId(Long id) {
         User u = new User();
         u.setId(id);
         this.user = u;
     }
 
-
-    //getters
-    public String getTitle() {
-        return title;
-    }
-
-    public LocalDateTime getDeadline() {
-        return deadline;
-    }
-
-    public String getCourse() {
-        return course;
-    }
-
-    public Long getId() {
-        return id;
-    }
-
+    public Long getId() { return id; }
+    public String getTitle() { return title; }
+    public LocalDateTime getDeadline() { return deadline; }
+    public String getCourse() { return course; }
     public Priority getPriority() { return priority; }
-
-    public Long getUserId(){
-        return user.getId();
-    }
-
-
+    public String getType() { return type; }
+    public String getNotes() { return notes; }
+    public boolean isCompleted() { return completed; }
+    public Long getUserId() { return user.getId(); }
 
     @Override
-    public String toString(){
-        return "Course: "+ course+ " Title "+ title+ " Deadline: "+ deadline +"\n" ;
+    public String toString() {
+        return "Course: " + course + " Title " + title + " Deadline: " + deadline + "\n";
     }
 }
-
-

@@ -27,7 +27,7 @@ public class TaskCleanupScheduler {
         this.taskRepository = taskRepository;
     }
 
-    @Scheduled(fixedRate = 60000)
+    @Scheduled(fixedRate = 600000)
     public void removeOverdueTasks() {
         List<Long> affectedUserIds = taskRepository.findDistinctUserIdsWithExpiredTasks(LocalDateTime.now());
 

@@ -7,10 +7,12 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
 
 public record TaskRequestDTO(
-         @NotBlank String course,
-         @NotBlank String title,
-
-         @JsonFormat(pattern = "dd-MM-yyyy HH:mm")  // day-month-year hours:minutes
-         @NotNull LocalDateTime deadline
+        @NotBlank String course,
+        @NotBlank String title,
+        String type,
+        String notes,
+        @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
+        @NotNull LocalDateTime deadline,
+        boolean completed
 ) {
 }

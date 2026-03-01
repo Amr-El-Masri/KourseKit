@@ -1,5 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { NotebookPen, Notebook, Pencil, Search, ListChecks } from "lucide-react";
+
+const API_BASE = "http://localhost:8080";
+
+function getToken() { return localStorage.getItem("kk_token"); }
+function getUserId() {
+  const t = getToken();
+  return t ? JSON.parse(atob(t.split(".")[1])).sub : null;
+}
+
+async function apiFetch(path, options = {}) {
+  try {
+    const t = getToken();
+    const res = await fetch(`${API_BASE}${path}`, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(t && { "Authorization": `Bearer ${t}` }),
+      },
+      ...options,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    if (res.status === 204) return null;
+    return res.json();
+  } catch {
+    return null;
+  }
+}
 
 const PRIORITIES = [
   { id:"high",   label:"High",   color:"#c0392b", bg:"#fef0f0", dot:"#e74c3c" },
@@ -7,7 +33,6 @@ const PRIORITIES = [
   { id:"low",    label:"Low",    color:"#2d7a4a", bg:"#eef7f0", dot:"#27ae60" },
 ];
 const TYPES   = ["Assignment","Project","Quiz","Exam","Lab","Reading","Other"];
-const COURSES = ["CMPS 271","PHIL 210","CMPS 215","PSYC 222","PSYC 284","Other"];
 const FILTERS = ["All","Pending","Done","Overdue"];
 
 const priority  = id => PRIORITIES.find(p => p.id === id) || PRIORITIES[1];
@@ -15,16 +40,17 @@ const fmt       = iso => {
   if (!iso) return "";
   const d = new Date(iso);
   return d.toLocaleDateString("en-US",{ month:"short", day:"numeric", year:"numeric" })
-    + " · " + d.toLocaleTimeString("en-US",{ hour:"2-digit", minute:"2-digit", hour12:false });
+      + " · " + d.toLocaleTimeString("en-US",{ hour:"2-digit", minute:"2-digit", hour12:false });
 };
 const isOverdue = (iso, done) => !done && iso && new Date(iso) < new Date();
 const daysLeft  = iso => {
   if (!iso) return null;
-  const diff = Math.ceil((new Date(iso) - new Date()) / 86400000);
-  return diff;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const due   = new Date(iso); due.setHours(0,0,0,0);
+  return Math.round((due - today) / 86400000);
 };
 
-const EMPTY = { course:"CMPS 271", type:"Assignment", title:"", due:"", priority:"medium", notes:"" };
+const EMPTY = { course:"", type:"Assignment", title:"", due:"", notes:"" };
 
 function PriorityDot({ id }) {
   const p = priority(id);
@@ -49,168 +75,221 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
   const over = isOverdue(task.due, task.done);
 
   return (
-    <div style={{
-      background: task.done ? "#fafafa" : "#ffffff",
-      border: `1px solid ${over && !task.done ? "#f5c6c6" : "#D4D4DC"}`,
-      borderLeft: `3px solid ${task.done ? "#D4D4DC" : p.dot}`,
-      borderRadius:12, padding:"13px 16px", transition:"box-shadow .15s",
-      opacity: task.done ? 0.6 : 1,
-    }} className="task-row">
-      <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-        <button onClick={() => onToggle(task.id)} style={{
-          width:20, height:20, borderRadius:6, border:`2px solid ${task.done?"#2d7a4a":"#D4D4DC"}`,
-          background: task.done?"#2d7a4a":"white", cursor:"pointer", flexShrink:0,
-          display:"flex", alignItems:"center", justifyContent:"center", transition:"all .15s",
-        }}>
-          {task.done && <span style={{ color:"white", fontSize:11, lineHeight:1 }}>✓</span>}
-        </button>
+      <div style={{
+        background: task.done ? "#fafafa" : "#ffffff",
+        border: `1px solid ${over && !task.done ? "#f5c6c6" : "#D4D4DC"}`,
+        borderLeft: `3px solid ${task.done ? "#D4D4DC" : p.dot}`,
+        borderRadius:12, padding:"13px 16px", transition:"box-shadow .15s",
+        opacity: task.done ? 0.6 : 1,
+      }} className="task-row">
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <button onClick={() => onToggle(task.id)} style={{
+            width:20, height:20, borderRadius:6, border:`2px solid ${task.done?"#2d7a4a":"#D4D4DC"}`,
+            background: task.done?"#2d7a4a":"white", cursor:"pointer", flexShrink:0,
+            display:"flex", alignItems:"center", justifyContent:"center", transition:"all .15s",
+          }}>
+            {task.done && <span style={{ color:"white", fontSize:11, lineHeight:1 }}>✓</span>}
+          </button>
 
-        <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
             <span style={{ fontSize:14, fontWeight:600, color: task.done?"#B8A9C9":"#2a2050", textDecoration: task.done?"line-through":"none" }}>
               {task.title || <em style={{ color:"#B8A9C9" }}>Untitled task</em>}
             </span>
-            <span style={{ fontSize:11, background:"#F0EEF7", color:"#7B5EA7", padding:"2px 8px", borderRadius:6, fontWeight:600, flexShrink:0 }}>{task.course}</span>
-            <span style={{ fontSize:11, background:"#F4F4F8", color:"#A59AC9", padding:"2px 8px", borderRadius:6, flexShrink:0 }}>{task.type}</span>
-            <DueBadge due={task.due} done={task.done} />
+              <span style={{ fontSize:11, background:"#F0EEF7", color:"#7B5EA7", padding:"2px 8px", borderRadius:6, fontWeight:600, flexShrink:0 }}>{task.course}</span>
+              <span style={{ fontSize:11, background:"#F4F4F8", color:"#A59AC9", padding:"2px 8px", borderRadius:6, flexShrink:0 }}>{task.type}</span>
+              <DueBadge due={task.due} done={task.done} />
+            </div>
+            {task.due && (
+                <div style={{ fontSize:11, color:"#B8A9C9", marginTop:3 }}>{fmt(task.due)}</div>
+            )}
           </div>
-          {task.due && (
-            <div style={{ fontSize:11, color:"#B8A9C9", marginTop:3 }}>{fmt(task.due)}</div>
-          )}
+
+          <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+            <button onClick={() => setExpanded(e=>!e)} style={tm.iconBtn} title="Notes">
+              {task.notes ? <NotebookPen size={15} /> : <Notebook size={15} />}
+            </button>
+            <button onClick={() => onEdit(task)} style={tm.iconBtn} title="Edit"><Pencil size={15} /></button>
+            <button onClick={() => onDelete(task.id)} style={{ ...tm.iconBtn, color:"#e07070" }} title="Delete">✕</button>
+          </div>
         </div>
 
-        <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-          <button onClick={() => setExpanded(e=>!e)} style={tm.iconBtn} title="Notes">
-            {task.notes ? <NotebookPen size={15} /> : <Notebook size={15} />}
-          </button>
-          <button onClick={() => onEdit(task)} style={tm.iconBtn} title="Edit"><Pencil size={15} /></button>
-          <button onClick={() => onDelete(task.id)} style={{ ...tm.iconBtn, color:"#e07070" }} title="Delete">✕</button>
-        </div>
+        {expanded && (
+            <div style={{ marginTop:10, paddingTop:10, borderTop:"1px solid #F4F4F8", fontSize:13, color:"#5A3B7B", lineHeight:1.6 }}>
+              {task.notes || <span style={{ color:"#B8A9C9" }}>No notes added.</span>}
+            </div>
+        )}
       </div>
-
-      {expanded && (
-        <div style={{ marginTop:10, paddingTop:10, borderTop:"1px solid #F4F4F8", fontSize:13, color:"#5A3B7B", lineHeight:1.6 }}>
-          {task.notes || <span style={{ color:"#B8A9C9" }}>No notes added.</span>}
-        </div>
-      )}
-    </div>
   );
 }
 
-function TaskForm({ initial, onSave, onCancel }) {
+function TaskForm({ initial, onSave, onCancel, backendError }) {
   const [form, setForm] = useState(initial || EMPTY);
   const [err,  setErr]  = useState("");
   const set = (k, v) => { setForm(p => ({ ...p, [k]:v })); setErr(""); };
 
   const save = () => {
     if (!form.title.trim()) { setErr("Please enter a task title."); return; }
-    onSave({ ...form, id: initial?.id || Date.now(), done: initial?.done || false });
+    if (!form.course.trim()) { setErr("Please enter a course."); return; }
+    if (!form.due) { setErr("Please select a due date."); return; }
+    if (new Date(form.due) < new Date()) { setErr("Deadline cannot be in the past."); return; }
+    onSave({ ...form, id: initial?.id || Date.now(), done: initial?.done || false }, setErr);
   };
 
   return (
-    <div style={tm.formCard}>
-      <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"#31487A", marginBottom:18 }}>
-        {initial?.id ? "Edit Task" : "New Task"}
-      </div>
-
-      {err && <div style={{ background:"#fef0f0", border:"1px solid #f5c6c6", borderRadius:10, padding:"9px 14px", fontSize:13, color:"#c0392b", marginBottom:14 }}>{err}</div>}
-
-      <label style={tm.label}>Task Title</label>
-      <input value={form.title} onChange={e=>set("title",e.target.value)}
-        placeholder="e.g. CMPS 271 — Lab 3 Report"
-        style={tm.input} className="tm-input" />
-
-      <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
-        <div style={{ flex:1, minWidth:140 }}>
-          <label style={tm.label}>Course</label>
-          <select value={form.course} onChange={e=>set("course",e.target.value)} style={{ ...tm.input, cursor:"pointer" }}>
-            {COURSES.map(c => <option key={c}>{c}</option>)}
-          </select>
+      <div style={tm.formCard}>
+        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"#31487A", marginBottom:18 }}>
+          {initial?.id ? "Edit Task" : "New Task"}
         </div>
-        <div style={{ flex:1, minWidth:140 }}>
-          <label style={tm.label}>Type</label>
-          <select value={form.type} onChange={e=>set("type",e.target.value)} style={{ ...tm.input, cursor:"pointer" }}>
-            {TYPES.map(t => <option key={t}>{t}</option>)}
-          </select>
+
+        {err && <div style={{ background:"#fef0f0", border:"1px solid #f5c6c6", borderRadius:10, padding:"9px 14px", fontSize:13, color:"#c0392b", marginBottom:14 }}>{err}</div>}
+
+        <label style={tm.label}>Task Title</label>
+        <input value={form.title} onChange={e=>set("title",e.target.value)}
+               placeholder="e.g. CMPS 271 — Lab 3 Report"
+               style={tm.input} className="tm-input" />
+
+        <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+          <div style={{ flex:1, minWidth:140 }}>
+            <label style={tm.label}>Course</label>
+            <input value={form.course} onChange={e=>set("course",e.target.value)}
+                   placeholder="e.g. CMPS 271"
+                   style={tm.input} className="tm-input" />
+          </div>
+          <div style={{ flex:1, minWidth:140 }}>
+            <label style={tm.label}>Type</label>
+            <select value={form.type} onChange={e=>set("type",e.target.value)} style={{ ...tm.input, cursor:"pointer" }}>
+              {TYPES.map(t => <option key={t}>{t}</option>)}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+          <div style={{ flex:2, minWidth:180 }}>
+            <label style={tm.label}>Due Date & Time</label>
+            <input type="datetime-local" value={form.due} onChange={e=>set("due",e.target.value)} style={{ ...tm.input, colorScheme:"light" }} className="tm-input" />
+          </div>
+
+        </div>
+
+        <label style={tm.label}>Notes <span style={{ color:"#B8A9C9", fontWeight:400 }}>(optional)</span></label>
+        <textarea value={form.notes} onChange={e=>set("notes",e.target.value)}
+                  placeholder="Any extra details..."
+                  rows={3}
+                  style={{ ...tm.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
+        />
+
+        <div style={{ display:"flex", gap:10, marginTop:4 }}>
+          <button onClick={save} style={tm.saveBtn}>
+            {initial?.id ? "Save Changes" : "Add Task"}
+          </button>
+          <button onClick={onCancel} style={tm.cancelBtn}>Cancel</button>
         </div>
       </div>
-
-      <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
-        <div style={{ flex:2, minWidth:180 }}>
-          <label style={tm.label}>Due Date & Time</label>
-          <input type="datetime-local" value={form.due} onChange={e=>set("due",e.target.value)} style={{ ...tm.input, colorScheme:"light" }} className="tm-input" />
-        </div>
-        <div style={{ flex:1, minWidth:130 }}>
-          <label style={tm.label}>Priority</label>
-          <select value={form.priority} onChange={e=>set("priority",e.target.value)} style={{ ...tm.input, cursor:"pointer" }}>
-            {PRIORITIES.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
-          </select>
-        </div>
-      </div>
-
-      <label style={tm.label}>Notes <span style={{ color:"#B8A9C9", fontWeight:400 }}>(optional)</span></label>
-      <textarea value={form.notes} onChange={e=>set("notes",e.target.value)}
-        placeholder="Any extra details..."
-        rows={3}
-        style={{ ...tm.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
-      />
-
-      <div style={{ display:"flex", gap:10, marginTop:4 }}>
-        <button onClick={save} style={tm.saveBtn}>
-          {initial?.id ? "Save Changes" : "Add Task"}
-        </button>
-        <button onClick={onCancel} style={tm.cancelBtn}>Cancel</button>
-      </div>
-    </div>
   );
 }
 
 export default function TaskManager() {
-  const [tasks,     setTasks]     = useState([
-    { id:1, course:"CMPS 271", type:"Lab",        title:"Lab 3 Report",          due:"2026-02-25T23:59", priority:"high",   notes:"Submit to Moodle. Include screenshots of output.", done:false },
-    { id:2, course:"PHIL 210", type:"Reading",    title:"Read Chapters 4–5",     due:"2026-02-22T12:00", priority:"medium", notes:"Focus on the argument structure in Ch. 5.",         done:false },
-    { id:3, course:"PSYC 222", type:"Assignment", title:"Reflection Paper",      due:"2026-02-20T23:59", priority:"high",   notes:"800–1000 words. APA format.",                       done:false },
-    { id:4, course:"CMPS 215", type:"Quiz",       title:"Quiz 2 — Pointers",     due:"2026-02-21T11:00", priority:"high",   notes:"",                                                  done:false },
-    { id:5, course:"PSYC 284", type:"Project",    title:"Group Presentation",    due:"2026-03-10T14:00", priority:"medium", notes:"Slides due one week before.",                       done:false },
-    { id:6, course:"PHIL 210", type:"Assignment", title:"Short Essay Draft",     due:"2026-02-15T23:59", priority:"low",    notes:"",                                                  done:true  },
-  ]);
-  const [filter,    setFilter]    = useState("All");
-  const [search,    setSearch]    = useState("");
-  const [sortBy,    setSortBy]    = useState("due"); 
-  const [composing, setComposing] = useState(false);
-  const [editing,   setEditing]   = useState(null);
+  const [tasks,        setTasks]        = useState([]);
+  const [filter,       setFilter]       = useState("All");
+  const [search,       setSearch]       = useState("");
+  const [courseFilter, setCourseFilter] = useState("");
+  const [composing,    setComposing]    = useState(false);
+  const [editing,      setEditing]      = useState(null);
 
-  const toggleDone = id => {
-    setTasks(p => p.map(t => t.id===id ? {...t, done:!t.done} : t));
-  };
-  const deleteTask = id => {
-    setTasks(p => p.filter(t => t.id!==id));
-  };
-  const saveTask = task => {
-    setTasks(p => p.some(t=>t.id===task.id) ? p.map(t=>t.id===task.id?task:t) : [task,...p]);
-    setComposing(false);
-    setEditing(null);
+  const USER_ID = getUserId();
+
+  const [allCourses, setAllCourses] = useState([]);
+
+  const loadTasks = useCallback(async () => {
+    const data = await apiFetch(`/api/tasks/${USER_ID}/list-all`);
+    if (data) {
+      const mapped = data.map(t => ({ ...t, due: t.deadline, done: t.completed }));
+      setTasks(mapped);
+      setAllCourses([...new Set(mapped.map(t => t.course).filter(Boolean))].sort());
+    }
+  }, [USER_ID]);
+
+  useEffect(() => { loadTasks(); }, [loadTasks]);
+
+  useEffect(() => {
+    if (!search.trim()) { loadTasks(); return; }
+    const timeout = setTimeout(async () => {
+      const data = await apiFetch(`/api/tasks/${USER_ID}/search?keyword=${encodeURIComponent(search)}`);
+      if (data) setTasks(data.map(t => ({ ...t, due: t.deadline, done: t.completed })));
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [search]);
+
+  useEffect(() => {
+    if (!courseFilter) { loadTasks(); return; }
+    const fetchByCourse = async () => {
+      const data = await apiFetch(`/api/tasks/${USER_ID}/list?course=${encodeURIComponent(courseFilter)}`);
+      if (data) setTasks(data.map(t => ({ ...t, due: t.deadline, done: t.completed })));
+    };
+    fetchByCourse();
+  }, [courseFilter]);
+
+  const toggleDone = async id => {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+    const updated = await apiFetch(`/api/tasks/${USER_ID}/edit/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ ...task, completed: !task.done }),
+    });
+    if (updated) setTasks(p => p.map(t => t.id === id ? { ...updated, due: updated.deadline, done: updated.completed } : t));
   };
 
-  const PRIO_ORDER = { high:0, medium:1, low:2 };
+  const deleteTask = async id => {
+    await apiFetch(`/api/tasks/${USER_ID}/delete/${id}`, { method: "DELETE" });
+    setTasks(p => p.filter(t => t.id !== id));
+  };
+
+  const saveTask = async (task, onError) => {
+    const isEdit = tasks.some(t => t.id === task.id);
+    const payload = { title: task.title, course: task.course, type: task.type, deadline: task.due, notes: task.notes };
+    if (isEdit) {
+      const res = await fetch(`${API_BASE}/api/tasks/${USER_ID}/edit/${task.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getToken()}` },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        setTasks(p => p.map(t => t.id === task.id ? { ...updated, due: updated.deadline, done: updated.completed } : t));
+        setEditing(null);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        if (onError) onError(data.message || "Failed to update task.");
+      }
+    } else {
+      const res = await fetch(`${API_BASE}/api/tasks/${USER_ID}/add`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getToken()}` },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        const newTask = { ...created, due: created.deadline, done: created.completed };
+        setTasks(p => [newTask, ...p]);
+        if (created.course) setAllCourses(prev => [...new Set([...prev, created.course])].sort());
+        setComposing(false);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        if (onError) onError(data.message || "Failed to add task.");
+      }
+    }
+  };
+
   let displayed = tasks
-    .filter(t => {
-      if (filter==="Pending") return !t.done;
-      if (filter==="Done")    return t.done;
-      if (filter==="Overdue") return isOverdue(t.due, t.done);
-      return true;
-    })
-    .filter(t => !search || t.title.toLowerCase().includes(search.toLowerCase()) || t.course.toLowerCase().includes(search.toLowerCase()));
+      .filter(t => {
+        if (filter==="Pending") return !t.done;
+        if (filter==="Done")    return t.done;
+        if (filter==="Overdue") return isOverdue(t.due, t.done);
+        return true;
+      });
 
-  displayed = [...displayed].sort((a,b) => {
-    if (sortBy==="priority") return PRIO_ORDER[a.priority]-PRIO_ORDER[b.priority];
-    if (sortBy==="course")   return a.course.localeCompare(b.course);
 
-    if (!a.due && !b.due) return 0;
-    if (!a.due) return 1;
-    if (!b.due) return -1;
-    return new Date(a.due) - new Date(b.due);
-  });
 
   const counts = {
     all:     tasks.length,
@@ -220,8 +299,8 @@ export default function TaskManager() {
   };
 
   return (
-    <div style={{ padding:"28px 28px 60px", maxWidth:860 }}>
-      <style>{`
+      <div style={{ padding:"28px 28px 60px", maxWidth:860 }}>
+        <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; }
         .tm-input:focus { border-color:#8FB3E2 !important; outline:none; }
@@ -229,87 +308,85 @@ export default function TaskManager() {
         .tm-icon-btn:hover { background:#F0EEF7 !important; }
       `}</style>
 
-      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:24, flexWrap:"wrap", gap:12 }}>
-        <div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"#31487A", marginBottom:4 }}>Task Manager</div>
-          <div style={{ fontSize:13, color:"#A59AC9" }}>
-            {counts.pending} pending · {counts.overdue > 0 && <span style={{ color:"#c0392b", fontWeight:600 }}>{counts.overdue} overdue · </span>}{counts.done} done
+        <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:24, flexWrap:"wrap", gap:12 }}>
+          <div>
+            <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"#31487A", marginBottom:4 }}>Task Manager</div>
+            <div style={{ fontSize:13, color:"#A59AC9" }}>
+              {counts.pending} pending · {counts.overdue > 0 && <span style={{ color:"#c0392b", fontWeight:600 }}>{counts.overdue} overdue · </span>}{counts.done} done
+            </div>
           </div>
-        </div>
-        <button onClick={() => { setEditing(null); setComposing(true); }} style={tm.newBtn}>
-          + New Task
-        </button>
-      </div>
-
-      {(composing || editing) && (
-        <TaskForm
-          initial={editing}
-          onSave={saveTask}
-          onCancel={() => { setComposing(false); setEditing(null); }}
-        />
-      )}
-
-      <div style={{ display:"flex", gap:10, marginBottom:20, flexWrap:"wrap" }}>
-        {[
-          { label:"All",     val:counts.all,     filter:"All"     },
-          { label:"Pending", val:counts.pending, filter:"Pending" },
-          { label:"Done",    val:counts.done,    filter:"Done"    },
-          { label:"Overdue", val:counts.overdue, filter:"Overdue", warn:counts.overdue>0 },
-        ].map(c => (
-          <button key={c.filter} onClick={() => setFilter(c.filter)} style={{
-            padding:"7px 16px", borderRadius:10, border:"1px solid",
-            fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:600, cursor:"pointer", transition:"all .15s",
-            borderColor: filter===c.filter ? "#31487A" : "#D4D4DC",
-            background:  filter===c.filter ? "#31487A" : "#ffffff",
-            color:       filter===c.filter ? "#ffffff" : c.warn?"#c0392b":"#A59AC9",
-          }}>
-            {c.label} <span style={{ opacity:.7 }}>{c.val}</span>
+          <button onClick={() => { setEditing(null); setComposing(true); }} style={tm.newBtn}>
+            + New Task
           </button>
-        ))}
-      </div>
+        </div>
 
-      <div style={{ display:"flex", gap:10, marginBottom:18, flexWrap:"wrap", alignItems:"center" }}>
-        <div style={{ display:"flex", alignItems:"center", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px", flex:"1 1 200px", maxWidth:300 }}>
-          <Search size={15} style={{ color:"#B8A9C9", marginRight:8, flexShrink:0 }} />
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search tasks…"
-            className="tm-input"
-            style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"#333", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
-        </div>
-        <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:"#A59AC9" }}>
-          <span>Sort:</span>
-          {[{id:"due",label:"Due Date"},{id:"priority",label:"Priority"},{id:"course",label:"Course"}].map(s => (
-            <button key={s.id} onClick={()=>setSortBy(s.id)} style={{
-              padding:"6px 12px", borderRadius:8, border:"1px solid", cursor:"pointer", fontSize:12,
-              fontFamily:"'DM Sans',sans-serif", fontWeight:600, transition:"all .15s",
-              borderColor: sortBy===s.id?"#31487A":"#D4D4DC",
-              background:  sortBy===s.id?"#31487A":"#ffffff",
-              color:       sortBy===s.id?"#ffffff":"#A59AC9",
-            }}>{s.label}</button>
-          ))}
-        </div>
-      </div>
-
-      
-      {displayed.length === 0 ? (
-        <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
-          <div style={{ marginBottom:12 }}><ListChecks size={40} color="#B8A9C9" /></div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>
-            {filter==="Done" ? "No completed tasks yet." : filter==="Overdue" ? "Nothing overdue!" : "No tasks found."}
-          </div>
-          {filter==="All" && <div style={{ fontSize:13, marginTop:6 }}>Hit "+ New Task" to add one.</div>}
-        </div>
-      ) : (
-        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          {displayed.map(t => (
-            <TaskRow key={t.id} task={t}
-              onToggle={toggleDone}
-              onDelete={deleteTask}
-              onEdit={task => { setEditing(task); setComposing(false); }}
+        {(composing || editing) && (
+            <TaskForm
+                initial={editing}
+                onSave={saveTask}
+                onCancel={() => { setComposing(false); setEditing(null); }}
             />
+        )}
+
+        <div style={{ display:"flex", gap:10, marginBottom:20, flexWrap:"wrap" }}>
+          {[
+            { label:"All",     val:counts.all,     filter:"All"     },
+            { label:"Pending", val:counts.pending, filter:"Pending" },
+            { label:"Done",    val:counts.done,    filter:"Done"    },
+            { label:"Overdue", val:counts.overdue, filter:"Overdue", warn:counts.overdue>0 },
+          ].map(c => (
+              <button key={c.filter} onClick={() => setFilter(c.filter)} style={{
+                padding:"7px 16px", borderRadius:10, border:"1px solid",
+                fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:600, cursor:"pointer", transition:"all .15s",
+                borderColor: filter===c.filter ? "#31487A" : "#D4D4DC",
+                background:  filter===c.filter ? "#31487A" : "#ffffff",
+                color:       filter===c.filter ? "#ffffff" : c.warn?"#c0392b":"#A59AC9",
+              }}>
+                {c.label} <span style={{ opacity:.7 }}>{c.val}</span>
+              </button>
           ))}
         </div>
-      )}
-    </div>
+
+        <div style={{ display:"flex", gap:10, marginBottom:18, flexWrap:"wrap", alignItems:"center" }}>
+          <div style={{ display:"flex", alignItems:"center", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px", flex:"1 1 200px", maxWidth:300 }}>
+            <Search size={15} style={{ color:"#B8A9C9", marginRight:8, flexShrink:0 }} />
+            <input value={search} onChange={e => { setCourseFilter(""); setSearch(e.target.value); }} placeholder="Search tasks…"
+                   className="tm-input"
+                   style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"#333", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
+          </div>
+          <div style={{ display:"flex", alignItems:"center", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px", flex:"1 1 160px", maxWidth:200 }}>
+            <select value={courseFilter} onChange={e => { setSearch(""); setCourseFilter(e.target.value); }}
+                    style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color: courseFilter ? "#2a2050" : "#B8A9C9", width:"100%", fontFamily:"'DM Sans',sans-serif", cursor:"pointer" }}>
+              <option value="">All Courses</option>
+              {allCourses.map(c => (
+                  <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+        </div>
+
+
+        {displayed.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
+              <div style={{ marginBottom:12 }}><ListChecks size={40} color="#B8A9C9" /></div>
+              <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>
+                {filter==="Done" ? "No completed tasks yet." : filter==="Overdue" ? "Nothing overdue!" : "No tasks found."}
+              </div>
+              {filter==="All" && <div style={{ fontSize:13, marginTop:6 }}>Hit "+ New Task" to add one.</div>}
+            </div>
+        ) : (
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {displayed.map(t => (
+                  <TaskRow key={t.id} task={t}
+                           onToggle={toggleDone}
+                           onDelete={deleteTask}
+                           onEdit={task => { setEditing(task); setComposing(false); }}
+                  />
+              ))}
+            </div>
+        )}
+      </div>
   );
 }
 
