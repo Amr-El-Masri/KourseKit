@@ -46,6 +46,29 @@ public class SavedGradeService {
     }
 
     @Transactional
+    public SavedSemesterResponse setTemplate(User user, Long semesterId) {
+        semesterRepository.findByUserIdAndIsTemplateTrue(user.getId())
+                .ifPresent(s -> { s.setTemplate(false); semesterRepository.save(s); });
+        SavedSemester semester = semesterRepository.findByIdAndUserId(semesterId, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Semester not found"));
+        semester.setTemplate(true);
+        return toResponse(semesterRepository.save(semester), "Template set");
+    }
+
+    @Transactional
+    public void clearTemplate(User user, Long semesterId) {
+        SavedSemester semester = semesterRepository.findByIdAndUserId(semesterId, user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Semester not found"));
+        semester.setTemplate(false);
+        semesterRepository.save(semester);
+    }
+
+    public java.util.Optional<SavedSemesterResponse> getTemplate(User user) {
+        return semesterRepository.findByUserIdAndIsTemplateTrue(user.getId())
+                .map(s -> toResponse(s, "Template found"));
+    }
+
+    @Transactional
     public void deleteSemester(User user, Long semesterId) {
         SavedSemester semester = semesterRepository.findByIdAndUserId(semesterId, user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Semester not found"));
@@ -106,12 +129,14 @@ public class SavedGradeService {
                 })
                 .collect(Collectors.toList());
 
-        return new SavedSemesterResponse(
+        SavedSemesterResponse response = new SavedSemesterResponse(
                 semester.getId(),
                 semester.getName(),
                 courseDTOs,
                 semester.getCreatedAt(),
                 message
         );
+        response.setTemplate(semester.isTemplate());
+        return response;
     }
 }

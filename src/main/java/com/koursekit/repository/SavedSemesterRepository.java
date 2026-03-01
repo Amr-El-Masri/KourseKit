@@ -10,4 +10,5 @@ public interface SavedSemesterRepository extends JpaRepository<SavedSemester, Lo
     List<SavedSemester> findByUserIdOrderByCreatedAtDesc(Long userId);
     Optional<SavedSemester> findByIdAndUserId(Long id, Long userId);
     void deleteByIdAndUserId(Long id, Long userId);
+    Optional<SavedSemester> findByUserIdAndIsTemplateTrue(Long userId);
 }

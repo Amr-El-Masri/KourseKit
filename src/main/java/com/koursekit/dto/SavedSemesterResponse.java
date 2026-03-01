@@ -9,6 +9,7 @@ public class SavedSemesterResponse {
     private List<SavedCourseDTO> courses;
     private LocalDateTime createdAt;
     private String message;
+    private boolean isTemplate;
 
     public SavedSemesterResponse() {}
 
@@ -49,10 +50,17 @@ public class SavedSemesterResponse {
         this.createdAt = createdAt; 
     }
 
-    public String getMessage() { 
-        return message; 
+    public String getMessage() {
+        return message;
     }
-    public void setMessage(String message) { 
-        this.message = message; 
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public boolean isTemplate() {
+        return isTemplate;
+    }
+    public void setTemplate(boolean isTemplate) {
+        this.isTemplate = isTemplate;
     }
 }

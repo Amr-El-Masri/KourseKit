@@ -62,9 +62,9 @@ export default function Register({ onGoToLogin }) {
       `}</style>
 
       <div style={s.leftPanel}>
-        <div style={s.brandMark}>K</div>
+        <img src="/logo.png" alt="KourseKit" style={{ width:72, height:72, objectFit:"contain", marginBottom:4 }} />
         <div style={s.brandName}>KourseKit</div>
-        <div style={s.brandTagline}>Join thousands of AUB<br />students staying on track.</div>
+        <div style={s.brandTagline}>Your AUB academic life,<br />organized.</div>
 
         <div style={s.featureList}>
           {["Grade Calculator", "Task Manager", "Semester Planner", "Anonymous Reviews"].map(f => (
@@ -83,7 +83,7 @@ export default function Register({ onGoToLogin }) {
             <div style={{ textAlign: "center", padding: "20px 0" }}>
               <div style={{ marginBottom: 16 }}><PartyPopper size={52} color="#6C63FF" /></div>
               <h2 style={s.title}>You're registered!</h2>
-              <p style={{ fontSize: 14, color: "#7a8fa8", marginBottom: 28, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 14, color: "#7a8fa8", marginBottom: 12, lineHeight: 1.6 }}>
                 Your account has been created. You can now log in with your AUB email.
               </p>
               <button className="reg-btn" onClick={onGoToLogin} style={s.btn}>

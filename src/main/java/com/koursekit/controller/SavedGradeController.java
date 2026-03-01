@@ -74,6 +74,35 @@ public class SavedGradeController {
         }
     }
 
+    @GetMapping("/template")
+    public ResponseEntity<SavedSemesterResponse> getTemplate() {
+        User user = getAuthenticatedUser();
+        return savedGradeService.getTemplate(user)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.noContent().build());
+    }
+
+    @PutMapping("/{id}/template")
+    public ResponseEntity<SavedSemesterResponse> setTemplate(@PathVariable Long id) {
+        try {
+            User user = getAuthenticatedUser();
+            return ResponseEntity.ok(savedGradeService.setTemplate(user, id));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @DeleteMapping("/{id}/template")
+    public ResponseEntity<Void> clearTemplate(@PathVariable Long id) {
+        try {
+            User user = getAuthenticatedUser();
+            savedGradeService.clearTemplate(user, id);
+            return ResponseEntity.noContent().build();
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     private User getAuthenticatedUser() {
         return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
