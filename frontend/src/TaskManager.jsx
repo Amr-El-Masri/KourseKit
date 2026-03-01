@@ -271,7 +271,7 @@ export default function TaskManager() {
       if (res.ok) {
         const created = await res.json();
         const newTask = { ...created, due: created.deadline, done: created.completed };
-        setTasks(p => [newTask, ...p]);
+        await loadTasks();
         if (created.course) setAllCourses(prev => [...new Set([...prev, created.course])].sort());
         setComposing(false);
       } else {
