@@ -12,4 +12,6 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Review> findBySectionCourseIdAndStatus(Long courseId, ReviewStatus status);
     List<Review> findBySectionIdAndStatus(Long sectionId, ReviewStatus status);
     boolean existsByUserIdAndSectionCourseId(String userId, Long courseId);
+    List<Review> findByUserId(String userId);
+    List<Review> findByStatus(ReviewStatus status);
 }
