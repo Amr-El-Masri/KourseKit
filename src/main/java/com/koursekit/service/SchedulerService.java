@@ -173,11 +173,16 @@ public class SchedulerService {
                 // Don't exceed daily subject limit
                 assign = Math.min(assign, subjectCapacityToday);  // NEW CONSTRAINT
 
-                // Round to nearest 0.5h
-                assign = Math.floor(assign * 2) / 2.0;
+                // Round down to nearest whole hour
+                assign = Math.floor(assign);
 
+                // If below minimum, round up to minimum if slot has capacity and we need it
                 if (assign < settings.getMinimumSessionHours()) {
-                    continue;
+                    if (slotCapacity >= settings.getMinimumSessionHours()) {
+                        assign = settings.getMinimumSessionHours();
+                    } else {
+                        continue;
+                    }
                 }
 
                 // Calculate start time within slot

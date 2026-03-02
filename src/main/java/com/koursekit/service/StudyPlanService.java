@@ -1,4 +1,6 @@
 package com.koursekit.service;
+import com.koursekit.model.AvailabilitySlot;
+import com.koursekit.repository.AvailabilitySlotRepository;
 
 import com.koursekit.exception.ResourceNotFoundException;
 import com.koursekit.model.*;
@@ -26,6 +28,8 @@ public class StudyPlanService {
     @Autowired
     private StudyBlockRepository blockRepository;
 
+    @Autowired
+    private AvailabilitySlotRepository slotRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -33,7 +37,12 @@ public class StudyPlanService {
     @Transactional
     public StudyPlanEntry createEntry(Long userId, Long taskId, double estimatedWorkload) {
         User user = entityManager.getReference(User.class, userId);
-        Task task = entityManager.getReference(Task.class, taskId);
+        Task task = entityManager.find(Task.class, taskId);
+        if (task == null) throw new RuntimeException("Task not found: " + taskId);
+
+        // Check for duplicate using direct query to avoid lazy loading issues
+        boolean duplicate = entryRepository.existsByUserIdAndTaskId(userId, taskId);
+        if (duplicate) throw new RuntimeException("Entry for this task already exists");
 
         StudyPlanEntry entry = new StudyPlanEntry();
         entry.setUser(user);
@@ -45,40 +54,73 @@ public class StudyPlanService {
     }
 
     @Transactional
-    public Map<DayOfWeek, List<StudyBlock>> generatePlan(Long userId, SchedulerSettings settings) {
+    public SchedulerResult generatePlan(Long userId, SchedulerSettings settings) {
         List<StudyPlanEntry> entries = entryRepository.findByUserId(userId);
 
-        SchedulerResult result = schedulerService.generatePlan(entries, settings, LocalDate.now());
+        for (StudyPlanEntry entry : entries) {
+            blockRepository.deleteAll(blockRepository.findByStudyPlanEntry(entry));
+        }
+        entityManager.flush();
+        for (StudyPlanEntry entry : entries) {
+            entry.setCompletedHours(0);
+            entryRepository.save(entry);
+            entityManager.refresh(entry);
+        }
 
+        SchedulerResult result = schedulerService.generatePlan(entries, settings, LocalDate.now());
         saveSchedule(entries, result.getBlocks());
 
-        // Return weekly view starting from today
-        return getWeeklyView(userId, LocalDate.now());
+        return result;
     }
 
     // Preserve Completed, Reschedule Rest
     @Transactional
-    public Map<DayOfWeek, List<StudyBlock>> rebalance(Long userId, SchedulerSettings settings) {
+    public SchedulerResult rebalance(Long userId, SchedulerSettings settings) {
         try {
+            LocalDate today = LocalDate.now();
             List<StudyPlanEntry> entries = entryRepository.findByUserId(userId);
 
-            // Wipe only uncompleted blocks
+            Map<Long, Double> pastUncompletedHours = new HashMap<>();
             for (StudyPlanEntry entry : entries) {
-                blockRepository.deleteByStudyPlanEntryAndCompletedFalse(entry);
+                double pastHrs = blockRepository.findPastUncompletedBlocks(entry, today)
+                        .stream()
+                        .mapToDouble(StudyBlock::getDuration)
+                        .sum();
+                pastUncompletedHours.put(entry.getId(), pastHrs);
             }
 
+            for (StudyPlanEntry entry : entries) {
+                blockRepository.deleteByStudyPlanEntryAndCompletedFalseAndDayGreaterThanEqual(entry, today);
+            }
             entityManager.flush();
-
             for (StudyPlanEntry entry : entries) {
                 entityManager.refresh(entry);
             }
 
-            // Generate a fresh plan for remaining workload using new availability
-            // generatePlan uses estimatedWorkload - completedHours so completed work is respected
-            SchedulerResult result = schedulerService.generatePlan(entries, settings, LocalDate.now());
-            saveSchedule(entries, result.getBlocks());
+            List<StudyPlanEntry> adjustedEntries = new ArrayList<>();
+            for (StudyPlanEntry entry : entries) {
+                double alreadyDone = entry.getCompletedHours()
+                        + pastUncompletedHours.getOrDefault(entry.getId(), 0.0);
+                double futureWorkload = Math.max(0, entry.getEstimatedWorkload() - alreadyDone);
 
-            return getWeeklyView(userId, LocalDate.now());
+                StudyPlanEntry adjusted = new StudyPlanEntry(futureWorkload, 0);
+                adjusted.setTask(entry.getTask());
+                adjustedEntries.add(adjusted);
+            }
+
+            SchedulerResult result = schedulerService.rebalance(adjustedEntries, settings, today);
+
+            List<StudyBlock> reattachedBlocks = new ArrayList<>();
+            for (StudyBlock block : result.getBlocks()) {
+                int idx = adjustedEntries.indexOf(block.getStudyPlanEntry());
+                if (idx >= 0) {
+                    block.setStudyPlanEntry(entries.get(idx));
+                }
+                reattachedBlocks.add(block);
+            }
+
+            saveSchedule(entries, reattachedBlocks);
+            return result;
 
         } catch (Exception e) {
             System.err.println("REBALANCE ERROR: " + e.getMessage());
@@ -86,7 +128,6 @@ public class StudyPlanService {
             throw e;
         }
     }
-
 
     @Transactional
     public void completeBlock(Long blockId) {
@@ -102,7 +143,6 @@ public class StudyPlanService {
         entry.setCompletedHours(entry.getCompletedHours() + block.getDuration());
         entryRepository.save(entry);
     }
-
 
     // Marks a study block as uncompleted (undo).
     @Transactional
@@ -124,11 +164,9 @@ public class StudyPlanService {
         entryRepository.save(entry);
     }
 
-
     // Returns all study blocks for a given week, grouped by day.
-
     public Map<DayOfWeek, List<StudyBlock>> getWeeklyView(Long userId, LocalDate weekStart) {
-        LocalDate weekEnd = weekStart.plusDays(7);
+        LocalDate weekEnd = weekStart.plusDays(6);
 
         List<StudyBlock> blocks = blockRepository.findByStudyPlanEntry_User_IdAndDayBetween(
                 userId,
@@ -144,7 +182,6 @@ public class StudyPlanService {
                         Collectors.toList()
                 ));
     }
-
 
     @Transactional
     public void deleteBlock(Long blockId) {
@@ -173,6 +210,7 @@ public class StudyPlanService {
 
         entryRepository.delete(entry);
     }
+
     @Transactional
     public StudyPlanEntry updateEntry(Long entryId, StudyPlanEntry updates) {
         StudyPlanEntry existing = getEntry(entryId);
@@ -212,6 +250,42 @@ public class StudyPlanService {
         return blockRepository.save(block);
     }
 
+    @Transactional
+    public int markPastBlocksDone(Long userId) {
+        LocalDate today = LocalDate.now();
+        java.time.LocalTime now = java.time.LocalTime.now();
+
+        List<StudyBlock> pastBlocks = blockRepository.findAllPastUncompletedForUser(userId, today, now);
+        if (pastBlocks.isEmpty()) return 0;
+
+        Map<Long, StudyPlanEntry> entryCache = new HashMap<>();
+        for (StudyBlock block : pastBlocks) {
+            block.setCompleted(true);
+
+            StudyPlanEntry entry = entryCache.computeIfAbsent(
+                    block.getStudyPlanEntry().getId(),
+                    id -> entryRepository.findById(id)
+                            .orElseThrow(() -> new RuntimeException("Entry not found: " + id))
+            );
+            entry.setCompletedHours(entry.getCompletedHours() + block.getDuration());
+        }
+
+        blockRepository.saveAll(pastBlocks);
+        entryRepository.saveAll(entryCache.values());
+
+        return pastBlocks.size();
+    }
+
+    @Transactional
+    public void clearAllBlocks(Long userId) {
+        List<StudyPlanEntry> entries = entryRepository.findByUserId(userId);
+        blockRepository.deleteAllByUserId(userId);
+        entityManager.flush();
+        for (StudyPlanEntry entry : entries) {
+            entry.setCompletedHours(0);
+            entryRepository.save(entry);
+        }
+    }
 
     private void saveSchedule(List<StudyPlanEntry> entries, List<StudyBlock> blocks) {
         blockRepository.saveAll(blocks);
@@ -221,9 +295,33 @@ public class StudyPlanService {
         return entryRepository.findByUserId(userId);
     }
 
-
     public StudyPlanEntry getEntry(Long entryId) {
         return entryRepository.findById(entryId)
                 .orElseThrow(() -> new RuntimeException("Entry not found"));
+    }
+
+    public List<AvailabilitySlot> getSlots(Long userId) {
+        return slotRepository.findByUserId(userId);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public List<AvailabilitySlot> saveSlots(Long userId, List<java.util.Map<String, Object>> slots) {
+        slotRepository.deleteAllByUserId(userId);
+        com.koursekit.model.User user = entityManager.getReference(com.koursekit.model.User.class, userId);
+        List<AvailabilitySlot> saved = new java.util.ArrayList<>();
+        for (java.util.Map<String, Object> s : slots) {
+            AvailabilitySlot slot = new AvailabilitySlot();
+            slot.setUser(user);
+            slot.setDayKey((String) s.get("dayKey"));
+            slot.setStartTime(java.time.LocalTime.parse((String) s.get("startTime")));
+            slot.setEndTime(java.time.LocalTime.parse((String) s.get("endTime")));
+            saved.add(slotRepository.save(slot));
+        }
+        return saved;
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void clearSlots(Long userId) {
+        slotRepository.deleteAllByUserId(userId);
     }
 }
