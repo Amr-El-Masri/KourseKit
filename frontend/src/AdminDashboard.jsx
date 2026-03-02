@@ -8,6 +8,7 @@ const getMyId = token => { try { return JSON.parse(atob(token.split(".")[1])).su
 export default function AdminDashboard({ token }) {
   const myId = getMyId(token);
   const [tab,     setTab]     = useState("users");
+  const [reviewDropdownOpen, setReviewDropdownOpen] = useState(false);
   // users
   const [users,   setUsers]   = useState([]);
   const [loading, setLoading] = useState(false);
@@ -220,7 +221,7 @@ export default function AdminDashboard({ token }) {
   );
 
   return (
-    <div style={{ padding:0, maxWidth:"100%", fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{ fontFamily:"'DM Sans',sans-serif", minHeight:"100vh", background:"#F4F4F8", paddingBottom:32 }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; }
@@ -228,20 +229,43 @@ export default function AdminDashboard({ token }) {
         .action-btn:hover { opacity:0.8; }
       `}</style>
 
-      <div style={{ marginBottom:24 }}>
+      <div style={{ marginBottom:28 }}>
         <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"#31487A", marginBottom:4 }}>Admin Dashboard</div>
         <div style={{ fontSize:13, color:"#A59AC9" }}>Manage users and moderate reviews.</div>
       </div>
 
-      <div style={{ display:"flex", gap:4, background:"#F4F4F8", padding:4, borderRadius:10, marginBottom:24, width:"fit-content" }}>
-        {[{id:"users",label:"Users"},{id:"reviews",label:"Reviews"}].map(t => (
-          <button key={t.id} onClick={() => { setErr(""); setTab(t.id); }} style={{
+      <div style={{ background:"#fff", borderRadius:20, border:"1px solid #D4D4DC", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px" }}>
+
+        <div style={{ display:"flex", gap:4, background:"#F4F4F8", padding:4, borderRadius:10, marginBottom:24, width:"fit-content", alignItems:"center" }}>
+          <button onClick={() => { setErr(""); setTab("users"); setReviewDropdownOpen(false); }} style={{
             padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer",
-            background: tab === t.id ? "#31487A" : "transparent",
-            color:      tab === t.id ? "#fff"    : "#A59AC9",
-          }}>{t.label}</button>
-        ))}
-      </div>
+            background: tab === "users" ? "#31487A" : "transparent",
+            color:      tab === "users" ? "#fff"    : "#A59AC9",
+          }}>Users</button>
+
+          <div style={{ position:"relative" }}>
+            <button onClick={() => { setErr(""); setReviewDropdownOpen(o => !o); if (tab !== "reviews") setTab("reviews"); }} style={{
+              padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6,
+              background: tab === "reviews" ? "#31487A" : "transparent",
+              color:      tab === "reviews" ? "#fff"    : "#A59AC9",
+            }}>
+              Reviews
+              <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+            </button>
+            {reviewDropdownOpen && (
+              <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, background:"#fff", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid #D4D4DC", zIndex:200, padding:6, minWidth:140 }}>
+                {[{id:"course",label:"Course"},{id:"professor",label:"Professor"}].map(opt => (
+                  <div key={opt.id} onClick={() => { setReviewType(opt.id); setReviewDropdownOpen(false); setExpandedId(null); }}
+                    style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                      background: reviewType === opt.id ? "#F0EEF7" : "transparent",
+                      color:      reviewType === opt.id ? "#7B5EA7" : "#31487A" }}>
+                    {opt.label}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
       {err && (
         <div style={{ background:"#fef0f0", border:"1px solid #f5c6c6", borderRadius:10, padding:"9px 14px", fontSize:13, color:"#c0392b", marginBottom:16 }}>
@@ -368,23 +392,12 @@ export default function AdminDashboard({ token }) {
       {tab === "reviews" && (
         <>
           {/* All | Flagged */}
-          <div style={{ display:"flex", gap:4, background:"#F4F4F8", padding:4, borderRadius:10, marginBottom:12, width:"fit-content" }}>
+          <div style={{ display:"flex", gap:4, background:"#F4F4F8", padding:4, borderRadius:10, marginBottom:20, width:"fit-content" }}>
             {[{id:"all",label:"All"},{id:"flagged",label:"Flagged"}].map(t => (
               <button key={t.id} onClick={() => { setReviewStatus(t.id); setExpandedId(null); }} style={{
                 padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer",
                 background: reviewStatus === t.id ? "#31487A" : "transparent",
                 color:      reviewStatus === t.id ? "#fff"    : "#A59AC9",
-              }}>{t.label}</button>
-            ))}
-          </div>
-
-          {/* Course | Professor */}
-          <div style={{ display:"flex", gap:4, background:"#F4F4F8", padding:4, borderRadius:10, marginBottom:20, width:"fit-content" }}>
-            {[{id:"course",label:"Course"},{id:"professor",label:"Professor"}].map(t => (
-              <button key={t.id} onClick={() => { setReviewType(t.id); setExpandedId(null); }} style={{
-                padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer",
-                background: reviewType === t.id ? "#7B5EA7" : "transparent",
-                color:      reviewType === t.id ? "#fff"    : "#A59AC9",
               }}>{t.label}</button>
             ))}
           </div>
@@ -395,6 +408,8 @@ export default function AdminDashboard({ token }) {
           {reviewStatus === "flagged" && reviewType === "professor" && reviewTable(flaggedProf,   flaggedProfLoading,   "No flagged professor reviews",    deleteProfReview,   "fp")}
         </>
       )}
+
+      </div> {/* white card */}
     </div>
   );
 }
