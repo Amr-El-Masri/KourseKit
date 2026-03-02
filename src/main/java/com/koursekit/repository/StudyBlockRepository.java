@@ -10,7 +10,8 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDate;
 import java.util.List;
 
-public interface StudyBlockRepository extends JpaRepository<StudyBlock,Long> {
+public interface StudyBlockRepository extends JpaRepository<StudyBlock, Long> {
+
     List<StudyBlock> findByStudyPlanEntry(StudyPlanEntry entry);
 
     List<StudyBlock> findByStudyPlanEntry_User_IdAndDayBetween(
@@ -22,4 +23,28 @@ public interface StudyBlockRepository extends JpaRepository<StudyBlock,Long> {
     @Modifying
     @Query("DELETE FROM StudyBlock b WHERE b.studyPlanEntry = :entry AND b.completed = false")
     void deleteByStudyPlanEntryAndCompletedFalse(@Param("entry") StudyPlanEntry entry);
+
+    @Modifying
+    @Query("DELETE FROM StudyBlock b WHERE b.studyPlanEntry = :entry AND b.completed = false AND b.day >= :fromDate")
+    void deleteByStudyPlanEntryAndCompletedFalseAndDayGreaterThanEqual(
+            @Param("entry") StudyPlanEntry entry,
+            @Param("fromDate") LocalDate fromDate
+    );
+
+    @Query("SELECT b FROM StudyBlock b WHERE b.studyPlanEntry = :entry AND b.completed = false AND b.day < :fromDate")
+    List<StudyBlock> findPastUncompletedBlocks(
+            @Param("entry") StudyPlanEntry entry,
+            @Param("fromDate") LocalDate fromDate
+    );
+
+    @Modifying
+    @Query("DELETE FROM StudyBlock b WHERE b.studyPlanEntry.user.id = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT b FROM StudyBlock b WHERE b.studyPlanEntry.user.id = :userId AND b.completed = false AND (b.day < :today OR (b.day = :today AND b.startTime < :cutoffTime))")
+    List<StudyBlock> findAllPastUncompletedForUser(
+            @Param("userId") Long userId,
+            @Param("today") LocalDate today,
+            @Param("cutoffTime") java.time.LocalTime cutoffTime
+    );
 }

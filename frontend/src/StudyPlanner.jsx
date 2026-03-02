@@ -9,680 +9,886 @@ const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const DAY_KEYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 
 const PALETTE = [
-  "#31487A", "#7B5EA7", "#4ecdc4", "#ff6b6b",
-  "#fdcb6e", "#55efc4", "#fd79a8", "#74b9ff",
-  "#a29bfe", "#e17055", "#00b894", "#6c5ce7",
+    // dark
+    "#c0392b", "#e67e22", "#f1c40f", "#27ae60", "#2980b9", "#8e44ad", "#d81b60",
+    // mid
+    "#e74c3c", "#fb8c00", "#fdd835", "#43a047", "#1e88e5", "#ab47bc", "#f06292",
+    // light
+    "#ef9a9a", "#ffcc80", "#fff59d", "#a5d6a7", "#90caf9", "#ce93d8", "#f48fb1",
 ];
 
 function getWeekDates(baseDate) {
-  const monday = new Date(baseDate);
-  const day = monday.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  monday.setDate(monday.getDate() + diff);
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return d;
-  });
+    const monday = new Date(baseDate);
+    const day = monday.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    monday.setDate(monday.getDate() + diff);
+    return Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        return d;
+    });
 }
 
 function formatTime(hour, minute = 0) {
-  const h = Math.floor(hour);
-  const m = minute || (hour % 1) * 60;
-  return `${String(h).padStart(2, "0")}:${String(Math.round(m)).padStart(2, "0")}`;
+    const h = Math.floor(hour);
+    const m = minute || (hour % 1) * 60;
+    return `${String(h).padStart(2, "0")}:${String(Math.round(m)).padStart(2, "0")}`;
 }
 
+function fmtDeadline(iso) {
+    if (!iso) return "";
+    try {
+        const d = new Date(iso);
+        return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+            + " · " + d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+    } catch { return iso; }
+}
 function pxToHour(px) { return px / HOUR_HEIGHT + START_HOUR; }
 function hourToPx(hour) { return (hour - START_HOUR) * HOUR_HEIGHT; }
 function snapToHalf(hour) { return Math.round(hour * 2) / 2; }
 function isToday(date) { return date.toDateString() === new Date().toDateString(); }
 
 function slotsOverlap(a, b) {
-  return a.startHour < b.endHour && a.endHour > b.startHour;
+    return a.startHour < b.endHour && a.endHour > b.startHour;
 }
 
 const API_BASE = "http://localhost:8080";
-const USER_ID = 1;
+function getUserId() {
+    try {
+        const t = localStorage.getItem("kk_token");
+        return t ? JSON.parse(atob(t.split(".")[1])).sub : null;
+    } catch { return null; }
+}
 
 async function apiFetch(path, options = {}) {
-  try {
+    const t = localStorage.getItem("kk_token");
+    if (!t) throw new Error("Not logged in — please refresh and log in again");
     const res = await fetch(`${API_BASE}${path}`, {
-      headers: { "Content-Type": "application/json" },
-      ...options,
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${t}`,
+        },
+        ...options,
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     if (res.status === 204) return null;
+    if (!res.ok) {
+        const text = await res.text();
+        console.error(`API ERROR ${res.status} ${path}:`, text);
+        let msg = `HTTP ${res.status}`;
+        try { msg = JSON.parse(text).message || msg; } catch {}
+        throw new Error(msg);
+    }
     return res.json();
-  } catch {
-    return null;
-  }
 }
 
 function buildSchedulerSettings(availability) {
-  const result = {};
-  for (const [dayKey, slots] of Object.entries(availability)) {
-    if (!slots || slots.length === 0) continue;
-    result[dayKey] = {
-      slots: slots.map(s => ({
-        start: formatTime(s.startHour) + ":00",
-        end:   formatTime(s.endHour)   + ":00",
-      })),
-    };
-  }
-  return { availability: result };
+    const result = {};
+    for (const [dayKey, slots] of Object.entries(availability)) {
+        if (!slots || slots.length === 0) continue;
+        result[dayKey] = {
+            slots: slots.map(s => ({
+                start: formatTime(s.startHour) + ":00",
+                end:   formatTime(s.endHour)   + ":00",
+            })),
+        };
+    }
+    return { availability: result };
 }
 
 
 function normalizeBlock(block) {
-  let startTime = block.startTime;
-  
-  if (Array.isArray(startTime)) {
-    const [h, m, s = 0] = startTime;
-    startTime = `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
-  }
-  return { ...block, startTime };
+    let startTime = block.startTime;
+
+    if (Array.isArray(startTime)) {
+        const [h, m, s = 0] = startTime;
+        startTime = `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+    }
+    return { ...block, startTime };
 }
 
 function normalizeWeeklyData(data) {
-  if (!data) return {};
-  const normalized = {};
-  for (const [day, blocks] of Object.entries(data)) {
-    normalized[day] = blocks.map(normalizeBlock);
-  }
-  return normalized;
+    if (!data) return {};
+    const normalized = {};
+    for (const [day, blocks] of Object.entries(data)) {
+        normalized[day] = blocks.map(normalizeBlock);
+    }
+    return normalized;
 }
 
 function TimeGutter() {
-  return (
-      <div className="sp-time-gutter">
-        {Array.from({ length: TOTAL_HOURS }, (_, i) => {
-          const hour = START_HOUR + i;
-          if (hour === START_HOUR) return <div key={hour} className="sp-time-label" style={{ top: 0 }} />;
-          return (
-              <div key={hour} className="sp-time-label" style={{ top: hourToPx(hour) }}>
-                <span>{hour > 12 ? `${hour - 12}pm` : hour === 12 ? "12pm" : `${hour}am`}</span>
-              </div>
-          );
-        })}
-      </div>
-  );
+    return (
+        <div className="sp-time-gutter">
+            {Array.from({ length: TOTAL_HOURS }, (_, i) => {
+                const hour = START_HOUR + i;
+                if (hour === START_HOUR) return <div key={hour} className="sp-time-label" style={{ top: 0 }} />;
+                return (
+                    <div key={hour} className="sp-time-label" style={{ top: hourToPx(hour) }}>
+                        <span>{hour > 12 ? `${hour - 12}pm` : hour === 12 ? "12pm" : `${hour}am`}</span>
+                    </div>
+                );
+            })}
+        </div>
+    );
 }
 
-function StudyBlockEvent({ block, color, onComplete, onDelete, onUncomplete, onEdit }) {
-  const [showMenu, setShowMenu] = useState(false);
-  const top = hourToPx(parseFloat(block.startTime.split(":")[0]) + parseFloat(block.startTime.split(":")[1]) / 60);
-  const height = Math.max(block.duration * HOUR_HEIGHT - 4, 20);
+function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUncomplete, onEdit, colIndex = 0, totalCols = 1 }) {
+    const [showMenu, setShowMenu] = useState(false);
+    useEffect(() => {
+        if (!showMenu) return;
+        const close = () => setShowMenu(false);
+        window.addEventListener("click", close);
+        return () => window.removeEventListener("click", close);
+    }, [showMenu]);
+    const top = hourToPx(parseFloat(block.startTime.split(":")[0]) + parseFloat(block.startTime.split(":")[1]) / 60);
+    const height = Math.max(block.duration * HOUR_HEIGHT - 4, 20);
 
-  return (
-      <div
-          className={`sp-study-block ${block.completed ? "completed" : ""}`}
-          style={{
-            top: top + 2, height,
-            background: block.completed ? "rgba(49,72,122,0.05)" : color + "22",
-            borderLeft: `3px solid ${block.completed ? "#ccc" : color}`,
-          }}
-          onClick={() => setShowMenu(!showMenu)}
-      >
-        <div className="sp-block-title" style={{ color: block.completed ? "#aaa" : color }}>
-          {block.completed && <span>✓ </span>}
-          {block.course || "Study"}
-        </div>
-        <div className="sp-block-time">
-          {block.startTime.slice(0, 5)} · {block.duration}h
-        </div>
-        {showMenu && (
-            <div className="sp-block-menu" onClick={e => e.stopPropagation()}>
-              {!block.completed
-                  ? <button onClick={() => { onComplete(block.id); setShowMenu(false); }}>✓ Complete</button>
-                  : <button onClick={() => { onUncomplete(block.id); setShowMenu(false); }}>↩ Undo</button>
-              }
-              <button onClick={() => { onEdit(block); setShowMenu(false); }}><Pencil size={13} style={{verticalAlign:"middle",marginRight:4}}/>Edit</button>
-              <button className="danger" onClick={() => { onDelete(block.id); setShowMenu(false); }}>✕ Delete</button>
+    const colWidth = 100 / totalCols;
+    const leftPct = colIndex * colWidth;
+    return (
+        <div
+            className={`sp-study-block ${block.completed ? "completed" : ""}`}
+            style={{
+                top: top + 2, height,
+                left: `calc(${leftPct}% + 4px)`,
+                right: `calc(${100 - leftPct - colWidth}% + 4px)`,
+                background: block.completed ? "rgba(49,72,122,0.05)" : color + "22",
+                borderLeft: `3px solid ${block.completed ? "#ccc" : color}`,
+            }}
+            onMouseDown={e => e.stopPropagation()}
+            onClick={() => setShowMenu(!showMenu)}
+        >
+            <div className="sp-block-title" style={{ color: block.completed ? "#aaa" : color }}>
+                {block.completed && <span>✓ </span>}
+                {entryName}
             </div>
-        )}
-      </div>
-  );
+            <div className="sp-block-time">
+                {block.startTime.slice(0, 5)} · {block.duration}h
+            </div>
+            {showMenu && (
+                <div className="sp-block-menu" onClick={e => e.stopPropagation()}>
+                    {!block.completed
+                        ? <button onClick={() => { onComplete(block.id); setShowMenu(false); }}>✓ Complete</button>
+                        : <button onClick={() => { onUncomplete(block.id); setShowMenu(false); }}>↩ Undo</button>
+                    }
+                    <button onClick={() => { onEdit(block); setShowMenu(false); }}><Pencil size={13} style={{verticalAlign:"middle",marginRight:4}}/>Edit</button>
+                    <button className="danger" onClick={() => { onDelete(block.id); setShowMenu(false); }}>✕ Delete</button>
+                </div>
+            )}
+        </div>
+    );
 }
 
 function EditBlockModal({ block, onClose, onSave }) {
-  const [startTime, setStartTime] = useState(block.startTime.slice(0, 5));
-  const [duration, setDuration]   = useState(String(block.duration));
+    const [startTime, setStartTime] = useState(block.startTime.slice(0, 5));
+    const [duration, setDuration]   = useState(String(block.duration));
 
-  const handleSave = () => {
-    const [h, m] = startTime.split(":").map(Number);
-    if (isNaN(h) || isNaN(m)) return;
-    const dur = parseFloat(duration);
-    if (!dur || dur <= 0) return;
-    onSave(block.id, { startTime: startTime + ":00", duration: dur });
-    onClose();
-  };
+    const handleSave = () => {
+        const [h, m] = startTime.split(":").map(Number);
+        if (isNaN(h) || isNaN(m)) return;
+        const dur = parseFloat(duration);
+        if (!dur || dur <= 0) return;
+        onSave(block.id, { startTime: startTime + ":00", duration: dur });
+        onClose();
+    };
 
-  return (
-      <div className="sp-modal-backdrop" onClick={onClose}>
-        <div className="sp-modal" onClick={e => e.stopPropagation()}>
-          <h2>Edit Block</h2>
-          <p>{block.course || "Study block"}</p>
-          <div style={{ marginBottom: 14 }}>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2a2050", marginBottom: 6 }}>
-              Start Time
-            </label>
-            <input
-                type="time"
-                value={startTime}
-                onChange={e => setStartTime(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", border: "1px solid #E0E0E8", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: "#2a2050", outline: "none" }}
-            />
-          </div>
-          <div style={{ marginBottom: 20 }}>
-            <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2a2050", marginBottom: 6 }}>
-              Duration (hours)
-            </label>
-            <input
-                type="number"
-                value={duration}
-                min="0.5"
-                max="8"
-                step="0.5"
-                onChange={e => setDuration(e.target.value)}
-                style={{ width: "100%", padding: "9px 12px", border: "1px solid #E0E0E8", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: "#2a2050", outline: "none" }}
-            />
-          </div>
-          <div className="sp-modal-actions">
-            <button className="sp-btn sp-btn-ghost" onClick={onClose}>Cancel</button>
-            <button className="sp-btn sp-btn-primary" onClick={handleSave}>Save</button>
-          </div>
+    return (
+        <div className="sp-modal-backdrop" onClick={onClose}>
+            <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                <h2>Edit Block</h2>
+                <p>{block.course || "Study block"}</p>
+                <div style={{ marginBottom: 14 }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2a2050", marginBottom: 6 }}>
+                        Start Time
+                    </label>
+                    <input
+                        type="time"
+                        value={startTime}
+                        onChange={e => setStartTime(e.target.value)}
+                        style={{ width: "100%", padding: "9px 12px", border: "1px solid #E0E0E8", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: "#2a2050", outline: "none" }}
+                    />
+                </div>
+                <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2a2050", marginBottom: 6 }}>
+                        Duration (hours)
+                    </label>
+                    <input
+                        type="number"
+                        value={duration}
+                        min="0.5"
+                        max="8"
+                        step="0.5"
+                        onChange={e => setDuration(e.target.value)}
+                        style={{ width: "100%", padding: "9px 12px", border: "1px solid #E0E0E8", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: "#2a2050", outline: "none" }}
+                    />
+                </div>
+                <div className="sp-modal-actions">
+                    <button className="sp-btn sp-btn-ghost" onClick={onClose}>Cancel</button>
+                    <button className="sp-btn sp-btn-primary" onClick={handleSave}>Save</button>
+                </div>
+            </div>
         </div>
-      </div>
-  );
+    );
 }
 
-function AvailabilitySlot({ slot, dayKey, onDelete }) {
-  const top = hourToPx(slot.startHour);
-  const height = (slot.endHour - slot.startHour) * HOUR_HEIGHT;
-  return (
-      <div
-          className="sp-avail-slot"
-          style={{ top: top + 2, height: Math.max(height - 4, 10) }}
-          title={`${formatTime(slot.startHour)} – ${formatTime(slot.endHour)}`}
-      >
-        <span className="sp-slot-time">{formatTime(slot.startHour)}–{formatTime(slot.endHour)}</span>
-        <button className="sp-slot-delete" onClick={() => onDelete(dayKey, slot.id)}>×</button>
-      </div>
-  );
+function AvailabilitySlot({ slot, dayKey, onDelete, onResize }) {
+    const [liveEndHour, setLiveEndHour] = useState(null);
+    const liveEndHourRef = useRef(null);
+    const dragRef = useRef(null);
+    const endHour = liveEndHour ?? slot.endHour;
+    const top = hourToPx(slot.startHour);
+    const height = (endHour - slot.startHour) * HOUR_HEIGHT;
+
+    const handleResizeStart = useCallback((e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        dragRef.current = { startY: e.clientY, startEndHour: slot.endHour };
+        liveEndHourRef.current = slot.endHour;
+        const onMove = (ev) => {
+            const diff = (ev.clientY - dragRef.current.startY) / HOUR_HEIGHT;
+            const newEnd = Math.max(snapToHalf(dragRef.current.startEndHour + diff), slot.startHour + 0.5);
+            liveEndHourRef.current = newEnd;
+            setLiveEndHour(newEnd);
+        };
+        const onUp = () => {
+            if (dragRef.current) {
+                onResize(dayKey, slot.id, liveEndHourRef.current);
+                setLiveEndHour(null);
+                liveEndHourRef.current = null;
+            }
+            dragRef.current = null;
+            window.removeEventListener("mousemove", onMove);
+            window.removeEventListener("mouseup", onUp);
+        };
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+    }, [slot, dayKey, onResize]);
+
+    return (
+        <div
+            className="sp-avail-slot"
+            style={{ top: top + 2, height: Math.max(height - 4, 10) }}
+            title={`${formatTime(slot.startHour)} – ${formatTime(endHour)}`}
+            onMouseDown={e => e.stopPropagation()}
+        >
+            <span className="sp-slot-time">{formatTime(slot.startHour)}–{formatTime(endHour)}</span>
+            <button className="sp-slot-delete" onMouseDown={e => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onDelete(dayKey, slot.id); }}>×</button>
+            <div onMouseDown={handleResizeStart} style={{ position:"absolute", bottom:0, left:0, right:0, height:8, cursor:"ns-resize", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <div style={{ width:24, height:3, borderRadius:2, background:"rgba(123,94,167,0.4)" }} />
+            </div>
+        </div>
+    );
 }
 
 function DayColumn({
-                     date, dayKey, blocks, colorMap,
-                     availabilitySlots, onCompleteBlock, onDeleteBlock, onUncompleteBlock,
-                     onAddSlot, onDeleteSlot, isAvailabilityMode, onEditBlock,
+                       date, dayKey, blocks, colorMap, entries,
+                       availabilitySlots, onCompleteBlock, onDeleteBlock, onUncompleteBlock,
+                       onAddSlot, onDeleteSlot, onResizeSlot, isAvailabilityMode, onEditBlock,
                    }) {
-  const columnRef = useRef(null);
-  const dragRef = useRef(null);
-  const [dragging, setDragging] = useState(null);
+    const columnRef = useRef(null);
+    const dragRef = useRef(null);
+    const [dragging, setDragging] = useState(null);
 
-  const getHourFromEvent = useCallback((e) => {
-    const rect = columnRef.current.getBoundingClientRect();
-    return snapToHalf(pxToHour(e.clientY - rect.top));
-  }, []);
+    const getHourFromEvent = useCallback((e) => {
+        const rect = columnRef.current.getBoundingClientRect();
+        return snapToHalf(pxToHour(e.clientY - rect.top));
+    }, []);
 
-  const handleMouseDown = useCallback((e) => {
-    if (!isAvailabilityMode) return;
-    if (e.target.closest(".sp-avail-slot") || e.target.closest(".sp-study-block")) return;
-    e.preventDefault();
-    const startHour = getHourFromEvent(e);
-    dragRef.current = { startHour, endHour: startHour + 0.5 };
-    setDragging({ startHour, endHour: startHour + 0.5 });
-  }, [isAvailabilityMode, getHourFromEvent]);
+    const handleMouseDown = useCallback((e) => {
+        if (!isAvailabilityMode) return;
+        if (e.target.closest(".sp-avail-slot") || e.target.closest(".sp-study-block")) return;
+        e.preventDefault();
+        const startHour = getHourFromEvent(e);
+        dragRef.current = { startHour, endHour: startHour + 0.5 };
+        setDragging({ startHour, endHour: startHour + 0.5 });
+    }, [isAvailabilityMode, getHourFromEvent]);
 
-  const handleMouseMove = useCallback((e) => {
-    if (!dragRef.current) return;
-    const currentHour = getHourFromEvent(e);
-    const endHour = Math.max(snapToHalf(currentHour), dragRef.current.startHour + 0.5);
-    dragRef.current.endHour = endHour;
-    setDragging({ startHour: dragRef.current.startHour, endHour });
-  }, [getHourFromEvent]);
+    const handleMouseMove = useCallback((e) => {
+        if (!dragRef.current) return;
+        const currentHour = getHourFromEvent(e);
+        const endHour = Math.max(snapToHalf(currentHour), dragRef.current.startHour + 0.5);
+        dragRef.current.endHour = endHour;
+        setDragging({ startHour: dragRef.current.startHour, endHour });
+    }, [getHourFromEvent]);
 
-  const handleMouseUp = useCallback(() => {
-    if (!dragRef.current) return;
-    const { startHour, endHour } = dragRef.current;
-    if (endHour - startHour >= 0.5) {
-      onAddSlot(dayKey, { startHour, endHour, id: Date.now() });
-    }
-    dragRef.current = null;
-    setDragging(null);
-  }, [dayKey, onAddSlot]);
+    const handleMouseUp = useCallback(() => {
+        if (!dragRef.current) return;
+        const { startHour, endHour } = dragRef.current;
+        if (endHour - startHour >= 0.5) {
+            onAddSlot(dayKey, { startHour, endHour, id: Date.now() });
+        }
+        dragRef.current = null;
+        setDragging(null);
+    }, [dayKey, onAddSlot]);
 
-  useEffect(() => {
-    window.addEventListener("mouseup", handleMouseUp);
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => {
-      window.removeEventListener("mouseup", handleMouseUp);
-      window.removeEventListener("mousemove", handleMouseMove);
-    };
-  }, [handleMouseMove, handleMouseUp]);
+    useEffect(() => {
+        window.addEventListener("mouseup", handleMouseUp);
+        window.addEventListener("mousemove", handleMouseMove);
+        return () => {
+            window.removeEventListener("mouseup", handleMouseUp);
+            window.removeEventListener("mousemove", handleMouseMove);
+        };
+    }, [handleMouseMove, handleMouseUp]);
 
-  return (
-      <div
-          className={`sp-day-column ${isToday(date) ? "today" : ""} ${isAvailabilityMode ? "avail-mode" : ""}`}
-          ref={columnRef}
-          onMouseDown={handleMouseDown}
-      >
-        {Array.from({ length: TOTAL_HOURS }, (_, i) => (
-            <div key={i} className="sp-hour-line" style={{ top: i * HOUR_HEIGHT }} />
-        ))}
-        {(availabilitySlots || []).map(slot => (
-            <AvailabilitySlot key={slot.id} slot={slot} dayKey={dayKey} onDelete={onDeleteSlot} />
-        ))}
-        {dragging && (
-            <div className="sp-drag-preview" style={{
-              top: hourToPx(dragging.startHour) + 2,
-              height: (dragging.endHour - dragging.startHour) * HOUR_HEIGHT - 4,
-            }}>
-              {formatTime(dragging.startHour)} – {formatTime(dragging.endHour)}
-            </div>
-        )}
-        {(blocks || []).map(block => (
-            <StudyBlockEvent
-                key={block.id}
-                block={block}
-                color={colorMap[block.studyPlanEntryId] || "#31487A"}
-                onComplete={onCompleteBlock}
-                onDelete={onDeleteBlock}
-                onUncomplete={onUncompleteBlock}
-                onEdit={onEditBlock}
-            />
-        ))}
-      </div>
-  );
+    return (
+        <div
+            className={`sp-day-column ${isToday(date) ? "today" : ""} ${isAvailabilityMode ? "avail-mode" : ""}`}
+            ref={columnRef}
+            onMouseDown={handleMouseDown}
+        >
+            {Array.from({ length: TOTAL_HOURS }, (_, i) => (
+                <div key={i} className="sp-hour-line" style={{ top: i * HOUR_HEIGHT }} />
+            ))}
+            {(availabilitySlots || []).map(slot => (
+                <AvailabilitySlot key={slot.id} slot={slot} dayKey={dayKey} onDelete={onDeleteSlot} onResize={onResizeSlot} />
+            ))}
+            {dragging && (
+                <div className="sp-drag-preview" style={{
+                    top: hourToPx(dragging.startHour) + 2,
+                    height: (dragging.endHour - dragging.startHour) * HOUR_HEIGHT - 4,
+                }}>
+                    {formatTime(dragging.startHour)} – {formatTime(dragging.endHour)}
+                </div>
+            )}
+            {(() => {
+                const blockList = blocks || [];
+                // Group overlapping blocks into columns
+                const columns = [];
+                blockList.forEach(block => {
+                    const bStart = parseFloat(block.startTime.split(":")[0]) + parseFloat(block.startTime.split(":")[1]) / 60;
+                    const bEnd = bStart + block.duration;
+                    let placed = false;
+                    for (const col of columns) {
+                        const last = col[col.length - 1];
+                        const lStart = parseFloat(last.startTime.split(":")[0]) + parseFloat(last.startTime.split(":")[1]) / 60;
+                        const lEnd = lStart + last.duration;
+                        if (bStart >= lEnd) { col.push(block); placed = true; break; }
+                    }
+                    if (!placed) columns.push([block]);
+                });
+                const totalCols = columns.length;
+                return columns.map((col, colIdx) =>
+                    col.map(block => (
+                        <StudyBlockEvent
+                            key={block.id}
+                            block={block}
+                            color={colorMap[String(block.studyPlanEntryId)] || "#31487A"}
+                            entryName={(() => { const e = entries.find(en => String(en.id) === String(block.studyPlanEntryId)); return e ? (e.name || e.course || "Study") : (block.taskTitle || block.course || "Study"); })()}
+                            onComplete={onCompleteBlock}
+                            onDelete={onDeleteBlock}
+                            onUncomplete={onUncompleteBlock}
+                            onEdit={onEditBlock}
+                            colIndex={colIdx}
+                            totalCols={totalCols}
+                        />
+                    ))
+                );
+            })()}
+        </div>
+    );
 }
 
 function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId }) {
-  const [tasks, setTasks] = useState([]);
-  const [selectedTaskId, setSelectedTaskId] = useState("");
-  const [hoursPerWeek, setHoursPerWeek] = useState("");
-  const [color, setColor] = useState(PALETTE[0]);
+    const [tasks, setTasks] = useState([]);
+    const [selectedTaskId, setSelectedTaskId] = useState("");
+    const [hoursPerWeek, setHoursPerWeek] = useState("");
+    const [color, setColor] = useState(PALETTE[0]);
 
-  useEffect(() => {
-    apiFetch(`/api/tasks/${userId}/list-all`).then(data => {
-      if (data) setTasks(data);
-    });
-  }, [userId]);
+    useEffect(() => {
+        apiFetch(`/api/tasks/${userId}/list-all`).then(data => {
+            if (data) setTasks(data);
+        });
+    }, [userId]);
 
-  const selectedTask = tasks.find(t => String(t.id) === String(selectedTaskId));
-  const addedTaskIds = new Set(entries.map(e => String(e.taskId)));
-  const availableTasks = tasks.filter(t => !addedTaskIds.has(String(t.id)));
+    const selectedTask = tasks.find(t => String(t.id) === String(selectedTaskId));
+    const addedTaskIds = new Set(entries.map(e => String(e.taskId)));
+    const availableTasks = tasks.filter(t => !addedTaskIds.has(String(t.id)));
 
-  const priorityColor = p => p === "HIGH" ? "#c0392b" : p === "MEDIUM" ? "#b7680a" : "#2d7a4a";
-  const priorityBg    = p => p === "HIGH" ? "#fef0f0" : p === "MEDIUM" ? "#fef9ee" : "#eef7f0";
+    const handleAdd = () => {
+        if (!selectedTask) return;
+        onAdd({
+            name: selectedTask.title,
+            course: selectedTask.course,
+            taskId: selectedTask.id,
+            workload: selectedTask.priority === "HIGH" ? "heavy"
+                : selectedTask.priority === "MEDIUM" ? "medium" : "light",
+            hoursPerWeek: parseFloat(hoursPerWeek) || 2,
+            color,
+        });
+        setSelectedTaskId("");
+        setHoursPerWeek("");
+        setColor(PALETTE[(entries.length + 1) % PALETTE.length]);
+    };
 
-  const handleAdd = () => {
-    if (!selectedTask) return;
-    onAdd({
-      name: `${selectedTask.course} — ${selectedTask.title}`,
-      taskId: selectedTask.id,
-      workload: selectedTask.priority === "HIGH" ? "heavy"
-          : selectedTask.priority === "MEDIUM" ? "medium" : "light",
-      hoursPerWeek: parseFloat(hoursPerWeek) || 2,
-      color,
-    });
-    setSelectedTaskId("");
-    setHoursPerWeek("");
-    setColor(PALETTE[(entries.length + 1) % PALETTE.length]);
-  };
+    return (
+        <div className="sp-entry-panel">
+            <div className="sp-panel-title">Study Entries</div>
 
-  return (
-      <div className="sp-entry-panel">
-        <div className="sp-panel-title">Study Entries</div>
-
-        <div className="sp-entry-form">
-          {availableTasks.length === 0 && tasks.length === 0 && (
-              <div className="sp-empty-hint" style={{ marginBottom: 8 }}>
-                No tasks found. Add tasks in the Task Manager first.
-              </div>
-          )}
-          {availableTasks.length === 0 && tasks.length > 0 && (
-              <div className="sp-empty-hint" style={{ marginBottom: 8 }}>
-                All your tasks are already added.
-              </div>
-          )}
-          {availableTasks.length > 0 && (
-              <select
-                  className="sp-input sp-select"
-                  value={selectedTaskId}
-                  onChange={e => setSelectedTaskId(e.target.value)}
-              >
-                <option value="">— Pick a task —</option>
-                {availableTasks.map(t => (
-                    <option key={t.id} value={t.id}>
-                      [{t.course}] {t.title}
-                    </option>
-                ))}
-              </select>
-          )}
-
-          {selectedTask && (
-              <div className="sp-task-preview">
-                <div className="sp-task-preview-row">
-                  <span className="sp-task-course">{selectedTask.course}</span>
-                  <span className="sp-workload-badge" style={{
-                    background: priorityBg(selectedTask.priority),
-                    color: priorityColor(selectedTask.priority),
-                  }}>{selectedTask.priority}</span>
-                </div>
-                <div className="sp-task-title">{selectedTask.title}</div>
-                <div className="sp-task-deadline">
-                  Due: {selectedTask.deadline}
-                </div>
-              </div>
-          )}
-
-          <input
-              className="sp-input"
-              type="number"
-              placeholder="Hours per week"
-              min="0.5"
-              max="40"
-              step="0.5"
-              value={hoursPerWeek}
-              onChange={e => setHoursPerWeek(e.target.value)}
-          />
-
-          <div className="sp-color-row">
-            {PALETTE.map(c => (
-                <button
-                    key={c}
-                    className={`sp-color-dot ${color === c ? "selected" : ""}`}
-                    style={{ background: c }}
-                    onClick={() => setColor(c)}
-                />
-            ))}
-          </div>
-          <button className="sp-add-btn" onClick={handleAdd} disabled={!selectedTask || !hoursPerWeek}>
-            + Add Entry
-          </button>
-        </div>
-
-        <div className="sp-entry-list">
-          {entries.length === 0 && (
-              <div className="sp-empty-hint">No entries yet. Add a course above.</div>
-          )}
-          {entries.map(entry => (
-              <div key={entry.id} className="sp-entry-item">
-                <div className="sp-entry-color-col">
-                  <div className="sp-entry-swatch" style={{ background: colorMap[entry.id] || entry.color }}>
-                    <div className="sp-swatch-picker">
-                      {PALETTE.map(c => (
-                          <button
-                              key={c}
-                              className="sp-color-dot"
-                              style={{ background: c }}
-                              onClick={() => onColorChange(entry.id, c)}
-                          />
-                      ))}
+            <div className="sp-entry-form">
+                {availableTasks.length === 0 && tasks.length === 0 && (
+                    <div className="sp-empty-hint" style={{ marginBottom: 8 }}>
+                        No tasks found. Add tasks in the Task Manager first.
                     </div>
-                  </div>
+                )}
+                {availableTasks.length === 0 && tasks.length > 0 && (
+                    <div className="sp-empty-hint" style={{ marginBottom: 8 }}>
+                        All your tasks are already added.
+                    </div>
+                )}
+                {availableTasks.length > 0 && (
+                    <select
+                        className="sp-input sp-select"
+                        value={selectedTaskId}
+                        onChange={e => setSelectedTaskId(e.target.value)}
+                    >
+                        <option value="">— Pick a task —</option>
+                        {availableTasks.map(t => (
+                            <option key={t.id} value={t.id}>
+                                [{t.course}] {t.title}
+                            </option>
+                        ))}
+                    </select>
+                )}
+
+                {selectedTask && (
+                    <div className="sp-task-preview">
+                        <div className="sp-task-preview-row">
+                            <span className="sp-task-course">{selectedTask.course}</span>
+                        </div>
+                        <div className="sp-task-title">{selectedTask.title}</div>
+                        <div className="sp-task-deadline">
+                            Due: {fmtDeadline(selectedTask.deadline)}
+                        </div>
+                    </div>
+                )}
+
+                <input
+                    className="sp-input"
+                    type="number"
+                    placeholder="Hours per week"
+                    min="0.5"
+                    max="40"
+                    step="0.5"
+                    value={hoursPerWeek}
+                    onChange={e => setHoursPerWeek(e.target.value)}
+                />
+
+                <div className="sp-color-row">
+                    {PALETTE.map(c => (
+                        <button
+                            key={c}
+                            className={`sp-color-dot ${color === c ? "selected" : ""}`}
+                            style={{ background: c }}
+                            onClick={() => setColor(c)}
+                        />
+                    ))}
                 </div>
-                <div className="sp-entry-info">
-                  <div className="sp-entry-name">{entry.name}</div>
-                  <div className="sp-entry-meta">
-                    <span className={`sp-workload-badge ${entry.workload}`}>{entry.workload}</span>
-                    {entry.hoursPerWeek && <span className="sp-hours-badge">{entry.hoursPerWeek}h/wk</span>}
-                  </div>
-                </div>
-                <button className="sp-entry-delete" onClick={() => onDelete(entry.id)}>×</button>
-              </div>
-          ))}
+                <button className="sp-add-btn" onClick={handleAdd} disabled={!selectedTask || !hoursPerWeek}>
+                    + Add Entry
+                </button>
+            </div>
+
+            <div className="sp-entry-list">
+                {entries.length === 0 && (
+                    <div className="sp-empty-hint">No entries yet. Add a course above.</div>
+                )}
+                {entries.map(entry => {
+                    return (
+                        <div key={entry.id} className="sp-entry-item">
+                            <div className="sp-entry-color-col">
+                                <div style={{ position:"relative" }}>
+                                    <div
+                                        onClick={e => { e.stopPropagation(); const el = e.currentTarget.nextSibling; el.style.display = el.style.display === "grid" ? "none" : "grid"; }}
+                                        style={{ width:20, height:20, borderRadius:6, background: colorMap[String(entry.id)] || entry.color, cursor:"pointer", border:"2px solid #E0E0E8" }}
+                                    />
+                                    <div style={{ display:"none", position:"absolute", left:24, top:0, zIndex:50, background:"#fff", border:"1px solid #E0E0E8", borderRadius:10, padding:8, gridTemplateColumns:"repeat(7,1fr)", gap:4, width:180, boxShadow:"0 4px 16px rgba(49,72,122,0.12)" }}>
+                                        {PALETTE.map(c => (
+                                            <button key={c} onClick={() => onColorChange(entry.id, c)}
+                                                    style={{ width:20, height:20, borderRadius:"50%", background:c, border: (colorMap[String(entry.id)]||entry.color)===c?"2px solid #2a2050":"2px solid transparent", cursor:"pointer", padding:0 }}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="sp-entry-info">
+                                <div className="sp-entry-name">{entry.name}</div>
+                                {entry.course && <div style={{ fontSize:10, color:"#A59AC9", marginTop:1, marginBottom:2 }}>{entry.course}</div>}
+                                <div className="sp-entry-meta">
+                                    <span className="sp-hours-badge">{entry.hoursPerWeek}h/wk</span>
+                                </div>
+                            </div>
+                            <button className="sp-entry-delete" onClick={() => onDelete(entry.id)}>×</button>
+                        </div>
+                    );
+                })}
+            </div>
         </div>
-      </div>
-  );
+    );
 }
 
 function SlotPanel({ availability, onDeleteSlot, onClearAll }) {
-  const allSlots = Object.entries(availability).flatMap(([dayKey, slots]) =>
-      slots.map(s => ({ ...s, dayKey }))
-  );
+    const allSlots = Object.entries(availability).flatMap(([dayKey, slots]) =>
+        slots.map(s => ({ ...s, dayKey }))
+    );
 
-  return (
-      <div className="sp-slot-panel">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <div className="sp-panel-title" style={{ marginBottom: 0 }}>Availability Slots</div>
-          {allSlots.length > 0 && (
-              <button className="sp-clear-btn" onClick={onClearAll}>Clear all</button>
-          )}
-        </div>
-        {allSlots.length === 0 && (
-            <div className="sp-empty-hint">Drag on the calendar to add free slots.</div>
-        )}
-        {allSlots.map(slot => (
-            <div key={slot.id} className="sp-slot-row">
-              <div className="sp-slot-day">{slot.dayKey.slice(0, 3)}</div>
-              <div className="sp-slot-time-text">{formatTime(slot.startHour)} – {formatTime(slot.endHour)}</div>
-              <button className="sp-entry-delete" onClick={() => onDeleteSlot(slot.dayKey, slot.id)}>×</button>
+    return (
+        <div className="sp-slot-panel">
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                <div className="sp-panel-title" style={{ marginBottom: 0 }}>Availability Slots</div>
+                {allSlots.length > 0 && (
+                    <button className="sp-clear-btn" onClick={onClearAll}>Clear all</button>
+                )}
             </div>
-        ))}
-      </div>
-  );
+            {allSlots.length === 0 && (
+                <div className="sp-empty-hint">Drag on the calendar to add free slots.</div>
+            )}
+            {allSlots.map(slot => (
+                <div key={slot.id} className="sp-slot-row">
+                    <div className="sp-slot-day">{slot.dayKey.slice(0, 3)}</div>
+                    <div className="sp-slot-time-text">{formatTime(slot.startHour)} – {formatTime(slot.endHour)}</div>
+                    <button
+                        onClick={() => onDeleteSlot(slot.dayKey, slot.id)}
+                        style={{ background:"rgba(192,57,43,0.1)", border:"none", color:"#c0392b", borderRadius:4, width:20, height:20, cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}
+                    >×</button>
+                </div>
+            ))}
+        </div>
+    );
 }
 
 export default function StudyPlanner() {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [weekBlocks, setWeekBlocks] = useState({});
-  const [availability, setAvailability] = useState({});
-  const [isAvailabilityMode, setIsAvailabilityMode] = useState(false);
-  const [colorMap, setColorMap] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState(null);
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [entries, setEntries] = useState([]);
-  const [activePanel, setActivePanel] = useState("entries"); // "entries" | "slots"
-  const [editingBlock, setEditingBlock] = useState(null);
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [weekBlocks, setWeekBlocks] = useState({});
+    const [availability, setAvailability] = useState({});
+    const [isAvailabilityMode, setIsAvailabilityMode] = useState(false);
+    const [colorMap, setColorMap] = useState({});
+    const [loading, setLoading] = useState(false);
+    const [toast, setToast] = useState(null);
+    const [showGenerateModal, setShowGenerateModal] = useState(false);
+    const [entries, setEntries] = useState([]);
+    const [activePanel, setActivePanel] = useState("entries"); // "entries" | "slots"
+    const [editingBlock, setEditingBlock] = useState(null);
+    const [hasGenerated, setHasGenerated] = useState(() => localStorage.getItem('kk_hasGenerated') === 'true');
+    const [showSlotOverlay, setShowSlotOverlay] = useState(() => localStorage.getItem('kk_hasGenerated') !== 'true');
 
-  const weekDates = getWeekDates(currentDate);
-  const weekStart = weekDates[0].toISOString().split("T")[0];
+    const weekDates = getWeekDates(currentDate);
+    const weekStart = weekDates[0].toISOString().split("T")[0];
 
-  const showToast = useCallback((msg, type = "info") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3000);
-  }, []);
+    const showToast = useCallback((msg, type = "info") => {
+        setToast({ msg, type });
+        setTimeout(() => setToast(null), 3000);
+    }, []);
 
- 
-  const loadEntries = useCallback(async () => {
-    const data = await apiFetch(`/api/study-plan/${USER_ID}/entries`);
-    if (data && data.length > 0) {
-      const mapped = data.map((entry, i) => ({
-        id: entry.id,
-        taskId: entry.task?.id,
-  
-        name: entry.task?.course
-            ? `${entry.task.course} — ${entry.task.title}`
-            : `Entry ${entry.id}`,
-        workload: entry.estimatedWorkload >= 8 ? "heavy"
-            : entry.estimatedWorkload >= 4 ? "medium" : "light",
-        hoursPerWeek: entry.estimatedWorkload,
-        completedHours: entry.completedHours,
-        color: PALETTE[i % PALETTE.length],
-      }));
-      setEntries(mapped);
-      setColorMap(Object.fromEntries(mapped.map(e => [e.id, e.color])));
-    }
-  }, []);
 
-  const loadWeeklyView = useCallback(async () => {
-    setLoading(true);
-    const data = await apiFetch(`/api/study-plan/${USER_ID}/weekly?weekStart=${weekStart}`);
-    if (data) {
-      setWeekBlocks(normalizeWeeklyData(data));
-    } else {
-      setWeekBlocks({
-        MONDAY: [
-          { id: 1, studyPlanEntryId: 1, startTime: "09:00:00", duration: 2, completed: false, course: "Mathematics" },
-          { id: 2, studyPlanEntryId: 2, startTime: "14:00:00", duration: 1.5, completed: true, course: "Physics" },
-        ],
-        WEDNESDAY: [
-          { id: 3, studyPlanEntryId: 1, startTime: "10:00:00", duration: 3, completed: false, course: "Mathematics" },
-        ],
-        FRIDAY: [
-          { id: 4, studyPlanEntryId: 3, startTime: "15:00:00", duration: 2, completed: false, course: "History" },
-          { id: 5, studyPlanEntryId: 2, startTime: "09:00:00", duration: 1, completed: false, course: "Physics" },
-        ],
-      });
-      setColorMap({ 1: "#31487A", 2: "#7B5EA7", 3: "#4ecdc4" });
-      setEntries([
-        { id: 1, name: "Mathematics", workload: "heavy", hoursPerWeek: 6, color: "#31487A" },
-        { id: 2, name: "Physics", workload: "medium", hoursPerWeek: 4, color: "#7B5EA7" },
-        { id: 3, name: "History", workload: "light", hoursPerWeek: 2, color: "#4ecdc4" },
-      ]);
-    }
-    setLoading(false);
-  }, [weekStart]);
+    useEffect(() => {
+        localStorage.setItem('kk_hasGenerated', String(hasGenerated));
+    }, [hasGenerated]);
 
-  useEffect(() => {
-    loadEntries();
-    loadWeeklyView();
-  }, [weekStart]);
+    useEffect(() => {
+        if (Object.keys(colorMap).length > 0) {
+            localStorage.setItem('kk_colorMap', JSON.stringify(colorMap));
+        }
+    }, [colorMap]);
 
-  const handleCompleteBlock = useCallback(async (blockId) => {
-    await apiFetch(`/api/study-plan/blocks/${blockId}/complete`, { method: "PATCH" });
-    setWeekBlocks(prev => {
-      const next = {};
-      for (const [day, blocks] of Object.entries(prev))
-        next[day] = blocks.map(b => b.id === blockId ? { ...b, completed: true } : b);
-      return next;
-    });
-    showToast("Marked complete ✓", "success");
-  }, [showToast]);
+    const loadEntries = useCallback(async (preserveColors = false) => {
+        const data = await apiFetch(`/api/study-plan/${getUserId()}/entries`);
+        const list = Array.isArray(data) ? data : [];
+        const mapped = list.map((entry, i) => ({
+            id: entry.id,
+            taskId: entry.task?.id,
+            name: entry.task?.title || "Untitled",
+            course: entry.task?.course || "",
+            workload: entry.estimatedWorkload >= 8 ? "heavy"
+                : entry.estimatedWorkload >= 4 ? "medium" : "light",
+            hoursPerWeek: entry.estimatedWorkload,
+            completedHours: entry.completedHours,
+            color: PALETTE[i % PALETTE.length],
+        }));
+        setEntries(mapped);
+        setColorMap(prev => {
+            const savedColors = (() => {
+                try { return JSON.parse(localStorage.getItem('kk_colorMap') || '{}'); } catch { return {}; }
+            })();
+            const next = Object.fromEntries(mapped.map(e => [String(e.id), e.color]));
+            if (preserveColors) Object.assign(next, prev);
+            Object.assign(next, savedColors);
+            return next;
+        });
+    }, []);
 
-  const handleUncompleteBlock = useCallback(async (blockId) => {
-    await apiFetch(`/api/study-plan/blocks/${blockId}/uncomplete`, { method: "PATCH" });
-    setWeekBlocks(prev => {
-      const next = {};
-      for (const [day, blocks] of Object.entries(prev))
-        next[day] = blocks.map(b => b.id === blockId ? { ...b, completed: false } : b);
-      return next;
-    });
-  }, []);
+    const loadWeeklyView = useCallback(async () => {
+        setLoading(true);
+        const data = await apiFetch(`/api/study-plan/${getUserId()}/weekly?weekStart=${weekStart}`);
+        if (data) setWeekBlocks(normalizeWeeklyData(data));
+        setLoading(false);
+    }, [weekStart]);
 
-  const handleDeleteBlock = useCallback(async (blockId) => {
-    await apiFetch(`/api/study-plan/blocks/${blockId}`, { method: "DELETE" });
-    setWeekBlocks(prev => {
-      const next = {};
-      for (const [day, blocks] of Object.entries(prev))
-        next[day] = blocks.filter(b => b.id !== blockId);
-      return next;
-    });
-    showToast("Block deleted", "info");
-  }, [showToast]);
+    const loadSlots = useCallback(async () => {
+        const data = await apiFetch(`/api/study-plan/${getUserId()}/slots`);
+        if (data) {
+            const map = {};
+            data.forEach(s => {
+                if (!map[s.dayKey]) map[s.dayKey] = [];
+                map[s.dayKey].push({
+                    id: s.id,
+                    dayKey: s.dayKey,
+                    startHour: parseFloat(s.startTime.split(":")[0]) + parseFloat(s.startTime.split(":")[1]) / 60,
+                    endHour: parseFloat(s.endTime.split(":")[0]) + parseFloat(s.endTime.split(":")[1]) / 60,
+                });
+            });
+            setAvailability(map);
+        }
+    }, []);
 
-  const handleSaveEditedBlock = useCallback(async (blockId, changes) => {
-    const res = await apiFetch(`/api/study-plan/blocks/${blockId}`, {
-      method: "PATCH",
-      body: JSON.stringify(changes),
-    });
-    setWeekBlocks(prev => {
-      const next = {};
-      for (const [day, blocks] of Object.entries(prev))
-        next[day] = blocks.map(b => b.id === blockId ? { ...b, ...changes } : b);
-      return next;
-    });
-    showToast("Block updated", "success");
-  }, [showToast]);
+    const persistSlots = useCallback(async (newAvailability) => {
+        const userId = getUserId();
+        if (!userId) return;
+        const slots = [];
+        const toTime = h => {
+            const hrs = Math.floor(h);
+            const mins = Math.round((h - hrs) * 60);
+            return `${String(hrs).padStart(2,"0")}:${String(mins).padStart(2,"0")}:00`;
+        };
+        Object.entries(newAvailability).forEach(([dayKey, daySlots]) => {
+            daySlots.forEach(s => slots.push({ dayKey, startTime: toTime(s.startHour), endTime: toTime(s.endHour) }));
+        });
+        try {
+            await apiFetch(`/api/study-plan/${userId}/slots`, {
+                method: "POST",
+                body: JSON.stringify(slots),
+            });
+            // Reload slots to get backend-assigned IDs
+            await loadSlots();
+        } catch (e) {
+            console.error("Failed to persist slots:", e.message);
+        }
+    }, [showToast]);
 
-  const handleAddSlot = useCallback((dayKey, newSlot) => {
-    setAvailability(prev => {
-      const existing = prev[dayKey] || [];
-      const overlaps = existing.some(s => slotsOverlap(s, newSlot));
-      if (overlaps) {
-        showToast("Slots can't overlap — adjust the existing one first", "error");
-        return prev;
-      }
-      return { ...prev, [dayKey]: [...existing, newSlot] };
-    });
-  }, [showToast]);
+    useEffect(() => {
+        loadEntries();
+        loadWeeklyView();
+        loadSlots();
+    }, [weekStart]);
 
-  const handleDeleteSlot = useCallback((dayKey, slotId) => {
-    setAvailability(prev => ({
-      ...prev,
-      [dayKey]: (prev[dayKey] || []).filter(s => s.id !== slotId),
-    }));
-  }, []);
+    const handleCompleteBlock = useCallback(async (blockId) => {
+        await apiFetch(`/api/study-plan/blocks/${blockId}/complete`, { method: "PATCH" });
+        setWeekBlocks(prev => {
+            const next = {};
+            for (const [day, blocks] of Object.entries(prev))
+                next[day] = blocks.map(b => String(b.id) === String(blockId) ? { ...b, completed: true } : b);
+            return next;
+        });
+        showToast("Marked complete ✓", "success");
+    }, [showToast]);
 
-  const handleClearAllSlots = useCallback(() => {
-    setAvailability({});
-    showToast("All slots cleared", "info");
-  }, [showToast]);
+    const handleUncompleteBlock = useCallback(async (blockId) => {
+        await apiFetch(`/api/study-plan/blocks/${blockId}/uncomplete`, { method: "PATCH" });
+        setWeekBlocks(prev => {
+            const next = {};
+            for (const [day, blocks] of Object.entries(prev))
+                next[day] = blocks.map(b => String(b.id) === String(blockId) ? { ...b, completed: false } : b);
+            return next;
+        });
+    }, []);
 
-  const handleAddEntry = useCallback(async (entry) => {
-    if (entry.taskId) {
-      const data = await apiFetch(
-          `/api/study-plan/${USER_ID}/entries/add?taskId=${entry.taskId}&estimatedWorkload=${entry.hoursPerWeek}`,
-          { method: "POST" }
-      );
-      if (data) {
-        await loadEntries();
-        showToast(`Added "${entry.name}"`, "success");
-        return;
-      }
-    }
-    const id = Date.now();
-    setEntries(prev => [...prev, { ...entry, id }]);
-    setColorMap(prev => ({ ...prev, [id]: entry.color }));
-    showToast(`Added "${entry.name}" (local only)`, "info");
-  }, [showToast, loadEntries]);
+    const handleDeleteBlock = useCallback(async (blockId) => {
+        await apiFetch(`/api/study-plan/blocks/${blockId}`, { method: "DELETE" });
+        setWeekBlocks(prev => {
+            const next = {};
+            for (const [day, blocks] of Object.entries(prev))
+                next[day] = blocks.filter(b => b.id !== blockId);
+            return next;
+        });
+        showToast("Block deleted", "info");
+    }, [showToast]);
 
-  const handleDeleteEntry = useCallback(async (entryId) => {
-    await apiFetch(`/api/study-plan/entries/${entryId}`, { method: "DELETE" });
-    setEntries(prev => prev.filter(e => e.id !== entryId));
-    setColorMap(prev => { const next = { ...prev }; delete next[entryId]; return next; });
-    showToast("Entry removed", "info");
-  }, [showToast]);
+    const handleSaveEditedBlock = useCallback(async (blockId, changes) => {
+        const res = await apiFetch(`/api/study-plan/blocks/${blockId}`, {
+            method: "PATCH",
+            body: JSON.stringify(changes),
+        });
+        setWeekBlocks(prev => {
+            const next = {};
+            for (const [day, blocks] of Object.entries(prev))
+                next[day] = blocks.map(b => b.id === blockId ? { ...b, ...changes } : b);
+            return next;
+        });
+        showToast("Block updated", "success");
+    }, [showToast]);
 
-  const handleColorChange = useCallback((entryId, color) => {
-    setColorMap(prev => ({ ...prev, [entryId]: color }));
-    setEntries(prev => prev.map(e => e.id === entryId ? { ...e, color } : e));
-  }, []);
+    const handleAddSlot = useCallback((dayKey, newSlot) => {
+        setAvailability(prev => {
+            const existing = prev[dayKey] || [];
+            if (existing.some(s => slotsOverlap(s, newSlot))) {
+                showToast("Slots can't overlap — adjust the existing one first", "error");
+                return prev;
+            }
+            const next = { ...prev, [dayKey]: [...existing, newSlot] };
+            setTimeout(() => persistSlots(next), 0);
+            return next;
+        });
+    }, [showToast, persistSlots]);
 
- 
-  const buildSettingsPayload = useCallback(() => {
-    return buildSchedulerSettings(availability);
-  }, [availability]);
+    const handleDeleteSlot = useCallback((dayKey, slotId) => {
+        setAvailability(prev => {
+            const next = { ...prev, [dayKey]: (prev[dayKey] || []).filter(s => s.id !== slotId) };
+            persistSlots(next);
+            return next;
+        });
+    }, [persistSlots]);
 
-  const handleGenerate = useCallback(async () => {
-    setLoading(true);
-    setShowGenerateModal(false);
-    const payload = buildSettingsPayload();
-    const data = await apiFetch(`/api/study-plan/${USER_ID}/generate`, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-    if (data) {
-      setWeekBlocks(normalizeWeeklyData(data));
-      showToast("Plan generated!", "success");
-    } else {
-      showToast("Backend not connected — showing demo data", "info");
-    }
-    setLoading(false);
-  }, [buildSettingsPayload, showToast]);
+    const handleClearAllSlots = useCallback(async () => {
+        const userId = getUserId();
+        await apiFetch(`/api/study-plan/${userId}/slots`, { method: "DELETE" });
+        await apiFetch(`/api/study-plan/${userId}/blocks`, { method: "DELETE" });
+        setAvailability({});
+        setWeekBlocks({});
+        setHasGenerated(false);
+        setShowSlotOverlay(true);
+        showToast("All slots cleared", "info");
+    }, [showToast]);
 
-  const handleRebalance = useCallback(async () => {
-    setLoading(true);
-    const data = await apiFetch(`/api/study-plan/${USER_ID}/rebalance`, {
-      method: "POST",
-      body: JSON.stringify(buildSettingsPayload()),
-    });
-    if (data) {
-      setWeekBlocks(normalizeWeeklyData(data));
-      showToast("Plan rebalanced!", "success");
-    } else {
-      showToast("Backend not connected", "info");
-    }
-    setLoading(false);
-  }, [buildSettingsPayload, showToast]);
+    const handleResizeSlot = useCallback((dayKey, slotId, newEndHour) => {
+        setAvailability(prev => {
+            const next = { ...prev, [dayKey]: (prev[dayKey] || []).map(s => s.id === slotId ? { ...s, endHour: newEndHour } : s) };
+            persistSlots(next);
+            return next;
+        });
+    }, [persistSlots]);
 
-  const slotCount = Object.values(availability).flat().length;
+    const handleAddEntry = useCallback(async (entry) => {
+        if (!entry.taskId) { showToast("No task selected", "error"); return; }
+        try {
+            await apiFetch(
+                `/api/study-plan/${getUserId()}/entries/add?taskId=${entry.taskId}&estimatedWorkload=${entry.hoursPerWeek}`,
+                { method: "POST" }
+            );
+            await loadEntries(true);
+            setEntries(prev => {
+                const match = prev.find(e => String(e.taskId) === String(entry.taskId));
+                if (match) setColorMap(cm => ({ ...cm, [String(match.id)]: entry.color }));
+                return prev;
+            });
+            showToast(`Added "${entry.name}"`, "success");
+        } catch (e) {
+            showToast(e.message || "Failed to add entry", "error");
+        }
+    }, [showToast, loadEntries]);
 
-  return (
-      <>
-        <style>{`
+    const handleDeleteEntry = useCallback(async (entryId) => {
+        try {
+            await apiFetch(`/api/study-plan/entries/${entryId}`, { method: "DELETE" });
+            setEntries(prev => prev.filter(e => e.id !== entryId));
+            setColorMap(prev => { const next = { ...prev }; delete next[String(entryId)]; return next; });
+            showToast("Entry removed", "info");
+        } catch (e) {
+            showToast(e.message || "Failed to remove entry", "error");
+        }
+    }, [showToast]);
+
+    const handleColorChange = useCallback((entryId, color) => {
+        setColorMap(prev => {
+            const next = { ...prev, [String(entryId)]: color };
+            localStorage.setItem('kk_colorMap', JSON.stringify(next));
+            return next;
+        });
+        setEntries(prev => prev.map(e => e.id === entryId ? { ...e, color } : e));
+    }, []);
+
+
+    const buildSettingsPayload = useCallback(() => {
+        return buildSchedulerSettings(availability);
+    }, [availability]);
+
+    const handleGenerate = useCallback(async () => {
+        setLoading(true);
+        setShowGenerateModal(false);
+        try {
+            const payload = buildSettingsPayload();
+            const data = await apiFetch(`/api/study-plan/${getUserId()}/generate`, {
+                method: "POST",
+                body: JSON.stringify(payload),
+            });
+            if (data) {
+                const weeklyView = data.weeklyView ?? data;
+                setWeekBlocks(normalizeWeeklyData(weeklyView));
+                setHasGenerated(true);
+                setIsAvailabilityMode(false);
+                setShowSlotOverlay(false);
+                await loadEntries(true);
+                showToast("Plan generated!", "success");
+            } else {
+                showToast("Failed to generate plan", "error");
+            }
+        } catch (e) {
+            showToast(e.message || "Failed to generate plan", "error");
+        }
+        setLoading(false);
+    }, [buildSettingsPayload, showToast, loadEntries]);
+
+    const handleMarkPastDone = useCallback(async () => {
+        setLoading(true);
+        try {
+            const res = await apiFetch(`/api/study-plan/${getUserId()}/blocks/complete-past`, { method: "POST" });
+            const count = res?.marked ?? 0;
+            if (count === 0) {
+                showToast("No past blocks to mark done", "info");
+            } else {
+                showToast(`Marked ${count} block${count !== 1 ? "s" : ""} as done ✓`, "success");
+                await loadWeeklyView();
+                await loadEntries(true);
+            }
+        } catch (e) {
+            showToast(e.message || "Failed to mark past blocks", "error");
+        }
+        setLoading(false);
+    }, [showToast, loadWeeklyView, loadEntries]);
+
+    const handleClearPlan = useCallback(async () => {
+        const userId = getUserId();
+        if (!userId) { showToast("Not logged in", "error"); return; }
+        setLoading(true);
+        try {
+            await apiFetch(`/api/study-plan/${userId}/blocks`, { method: "DELETE" });
+            await apiFetch(`/api/study-plan/${userId}/slots`, { method: "DELETE" });
+            setWeekBlocks({});
+            setAvailability({});
+            setHasGenerated(false);
+            setShowSlotOverlay(true);
+            showToast("Plan cleared", "info");
+        } catch (e) {
+            showToast(e.message || "Failed to clear plan", "error");
+        }
+        setLoading(false);
+    }, [showToast]);
+
+    const handleRebalance = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await apiFetch(`/api/study-plan/${getUserId()}/rebalance`, {
+                method: "POST",
+                body: JSON.stringify(buildSettingsPayload()),
+            });
+            if (data) {
+                const weeklyView = data.weeklyView ?? data;
+                setWeekBlocks(normalizeWeeklyData(weeklyView));
+                setIsAvailabilityMode(false);
+                setShowSlotOverlay(false);
+                await loadEntries(true);
+                showToast("Plan rebalanced!", "success");
+            } else {
+                showToast("Failed to rebalance plan", "error");
+            }
+        } catch (e) {
+            showToast(e.message || "Failed to rebalance plan", "error");
+        }
+        setLoading(false);
+    }, [buildSettingsPayload, showToast, loadEntries]);
+
+    const slotCount = Object.values(availability).flat().length;
+
+    return (
+        <>
+            <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -863,22 +1069,26 @@ export default function StudyPlanner() {
         .sp-select { cursor: pointer; }
 
         .sp-color-row {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
+          display: grid;
+          grid-template-columns: repeat(7, 1fr);
+          gap: 5px;
           margin-bottom: 10px;
+          background: #F8F8FB;
+          border: 1px solid #E0E0E8;
+          border-radius: 10px;
+          padding: 8px;
         }
 
         .sp-color-dot {
-          width: 20px; height: 20px;
+          width: 100%; aspect-ratio: 1;
           border-radius: 50%;
           border: 2px solid transparent;
           cursor: pointer;
-          transition: transform 0.1s, border-color 0.1s;
+          transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s;
           padding: 0;
         }
-        .sp-color-dot:hover { transform: scale(1.15); }
-        .sp-color-dot.selected { border-color: #2a2050; transform: scale(1.1); }
+        .sp-color-dot:hover { transform: scale(1.2); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .sp-color-dot.selected { border-color: #fff; box-shadow: 0 0 0 2px #2a2050; transform: scale(1.1); }
 
         .sp-add-btn {
           width: 100%;
@@ -962,7 +1172,7 @@ export default function StudyPlanner() {
           border-radius: 10px;
           padding: 8px;
           z-index: 50;
-          width: 110px;
+          width: 200px;
           box-shadow: 0 4px 16px rgba(49,72,122,0.12);
         }
 
@@ -1164,7 +1374,6 @@ export default function StudyPlanner() {
         /* ── Study Block ── */
         .sp-study-block {
           position: absolute;
-          left: 4px; right: 4px;
           border-radius: 6px;
           padding: 5px 8px;
           cursor: pointer;
@@ -1242,7 +1451,7 @@ export default function StudyPlanner() {
           cursor: pointer;
           font-size: 12px;
           display: flex; align-items: center; justify-content: center;
-          opacity: 0;
+          opacity: 1;
           transition: opacity 0.15s;
           line-height: 1;
           padding: 0;
@@ -1260,27 +1469,6 @@ export default function StudyPlanner() {
           font-size: 10px;
           color: #7B5EA7;
           pointer-events: none;
-        }
-
-        /* ── Legend ── */
-        .sp-legend {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-
-        .sp-legend-item {
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          font-size: 11px;
-          color: #7B8DB0;
-        }
-
-        .sp-legend-dot {
-          width: 8px; height: 8px;
-          border-radius: 2px;
         }
 
         /* ── Toast ── */
@@ -1374,165 +1562,176 @@ export default function StudyPlanner() {
         .sp-avail-tip strong { color: #31487A; display: block; margin-bottom: 4px; }
       `}</style>
 
-        <div className="sp-root">
-          {loading && <div className="sp-loading-bar" />}
+            <div className="sp-root">
+                {loading && <div className="sp-loading-bar" />}
 
-          {/* Header */}
-          <div className="sp-header">
-            <div className="sp-header-left">
-              <div className="sp-title">Study Planner</div>
-              <div className="sp-week-nav">
-                <button className="sp-nav-btn" onClick={() => { const d = new Date(currentDate); d.setDate(d.getDate() - 7); setCurrentDate(d); }}>‹</button>
-                <div className="sp-week-label">
-                  {weekDates[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                  {" – "}
-                  {weekDates[6].toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                </div>
-                <button className="sp-nav-btn" onClick={() => { const d = new Date(currentDate); d.setDate(d.getDate() + 7); setCurrentDate(d); }}>›</button>
-                <button className="sp-btn sp-btn-ghost" onClick={() => setCurrentDate(new Date())}>Today</button>
-              </div>
-            </div>
-
-            <div className="sp-legend">
-              {Object.entries(colorMap).map(([entryId, color]) => {
-                const entry = entries.find(e => e.id === parseInt(entryId));
-                if (!entry) return null;
-                return (
-                    <div key={entryId} className="sp-legend-item">
-                      <div className="sp-legend-dot" style={{ background: color }} />
-                      {entry.name}
+                {/* Header */}
+                <div className="sp-header">
+                    <div className="sp-header-left">
+                        <div className="sp-title">Study Planner</div>
+                        <div className="sp-week-nav">
+                            <button className="sp-nav-btn" onClick={() => { const d = new Date(currentDate); d.setDate(d.getDate() - 7); setCurrentDate(d); }}>‹</button>
+                            <div className="sp-week-label">
+                                {weekDates[0].toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                {" – "}
+                                {weekDates[6].toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </div>
+                            <button className="sp-nav-btn" onClick={() => { const d = new Date(currentDate); d.setDate(d.getDate() + 7); setCurrentDate(d); }}>›</button>
+                            <button className="sp-btn sp-btn-ghost" onClick={() => setCurrentDate(new Date())}>Today</button>
+                        </div>
                     </div>
-                );
-              })}
-            </div>
 
-            <div className="sp-header-actions">
-              <button
-                  className={`sp-btn ${isAvailabilityMode ? "sp-btn-active" : "sp-btn-outline"}`}
-                  onClick={() => setIsAvailabilityMode(!isAvailabilityMode)}
-              >
-                {isAvailabilityMode ? <><Pencil size={13} style={{verticalAlign:"middle",marginRight:4}}/>Editing slots</> : "＋ Set availability"}
-                {slotCount > 0 && <span className="sp-slot-badge">{slotCount}</span>}
-              </button>
-              {slotCount > 0 && (
-                  <>
-                    <button className="sp-btn sp-btn-outline" onClick={handleRebalance}><RotateCcw size={13} style={{verticalAlign:"middle",marginRight:4}}/>Rebalance</button>
-                    <button className="sp-btn sp-btn-primary" onClick={() => setShowGenerateModal(true)}><Zap size={13} style={{verticalAlign:"middle",marginRight:4}}/>Generate</button>
-                  </>
-              )}
-            </div>
-          </div>
+                    <div className="sp-header-actions">
+                        <button
+                            className={`sp-btn ${isAvailabilityMode ? "sp-btn-active" : "sp-btn-outline"}`}
+                            onClick={() => {
+                                const entering = !isAvailabilityMode;
+                                setIsAvailabilityMode(entering);
+                                if (entering) {
+                                    setShowSlotOverlay(true);
+                                } else {
+                                    persistSlots(availability);
+                                    if (hasGenerated) setShowSlotOverlay(false);
+                                }
+                            }}
+                        >
+                            {isAvailabilityMode ? <><Pencil size={13} style={{verticalAlign:"middle",marginRight:4}}/>Editing slots</> : "＋ Set availability"}
+                            {slotCount > 0 && <span className="sp-slot-badge">{slotCount}</span>}
+                        </button>
+                        {slotCount > 0 && (
+                            <>
+                                {hasGenerated && entries.length > 0 && (
+                                    <button className="sp-btn sp-btn-outline" onClick={handleRebalance}><RotateCcw size={13} style={{verticalAlign:"middle",marginRight:4}}/>Rebalance</button>
+                                )}
+                                {hasGenerated && entries.length > 0 && (
+                                    <button className="sp-btn sp-btn-outline" onClick={handleMarkPastDone} title="Mark all blocks that have already started as complete" style={{color:"#2d7a4a",borderColor:"#b7dfc4"}}>✓ Mark past done</button>
+                                )}
+                                {hasGenerated && (
+                                    <button className="sp-btn sp-btn-ghost" onClick={handleClearPlan} style={{color:"#c0392b",borderColor:"#f5c6c6"}}>✕ Clear Plan</button>
+                                )}
+                                {!hasGenerated && (
+                                    <button className="sp-btn sp-btn-primary" onClick={() => setShowGenerateModal(true)}><Zap size={13} style={{verticalAlign:"middle",marginRight:4}}/>Generate</button>
+                                )}
+                                {hasGenerated && (
+                                    <button className="sp-btn sp-btn-primary" disabled style={{opacity:0.4,cursor:"not-allowed"}}><Zap size={13} style={{verticalAlign:"middle",marginRight:4}}/>Generated</button>
+                                )}
+                            </>
+                        )}
+                    </div>
+                </div>
 
-          <div className="sp-body">
-            <div className="sp-sidebar">
-              <div className="sp-sidebar-tabs">
-                <button
-                    className={`sp-sidebar-tab ${activePanel === "entries" ? "active" : ""}`}
-                    onClick={() => setActivePanel("entries")}
-                >
-                  Entries {entries.length > 0 && `(${entries.length})`}
-                </button>
-                <button
-                    className={`sp-sidebar-tab ${activePanel === "slots" ? "active" : ""}`}
-                    onClick={() => setActivePanel("slots")}
-                >
-                  Slots {slotCount > 0 && `(${slotCount})`}
-                </button>
-              </div>
-              <div className="sp-sidebar-content">
-                {activePanel === "entries" && (
-                    <EntryPanel
-                        entries={entries}
-                        onAdd={handleAddEntry}
-                        onDelete={handleDeleteEntry}
-                        colorMap={colorMap}
-                        onColorChange={handleColorChange}
-                        userId={USER_ID}
+                <div className="sp-body">
+                    <div className="sp-sidebar">
+                        <div className="sp-sidebar-tabs">
+                            <button
+                                className={`sp-sidebar-tab ${activePanel === "entries" ? "active" : ""}`}
+                                onClick={() => setActivePanel("entries")}
+                            >
+                                Entries {entries.length > 0 && `(${entries.length})`}
+                            </button>
+                            <button
+                                className={`sp-sidebar-tab ${activePanel === "slots" ? "active" : ""}`}
+                                onClick={() => setActivePanel("slots")}
+                            >
+                                Slots {slotCount > 0 && `(${slotCount})`}
+                            </button>
+                        </div>
+                        <div className="sp-sidebar-content">
+                            {activePanel === "entries" && (
+                                <EntryPanel
+                                    entries={entries}
+                                    onAdd={handleAddEntry}
+                                    onDelete={handleDeleteEntry}
+                                    colorMap={colorMap}
+                                    onColorChange={handleColorChange}
+                                    userId={getUserId()}
+                                />
+                            )}
+                            {activePanel === "slots" && (
+                                <SlotPanel
+                                    availability={availability}
+                                    onDeleteSlot={handleDeleteSlot}
+                                    onClearAll={handleClearAllSlots}
+                                />
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="sp-calendar-area">
+                        <div className="sp-day-header-row">
+                            <div className="sp-gutter-spacer" />
+                            {weekDates.map((date, i) => (
+                                <div key={i} className={`sp-day-header ${isToday(date) ? "today" : ""}`}>
+                                    <div className="sp-day-name">{DAYS[i]}</div>
+                                    <div className="sp-day-number">{date.getDate()}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="sp-cal-body">
+                            <TimeGutter />
+                            <div className="sp-days-grid">
+                                {weekDates.map((date, i) => {
+                                    const dayKey = DAY_KEYS[i];
+                                    return (
+                                        <DayColumn
+                                            key={dayKey}
+                                            date={date}
+                                            dayKey={dayKey}
+                                            dayIndex={i}
+                                            blocks={weekBlocks[dayKey] || []}
+                                            colorMap={colorMap}
+                                            entries={entries}
+                                            availabilitySlots={(isAvailabilityMode || showSlotOverlay) ? (availability[dayKey] || []) : []}
+                                            onCompleteBlock={handleCompleteBlock}
+                                            onDeleteBlock={handleDeleteBlock}
+                                            onUncompleteBlock={handleUncompleteBlock}
+                                            onAddSlot={handleAddSlot}
+                                            onDeleteSlot={handleDeleteSlot}
+                                            onResizeSlot={handleResizeSlot}
+                                            isAvailabilityMode={isAvailabilityMode}
+                                            onEditBlock={setEditingBlock}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {showGenerateModal && (
+                    <div className="sp-modal-backdrop" onClick={() => setShowGenerateModal(false)}>
+                        <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                            <h2>Generate new plan?</h2>
+                            <p>
+                                This will delete all existing blocks and create a fresh schedule
+                                based on your {slotCount} availability slot{slotCount !== 1 ? "s" : ""} and your task entries.
+                            </p>
+                            <div className="sp-modal-actions">
+                                <button className="sp-btn sp-btn-ghost" onClick={() => setShowGenerateModal(false)}>Cancel</button>
+                                <button className="sp-btn sp-btn-primary" onClick={handleGenerate}>Generate</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {isAvailabilityMode && (
+                    <div className="sp-avail-tip">
+                        <strong>Drag to add slots</strong>
+                        Click × or go to the Slots tab to remove them. Overlapping slots are not allowed.
+                    </div>
+                )}
+
+                {toast && <div className={`sp-toast ${toast.type}`}>{toast.msg}</div>}
+
+                {editingBlock && (
+                    <EditBlockModal
+                        block={editingBlock}
+                        onClose={() => setEditingBlock(null)}
+                        onSave={handleSaveEditedBlock}
                     />
                 )}
-                {activePanel === "slots" && (
-                    <SlotPanel
-                        availability={availability}
-                        onDeleteSlot={handleDeleteSlot}
-                        onClearAll={handleClearAllSlots}
-                    />
-                )}
-              </div>
             </div>
-
-            <div className="sp-calendar-area">
-              <div className="sp-day-header-row">
-                <div className="sp-gutter-spacer" />
-                {weekDates.map((date, i) => (
-                    <div key={i} className={`sp-day-header ${isToday(date) ? "today" : ""}`}>
-                      <div className="sp-day-name">{DAYS[i]}</div>
-                      <div className="sp-day-number">{date.getDate()}</div>
-                    </div>
-                ))}
-              </div>
-
-              <div className="sp-cal-body">
-                <TimeGutter />
-                <div className="sp-days-grid">
-                  {weekDates.map((date, i) => {
-                    const dayKey = DAY_KEYS[i];
-                    return (
-                        <DayColumn
-                            key={dayKey}
-                            date={date}
-                            dayKey={dayKey}
-                            dayIndex={i}
-                            blocks={weekBlocks[dayKey] || []}
-                            colorMap={colorMap}
-                            availabilitySlots={availability[dayKey] || []}
-                            onCompleteBlock={handleCompleteBlock}
-                            onDeleteBlock={handleDeleteBlock}
-                            onUncompleteBlock={handleUncompleteBlock}
-                            onAddSlot={handleAddSlot}
-                            onDeleteSlot={handleDeleteSlot}
-                            isAvailabilityMode={isAvailabilityMode}
-                            onEditBlock={setEditingBlock}
-                        />
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {showGenerateModal && (
-              <div className="sp-modal-backdrop" onClick={() => setShowGenerateModal(false)}>
-                <div className="sp-modal" onClick={e => e.stopPropagation()}>
-                  <h2>Generate new plan?</h2>
-                  <p>
-                    This will delete all existing blocks and create a fresh schedule
-                    based on your {slotCount} availability slot{slotCount !== 1 ? "s" : ""} and your task entries.
-                  </p>
-                  <div className="sp-modal-actions">
-                    <button className="sp-btn sp-btn-ghost" onClick={() => setShowGenerateModal(false)}>Cancel</button>
-                    <button className="sp-btn sp-btn-primary" onClick={handleGenerate}>Generate</button>
-                  </div>
-                </div>
-              </div>
-          )}
-
-          {isAvailabilityMode && (
-              <div className="sp-avail-tip">
-                <strong>Drag to add slots</strong>
-                Click × or go to the Slots tab to remove them. Overlapping slots are not allowed.
-              </div>
-          )}
-
-          {toast && <div className={`sp-toast ${toast.type}`}>{toast.msg}</div>}
-
-          {editingBlock && (
-              <EditBlockModal
-                  block={editingBlock}
-                  onClose={() => setEditingBlock(null)}
-                  onSave={handleSaveEditedBlock}
-              />
-          )}
-        </div>
-      </>
-  );
+        </>
+    );
 }
