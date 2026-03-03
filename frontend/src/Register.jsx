@@ -9,12 +9,26 @@ const requirements = [
   { label: "One special character",        test: p => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(p) },
 ];
 
+const AUB_SEMESTERS = [
+  "Spring 25-26","Summer 25-26","Fall 25-26",
+  "Spring 24-25","Summer 24-25","Fall 24-25",
+  "Spring 23-24","Summer 23-24","Fall 23-24",
+  "Spring 22-23","Summer 22-23","Fall 22-23",
+];
+
 export default function Register({ onGoToLogin }) {
   const [email,     setEmail]     = useState("");
   const [password,  setPassword]  = useState("");
   const [confirm,   setConfirm]   = useState("");
   const [error,     setError]     = useState("");
   const [success,   setSuccess]   = useState(false);
+  const [semStep,   setSemStep]   = useState(false);
+  const [regToken,  setRegToken]  = useState("");
+
+  const [semName,    setSemName]    = useState("");
+  const [semCourses, setSemCourses] = useState([{ id:1, name:"" }]);
+  const [semSaving,  setSemSaving]  = useState(false);
+  const [semError,   setSemError]   = useState("");
 
   const [loading,      setLoading]      = useState(false);
   const [passfocused,  setpassfocused]  = useState(false);
@@ -39,7 +53,8 @@ export default function Register({ onGoToLogin }) {
       });
       const data = await res.json();
       if (data.success) {
-        setSuccess(true);
+        setRegToken(data.token || "");
+        setSemStep(true);
       } else {
         setError(data.message?.replace(/^error:\s*/i, "") || "Registration failed.");
       }
@@ -48,6 +63,21 @@ export default function Register({ onGoToLogin }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSemesterSubmit = async () => {
+    if (!semName) { setSemError("Please select your current semester."); return; }
+    const courses = semCourses.filter(c => c.name.trim());
+    setSemSaving(true); setSemError("");
+    try {
+      await fetch("http://localhost:8080/api/grades/saved", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${regToken}` },
+        body: JSON.stringify({ semesterName: semName, courses: courses.map(c => ({ courseCode: c.name.trim(), grade: "", credits: 0 })) }),
+      });
+    } catch {}
+    finally { setSemSaving(false); }
+    setSuccess(true);
   };
 
   return (
@@ -82,12 +112,54 @@ export default function Register({ onGoToLogin }) {
           {success ? (
             <div style={{ textAlign: "center", padding: "20px 0" }}>
               <div style={{ marginBottom: 16 }}><PartyPopper size={52} color="#6C63FF" /></div>
-              <h2 style={s.title}>You're registered!</h2>
-              <p style={{ fontSize: 14, color: "#7a8fa8", marginBottom: 12, lineHeight: 1.6 }}>
-                Your account has been created. You can now log in with your AUB email.
+              <h2 style={s.title}>You're all set!</h2>
+              <p style={{ fontSize: 14, color: "#7a8fa8", marginBottom: 24, lineHeight: 1.6 }}>
+                Your account has been created. Check your AUB email to verify your account, then log in.
               </p>
-              <button className="reg-btn" onClick={onGoToLogin} style={s.btn}>
-                Go to Login
+              <button className="reg-btn" onClick={onGoToLogin} style={s.btn}>Go to Login</button>
+            </div>
+          ) : semStep ? (
+            <div>
+              <h2 style={s.title}>One last step</h2>
+              <p style={{ fontSize: 13, color: "#7a8fa8", marginBottom: 20, lineHeight: 1.6 }}>
+                Tell us your current semester so we can set up your courses.
+              </p>
+
+              {semError && <div style={s.errorBox}>{semError}</div>}
+
+              <label style={s.label}>Current Semester</label>
+              <select value={semName} onChange={e => { setSemName(e.target.value); setSemError(""); }}
+                className="reg-input"
+                style={{ ...s.input, cursor:"pointer", color: semName ? "#2a2050" : "#A59AC9" }}>
+                <option value="">Select your semester…</option>
+                {AUB_SEMESTERS.map(sem => <option key={sem} value={sem}>{sem}</option>)}
+              </select>
+
+              <label style={s.label}>Your Courses <span style={{ fontWeight:400, color:"#B8A9C9" }}>(optional)</span></label>
+              <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:8 }}>
+                {semCourses.map(c => (
+                  <div key={c.id} style={{ display:"flex", gap:8, alignItems:"center" }}>
+                    <input className="reg-input" value={c.name}
+                      onChange={e => setSemCourses(p => p.map(r => r.id===c.id ? {...r, name:e.target.value} : r))}
+                      placeholder="e.g. CMPS 200"
+                      style={{ ...s.input, marginBottom:0, flex:1 }} />
+                    {semCourses.length > 1 && (
+                      <button onClick={() => setSemCourses(p => p.filter(r => r.id !== c.id))}
+                        style={{ background:"none", border:"none", cursor:"pointer", color:"#c0392b", fontSize:20, lineHeight:1, padding:"0 4px" }}>×</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button onClick={() => setSemCourses(p => [...p, { id:Date.now(), name:"" }])}
+                style={{ fontSize:13, color:"#7B5EA7", background:"none", border:"none", cursor:"pointer", fontWeight:600, marginBottom:20, padding:0 }}>+ Add Course</button>
+
+              <button className="reg-btn" onClick={handleSemesterSubmit} disabled={semSaving || !semName}
+                style={{ ...s.btn, opacity: semSaving || !semName ? 0.7 : 1, cursor: semSaving || !semName ? "not-allowed" : "pointer", marginBottom:10 }}>
+                {semSaving ? "Saving…" : "Get Started"}
+              </button>
+              <button onClick={() => setSuccess(true)}
+                style={{ width:"100%", background:"none", border:"none", color:"#A59AC9", fontSize:13, cursor:"pointer", padding:"6px 0" }}>
+                Skip for now
               </button>
             </div>
           ) : (
