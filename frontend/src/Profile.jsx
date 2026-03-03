@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle } from "lucide-react";
 import AdminDashboard from "./AdminDashboard";
 
@@ -99,6 +99,61 @@ const API = "http://localhost:8080";
 const semAuthHeaders = () => ({ "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("kk_token")}` });
 const LETTER_GRADES = ["","A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
 const fmtDateShort = iso => { try { return new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); } catch { return ""; } };
+const AUB_SEMESTERS = [
+  "Spring 25-26","Summer 25-26","Fall 25-26",
+  "Spring 24-25","Summer 24-25","Fall 24-25",
+  "Spring 23-24","Summer 23-24","Fall 23-24",
+  "Spring 22-23","Summer 22-23","Fall 22-23",
+];
+
+function CourseSearchInput({ value = "", onSelect }) {
+  const [query,   setQuery]   = useState(value);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [dropPos,  setDropPos] = useState(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => { setQuery(value); }, [value]);
+  useEffect(() => {
+    if (query === value || query.trim().length < 2) { setResults([]); return; }
+    setLoading(true);
+    const t = setTimeout(() => {
+      fetch(`${API}/api/courses/search?query=${encodeURIComponent(query)}`)
+        .then(r => r.json()).then(setResults).catch(() => setResults([])).finally(() => setLoading(false));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query, value]);
+
+  const showDrop = results.length > 0 || loading;
+  useEffect(() => {
+    if (showDrop && inputRef.current) {
+      const r = inputRef.current.getBoundingClientRect();
+      setDropPos({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+    if (!showDrop) setDropPos(null);
+  }, [showDrop]);
+
+  return (
+    <div style={{ position:"relative" }}>
+      <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search course (e.g. CMPS 200)"
+        style={{ width:"100%", padding:"10px 14px", border:"1px solid #D4D4DC", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"#2a2050", background:"#F7F5FB", outline:"none" }} />
+      {showDrop && dropPos && (
+        <div style={{ position:"fixed", top:dropPos.top, left:dropPos.left, width:dropPos.width, background:"#fff", border:"1px solid #D4D4DC", borderRadius:10, boxShadow:"0 4px 16px rgba(49,72,122,0.1)", zIndex:9999, maxHeight:180, overflowY:"auto" }}>
+          {loading && <div style={{ padding:"10px 14px", fontSize:12, color:"#A59AC9" }}>Searching…</div>}
+          {results.map(c => (
+            <div key={c.id} onClick={() => { onSelect(c.courseCode); setQuery(c.courseCode); setResults([]); }}
+              style={{ padding:"9px 14px", fontSize:13, color:"#2a2050", cursor:"pointer", borderBottom:"1px solid #F4F4F8" }}
+              onMouseEnter={e => e.currentTarget.style.background="#F0EEF7"}
+              onMouseLeave={e => e.currentTarget.style.background="transparent"}>
+              <span style={{ fontWeight:600 }}>{c.courseCode}</span>
+              {c.title && <span style={{ color:"#A59AC9", marginLeft:8 }}>{c.title}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
@@ -156,7 +211,7 @@ export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
         body: JSON.stringify({ semesterName: newSemName.trim(), courses: courses.map(c => ({ courseCode: c.code, grade: c.grade, credits: parseInt(c.credits) || 0 })) }),
       });
       await refetchSemesters();
-      setCreating(false); setNewSemName(""); setNewSemCourses([{ id:1, code:"", credits:"", grade:"A" }]);
+      setCreating(false); setNewSemName(""); setNewSemCourses([{ id:1, code:"", credits:"", grade:"" }]);
     } catch {}
     finally { setSemSaveLoad(false); }
   };
@@ -185,7 +240,7 @@ export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
   const startEdit = (sem) => {
     setEditingId(sem.id);
     setEditName(sem.semesterName);
-    setEditCourses((sem.courses || []).map((c,i) => ({ id: i+1, code: c.courseCode || "", credits: String(c.credits || ""), grade: c.grade || "A" })));
+    setEditCourses((sem.courses || []).map((c,i) => ({ id: i+1, code: c.courseCode || "", credits: String(c.credits || ""), grade: c.grade || "" })));
   };
 
   const newpassok    = passrequirements.every(r => r.test(newpass));
@@ -551,11 +606,13 @@ export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
         {/* Create form */}
         {creating && (
           <div style={{ background:"#F7F5FB", border:"1px solid #D4D4DC", borderRadius:12, padding:"16px 18px", marginBottom:16 }}>
-            <input
+            <select
               value={newSemName} onChange={e => setNewSemName(e.target.value)}
-              placeholder="Semester name (e.g. Fall 24-25)"
-              style={{ ...pf.input, marginBottom:12 }}
-            />
+              style={{ ...pf.input, marginBottom:12, cursor:"pointer" }}
+            >
+              <option value="">Select semester…</option>
+              {AUB_SEMESTERS.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
               <span style={{ fontSize:11, fontWeight:700, color:"#A59AC9", textTransform:"uppercase" }}>Course Name</span>
               <span style={{ fontSize:11, fontWeight:700, color:"#A59AC9", textTransform:"uppercase" }}>Credits</span>
@@ -564,7 +621,7 @@ export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
             </div>
             {newSemCourses.map(c => (
               <div key={c.id} style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
-                <input value={c.code} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,code:e.target.value} : r))} placeholder="e.g. CMPS 200" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
+                <CourseSearchInput value={c.code} onSelect={code => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,code} : r))} />
                 <input value={c.credits} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                 <select value={c.grade} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
                   {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}
@@ -575,7 +632,7 @@ export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
             <button onClick={() => setNewSemCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"" }])} style={{ fontSize:12, color:"#7B5EA7", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
             <div style={{ display:"flex", gap:8, marginTop:12 }}>
               <button onClick={createSemester} disabled={semSaveLoad || !newSemName.trim()} style={{ ...pf.saveBtn, fontSize:13, opacity: semSaveLoad || !newSemName.trim() ? 0.6 : 1 }}>{semSaveLoad ? "Saving…" : "Save Semester"}</button>
-              <button onClick={() => { setCreating(false); setNewSemName(""); setNewSemCourses([{ id:1, code:"", credits:"", grade:"A" }]); }} style={{ ...pf.cancelBtn }}>Cancel</button>
+              <button onClick={() => { setCreating(false); setNewSemName(""); setNewSemCourses([{ id:1, code:"", credits:"", grade:"" }]); }} style={{ ...pf.cancelBtn }}>Cancel</button>
             </div>
           </div>
         )}
@@ -585,9 +642,9 @@ export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
           <div style={{ textAlign:"center", padding:"24px 0", color:"#B8A9C9", fontSize:13 }}>No semesters yet. Create one above.</div>
         )}
         {semesters.map(sem => (
-          <div key={sem.id} style={{ border:"1px solid #D4D4DC", borderRadius:12, marginBottom:10, overflow:"hidden" }}>
+          <div key={sem.id} style={{ border:"1px solid #D4D4DC", borderRadius:12, marginBottom:10 }}>
             {/* Card header */}
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", background:"#F7F5FB" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", background:"#F7F5FB", borderRadius:"12px 12px 0 0" }}>
               <div>
                 <span style={{ fontWeight:700, fontSize:14, color:"#31487A" }}>{sem.semesterName}</span>
                 <span style={{ fontSize:11, color:"#B8A9C9", marginLeft:10 }}>{(sem.courses||[]).length} course{(sem.courses||[]).length !== 1 ? "s" : ""} · {fmtDateShort(sem.createdAt)}</span>
@@ -628,7 +685,10 @@ export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
             {/* Edit mode */}
             {editingId === sem.id && (
               <div style={{ padding:"14px 16px" }}>
-                <input value={editName} onChange={e => setEditName(e.target.value)} style={{ ...pf.input, marginBottom:10 }} />
+                <select value={editName} onChange={e => setEditName(e.target.value)} style={{ ...pf.input, marginBottom:10, cursor:"pointer" }}>
+                  <option value="">Select semester…</option>
+                  {AUB_SEMESTERS.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
                   <span style={{ fontSize:11, fontWeight:700, color:"#A59AC9", textTransform:"uppercase" }}>Course Name</span>
                   <span style={{ fontSize:11, fontWeight:700, color:"#A59AC9", textTransform:"uppercase" }}>Credits</span>
@@ -637,7 +697,7 @@ export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
                 </div>
                 {editCourses.map(c => (
                   <div key={c.id} style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
-                    <input value={c.code} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,code:e.target.value} : r))} placeholder="e.g. CMPS 200" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
+                    <CourseSearchInput value={c.code} onSelect={code => setEditCourses(p => p.map(r => r.id===c.id ? {...r,code} : r))} />
                     <input value={c.credits} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                     <select value={c.grade} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
                       {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}

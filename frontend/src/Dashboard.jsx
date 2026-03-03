@@ -367,7 +367,6 @@ const calKey = (d) => {
 
       <aside style={{ ...s.sidebar, width:sidebarOpen ? 224 : 66 }}>
         <div style={s.sidebarTop}>
-          <img src="/logo.png" alt="KourseKit" style={{ width:36, height:36, objectFit:"contain", flexShrink:0 }} />
           {sidebarOpen && <span style={s.logoLabel}>KourseKit</span>}
         </div>
         <nav style={{flex:1,paddingTop:10}}>
