@@ -128,7 +128,7 @@ const SEMESTER_OPTIONS = [
 ];
 
 // Grade Calculator page
-export default function GradeCalculator({ dashboardCourses = [], savedSemesters = [], semesterToLoad, onSemesterLoaded }) {
+export default function GradeCalculator({ dashboardCourses = [], savedSemesters = [] }) {
   const [activeTab, setActiveTab] = useState("semester");
 
   // Row helpers (UI only)
@@ -137,6 +137,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
   const updateRow = (setter, id, field, val) => setter(p => p.map(r => r.id === id ? { ...r, [field]:val } : r));
 
   // Semester GPA
+  const [semToLoad, setSelectedLoad] = useState("");
   const [semCourses, setSemCourses] = useState([{ id:1, name:"", grade:"", credits:"" }]);
   const [semResult,  setSemResult]  = useState(null);
   const [semLoading, setSemLoading] = useState(false);
@@ -456,14 +457,6 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
     return () => document.removeEventListener("keydown", handler);
   }, [activeTab]);
 
-  // Load semester from Profile's "My Semesters"
-  useEffect(() => {
-    if (semesterToLoad) {
-      loadSnapshot(semesterToLoad);
-      setActiveTab("semester");
-      onSemesterLoaded?.();
-    }
-  }, [semesterToLoad]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const TABS = [
     { id:"semester",   label:"Semester GPA"    },
@@ -517,6 +510,25 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
           <p style={{ fontSize:13, color:"#A59AC9", marginTop:6, marginBottom:18 }}>
             Enter each course, your grade (letter or GPA point), and its credit hours.
           </p>
+
+          {savedSemesters.length > 0 && (
+            <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:18 }}>
+              <select value={semToLoad} onChange={e => setSelectedLoad(e.target.value)} style={{ ...gc.input, flex:1, maxWidth:260, cursor:"pointer" }}>
+                <option value="">Load from My Semesters…</option>
+                {savedSemesters.map(s => <option key={s.id} value={s.id}>{s.semesterName}</option>)}
+              </select>
+              <button
+                onClick={() => {
+                  const sem = savedSemesters.find(s => String(s.id) === String(semToLoad));
+                  if (sem) { loadSnapshot(sem); setSelectedLoad(""); }
+                }}
+                disabled={!semToLoad}
+                style={{ ...gc.calcBtn, padding:"8px 16px", opacity: semToLoad ? 1 : 0.45 }}
+              >
+                Load
+              </button>
+            </div>
+          )}
 
           <div style={gc.headerRow}>
             <span style={{ ...gc.colHead, flex:1 }}>Course</span>
@@ -606,6 +618,32 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
           <p style={{ fontSize:13, color:"#A59AC9", marginTop:6, marginBottom:18 }}>
             Enter your GPA and credit hours for each completed semester.
           </p>
+
+          {savedSemesters.length > 0 && (
+            <div style={{ marginBottom:18 }}>
+              <button
+                onClick={() => {
+                  const rows = savedSemesters.map((s, i) => {
+                    const autoGpa    = computeSavedGPA(s.courses);
+                    const autoCredits = (s.courses || []).reduce((sum, c) => sum + (Number(c.credits) || 0), 0);
+                    return {
+                      id: Date.now() + i,
+                      name: s.semesterName,
+                      gpa: autoGpa != null ? String(autoGpa) : "",
+                      credits: autoCredits > 0 ? String(autoCredits) : "",
+                    };
+                  });
+                  setCumSems(rows);
+                  setCumResult(null); setCumError(null);
+                  setFutureResult(null); setFutureError(null);
+                }}
+                style={{ ...gc.calcBtn, padding:"8px 16px" }}
+              >
+                Load All Semesters
+              </button>
+            </div>
+          )}
+
           <div style={gc.headerRow}>
             <span style={gc.colHead}>Semester</span>
             <span style={{ ...gc.colHead, maxWidth:120 }}>GPA</span>
