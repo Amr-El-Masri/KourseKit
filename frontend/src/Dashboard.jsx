@@ -210,7 +210,6 @@ export default function Dashboard({ onLogout }) {
   const [activePage,     setActivePage]    = useState("dashboard");
   const [sidebarOpen,    setSidebarOpen]   = useState(true);
   const [semester,       setSemester]      = useState("");
-  const [semesterToLoad, setSemesterToLoad] = useState(null);
   const [apiSemesters,   setApiSemesters]  = useState([]);
   const [showToggle,    setShowToggle]    = useState(false);
   const toggleRef = useRef(null);
@@ -666,12 +665,12 @@ const calKey = (d) => {
         )}
 
       
-        {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} semesterToLoad={semesterToLoad} onSemesterLoaded={() => setSemesterToLoad(null)} />}
+        {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} />}
         {activePage === "tasks" && (<TaskManager tasks={tasks}onToggle={toggleTask} onDelete={deleteTask} onSave={upsertTask}/>)}
         {activePage === "reviews" && <Reviews />}
         {activePage === "planner" && <StudyPlanner />}
         {activePage === "profile" && (
-          <Profile onProfileSave={p => setProfile(p)} onLogout={handleLogout} onLoadSemester={sem => { setSemesterToLoad(sem); setActivePage("grades"); }} />
+          <Profile onProfileSave={p => setProfile(p)} onLogout={handleLogout} />
         )}
 
       </main>

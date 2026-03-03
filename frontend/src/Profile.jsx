@@ -155,7 +155,7 @@ function CourseSearchInput({ value = "", onSelect }) {
   );
 }
 
-export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
+export default function Profile({ onProfileSave, onLogout }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const isAdmin = getTokenRole() === "ADMIN";
   const [section, setSection] = useState("profile");
@@ -653,11 +653,6 @@ export default function Profile({ onProfileSave, onLogout, onLoadSemester }) {
                 <button onClick={() => editingId === sem.id ? setEditingId(null) : startEdit(sem)} style={{ fontSize:12, fontWeight:600, padding:"5px 12px", border:"1px solid #D4D4DC", borderRadius:8, background:"white", color:"#31487A", cursor:"pointer" }}>
                   {editingId === sem.id ? "Close" : "Edit"}
                 </button>
-                {onLoadSemester && (
-                  <button onClick={() => onLoadSemester(sem)} style={{ fontSize:12, fontWeight:600, padding:"5px 12px", border:"none", borderRadius:8, background:"#31487A", color:"white", cursor:"pointer" }}>
-                    Load into Calculator
-                  </button>
-                )}
                 {deleteConfirmId === sem.id ? (
                   <>
                     <button onClick={() => deleteSemester(sem.id)} style={{ fontSize:12, fontWeight:600, padding:"5px 12px", border:"none", borderRadius:8, background:"#c0392b", color:"white", cursor:"pointer" }}>Confirm</button>
