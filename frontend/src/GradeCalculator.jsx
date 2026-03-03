@@ -116,11 +116,6 @@ function computeSavedGPA(courses) {
   }
   return creds > 0 ? (pts / creds).toFixed(2) : null;
 }
-function fmtDate(iso) {
-  if (!iso) return "";
-  try { return new Date(iso).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }); }
-  catch { return ""; }
-}
 
 const LETTER_GRADES = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
 
@@ -137,7 +132,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
   const [activeTab, setActiveTab] = useState("semester");
 
   // Row helpers (UI only)
-  const addRow    = setter => setter(p => [...p, { id:Date.now(), name:"", grade:"", credits:"", weight:"", type:"Exam", gpa:"" }]);
+  const addRow    = setter => setter(p => [...p, { id:Date.now(), name:"", grade:"", credits:"", weight:"", type:"Exam", gpa:"", customType:"" }]);
   const removeRow = (setter, id) => setter(p => p.length > 1 ? p.filter(r => r.id !== id) : p);
   const updateRow = (setter, id, field, val) => setter(p => p.map(r => r.id === id ? { ...r, [field]:val } : r));
 
@@ -152,16 +147,6 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
   const [impactLoading, setImpactLoading] = useState(false);
   const [impactError,   setImpactError]   = useState(null);
 
-  // Save / Load (Semester GPA tab)
-  const [saveLabel,         setSaveLabel]         = useState("");
-  const [saveStatus,        setSaveStatus]        = useState(null); // {type:"ok"|"err", msg}
-  const [saveLoading,       setSaveLoading]       = useState(false);
-  const [savedList,         setSavedList]         = useState([]);
-  const [templateSemester,  setTemplateSemester]  = useState(null);
-  const [templateDismissed, setTemplateDismissed] = useState(false);
-  const [deleteConfirm,     setDeleteConfirm]     = useState(null);
-  const [deleteLoading,     setDeleteLoading]     = useState(false);
-  const [templateLoading,   setTemplateLoading]   = useState(null);
 
   const calcSemGPA = async () => {
     setSemError(null);
@@ -222,77 +207,6 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
     }
   };
 
-  const saveSemester = async () => {
-    setSaveStatus(null);
-    setSaveLoading(true);
-    try {
-      const res = await fetch(`${API}/api/grades/saved`, {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          semesterName: saveLabel.trim() || "My Semester",
-          courses: semCourses.map(c => ({
-            courseCode: c.name || "Course",
-            grade: resolveGrade(c.grade),
-            credits: parseInt(c.credits) || 0,
-            assessments: [],
-          })),
-        }),
-      });
-      const data = await parseResponse(res);
-      if (!res.ok || data.message?.startsWith("Error")) throw new Error(data.message || "Save failed.");
-      setSaveStatus({ type:"ok", msg:"Saved successfully!" });
-      setSaveLabel("");
-      fetchSavedList();
-    } catch (e) {
-      setSaveStatus({ type:"err", msg: e.message || "Failed to save." });
-    } finally {
-      setSaveLoading(false);
-    }
-  };
-
-  const fetchSavedList = async () => {
-    try {
-      const res = await fetch(`${API}/api/grades/saved`, { headers: authHeaders() });
-      const data = await parseResponse(res);
-      if (res.ok && Array.isArray(data)) {
-        setSavedList(data);
-        const tpl = data.find(s => s.isTemplate);
-        setTemplateSemester(tpl ?? null);
-      }
-    } catch {}
-  };
-
-  const deleteSemester = async (id) => {
-    setDeleteLoading(true);
-    try {
-      await fetch(`${API}/api/grades/saved/${id}`, { method:"DELETE", headers: authHeaders() });
-      setSavedList(p => p.filter(s => s.id !== id));
-      setTemplateSemester(prev => prev?.id === id ? null : prev);
-      setDeleteConfirm(null);
-    } finally {
-      setDeleteLoading(false);
-    }
-  };
-
-  const toggleTemplate = async (semester) => {
-    setTemplateLoading(semester.id);
-    try {
-      if (semester.isTemplate) {
-        await fetch(`${API}/api/grades/saved/${semester.id}/template`, { method:"DELETE", headers: authHeaders() });
-        setSavedList(p => p.map(s => s.id === semester.id ? { ...s, isTemplate:false } : s));
-        setTemplateSemester(null);
-      } else {
-        const res = await fetch(`${API}/api/grades/saved/${semester.id}/template`, { method:"PUT", headers: authHeaders() });
-        const data = await parseResponse(res);
-        setSavedList(p => p.map(s => ({ ...s, isTemplate: s.id === semester.id })));
-        setTemplateSemester(data);
-      }
-    } finally {
-      setTemplateLoading(null);
-    }
-  };
-
   const loadSnapshot = (snapshot) => {
     setSemCourses(
       (snapshot.courses ?? []).map((c, i) => ({
@@ -304,7 +218,6 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
     );
     setSemResult(null); setSemError(null);
     setImpactResult(null); setImpactError(null);
-    setSaveStatus(null);
   };
 
   // Cumulative GPA
@@ -385,7 +298,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
   };
 
   // Course Grade
-  const [components,    setComponents]    = useState([{ id:1, type:"Exam", weight:"", grade:"" }]);
+  const [components,    setComponents]    = useState([{ id:1, type:"Exam", weight:"", grade:"", customType:"" }]);
   const [courseResult,  setCourseResult]  = useState(null);
   const [courseLoading, setCourseLoading] = useState(false);
   const [courseError,   setCourseError]   = useState(null);
@@ -407,7 +320,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
         headers: authHeaders(),
         body: JSON.stringify({
           assessments: components.map(c => ({
-            name: c.type,
+            name: c.type === "Other" ? (c.customType.trim() || "Other") : c.type,
             grade: letterToNumeric(c.grade),
             weight: parseFloat(c.weight) || 0,
           })),
@@ -474,7 +387,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
   };
 
   // Grade Simulator
-  const [simPast,         setSimPast]         = useState([{ id:1, type:"Exam", weight:"", grade:"" }]);
+  const [simPast,         setSimPast]         = useState([{ id:1, type:"Exam", weight:"", grade:"", customType:"" }]);
   const [simFutureGrade,  setSimFutureGrade]  = useState("");
   const [simFutureWeight, setSimFutureWeight] = useState("");
   const [simResult,       setSimResult]       = useState(null);
@@ -496,7 +409,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
     setSimLoading(true);
     try {
       const allComponents = [
-        ...simPast.map(c => ({ name: c.type, grade: letterToNumeric(c.grade), weight: parseFloat(c.weight) || 0 })),
+        ...simPast.map(c => ({ name: c.type === "Other" ? (c.customType.trim() || "Other") : c.type, grade: letterToNumeric(c.grade), weight: parseFloat(c.weight) || 0 })),
         { name: "Future Component", grade: letterToNumeric(simFutureGrade), weight: parseFloat(simFutureWeight) || 0 },
       ];
       const totalWeight = allComponents.reduce((sum, c) => sum + c.weight, 0);
@@ -542,9 +455,6 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
   }, [activeTab]);
-
-  // Auto-fetch saved semesters + template on mount
-  useEffect(() => { fetchSavedList(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load semester from Profile's "My Semesters"
   useEffect(() => {
@@ -608,23 +518,6 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             Enter each course, your grade (letter or GPA point), and its credit hours.
           </p>
 
-          {/* Template restore banner */}
-          {templateSemester && !templateDismissed && (
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, marginBottom:16, padding:"12px 16px", background:"#EDE8F8", border:"1px solid #C3B4E8", borderRadius:12 }}>
-              <span style={{ fontSize:13, color:"#5A3B7B", fontWeight:500 }}>
-                Restore your template <strong>"{templateSemester.semesterName}"</strong>?
-              </span>
-              <div style={{ display:"flex", gap:8 }}>
-                <button onClick={() => { loadSnapshot(templateSemester); setTemplateDismissed(true); }} style={{ padding:"6px 14px", background:"#7B5EA7", color:"white", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
-                  Restore
-                </button>
-                <button onClick={() => setTemplateDismissed(true)} style={{ padding:"6px 10px", background:"none", color:"#A59AC9", border:"1px solid #D4D4DC", borderRadius:8, fontSize:12, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
-                  Dismiss
-                </button>
-              </div>
-            </div>
-          )}
-
           <div style={gc.headerRow}>
             <span style={{ ...gc.colHead, flex:1 }}>Course</span>
             <span style={{ ...gc.colHead, flex:1, maxWidth:150 }}>Grade</span>
@@ -654,7 +547,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             <button className="gc-calcbtn" onClick={calcSemGPA} disabled={semLoading} style={gc.calcBtn}>
               {semLoading ? "Calculating…" : "Calculate GPA"}
             </button>
-            <button onClick={() => { setSemCourses([{ id:Date.now(), name:"", grade:"", credits:"" }]); setSemResult(null); setSemError(null); setImpactResult(null); setImpactError(null); setSaveStatus(null); }} style={gc.clearBtn}>
+            <button onClick={() => { setSemCourses([{ id:Date.now(), name:"", grade:"", credits:"" }]); setSemResult(null); setSemError(null); setImpactResult(null); setImpactError(null); }} style={gc.clearBtn}>
               Clear all
             </button>
             {semResult && !semError && (
@@ -666,86 +559,6 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             )}
           </div>
           {semError && <ErrorBox>{semError}</ErrorBox>}
-
-          {/* Save / Load */}
-          <div style={{ marginTop:24, paddingTop:20, borderTop:"1px solid #F0EEF7" }}>
-            <div style={{ fontSize:12, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:10 }}>Save Semester</div>
-            <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"center" }}>
-              <input
-                className="gc-input"
-                value={saveLabel}
-                onChange={e => { setSaveLabel(e.target.value); setSaveStatus(null); }}
-                placeholder="Semester name (e.g. Fall 24-25)"
-                style={{ ...gc.input, maxWidth:240 }}
-              />
-              <button className="gc-calcbtn" onClick={saveSemester} disabled={saveLoading} style={gc.calcBtn}>
-                {saveLoading ? "Saving…" : "Save Semester"}
-              </button>
-            </div>
-            {saveStatus && (
-              <div style={{ marginTop:8, fontSize:13, fontWeight:500, color: saveStatus.type==="ok"?"#2d7a4a":"#c0392b" }}>
-                {saveStatus.msg}
-              </div>
-            )}
-
-            {/* History panel */}
-            <div style={{ marginTop:20 }}>
-              <div style={{ fontSize:12, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:10 }}>Saved Semesters</div>
-              {savedList.length === 0 && (
-                <InfoBox color="#A59AC9" bg="#F4F4F8" border="#D4D4DC">No saved semesters yet. Save one above to get started.</InfoBox>
-              )}
-              {savedList.length > 0 && (
-                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                  {savedList.map(s => {
-                    const gpa = computeSavedGPA(s.courses);
-                    const count = s.courses?.length ?? 0;
-                    const isDeleting = deleteConfirm === s.id;
-                    const isTplLoading = templateLoading === s.id;
-                    return (
-                      <div key={s.id} style={{ background: s.isTemplate ? "#F0EEF7" : "#F7F5FB", border:`1px solid ${s.isTemplate?"#C3B4E8":"#D4D4DC"}`, borderRadius:12, padding:"12px 16px" }}>
-                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:8 }}>
-                          <div>
-                            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                              <span style={{ fontWeight:600, fontSize:14, color:"#31487A", fontFamily:"'DM Sans',sans-serif" }}>{s.semesterName || "Unnamed"}</span>
-                              {s.isTemplate && <span style={{ fontSize:11, fontWeight:700, color:"#7B5EA7", background:"#EDE8F8", borderRadius:6, padding:"2px 7px" }}>Template</span>}
-                            </div>
-                            <div style={{ marginTop:4, display:"flex", gap:14, fontSize:12, color:"#A59AC9" }}>
-                              {gpa && <span>GPA <strong style={{ color:"#31487A" }}>{gpa}</strong></span>}
-                              <span>{count} course{count !== 1 ? "s" : ""}</span>
-                              <span>{fmtDate(s.createdAt)}</span>
-                            </div>
-                          </div>
-                          <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap" }}>
-                            <button onClick={() => loadSnapshot(s)} style={{ padding:"6px 12px", background:"#31487A", color:"white", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
-                              Load
-                            </button>
-                            <button onClick={() => toggleTemplate(s)} disabled={isTplLoading} style={{ padding:"6px 10px", background: s.isTemplate ? "#EDE8F8" : "#F0EEF7", color: s.isTemplate ? "#7B5EA7" : "#B8A9C9", border:`1px solid ${s.isTemplate?"#C3B4E8":"#D4D4DC"}`, borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
-                              {isTplLoading ? "…" : s.isTemplate ? "★ Template" : "☆ Set Template"}
-                            </button>
-                            {!isDeleting ? (
-                              <button onClick={() => setDeleteConfirm(s.id)} style={{ padding:"6px 10px", background:"none", color:"#c0392b", border:"1px solid #f0c0c0", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
-                                Delete
-                              </button>
-                            ) : (
-                              <span style={{ display:"flex", alignItems:"center", gap:6 }}>
-                                <span style={{ fontSize:12, color:"#c0392b", fontWeight:500 }}>Delete?</span>
-                                <button onClick={() => deleteSemester(s.id)} disabled={deleteLoading} style={{ padding:"5px 10px", background:"#c0392b", color:"white", border:"none", borderRadius:7, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
-                                  {deleteLoading ? "…" : "Yes"}
-                                </button>
-                                <button onClick={() => setDeleteConfirm(null)} style={{ padding:"5px 10px", background:"#F4F4F8", color:"#5A3B7B", border:"1px solid #D4D4DC", borderRadius:7, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>
-                                  No
-                                </button>
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
 
           {/* Highest Impact — auto result after GPA calculation */}
           {semResult && !semError && semCourses.length >= 2 && (
@@ -921,10 +734,15 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             <span style={{ width:28 }} />
           </div>
           {components.map(c => (
-            <div key={c.id} style={gc.row}>
-              <select className="gc-input" value={c.type} onChange={e=>updateRow(setComponents,c.id,"type",e.target.value)} style={{ ...gc.input, maxWidth:140, cursor:"pointer" }}>
-                {["Exam","Assignment","Project","Quiz","Lab","Participation","Other"].map(t=><option key={t}>{t}</option>)}
-              </select>
+            <div key={c.id} style={{ ...gc.row, alignItems: c.type === "Other" ? "flex-start" : "center" }}>
+              <div style={{ flex:1, maxWidth:140 }}>
+                <select className="gc-input" value={c.type} onChange={e=>updateRow(setComponents,c.id,"type",e.target.value)} style={{ ...gc.input, width:"100%", cursor:"pointer" }}>
+                  {["Exam","Assignment","Project","Quiz","Lab","Attendance","Participation","Other"].map(t=><option key={t}>{t}</option>)}
+                </select>
+                {c.type === "Other" && (
+                  <input className="gc-input" value={c.customType||""} onChange={e=>updateRow(setComponents,c.id,"customType",e.target.value)} placeholder="Specify (optional)" style={{ ...gc.input, width:"100%", marginTop:4, fontSize:12 }} />
+                )}
+              </div>
               <input className="gc-input" value={c.weight} onChange={e => {
                 const val = e.target.value;
                 const otherTotal = components.filter(r => r.id !== c.id).reduce((s, r) => s + (parseFloat(r.weight) || 0), 0);
@@ -943,7 +761,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             <button className="gc-calcbtn" onClick={calcCourse} disabled={courseLoading} style={gc.calcBtn}>
               {courseLoading ? "Calculating…" : "Calculate Grade"}
             </button>
-            <button onClick={() => { setComponents([{ id:Date.now(), type:"Exam", weight:"", grade:"" }]); setCourseResult(null); setCourseError(null); }} style={gc.clearBtn}>
+            <button onClick={() => { setComponents([{ id:Date.now(), type:"Exam", weight:"", grade:"", customType:"" }]); setCourseResult(null); setCourseError(null); }} style={gc.clearBtn}>
               Clear all
             </button>
             {courseResult && !courseError && (
@@ -1060,10 +878,15 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
               <span style={{ width:28 }} />
             </div>
             {simPast.map(c => (
-              <div key={c.id} style={gc.row}>
-                <select className="gc-input" value={c.type} onChange={e=>updateRow(setSimPast,c.id,"type",e.target.value)} style={{ ...gc.input, maxWidth:140, cursor:"pointer" }}>
-                  {["Exam","Assignment","Project","Quiz","Lab","Participation","Other"].map(t=><option key={t}>{t}</option>)}
-                </select>
+              <div key={c.id} style={{ ...gc.row, alignItems: c.type === "Other" ? "flex-start" : "center" }}>
+                <div style={{ flex:1, maxWidth:140 }}>
+                  <select className="gc-input" value={c.type} onChange={e=>updateRow(setSimPast,c.id,"type",e.target.value)} style={{ ...gc.input, width:"100%", cursor:"pointer" }}>
+                    {["Exam","Assignment","Project","Quiz","Lab","Attendance","Participation","Other"].map(t=><option key={t}>{t}</option>)}
+                  </select>
+                  {c.type === "Other" && (
+                    <input className="gc-input" value={c.customType||""} onChange={e=>updateRow(setSimPast,c.id,"customType",e.target.value)} placeholder="Specify (optional)" style={{ ...gc.input, width:"100%", marginTop:4, fontSize:12 }} />
+                  )}
+                </div>
                 <input className="gc-input" value={c.weight} onChange={e => {
                   const val = e.target.value;
                   const otherTotal = simPast.filter(r => r.id !== c.id).reduce((s, r) => s + (parseFloat(r.weight) || 0), 0) + (parseFloat(simFutureWeight) || 0);
@@ -1115,7 +938,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                   <button className="gc-calcbtn" onClick={calcSim} disabled={simLoading} style={gc.calcBtn}>
                     {simLoading ? "Simulating…" : "Simulate"}
                   </button>
-                  <button onClick={() => { setSimPast([{ id:Date.now(), type:"Exam", weight:"", grade:"" }]); setSimFutureGrade(""); setSimFutureWeight(""); setSimResult(null); setSimError(null); }} style={gc.clearBtn}>
+                  <button onClick={() => { setSimPast([{ id:Date.now(), type:"Exam", weight:"", grade:"", customType:"" }]); setSimFutureGrade(""); setSimFutureWeight(""); setSimResult(null); setSimError(null); }} style={gc.clearBtn}>
                     Clear all
                   </button>
                 </div>
