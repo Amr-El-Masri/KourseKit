@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import GradeCalculator from "./GradeCalculator";
 import Reviews from "./Reviews";
 import TaskManager from "./TaskManager";
@@ -278,12 +278,27 @@ const deleteTodo = id => {
   localStorage.setItem("kk_todos", JSON.stringify(next));
 };
 
-const [tasks, setTasks] = useState(() => {
-   try {
-    const saved = localStorage.getItem("kk_tasks");
-    return saved ? JSON.parse(saved) : [];
-  } catch { return []; }
-});
+const [tasks, setTasks] = useState([]);
+
+const loadTasksForCalendar = useCallback(() => {
+  const token = localStorage.getItem("kk_token");
+  const userId = token ? JSON.parse(atob(token.split(".")[1])).sub : null;
+  if (!userId) return;
+  fetch(`http://localhost:8080/api/tasks/${userId}/list-all`, {
+    headers: { "Authorization": `Bearer ${token}` }
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (Array.isArray(data)) {
+        setTasks(data.map(t => ({ ...t, due: t.deadline, done: t.completed })));
+      }
+    })
+    .catch(() => {});
+}, []);
+
+useEffect(() => {
+  if (activePage === "dashboard") loadTasksForCalendar();
+}, [activePage]);
 
 const saveTasks = (next) => {
   setTasks(next);
@@ -537,12 +552,17 @@ const calKey = (d) => {
 
               {/* colored task lines */}
               {dayTasks.map((t, ti) => {
-                const color = t.done ? "#27ae60"
-                  : new Date(t.due) < new Date() ? "#c0392b"
-                  : t.priority==="high"   ? "#e74c3c"
-                  : t.priority==="medium" ? "#f39c12"
-                  : "#27ae60";
-                const typeLabel = t.type || "Task";
+                const getCourseColor = (course) => {
+                const palette = [
+                    "#31487A", "#7B5EA7", "#2d7a4a", "#b7680a",
+                    "#6b2d7a", "#1a7a8a", "#8a3a1a", "#4a7a2d",
+                    "#2d4a8a", "#8a1a4a"];
+                let hash = 0;
+                for (let i = 0; i < course.length; i++) {
+                hash = course.charCodeAt(i) + ((hash << 5) - hash);}
+                return palette[Math.abs(hash) % palette.length]; };
+
+              const color = t.done ? "#27ae60": new Date(t.due) < new Date() ? "#c0392b": getCourseColor(t.course);
                 return (
                   <div
                     key={ti}
