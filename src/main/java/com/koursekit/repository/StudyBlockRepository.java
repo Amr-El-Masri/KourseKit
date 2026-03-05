@@ -20,6 +20,9 @@ public interface StudyBlockRepository extends JpaRepository<StudyBlock, Long> {
             LocalDate endDate
     );
 
+    // Used by rebalance to load only completed blocks for an entry
+    List<StudyBlock> findByStudyPlanEntryAndCompleted(StudyPlanEntry entry, boolean completed);
+
     @Modifying
     @Query("DELETE FROM StudyBlock b WHERE b.studyPlanEntry = :entry AND b.completed = false")
     void deleteByStudyPlanEntryAndCompletedFalse(@Param("entry") StudyPlanEntry entry);
@@ -47,4 +50,8 @@ public interface StudyBlockRepository extends JpaRepository<StudyBlock, Long> {
             @Param("today") LocalDate today,
             @Param("cutoffTime") java.time.LocalTime cutoffTime
     );
+
+    @Modifying
+    @Query("UPDATE StudyBlock b SET b.completed = true WHERE b.id IN :ids")
+    void markAllCompletedByIds(@Param("ids") List<Long> ids);
 }

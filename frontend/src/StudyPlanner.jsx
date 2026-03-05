@@ -74,6 +74,7 @@ async function apiFetch(path, options = {}) {
     if (!res.ok) {
         const text = await res.text();
         console.error(`API ERROR ${res.status} ${path}:`, text);
+        alert(`${res.status} ${path}: ${text}`);
         let msg = `HTTP ${res.status}`;
         try { msg = JSON.parse(text).message || msg; } catch {}
         throw new Error(msg);
@@ -136,8 +137,8 @@ function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUnco
     useEffect(() => {
         if (!showMenu) return;
         const close = () => setShowMenu(false);
-        window.addEventListener("click", close);
-        return () => window.removeEventListener("click", close);
+        const timer = setTimeout(() => window.addEventListener("click", close), 0);
+        return () => { clearTimeout(timer); window.removeEventListener("click", close); };
     }, [showMenu]);
     const top = hourToPx(parseFloat(block.startTime.split(":")[0]) + parseFloat(block.startTime.split(":")[1]) / 60);
     const height = Math.max(block.duration * HOUR_HEIGHT - 4, 20);
@@ -155,7 +156,7 @@ function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUnco
                 borderLeft: `3px solid ${block.completed ? "#ccc" : color}`,
             }}
             onMouseDown={e => e.stopPropagation()}
-            onClick={() => setShowMenu(!showMenu)}
+            onClick={e => { e.stopPropagation(); setShowMenu(v => !v); }}
         >
             <div className="sp-block-title" style={{ color: block.completed ? "#aaa" : color }}>
                 {block.completed && <span>✓ </span>}
@@ -163,6 +164,14 @@ function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUnco
             </div>
             <div className="sp-block-time">
                 {block.startTime.slice(0, 5)} · {block.duration}h
+            </div>
+            <div className="sp-block-actions">
+                {!block.completed
+                    ? <button className="sp-block-action-btn" title="Mark complete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onComplete(block.id); }}>✓</button>
+                    : <button className="sp-block-action-btn" title="Undo complete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onUncomplete(block.id); }}>↩</button>
+                }
+                <button className="sp-block-action-btn" title="Edit" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onEdit(block); }}>✎</button>
+                <button className="sp-block-action-btn danger" title="Delete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(block.id); }}>✕</button>
             </div>
             {showMenu && (
                 <div className="sp-block-menu" onClick={e => e.stopPropagation()}>
@@ -178,16 +187,36 @@ function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUnco
     );
 }
 
-function EditBlockModal({ block, onClose, onSave }) {
-    const [startTime, setStartTime] = useState(block.startTime.slice(0, 5));
-    const [duration, setDuration]   = useState(String(block.duration));
+function EditBlockModal({ block, entries, dayBlocks, onClose, onSave }) {
+    const [startTime, setStartTime]   = useState(block.startTime.slice(0, 5));
+    const [duration, setDuration]     = useState(String(block.duration));
+    const [entryId, setEntryId]       = useState(String(block.studyPlanEntryId));
+    const [error, setError]           = useState("");
+
+    const inputStyle = { width: "100%", padding: "9px 12px", border: "1px solid #E0E0E8", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: "#2a2050", outline: "none" };
+    const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: "#2a2050", marginBottom: 6 };
 
     const handleSave = () => {
+        setError("");
         const [h, m] = startTime.split(":").map(Number);
-        if (isNaN(h) || isNaN(m)) return;
+        if (isNaN(h) || isNaN(m)) { setError("Invalid start time"); return; }
         const dur = parseFloat(duration);
-        if (!dur || dur <= 0) return;
-        onSave(block.id, { startTime: startTime + ":00", duration: dur });
+        if (!dur || dur <= 0) { setError("Invalid duration"); return; }
+
+        const newStart = h + m / 60;
+        const newEnd   = newStart + dur;
+
+        // Check overlap with other blocks on same day
+        const overlaps = (dayBlocks || []).some(b => {
+            if (b.id === block.id) return false;
+            const bStart = parseFloat(b.startTime.split(":")[0]) + parseFloat(b.startTime.split(":")[1]) / 60;
+            const bEnd   = bStart + b.duration;
+            return newStart < bEnd && newEnd > bStart;
+        });
+
+        if (overlaps) { setError("This time overlaps with another block on the same day"); return; }
+
+        onSave(block.id, { startTime: startTime + ":00", duration: dur, studyPlanEntryId: parseInt(entryId) });
         onClose();
     };
 
@@ -195,32 +224,23 @@ function EditBlockModal({ block, onClose, onSave }) {
         <div className="sp-modal-backdrop" onClick={onClose}>
             <div className="sp-modal" onClick={e => e.stopPropagation()}>
                 <h2>Edit Block</h2>
-                <p>{block.course || "Study block"}</p>
                 <div style={{ marginBottom: 14 }}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2a2050", marginBottom: 6 }}>
-                        Start Time
-                    </label>
-                    <input
-                        type="time"
-                        value={startTime}
-                        onChange={e => setStartTime(e.target.value)}
-                        style={{ width: "100%", padding: "9px 12px", border: "1px solid #E0E0E8", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: "#2a2050", outline: "none" }}
-                    />
+                    <label style={labelStyle}>Entry</label>
+                    <select value={entryId} onChange={e => setEntryId(e.target.value)} style={{ ...inputStyle, background: "#fff" }}>
+                        {entries.map(e => (
+                            <option key={e.id} value={String(e.id)}>[{e.course}] {e.name}</option>
+                        ))}
+                    </select>
                 </div>
-                <div style={{ marginBottom: 20 }}>
-                    <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#2a2050", marginBottom: 6 }}>
-                        Duration (hours)
-                    </label>
-                    <input
-                        type="number"
-                        value={duration}
-                        min="0.5"
-                        max="8"
-                        step="0.5"
-                        onChange={e => setDuration(e.target.value)}
-                        style={{ width: "100%", padding: "9px 12px", border: "1px solid #E0E0E8", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: "#2a2050", outline: "none" }}
-                    />
+                <div style={{ marginBottom: 14 }}>
+                    <label style={labelStyle}>Start Time</label>
+                    <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} style={inputStyle} />
                 </div>
+                <div style={{ marginBottom: error ? 10 : 20 }}>
+                    <label style={labelStyle}>Duration (hours)</label>
+                    <input type="number" value={duration} min="0.5" max="12" step="0.5" onChange={e => setDuration(e.target.value)} style={inputStyle} />
+                </div>
+                {error && <div style={{ marginBottom: 14, fontSize: 12, color: "#c0392b", background: "#fef0f0", borderRadius: 6, padding: "8px 12px" }}>{error}</div>}
                 <div className="sp-modal-actions">
                     <button className="sp-btn sp-btn-ghost" onClick={onClose}>Cancel</button>
                     <button className="sp-btn sp-btn-primary" onClick={handleSave}>Save</button>
@@ -564,6 +584,7 @@ export default function StudyPlanner() {
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState(null);
     const [showGenerateModal, setShowGenerateModal] = useState(false);
+    const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [entries, setEntries] = useState([]);
     const [activePanel, setActivePanel] = useState("entries"); // "entries" | "slots"
     const [editingBlock, setEditingBlock] = useState(null);
@@ -639,28 +660,33 @@ export default function StudyPlanner() {
         }
     }, []);
 
-    const persistSlots = useCallback(async (newAvailability) => {
-        const userId = getUserId();
-        if (!userId) return;
-        const slots = [];
-        const toTime = h => {
-            const hrs = Math.floor(h);
-            const mins = Math.round((h - hrs) * 60);
-            return `${String(hrs).padStart(2,"0")}:${String(mins).padStart(2,"0")}:00`;
-        };
-        Object.entries(newAvailability).forEach(([dayKey, daySlots]) => {
-            daySlots.forEach(s => slots.push({ dayKey, startTime: toTime(s.startHour), endTime: toTime(s.endHour) }));
-        });
-        try {
-            await apiFetch(`/api/study-plan/${userId}/slots`, {
-                method: "POST",
-                body: JSON.stringify(slots),
+    const persistSlotsTimer = useRef(null);
+
+    const persistSlots = useCallback((newAvailability) => {
+        if (persistSlotsTimer.current) clearTimeout(persistSlotsTimer.current);
+        persistSlotsTimer.current = setTimeout(async () => {
+            const userId = getUserId();
+            if (!userId) return;
+            const slots = [];
+            const toTime = h => {
+                const hrs = Math.floor(h);
+                const mins = Math.round((h - hrs) * 60);
+                return `${String(hrs).padStart(2,"0")}:${String(mins).padStart(2,"0")}:00`;
+            };
+            Object.entries(newAvailability).forEach(([dayKey, daySlots]) => {
+                daySlots.forEach(s => slots.push({ dayKey, startTime: toTime(s.startHour), endTime: toTime(s.endHour) }));
             });
-            // Reload slots to get backend-assigned IDs
-            await loadSlots();
-        } catch (e) {
-            console.error("Failed to persist slots:", e.message);
-        }
+            try {
+                await apiFetch(`/api/study-plan/${userId}/slots`, {
+                    method: "POST",
+                    body: JSON.stringify(slots),
+                });
+                // Reload slots to get backend-assigned IDs
+                await loadSlots();
+            } catch (e) {
+                console.error("Failed to persist slots:", e.message);
+            }
+        }, 600);
     }, [showToast]);
 
     useEffect(() => {
@@ -702,18 +728,18 @@ export default function StudyPlanner() {
     }, [showToast]);
 
     const handleSaveEditedBlock = useCallback(async (blockId, changes) => {
-        const res = await apiFetch(`/api/study-plan/blocks/${blockId}`, {
-            method: "PATCH",
-            body: JSON.stringify(changes),
-        });
-        setWeekBlocks(prev => {
-            const next = {};
-            for (const [day, blocks] of Object.entries(prev))
-                next[day] = blocks.map(b => b.id === blockId ? { ...b, ...changes } : b);
-            return next;
-        });
-        showToast("Block updated", "success");
-    }, [showToast]);
+        try {
+            await apiFetch(`/api/study-plan/blocks/${blockId}`, {
+                method: "PATCH",
+                body: JSON.stringify(changes),
+            });
+            await loadWeeklyView();
+            await loadEntries(true);
+            showToast("Block updated", "success");
+        } catch (e) {
+            showToast(e.message || "Failed to update block", "error");
+        }
+    }, [showToast, loadWeeklyView, loadEntries]);
 
     const handleAddSlot = useCallback((dayKey, newSlot) => {
         setAvailability(prev => {
@@ -864,9 +890,11 @@ export default function StudyPlanner() {
     const handleRebalance = useCallback(async () => {
         setLoading(true);
         try {
+            const payload = buildSettingsPayload();
+            console.log("REBALANCE PAYLOAD:", JSON.stringify(payload, null, 2));
             const data = await apiFetch(`/api/study-plan/${getUserId()}/rebalance`, {
                 method: "POST",
-                body: JSON.stringify(buildSettingsPayload()),
+                body: JSON.stringify(payload),
             });
             if (data) {
                 const weeklyView = data.weeklyView ?? data;
@@ -904,57 +932,61 @@ export default function StudyPlanner() {
 
         /* ── Header ── */
         .sp-header {
-          height: 64px;
+          min-height: 64px;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 0 20px;
+          padding: 8px 16px;
           border-bottom: 1px solid #E0E0E8;
           background: #fff;
           flex-shrink: 0;
-          gap: 16px;
+          gap: 10px;
+          flex-wrap: wrap;
         }
 
-        .sp-header-left { display: flex; align-items: center; gap: 16px; }
+        .sp-header-left { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
         .sp-title {
           font-family: 'Fraunces', serif;
           font-weight: 700;
-          font-size: 20px;
+          font-size: 18px;
           color: #31487A;
           letter-spacing: -0.3px;
+          white-space: nowrap;
         }
 
-        .sp-week-nav { display: flex; align-items: center; gap: 6px; }
+        .sp-week-nav { display: flex; align-items: center; gap: 4px; }
 
         .sp-nav-btn {
           background: #F4F4F8;
           border: 1px solid #E0E0E8;
           color: #31487A;
-          width: 30px; height: 30px;
+          width: 28px; height: 28px;
           border-radius: 8px;
           cursor: pointer;
-          font-size: 14px;
+          font-size: 13px;
           display: flex; align-items: center; justify-content: center;
           transition: all 0.15s;
+          flex-shrink: 0;
         }
         .sp-nav-btn:hover { background: #E8EDF5; }
 
         .sp-week-label {
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 600;
           color: #7B8DB0;
-          min-width: 140px;
+          min-width: 110px;
           text-align: center;
+          white-space: nowrap;
         }
 
-        .sp-header-actions { display: flex; align-items: center; gap: 8px; }
+        .sp-header-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
         .sp-btn {
           font-family: 'DM Sans', sans-serif;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 600;
-          padding: 7px 14px;
+          padding: 6px 10px;
           border-radius: 8px;
           cursor: pointer;
           border: 1px solid #E0E0E8;
@@ -987,8 +1019,9 @@ export default function StudyPlanner() {
 
         /* ── Sidebar ── */
         .sp-sidebar {
-          width: 260px;
-          flex-shrink: 0;
+          width: 240px;
+          min-width: 180px;
+          flex-shrink: 1;
           background: #fff;
           border-right: 1px solid #E0E0E8;
           display: flex;
@@ -1270,6 +1303,25 @@ export default function StudyPlanner() {
           display: flex;
           flex-direction: column;
           overflow: hidden;
+          min-width: 0;
+        }
+
+        .sp-calendar-scroll-wrapper {
+          flex: 1;
+          overflow-x: auto;
+          overflow-y: hidden;
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
+          min-height: 0;
+        }
+
+        .sp-calendar-inner {
+          min-width: 560px;
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          min-height: 0;
         }
 
         .sp-day-header-row {
@@ -1278,6 +1330,7 @@ export default function StudyPlanner() {
           border-bottom: 1px solid #E0E0E8;
           background: #fff;
           scrollbar-gutter: stable;
+          min-width: 560px;
         }
 
         .sp-gutter-spacer {
@@ -1288,6 +1341,7 @@ export default function StudyPlanner() {
 
         .sp-day-header {
           flex: 1;
+          min-width: 70px;
           padding: 10px 6px;
           text-align: center;
           border-right: 1px solid #E0E0E8;
@@ -1319,6 +1373,7 @@ export default function StudyPlanner() {
           flex: 1;
           overflow-y: scroll;
           overflow-x: hidden;
+          min-height: 0;
         }
         /* Gutter spacer in header must match time-gutter + scrollbar width */
         .sp-day-header-row {
@@ -1347,11 +1402,12 @@ export default function StudyPlanner() {
           user-select: none;
         }
 
-        .sp-days-grid { display: flex; flex: 1; }
+        .sp-days-grid { display: flex; flex: 1; min-width: 0; }
 
         /* ── Day Column ── */
         .sp-day-column {
           flex: 1;
+          min-width: 70px;
           position: relative;
           height: ${TOTAL_HOURS * HOUR_HEIGHT}px;
           border-right: 1px solid #E0E0E8;
@@ -1382,6 +1438,7 @@ export default function StudyPlanner() {
           z-index: 2;
         }
         .sp-study-block:hover { filter: brightness(0.95); }
+        .sp-study-block:hover .sp-block-actions { opacity: 1; }
 
         .sp-block-title {
           font-size: 11px;
@@ -1396,6 +1453,36 @@ export default function StudyPlanner() {
           color: #7B8DB0;
           margin-top: 2px;
         }
+
+        .sp-block-actions {
+          position: absolute;
+          top: 3px;
+          right: 3px;
+          display: flex;
+          gap: 2px;
+          opacity: 0;
+          transition: opacity 0.15s;
+        }
+
+        .sp-block-action-btn {
+          background: rgba(255,255,255,0.85);
+          border: 1px solid rgba(0,0,0,0.08);
+          border-radius: 4px;
+          width: 18px;
+          height: 18px;
+          font-size: 10px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #31487A;
+          padding: 0;
+          line-height: 1;
+          transition: background 0.1s;
+        }
+        .sp-block-action-btn:hover { background: #EEF2FB; }
+        .sp-block-action-btn.danger { color: #c0392b; }
+        .sp-block-action-btn.danger:hover { background: #fef0f0; }
 
         .sp-block-menu {
           position: absolute;
@@ -1607,7 +1694,7 @@ export default function StudyPlanner() {
                                     <button className="sp-btn sp-btn-outline" onClick={handleMarkPastDone} title="Mark all blocks that have already started as complete" style={{color:"#2d7a4a",borderColor:"#b7dfc4"}}>✓ Mark past done</button>
                                 )}
                                 {hasGenerated && (
-                                    <button className="sp-btn sp-btn-ghost" onClick={handleClearPlan} style={{color:"#c0392b",borderColor:"#f5c6c6"}}>✕ Clear Plan</button>
+                                    <button className="sp-btn sp-btn-ghost" onClick={() => setShowClearConfirm(true)} style={{color:"#c0392b",borderColor:"#f5c6c6"}}>✕ Clear Plan</button>
                                 )}
                                 {!hasGenerated && (
                                     <button className="sp-btn sp-btn-primary" onClick={() => setShowGenerateModal(true)}><Zap size={13} style={{verticalAlign:"middle",marginRight:4}}/>Generate</button>
@@ -1658,46 +1745,63 @@ export default function StudyPlanner() {
                     </div>
 
                     <div className="sp-calendar-area">
-                        <div className="sp-day-header-row">
-                            <div className="sp-gutter-spacer" />
-                            {weekDates.map((date, i) => (
-                                <div key={i} className={`sp-day-header ${isToday(date) ? "today" : ""}`}>
-                                    <div className="sp-day-name">{DAYS[i]}</div>
-                                    <div className="sp-day-number">{date.getDate()}</div>
+                        <div className="sp-calendar-scroll-wrapper">
+                            <div className="sp-calendar-inner">
+                                <div className="sp-day-header-row">
+                                    <div className="sp-gutter-spacer" />
+                                    {weekDates.map((date, i) => (
+                                        <div key={i} className={`sp-day-header ${isToday(date) ? "today" : ""}`}>
+                                            <div className="sp-day-name">{DAYS[i]}</div>
+                                            <div className="sp-day-number">{date.getDate()}</div>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
 
-                        <div className="sp-cal-body">
-                            <TimeGutter />
-                            <div className="sp-days-grid">
-                                {weekDates.map((date, i) => {
-                                    const dayKey = DAY_KEYS[i];
-                                    return (
-                                        <DayColumn
-                                            key={dayKey}
-                                            date={date}
-                                            dayKey={dayKey}
-                                            dayIndex={i}
-                                            blocks={weekBlocks[dayKey] || []}
-                                            colorMap={colorMap}
-                                            entries={entries}
-                                            availabilitySlots={(isAvailabilityMode || showSlotOverlay) ? (availability[dayKey] || []) : []}
-                                            onCompleteBlock={handleCompleteBlock}
-                                            onDeleteBlock={handleDeleteBlock}
-                                            onUncompleteBlock={handleUncompleteBlock}
-                                            onAddSlot={handleAddSlot}
-                                            onDeleteSlot={handleDeleteSlot}
-                                            onResizeSlot={handleResizeSlot}
-                                            isAvailabilityMode={isAvailabilityMode}
-                                            onEditBlock={setEditingBlock}
-                                        />
-                                    );
-                                })}
+                                <div className="sp-cal-body">
+                                    <TimeGutter />
+                                    <div className="sp-days-grid">
+                                        {weekDates.map((date, i) => {
+                                            const dayKey = DAY_KEYS[i];
+                                            return (
+                                                <DayColumn
+                                                    key={dayKey}
+                                                    date={date}
+                                                    dayKey={dayKey}
+                                                    dayIndex={i}
+                                                    blocks={weekBlocks[dayKey] || []}
+                                                    colorMap={colorMap}
+                                                    entries={entries}
+                                                    availabilitySlots={(isAvailabilityMode || showSlotOverlay) ? (availability[dayKey] || []) : []}
+                                                    onCompleteBlock={handleCompleteBlock}
+                                                    onDeleteBlock={handleDeleteBlock}
+                                                    onUncompleteBlock={handleUncompleteBlock}
+                                                    onAddSlot={handleAddSlot}
+                                                    onDeleteSlot={handleDeleteSlot}
+                                                    onResizeSlot={handleResizeSlot}
+                                                    isAvailabilityMode={isAvailabilityMode}
+                                                    onEditBlock={setEditingBlock}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                {showClearConfirm && (
+                    <div className="sp-modal-backdrop" onClick={() => setShowClearConfirm(false)}>
+                        <div className="sp-modal" onClick={e => e.stopPropagation()}>
+                            <h2>Clear Plan</h2>
+                            <p style={{color:"#555",fontSize:14,marginBottom:20}}>Are you sure you want to delete your entire study plan and all availability slots? This cannot be undone.</p>
+                            <div className="sp-modal-actions">
+                                <button className="sp-btn sp-btn-ghost" onClick={() => setShowClearConfirm(false)}>Cancel</button>
+                                <button className="sp-btn sp-btn-primary" style={{background:"#c0392b",borderColor:"#c0392b"}} onClick={() => { setShowClearConfirm(false); handleClearPlan(); }}>Yes, Delete</button>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {showGenerateModal && (
                     <div className="sp-modal-backdrop" onClick={() => setShowGenerateModal(false)}>
@@ -1727,6 +1831,11 @@ export default function StudyPlanner() {
                 {editingBlock && (
                     <EditBlockModal
                         block={editingBlock}
+                        entries={entries}
+                        dayBlocks={(() => {
+                            const entry = Object.entries(weekBlocks).find(([, blocks]) => blocks.some(b => b.id === editingBlock.id));
+                            return entry ? entry[1] : [];
+                        })()}
                         onClose={() => setEditingBlock(null)}
                         onSave={handleSaveEditedBlock}
                     />

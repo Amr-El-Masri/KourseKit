@@ -1,9 +1,9 @@
 package com.koursekit.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
@@ -40,8 +40,15 @@ public class StudyBlock{
     public Long getId() {
         return id;
     }
-    public Long getStudyPlanEntryId(){return studyPlanEntry.getId();}
 
+    // Safely expose entry ID without touching lazy proxy fields
+    @JsonProperty("studyPlanEntryId")
+    public Long getStudyPlanEntryId(){
+        if (studyPlanEntry == null) return null;
+        return studyPlanEntry.getId();
+    }
+
+    @JsonIgnore
     public StudyPlanEntry getStudyPlanEntry() {
         return studyPlanEntry;
     }
@@ -58,6 +65,7 @@ public class StudyBlock{
     public boolean isCompleted(){return completed;}
 
     @Transient
+    @JsonIgnore
     public String getCourse() {
         if (studyPlanEntry != null && studyPlanEntry.getTask() != null) {
             return studyPlanEntry.getTask().getCourse();
@@ -66,6 +74,7 @@ public class StudyBlock{
     }
 
     @Transient
+    @JsonIgnore
     public String getTaskTitle() {
         if (studyPlanEntry != null && studyPlanEntry.getTask() != null) {
             return studyPlanEntry.getTask().getTitle();
@@ -75,16 +84,8 @@ public class StudyBlock{
 
     //setters
     public void setStudyPlanEntry(StudyPlanEntry entry){this.studyPlanEntry= entry;}
-    public void setDay(LocalDate day) {
-        this.day = day;
-    }
-    public void setStartTime(LocalTime startTime) {
-        this.startTime = startTime;
-    }
-    public void setDuration(double duration) {
-        this.duration = duration;
-    }
-    public void setCompleted(boolean completed){ this.completed = completed;}
-
-
+    public void setDay(LocalDate day) {this.day = day;}
+    public void setStartTime(LocalTime startTime) {this.startTime = startTime;}
+    public void setDuration(double duration) {this.duration = duration;}
+    public void setCompleted(boolean completed){this.completed = completed;}
 }

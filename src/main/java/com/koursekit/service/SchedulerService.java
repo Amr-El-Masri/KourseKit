@@ -1,47 +1,43 @@
 package com.koursekit.service;
 import com.koursekit.model.*;
-import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
+
 @Service
 public class SchedulerService {
 
-    // Deletes everything and generates a new plan
     public SchedulerResult generatePlan(
             List<StudyPlanEntry> entries,
             SchedulerSettings settings,
             LocalDate startDate
     ) {
-        // Sort by deadline (Earliest Deadline First)
         List<StudyPlanEntry> sorted = entries.stream()
-                .sorted(Comparator.comparing(e -> e.getTask().getDeadline()))
+                .sorted(Comparator.comparingDouble(e -> {
+                    long daysLeft = ChronoUnit.DAYS.between(startDate, e.getTask().getDeadline().toLocalDate());
+                    double hoursLeft = Math.max(e.getEstimatedWorkload() - e.getCompletedHours(), 0.5);
+                    return daysLeft / hoursLeft;
+                }))
                 .toList();
 
-        // Track slot usage: "date_slotStart" → hours used
         Map<String, Double> slotLoad = new HashMap<>();
-
-        //Track subject hours per day: "date_taskTitle" → hours used
         Map<String, Double> subjectLoadPerDay = new HashMap<>();
-
         List<StudyBlock> allBlocks = new ArrayList<>();
         List<String> warnings = new ArrayList<>();
 
-        // Schedule each entry
         for (StudyPlanEntry entry : sorted) {
             ScheduleResult result = scheduleEntry(entry, settings, startDate, slotLoad, subjectLoadPerDay);
-            allBlocks.addAll(result.blocks);
-
-            // TODO: not sure about this
-            if (result.overloaded) {
+            allBlocks.addAll(result.blocks());
+            if (result.overloaded()) {
                 warnings.add(String.format(
                         "Task '%s' (deadline: %s) — %.1f hour(s) could not fit before deadline.",
                         entry.getTask().getTitle(),
                         entry.getTask().getDeadline(),
-                        result.unscheduledHours
+                        result.unscheduledHours()
                 ));
             }
         }
@@ -49,7 +45,6 @@ public class SchedulerService {
         return new SchedulerResult(allBlocks, warnings);
     }
 
-    // Keeps the completed blocks and rebalance the remaining and the new added ones
     public SchedulerResult rebalance(
             List<StudyPlanEntry> entries,
             SchedulerSettings settings,
@@ -59,55 +54,51 @@ public class SchedulerService {
         Map<String, Double> subjectLoadPerDay = new HashMap<>();
         List<StudyBlock> allBlocks = new ArrayList<>();
 
-        // Step 1: Lock completed blocks
         for (StudyPlanEntry entry : entries) {
             for (StudyBlock block : entry.getAssignedBlocks()) {
                 if (block.isCompleted()) {
-                    String slotKey = slotKey(block.getDay(), block.getStartTime());
-
-                    // if key exists combine old value with new value, else add new value
-                    slotLoad.merge(slotKey, block.getDuration(), Double::sum);
-
-                    // Also track completed hours for subject-per-day limit
-                    String subjectKey = subjectKey(block.getDay(), entry.getTask().getTitle());
-
-                    // if key exists combine old value with new value, else add new value
-                    subjectLoadPerDay.merge(subjectKey, block.getDuration(), Double::sum);
-
+                    DayOfWeek dow = block.getDay().getDayOfWeek();
+                    DaySchedule daySchedule = settings.getAvailability().get(dow);
+                    if (daySchedule != null) {
+                        for (TimeSlot slot : daySchedule.getSlots()) {
+                            if (!block.getStartTime().isBefore(slot.getStart())
+                                    && block.getStartTime().isBefore(slot.getEnd())) {
+                                slotLoad.merge(slotKey(block.getDay(), slot.getStart()), block.getDuration(), Double::sum);
+                                break;
+                            }
+                        }
+                    }
+                    subjectLoadPerDay.merge(subjectKey(block.getDay(), entry.getTask().getTitle()), block.getDuration(), Double::sum);
                     allBlocks.add(block);
                 }
             }
         }
 
-        // Step 2: Sort remaining work by deadline
         List<StudyPlanEntry> sorted = entries.stream()
                 .filter(e -> e.getEstimatedWorkload() - e.getCompletedHours() > 0)
-                .sorted(Comparator.comparing(e -> e.getTask().getDeadline()))
+                .sorted(Comparator.comparingDouble(e -> {
+                    long daysLeft = ChronoUnit.DAYS.between(startDate, e.getTask().getDeadline().toLocalDate());
+                    double hoursLeft = Math.max(e.getEstimatedWorkload() - e.getCompletedHours(), 0.5);
+                    return daysLeft / hoursLeft;
+                }))
                 .toList();
 
-        // Step 3: Reschedule remaining work
         List<String> warnings = new ArrayList<>();
         for (StudyPlanEntry entry : sorted) {
             ScheduleResult result = scheduleEntry(entry, settings, startDate, slotLoad, subjectLoadPerDay);
-            allBlocks.addAll(result.blocks);
-
-            //TODO: unsure about this
-            if (result.overloaded) {
+            allBlocks.addAll(result.blocks());
+            if (result.overloaded()) {
                 warnings.add(String.format(
                         "Task '%s' (deadline: %s) — %.1f hour(s) cannot fit after rebalance.",
                         entry.getTask().getTitle(),
                         entry.getTask().getDeadline(),
-                        result.unscheduledHours
+                        result.unscheduledHours()
                 ));
             }
         }
 
         return new SchedulerResult(allBlocks, warnings);
     }
-
-
-
-    //Schedules one entry by filling available time slots greedily.
 
     private ScheduleResult scheduleEntry(
             StudyPlanEntry entry,
@@ -122,28 +113,26 @@ public class SchedulerService {
             return new ScheduleResult(Collections.emptyList(), false, 0);
         }
 
-        // Apply deadline buffer
         LocalDate effectiveDeadline = LocalDate.from(entry.getTask().getDeadline()
                 .minusDays(settings.getDeadlineBufferDays()));
 
+        if (effectiveDeadline.isBefore(startDate)) {
+            effectiveDeadline = LocalDate.from(entry.getTask().getDeadline());
+        }
+
         List<LocalDate> availableDays = getAvailableDays(startDate, effectiveDeadline, settings);
         List<StudyBlock> blocks = new ArrayList<>();
-
         String taskTitle = entry.getTask().getTitle();
+        LocalTime now = LocalTime.now();
 
-        //walk days and slots chronologically
         for (LocalDate day : availableDays) {
             if (remaining <= 0.001) break;
 
-            // Check how much of this subject already scheduled today
             String daySubjectKey = subjectKey(day, taskTitle);
             double subjectHoursToday = subjectLoadPerDay.getOrDefault(daySubjectKey, 0.0);
             double subjectCapacityToday = settings.getMaxHoursPerSubjectPerDay() - subjectHoursToday;
 
-            if (subjectCapacityToday <= 0.001) {
-                // Already hit daily limit for this subject, skip to next day
-                continue;
-            }
+            if (subjectCapacityToday <= 0.001) continue;
 
             DayOfWeek dayOfWeek = day.getDayOfWeek();
             DaySchedule daySchedule = settings.getAvailability().get(dayOfWeek);
@@ -153,30 +142,28 @@ public class SchedulerService {
 
             for (TimeSlot slot : usableSlots) {
                 if (remaining <= 0.001) break;
-                if (subjectCapacityToday <= 0.001) break;  // Hit daily subject limit
+                if (subjectCapacityToday <= 0.001) break;
+
+                if (day.equals(startDate) && slot.getEnd().isBefore(now)) continue;
 
                 String key = slotKey(day, slot.getStart());
                 double slotUsed = slotLoad.getOrDefault(key, 0.0);
-                double slotCapacity = slot.getDurationHours() - slotUsed;
 
-                if (slotCapacity < settings.getMinimumSessionHours()) {
-                    continue;
+                if (day.equals(startDate) && slot.getStart().isBefore(now)) {
+                    long minutesPast = ChronoUnit.MINUTES.between(slot.getStart(), now);
+                    double hoursPast = Math.ceil((minutesPast / 60.0) * 2) / 2.0;
+                    slotUsed = Math.max(slotUsed, hoursPast);
                 }
 
-                //Don't exceed remaining hours
-                // Don't exceed available slot capacity
+                double slotCapacity = slot.getDurationHours() - slotUsed;
+
+                if (slotCapacity < settings.getMinimumSessionHours()) continue;
+
                 double assign = Math.min(remaining, slotCapacity);
-
-                //Don't exceed max session length
                 assign = Math.min(assign, settings.getMaximumSessionHours());
+                assign = Math.min(assign, subjectCapacityToday);
+                assign = Math.floor(assign * 2) / 2.0;
 
-                // Don't exceed daily subject limit
-                assign = Math.min(assign, subjectCapacityToday);  // NEW CONSTRAINT
-
-                // Round down to nearest whole hour
-                assign = Math.floor(assign);
-
-                // If below minimum, round up to minimum if slot has capacity and we need it
                 if (assign < settings.getMinimumSessionHours()) {
                     if (slotCapacity >= settings.getMinimumSessionHours()) {
                         assign = settings.getMinimumSessionHours();
@@ -185,10 +172,8 @@ public class SchedulerService {
                     }
                 }
 
-                // Calculate start time within slot
                 LocalTime blockStart = slot.getStart().plusMinutes((long) (slotUsed * 60));
 
-                // Create block
                 StudyBlock block = new StudyBlock();
                 block.setStudyPlanEntry(entry);
                 block.setDay(day);
@@ -198,13 +183,9 @@ public class SchedulerService {
 
                 blocks.add(block);
 
-                // Update slot usage
                 slotLoad.put(key, slotUsed + assign);
-
-                // NEW: Update subject usage for this day
                 subjectLoadPerDay.put(daySubjectKey, subjectHoursToday + assign);
                 subjectCapacityToday -= assign;
-
                 remaining -= assign;
             }
         }
@@ -213,17 +194,18 @@ public class SchedulerService {
         return new ScheduleResult(blocks, overloaded, overloaded ? remaining : 0);
     }
 
-    //  HELPERS
-
     private List<LocalDate> getAvailableDays(
             LocalDate startDate,
             LocalDate deadline,
             SchedulerSettings settings
     ) {
         List<LocalDate> days = new ArrayList<>();
-        LocalDate cursor = startDate;
 
-        while (!cursor.isAfter(deadline)) {
+        LocalDate weekEnd = startDate.with(DayOfWeek.SUNDAY);
+        LocalDate effectiveEnd = deadline.isBefore(weekEnd) ? deadline : weekEnd;
+
+        LocalDate cursor = startDate;
+        while (!cursor.isAfter(effectiveEnd)) {
             if (settings.getStudyDays().contains(cursor.getDayOfWeek())) {
                 days.add(cursor);
             }
@@ -237,12 +219,9 @@ public class SchedulerService {
         return date + "_" + slotStart;
     }
 
-
     private String subjectKey(LocalDate date, String taskTitle) {
         return date + "_" + taskTitle;
     }
 
-    //private inner class result
-    private record ScheduleResult(List<StudyBlock> blocks, boolean overloaded, double unscheduledHours) {
-    }
+    private record ScheduleResult(List<StudyBlock> blocks, boolean overloaded, double unscheduledHours) {}
 }
