@@ -59,12 +59,13 @@ public class GlobalExceptionHandle {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGeneric(Exception ex) {
+        ex.printStackTrace(); // Print full stack trace to backend console
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
                 .body(Map.of(
                         "timestamp", LocalDateTime.now(),
                         "status", 400,
-                        "error", "Bad request"
+                        "error", "Bad request: " + ex.getMessage() // Show real message
                 ));
     }
 }

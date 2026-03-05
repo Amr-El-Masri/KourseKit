@@ -106,7 +106,8 @@ public class StudyPlanController {
             remainingPerEntry.put(e.getId(), rem);
         }
 
-        SchedulerResult result = studyPlanService.rebalance(userId, settings);
+        studyPlanService.rebalance(userId, settings);
+        SchedulerResult result = new SchedulerResult(new ArrayList<>(), new ArrayList<>());
         return ResponseEntity.ok(buildPlanResponse(userId, result, entriesBefore, remainingPerEntry));
     }
 
