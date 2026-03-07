@@ -26,11 +26,25 @@ public class ScraperService {
             System.out.println(">>> Scraping Letter: " + alphabet + " (" + url + ")");
 
             try {
-                Document doc = Jsoup.connect(url)
-                        .userAgent("Mozilla/5.0")
-                        .timeout(60000) // timeout to handle slow responses, i put as 60 sec cz pages like "E" are large cz many courses start with E
-                        .maxBodySize(0)  // Unlimited size for large pages like 'E'
-                        .get();
+                Document doc = null;
+                int attempts = 0;
+                while (doc == null && attempts < 3) {
+                    try {
+                        attempts++;
+                        doc = Jsoup.connect(url)
+                                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+                                .timeout(120000)  // 2 minutes
+                                .maxBodySize(0)
+                                .get();
+                    } catch (java.net.SocketTimeoutException ex) {
+                        System.err.println("Timeout attempt " + attempts + " for letter " + alphabet + ". Retrying...");
+                        if (attempts >= 3) {
+                            System.err.println("Giving up on letter " + alphabet + " after 3 attempts.");
+                        }
+                        Thread.sleep(10000); // wait 3 seconds before retry
+                    }
+                }
+                if (doc == null) continue;
 
                 Elements rows = doc.select("table tr");
 
@@ -63,12 +77,72 @@ public class ScraperService {
                                 .orElseGet(() -> courseRepo.save(new Course(fullCode, title)));
 
                         // Save Section logic
+                        String creditHoursStr = cols.get(6).text().trim();
+                        String college        = cols.get(8).text().trim();
+                        String actualEnrolStr = cols.get(9).text().trim();
+                        String seatsAvailStr  = cols.get(10).text().trim();
+                        String beginTime1     = cols.get(11).text().trim();
+                        String endTime1       = cols.get(12).text().trim();
+                        String building1      = cols.get(13).text().trim();
+                        String room1          = cols.get(14).text().trim();
+
+                        // Days slot 1: columns 15-21 are individual day letters (M, T, W, R, F, S, U)
+                        // The scraper page uses individual td cells per day — collect non-empty ones
+                        String[] dayLabels1 = {"M","T","W","R","F","S","U"};
+                        StringBuilder days1Builder = new StringBuilder();
+                        for (int i = 0; i < 7; i++) {
+                            String d = cols.get(15 + i).text().trim();
+                            if (!d.isEmpty() && !d.equals(".")) {
+                                if (days1Builder.length() > 0) days1Builder.append(" ");
+                                days1Builder.append(d);
+                            }
+                        }
+                        String days1 = days1Builder.toString();
+
+                        String beginTime2 = cols.get(22).text().trim();
+                        String endTime2   = cols.get(23).text().trim();
+                        String building2  = cols.get(24).text().trim();
+                        String room2      = cols.get(25).text().trim();
+
+                        StringBuilder days2Builder = new StringBuilder();
+                        for (int i = 0; i < 7; i++) {
+                            String d = cols.get(26 + i).text().trim();
+                            if (!d.isEmpty() && !d.equals(".")) {
+                                if (days2Builder.length() > 0) days2Builder.append(" ");
+                                days2Builder.append(d);
+                            }
+                        }
+                        String days2 = days2Builder.toString();
+
+                        // Parse integers safely
+                        int creditHours = 0;
+                        int seatsAvail  = 0;
+                        int actualEnrol = 0;
+                        try { creditHours = Integer.parseInt(creditHoursStr); } catch (Exception ignored) {}
+                        try { seatsAvail  = Integer.parseInt(seatsAvailStr);  } catch (Exception ignored) {}
+                        try { actualEnrol = Integer.parseInt(actualEnrolStr); } catch (Exception ignored) {}
+
+                        // Save Section logic
                         if (!sectionRepo.existsByCrn(crn)) {
                             Section section = new Section();
                             section.setCrn(crn);
                             section.setSectionNumber(sectionNum);
                             section.setProfessorName(prof);
                             section.setCourse(course);
+                            section.setCreditHours(creditHours);
+                            section.setCollege(college);
+                            section.setSeatsAvailable(seatsAvail);
+                            section.setActualEnrolment(actualEnrol);
+                            section.setBeginTime1(beginTime1);
+                            section.setEndTime1(endTime1);
+                            section.setBuilding1(building1);
+                            section.setRoom1(room1);
+                            section.setDays1(days1);
+                            section.setBeginTime2(beginTime2);
+                            section.setEndTime2(endTime2);
+                            section.setBuilding2(building2);
+                            section.setRoom2(room2);
+                            section.setDays2(days2);
                             sectionRepo.save(section);
                             System.out.println("Imported: " + fullCode + " (" + sectionNum + ") - " + prof);
                         }
@@ -76,7 +150,7 @@ public class ScraperService {
                 }
 
                 // Short pause to be gentle on the AUB server, so my ip doesnt get flagged
-                Thread.sleep(500);
+                Thread.sleep(3000);
 
             }
             catch (java.net.SocketTimeoutException e) {

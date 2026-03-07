@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Pen, Search, Inbox, CheckCircle } from "lucide-react";
+import CourseDetails from "./CourseDetails";
 
 const API = "http://localhost:8080";
 
@@ -241,6 +242,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
 export default function Reviews() {
   const token = localStorage.getItem("kk_token");
   const userEmail = localStorage.getItem("kk_email");
+  const [detailsCourse, setDetailsCourse] = useState(null);
   const [tab, setTab] = useState("course");
   const [reviews,   setReviews]   = useState([]);
   const [loading,   setLoading]   = useState(false);
@@ -271,6 +273,9 @@ export default function Reviews() {
     ? [...displayed].sort((a,b) => b.rating - a.rating)
     : [...displayed].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+  if (detailsCourse) {
+    return <CourseDetails course={detailsCourse} onBack={() => setDetailsCourse(null)} />;
+  }
   return (
     <div style={{ padding:"28px 28px 60px", maxWidth:860, fontFamily:"'DM Sans',sans-serif" }}>
       <style>{`
@@ -309,9 +314,21 @@ export default function Reviews() {
       {activeCourse && (
         <>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, marginBottom:18 }}>
-            <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>
-              {activeCourse.courseCode} — {activeCourse.title}
-            </div>
+              <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+                <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>
+                  {activeCourse.courseCode} — {activeCourse.title}
+                </div>
+                <button
+                  onClick={() => setDetailsCourse(activeCourse)}
+                  style={{
+                    padding:"7px 16px", background:"#eef2fb", color:"#31487A",
+                    border:"1px solid #c5d4ef", borderRadius:10, fontSize:12,
+                    fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                  }}
+                >
+                  View Course Details
+                </button>
+              </div>
             <div style={{ display:"flex", gap:8 }}>
               <div style={{ display:"flex", gap:4, background:"#F4F4F8", padding:4, borderRadius:10 }}>
                 {[{id:"top",label:"Top"},{id:"new",label:"New"}].map(s => (
