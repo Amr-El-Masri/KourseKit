@@ -29,7 +29,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/verify", "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
                 .requestMatchers("/*.html", "/css/**", "/js/**", "/images/**").permitAll() // static files no token need
-                .requestMatchers("/api/courses/search", "/api/courses/*/sections", "/api/courses/professors").permitAll()
+                .requestMatchers("/api/courses/search", "/api/courses/*/sections", "/api/courses/professors", "/api/courses/*").permitAll()
                 .requestMatchers("/api/reviews/course/**", "/api/reviews/section/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN") // admin only
                 .requestMatchers(HttpMethod.GET, "/api/professor-reviews").permitAll()
