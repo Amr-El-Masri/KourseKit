@@ -279,6 +279,18 @@ const deleteTodo = id => {
 };
 
 const [tasks, setTasks] = useState([]);
+const [courseColors, setCourseColors] = useState(() => {
+  try {
+    const saved = localStorage.getItem("kk_course_colors");
+    return saved ? JSON.parse(saved) : {};
+  } catch { return {}; }
+});
+
+const saveCourseColor = (courseName, color) => {
+  const next = { ...courseColors, [courseName]: color };
+  setCourseColors(next);
+  localStorage.setItem("kk_course_colors", JSON.stringify(next));
+};
 
 const loadTasksForCalendar = useCallback(() => {
   const token = localStorage.getItem("kk_token");
@@ -453,12 +465,20 @@ const calKey = (d) => {
                 {semCourseList.length === 0
                   ? <div style={{fontSize:13,color:"#B8A9C9",marginTop:16,textAlign:"center",padding:"20px 0"}}>No courses registered for this semester yet.</div>
                   : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
-                      {semCourseList.map(c => (
-                        <div key={c.id} className="course-card" style={s.courseCard}>
-                          <div style={{fontWeight:700,fontSize:15,color:"#31487A"}}>{c.name}</div>
-                        </div>
-                      ))}
+                  {semCourseList.map(c => (
+                    <div key={c.id} className="course-card" style={{
+                    ...s.courseCard,borderLeft: `4px solid ${courseColors[c.name] || "#A59AC9"}`}}>
+                    <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+                    <div style={{fontWeight:700, fontSize:15, color:"#31487A"}}>{c.name}</div>
+                    <input type="color" value={courseColors[c.name] || "#A59AC9"}
+                    onChange={e => saveCourseColor(c.name, e.target.value)}
+                    style={{
+                    width:24, height:24, borderRadius:"50%", border:"none",
+                    cursor:"pointer", padding:0, background:"none"}}
+                    title={`Pick color for ${c.name}`}/>
                     </div>
+                  </div> ))}
+                </div>
                 }
               </section>
             )}
@@ -552,17 +572,7 @@ const calKey = (d) => {
 
               {/* colored task lines */}
               {dayTasks.map((t, ti) => {
-                const getCourseColor = (course) => {
-                const palette = [
-                    "#31487A", "#7B5EA7", "#2d7a4a", "#b7680a",
-                    "#6b2d7a", "#1a7a8a", "#8a3a1a", "#4a7a2d",
-                    "#2d4a8a", "#8a1a4a"];
-                let hash = 0;
-                for (let i = 0; i < course.length; i++) {
-                hash = course.charCodeAt(i) + ((hash << 5) - hash);}
-                return palette[Math.abs(hash) % palette.length]; };
-
-              const color = t.done ? "#27ae60": new Date(t.due) < new Date() ? "#c0392b": getCourseColor(t.course);
+                const color = t.done ? "#27ae60": new Date(t.due) < new Date() ? "#c0392b": courseColors[t.course] || "#A59AC9";
                 return (
                   <div
                     key={ti}
