@@ -33,8 +33,6 @@ const ALL_WIDGETS = [
   { id:"pomodoro",  label:"Pomodoro Timer",    span:1 },
   { id:"calendar",  label:"Calendar",          span:1 },
   { id:"schedule",  label:"Weekly Schedule",   span:1 },
-  { id:"profrev",   label:"Professor Reviews", span:2 },
-  { id:"courserev", label:"Course Reviews",    span:2 },
 ];
 
 
@@ -312,6 +310,50 @@ useEffect(() => {
   if (activePage === "dashboard") loadTasksForCalendar();
 }, [activePage]);
 
+const [studyBlocks, setStudyBlocks] = useState({});
+const [studySlots, setStudySlots] = useState({});
+const [studyEntries, setStudyEntries] = useState([]);
+
+const loadStudyBlocks = useCallback(() => {
+  const token = localStorage.getItem("kk_token");
+  const userId = token ? JSON.parse(atob(token.split(".")[1])).sub : null;
+  if (!userId) return;
+  const monday = new Date();
+  const diff = monday.getDay() === 0 ? -6 : 1 - monday.getDay();
+  monday.setDate(monday.getDate() + diff);
+  const weekStart = monday.toISOString().split("T")[0];
+
+  fetch(`http://localhost:8080/api/study-plan/${userId}/weekly?weekStart=${weekStart}`, {
+    headers: { "Authorization": `Bearer ${token}` }
+  }).then(r => r.json()).then(data => { if (data) setStudyBlocks(data); }).catch(() => {});
+
+  fetch(`http://localhost:8080/api/study-plan/${userId}/slots`, {
+    headers: { "Authorization": `Bearer ${token}` }
+  }).then(r => r.json()).then(data => {
+    if (Array.isArray(data)) {
+      const map = {};
+      data.forEach(s => {
+        if (!map[s.dayKey]) map[s.dayKey] = [];
+        map[s.dayKey].push(s);
+      });
+      setStudySlots(map);
+    }
+  }).catch(() => {});
+
+  fetch(`http://localhost:8080/api/study-plan/${userId}/entries`, {
+  headers: { "Authorization": `Bearer ${token}` }
+}).then(r => r.json()).then(data => {
+  if (Array.isArray(data)) setStudyEntries(data);
+}).catch(() => {});
+}, []);
+
+useEffect(() => {
+  if (activePage === "dashboard") {
+    loadTasksForCalendar();
+    loadStudyBlocks();
+  }
+}, [activePage]);
+
 const saveTasks = (next) => {
   setTasks(next);
   localStorage.setItem("kk_tasks", JSON.stringify(next));
@@ -389,6 +431,7 @@ const calKey = (d) => {
         .add-btn { transition:background .15s; }
         .cal-day:hover { background:#D9E1F1 !important; border-radius:6px; }
         .toggle-opt:hover { background:#F0EEF7; }
+        label:has(input[type="color"]):hover { transform: scale(1.2); box-shadow: 0 3px 10px rgba(0,0,0,0.2) !important; }
       `}</style>
 
       <aside style={{ ...s.sidebar, width:sidebarOpen ? 224 : 66 }}>
@@ -437,11 +480,6 @@ const calKey = (d) => {
             <SemesterSelect value={semester} onChange={setSemester} semesters={apiSemesters.map(s => s.semesterName)} />
           )}
 
-          <div style={s.searchWrap}>
-            <span style={{color:"#B8A9C9",marginRight:8}}></span>
-            <input placeholder="Search…" style={s.searchInput} />
-          </div>
-
           {/* widget toggle */}
           {activePage === "dashboard" && (
             <div ref={toggleRef} style={{position:"relative"}}>
@@ -467,15 +505,25 @@ const calKey = (d) => {
                   : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
                   {semCourseList.map(c => (
                     <div key={c.id} className="course-card" style={{
-                    ...s.courseCard,borderLeft: `4px solid ${courseColors[c.name] || "#A59AC9"}`}}>
+                    ...s.courseCard,border: `2px solid ${courseColors[c.name] || "#A59AC9"}`}}>
                     <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
                     <div style={{fontWeight:700, fontSize:15, color:"#31487A"}}>{c.name}</div>
-                    <input type="color" value={courseColors[c.name] || "#A59AC9"}
+                    <label style={{
+                      width:20, height:20, borderRadius:"50%",
+                      background: courseColors[c.name] || "#A59AC9",
+                      cursor:"pointer", flexShrink:0,
+                      boxShadow:"0 1px 4px rgba(0,0,0,0.15)",
+                      border:"2px solid white",
+                      display:"inline-block",
+                      transition:"transform .15s, box-shadow .15s ease",
+                    }}>
+                  <input
+                    type="color"
+                    value={courseColors[c.name] || "#A59AC9"}
                     onChange={e => saveCourseColor(c.name, e.target.value)}
-                    style={{
-                    width:24, height:24, borderRadius:"50%", border:"none",
-                    cursor:"pointer", padding:0, background:"none"}}
-                    title={`Pick color for ${c.name}`}/>
+                    style={{ opacity:0, width:0, height:0, position:"absolute" }}
+                  />
+                </label>
                     </div>
                   </div> ))}
                 </div>
@@ -562,7 +610,7 @@ const calKey = (d) => {
             }}>
               {/* day number */}
               <div style={{
-                height:28, display:"flex", alignItems:"center", justifyContent:"center",
+                minHeight:28, display:"flex", alignItems:"center", justifyContent:"center",
                 fontSize:12, width:"100%",
                 color:isToday(d)?"#fff":d?"#2a2050":"transparent",
                 fontWeight:isToday(d)?700:400,
@@ -642,59 +690,101 @@ const calKey = (d) => {
     )}
   </section>
 )}
-            {visible.schedule && (
-              <section className="card-anim" style={s.card}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-                  <SectionTitle>Weekly Schedule</SectionTitle>
-                  <button onClick={()=>setShowAddEvent(o=>!o)} style={sd.smallAddBtn}>{showAddEvent?"✕ Cancel":"+ Add Event"}</button>
-                </div>
-                {showAddEvent && (
-                  <div style={sd.addEventForm}>
-                    <select value={newEvent.day} onChange={e=>setNewEvent(p=>({...p,day:e.target.value}))} style={sd.miniSelect}>
-                      {DAYS_OF_WEEK.map(d=><option key={d}>{d}</option>)}
-                    </select>
-                    <input placeholder="Label" value={newEvent.label} onChange={e=>setNewEvent(p=>({...p,label:e.target.value}))} style={{...sd.miniInput,flex:2}}/>
-                    <input placeholder="Time (e.g. 9:00–10:00)" value={newEvent.time} onChange={e=>setNewEvent(p=>({...p,time:e.target.value}))} style={{...sd.miniInput,flex:2}}/>
-                    <select value={newEvent.type} onChange={e=>setNewEvent(p=>({...p,type:e.target.value}))} style={sd.miniSelect}>
-                      {EVENT_TYPES.map(t=><option key={t.label}>{t.label}</option>)}
-                    </select>
-                    <button onClick={addEvent} style={sd.miniSaveBtn}>Save</button>
-                  </div>
-                )}
-                <div style={{maxHeight:240,overflowY:"auto",display:"flex",flexDirection:"column",gap:8}}>
-                  {DAYS_OF_WEEK.map(day => {
-                    const evts = scheduleEvents.filter(e=>e.day===day);
-                    if (!evts.length) return null;
-                    return (
-                      <div key={day}>
-                        <div style={{fontSize:11,fontWeight:700,color:"#8FB3E2",marginBottom:4,textTransform:"uppercase",letterSpacing:"0.06em"}}>{day}</div>
-                        {evts.map(ev => {
-                          const tc = EVENT_TYPES.find(t=>t.label===ev.type)||EVENT_TYPES[4];
-                          return (
-                            <div key={ev.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 10px",borderRadius:8,marginBottom:4,background:tc.bg,borderLeft:`3px solid ${tc.color}`}}>
-                              <div>
-                                <span style={{fontSize:13,fontWeight:600,color:tc.color}}>{ev.label}</span>
-                                {ev.time && <span style={{fontSize:11,color:"#B8A9C9",marginLeft:8}}>{ev.time}</span>}
-                              </div>
-                              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                                <span style={{fontSize:10,background:tc.color+"22",color:tc.color,padding:"2px 6px",borderRadius:4}}>{ev.type}</span>
-                                <button onClick={()=>deleteEvent(ev.id)} style={{background:"none",border:"none",color:"#ccc",cursor:"pointer",fontSize:11}}>✕</button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
-                  {scheduleEvents.length===0 && <div style={{fontSize:13,color:"#B8A9C9",textAlign:"center",padding:"16px 0"}}>No events yet!</div>}
-                </div>
-              </section>
-            )}
 
+{visible.schedule && (
+  <section className="card-anim" style={s.card}>
+    <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14}}>
+      <SectionTitle>Weekly Schedule</SectionTitle>
+      <button onClick={() => setActivePage("planner")} style={sd.smallAddBtn}>
+        Open Planner →
+      </button>
+    </div>
+
+    <div style={{display:"flex", flexDirection:"column", gap:6, maxHeight:240, overflowY:"auto"}}>
+      {(() => {
+        const DAY_KEYS = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"];
+        const DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+        const hasBlocks = DAY_KEYS.some(k => (studyBlocks[k]||[]).length > 0);
+        const hasSlots  = DAY_KEYS.some(k => (studySlots[k]||[]).length > 0);
+
+        if (!hasBlocks && !hasSlots) return (
+          <div style={{fontSize:13, color:"#B8A9C9", textAlign:"center", padding:"20px 0"}}>
+            No schedule yet — open the planner to get started!
           </div>
-        )}
+        );
 
-      
+        const fmt = timeStr => {
+          if (!timeStr) return "";
+          const parts = Array.isArray(timeStr) ? timeStr : timeStr.split(":");
+          const h = String(parts[0]).padStart(2,"0");
+          const m = String(parts[1]||0).padStart(2,"0");
+          return `${h}:${m}`;
+        };
+
+        return DAY_KEYS.map((key, i) => {
+          const blocks = studyBlocks[key] || [];
+          const slots  = studySlots[key]  || [];
+          if (!blocks.length && !slots.length) return null;
+
+          return (
+            <div key={key}>
+              <div style={{fontSize:11, fontWeight:700, color:"#8FB3E2", marginBottom:4, textTransform:"uppercase", letterSpacing:"0.06em"}}>
+                {DAY_LABELS[i]}
+              </div>
+
+              {/* Study blocks if generated */}
+              {blocks.map((b, bi) => {
+                const startH = Array.isArray(b.startTime)
+                  ? b.startTime[0] + b.startTime[1]/60
+                  : parseFloat(b.startTime?.split(":")[0]) + parseFloat(b.startTime?.split(":")[1]||0)/60;
+                const endH = startH + (b.duration || 1);
+                const fmtH = h => `${String(Math.floor(h)).padStart(2,"0")}:${String(Math.round((h%1)*60)).padStart(2,"0")}`;
+                return (
+                  <div key={bi} style={{
+                    display:"flex", alignItems:"center", justifyContent:"space-between",
+                    padding:"6px 10px", borderRadius:8, marginBottom:4,
+                    background: b.completed ? "#f5f5f5" : "#F0EEF7",
+                    borderLeft: `3px solid ${b.completed ? "#ccc" : "#7B5EA7"}`,
+                    opacity: b.completed ? 0.6 : 1,
+                  }}>
+                    <div>
+                      <span style={{fontSize:13, fontWeight:600, color: b.completed ? "#aaa" : "#5A3B7B"}}>
+                        {b.entryName || "Study Block"}
+                      </span>
+                      <span style={{fontSize:11, color:"#B8A9C9", marginLeft:8}}>
+                        {fmtH(startH)} – {fmtH(endH)}
+                      </span>
+                    </div>
+                    {b.completed && <span style={{fontSize:10, background:"#eef7f0", color:"#2d7a4a", padding:"2px 6px", borderRadius:4, fontWeight:600}}>✓ Done</span>}
+                  </div>
+                );
+              })}
+
+            {/* Availability slots as fallback */}
+            {!blocks.length && slots.map((slot, si) => (
+            <div key={si} style={{
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            padding:"6px 10px", borderRadius:8, marginBottom:4,
+            background:"#eef2fb", borderLeft:"3px solid #8FB3E2",
+          }}>
+            <div>
+                <span style={{fontSize:13, fontWeight:600, color:"#31487A"}}>
+                  {fmt(slot.startTime)} – {fmt(slot.endTime)} </span>
+                <div style={{fontSize:11, color:"#A59AC9", marginTop:2}}>
+                  {studyEntries.map(e => e.task?.title).filter(Boolean).join(" · ") || "Free to study"}
+                  </div>
+                </div>
+              <span style={{fontSize:10, background:"#D9E1F1", color:"#31487A", padding:"2px 6px", borderRadius:4}}>Available</span>
+              </div> ))}
+              </div>
+              );
+            });
+          })()}
+        </div>
+      </section>
+      )}
+  </div>
+)}
         {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} />}
         {activePage === "tasks" && (<TaskManager tasks={tasks}onToggle={toggleTask} onDelete={deleteTask} onSave={upsertTask}/>)}
         {activePage === "reviews" && <Reviews />}
@@ -720,8 +810,6 @@ const s = {
   main:         { flex:1, overflowY:"auto", minHeight:"100vh" },
   topbar:       { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", background:"rgba(244,244,248,0.95)", backdropFilter:"blur(10px)", position:"sticky", top:0, zIndex:50, borderBottom:"1px solid #D4D4DC", gap:14, flexWrap:"wrap" },
   greeting:     { fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:20, color:"#31487A" },
-  searchWrap:   { flex:1, maxWidth:240, display:"flex", alignItems:"center", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px" },
-  searchInput:  { border:"none", outline:"none", background:"transparent", fontSize:13, color:"#333", width:"100%", fontFamily:"'DM Sans',sans-serif" },
   bell:         { width:38, height:38, borderRadius:10, background:"#ffffff", border:"1px solid #D4D4DC", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:16 },
   grid:         { display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:20, padding:"24px 28px 40px" },
   card:         { background:"#ffffff", borderRadius:18, padding:"20px 22px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid #D4D4DC" },
