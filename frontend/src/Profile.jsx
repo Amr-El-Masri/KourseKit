@@ -37,15 +37,52 @@ const FACULTIES = [
   "Education",
 ];
 
-const MAJORS_BY_FACULTY = {
-  "Arts & Sciences":            ["Computer Science","Mathematics","Physics","Chemistry","Biology","Psychology","Philosophy","Political Science","Economics","English","Arabic","Sociology","Statistics","Geology"],
-  "Engineering & Architecture": ["Computer & Communications Engineering","Electrical & Computer Engineering","Civil Engineering","Mechanical Engineering","Chemical Engineering","Architecture","Landscape Architecture"],
-  "Business":                   ["Business Administration","Accounting","Finance","Marketing","Management","Entrepreneurship"],
-  "Health Sciences":            ["Nutrition","Environmental Health","Health Management"],
-  "Medicine":                   ["Medicine (MD)"],
-  "Nursing":                    ["Nursing"],
-  "Education":                  ["Education","Early Childhood Education"],
-};
+const MAJORS = [
+  "Agri-Business",
+  "Agri-culture",
+  "Applied Mathematics",
+  "Arabic Language and Literature",
+  "Archaeology",
+  "Architecture",
+  "Art History",
+  "Biology",
+  "Business Administration",
+  "Chemical Engineering",
+  "Chemistry",
+  "Civil and Environmental Engineering",
+  "Computer and Communications Engineering",
+  "Computer Science",
+  "Construction Engineering",
+  "Earth Sciences",
+  "Economics",
+  "Electrical and Computer Engineering",
+  "Elementary Education",
+  "English Language",
+  "English Literature",
+  "Environmental Health",
+  "Food Sciences and Management",
+  "Graphic Design",
+  "Health Communication",
+  "History",
+  "Industrial Engineering",
+  "Landscape Architecture",
+  "Mathematics",
+  "Mechanical Engineering",
+  "Media and Communication",
+  "Medical Imaging Sciences",
+  "Medical Laboratory Sciences",
+  "Nursing",
+  "Nutrition and Dietetics",
+  "Nutrition and Dietetics Coordinated Program",
+  "Philosophy",
+  "Physics",
+  "Political Studies",
+  "Psychology",
+  "Public Administration",
+  "Sociology-Anthropology",
+  "Statistics",
+  "Studio Arts",
+];
 
 const STUDENT_STATUSES = [
   { id:"freshman",  label:"Freshman",  desc:"1st year" },
@@ -73,8 +110,6 @@ const DEFAULT_PROFILE = {
   doubleMajor:   false,
   secondMajor:   "",
   secondFaculty: "Arts & Sciences",
-  minor:         false,
-  minorName:     "",
 };
 
 function loadProfile(email) {
@@ -281,7 +316,6 @@ export default function Profile({ onProfileSave, onLogout }) {
 
   const set = (k, v) => setDraft(p => {
     const updated = { ...p, [k]: v };
-    if (k === "faculty") updated.major = MAJORS_BY_FACULTY[v]?.[0] || "";
     return updated;
   });
 
@@ -415,7 +449,6 @@ export default function Profile({ onProfileSave, onLogout }) {
             <StatChip label="Status"         value={`${st.label} · ${st.desc}`} color="#7B5EA7" bg="#F0EEF7" />
             <StatChip label="Major" value={profile.major || "—"} color="#31487A" bg="#eef2fb" />
             {profile.doubleMajor && profile.secondMajor && <StatChip label="Second Major" value={profile.secondMajor} color="#5A3B7B" bg="#F0EEF7" />}
-            {profile.minor && profile.minorName && <StatChip label="Minor" value={profile.minorName} color="#2d7a4a" bg="#eef7f0" />}
             <StatChip label="Cumulative GPA" value={profile.cumGPA || "—"}      color={gpaColor(profile.cumGPA)} bg="#F4F4F8" />
             {profile.totalCredits && <StatChip label="Credits" value={`${profile.totalCredits} cr`} color="#5A3B7B" bg="#F0EEF7" />}
           </div>
@@ -444,7 +477,7 @@ export default function Profile({ onProfileSave, onLogout }) {
                 <div style={{ flex:1, minWidth:200 }}>
                   <label style={pf.label}>Major</label>
                   <select className="pf-input" value={draft.major} onChange={e => set("major", e.target.value)} style={{ ...pf.input, cursor:"pointer" }}>
-                    {(MAJORS_BY_FACULTY[draft.faculty] || []).map(m => <option key={m}>{m}</option>)}
+                    {MAJORS.map(m => <option key={m}>{m}</option>)}
                   </select>
                 </div>
               </div>
@@ -475,36 +508,13 @@ export default function Profile({ onProfileSave, onLogout }) {
                     <div style={{ flex:1, minWidth:200 }}>
                       <label style={pf.label}>Second Major</label>
                       <select className="pf-input" value={draft.secondMajor} onChange={e => set("secondMajor", e.target.value)} style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
-                        {(MAJORS_BY_FACULTY[draft.secondFaculty] || []).map(m => <option key={m}>{m}</option>)}
+                        {MAJORS.map(m => <option key={m}>{m}</option>)}
                       </select>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* if the student was completing a minor */}
-              <div style={{ marginBottom:16 }}>
-                <label style={{ ...pf.label, marginBottom:10 }}>Doing a Minor?</label>
-                <div style={{ display:"flex", gap:8, marginBottom: draft.minor ? 12 : 0 }}>
-                  {[{val:true,label:"Yes"},{val:false,label:"No"}].map(opt => (
-                    <button key={String(opt.val)} onClick={() => set("minor", opt.val)} style={{
-                      padding:"7px 18px", borderRadius:10, border:"1px solid", cursor:"pointer",
-                      fontFamily:"'DM Sans',sans-serif", fontSize:13, transition:"all .15s",
-                      borderColor: draft.minor === opt.val ? "#2d7a4a" : "#D4D4DC",
-                      background:  draft.minor === opt.val ? "#2d7a4a" : "#F7F5FB",
-                      color:       draft.minor === opt.val ? "#fff"    : "#5A3B7B",
-                      fontWeight:  draft.minor === opt.val ? 600 : 400,
-                    }}>{opt.label}</button>
-                  ))}
-                </div>
-                {draft.minor && (
-                  <div>
-                    <label style={pf.label}>Minor Name</label>
-                    <input className="pf-input" value={draft.minorName} onChange={e => set("minorName", e.target.value)}
-                      placeholder="e.g. Mathematics" style={{ ...pf.input, marginBottom:0 }} />
-                  </div>
-                )}
-              </div>
 
               <label style={pf.label}>Academic Status</label>
               <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:16 }}>
