@@ -70,6 +70,11 @@ const DEFAULT_PROFILE = {
   totalCredits: "",
   bio:          "",
   avatar:       null,
+  doubleMajor:   false,
+  secondMajor:   "",
+  secondFaculty: "Arts & Sciences",
+  minor:         false,
+  minorName:     "",
 };
 
 function loadProfile(email) {
@@ -408,7 +413,9 @@ export default function Profile({ onProfileSave, onLogout }) {
 
           <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom: editing ? 24 : 0 }}>
             <StatChip label="Status"         value={`${st.label} · ${st.desc}`} color="#7B5EA7" bg="#F0EEF7" />
-            <StatChip label="Major"          value={profile.major || "—"}        color="#31487A" bg="#eef2fb" />
+            <StatChip label="Major" value={profile.major || "—"} color="#31487A" bg="#eef2fb" />
+            {profile.doubleMajor && profile.secondMajor && <StatChip label="Second Major" value={profile.secondMajor} color="#5A3B7B" bg="#F0EEF7" />}
+            {profile.minor && profile.minorName && <StatChip label="Minor" value={profile.minorName} color="#2d7a4a" bg="#eef7f0" />}
             <StatChip label="Cumulative GPA" value={profile.cumGPA || "—"}      color={gpaColor(profile.cumGPA)} bg="#F4F4F8" />
             {profile.totalCredits && <StatChip label="Credits" value={`${profile.totalCredits} cr`} color="#5A3B7B" bg="#F0EEF7" />}
           </div>
@@ -440,6 +447,63 @@ export default function Profile({ onProfileSave, onLogout }) {
                     {(MAJORS_BY_FACULTY[draft.faculty] || []).map(m => <option key={m}>{m}</option>)}
                   </select>
                 </div>
+              </div>
+
+              {/* if the student has a double major */}
+              <div style={{ marginBottom:14 }}>
+                <label style={{ ...pf.label, marginBottom:10 }}>Double Major?</label>
+                <div style={{ display:"flex", gap:8, marginBottom: draft.doubleMajor ? 12 : 0 }}>
+                  {[{val:true,label:"Yes"},{val:false,label:"No"}].map(opt => (
+                    <button key={String(opt.val)} onClick={() => set("doubleMajor", opt.val)} style={{
+                      padding:"7px 18px", borderRadius:10, border:"1px solid", cursor:"pointer",
+                      fontFamily:"'DM Sans',sans-serif", fontSize:13, transition:"all .15s",
+                      borderColor: draft.doubleMajor === opt.val ? "#7B5EA7" : "#D4D4DC",
+                      background:  draft.doubleMajor === opt.val ? "#7B5EA7" : "#F7F5FB",
+                      color:       draft.doubleMajor === opt.val ? "#fff"    : "#5A3B7B",
+                      fontWeight:  draft.doubleMajor === opt.val ? 600 : 400,
+                    }}>{opt.label}</button>
+                  ))}
+                </div>
+                {draft.doubleMajor && (
+                  <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                    <div style={{ flex:1, minWidth:200 }}>
+                      <label style={pf.label}>Second Faculty</label>
+                      <select className="pf-input" value={draft.secondFaculty} onChange={e => set("secondFaculty", e.target.value)} style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
+                        {FACULTIES.map(f => <option key={f}>{f}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ flex:1, minWidth:200 }}>
+                      <label style={pf.label}>Second Major</label>
+                      <select className="pf-input" value={draft.secondMajor} onChange={e => set("secondMajor", e.target.value)} style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
+                        {(MAJORS_BY_FACULTY[draft.secondFaculty] || []).map(m => <option key={m}>{m}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* if the student was completing a minor */}
+              <div style={{ marginBottom:16 }}>
+                <label style={{ ...pf.label, marginBottom:10 }}>Doing a Minor?</label>
+                <div style={{ display:"flex", gap:8, marginBottom: draft.minor ? 12 : 0 }}>
+                  {[{val:true,label:"Yes"},{val:false,label:"No"}].map(opt => (
+                    <button key={String(opt.val)} onClick={() => set("minor", opt.val)} style={{
+                      padding:"7px 18px", borderRadius:10, border:"1px solid", cursor:"pointer",
+                      fontFamily:"'DM Sans',sans-serif", fontSize:13, transition:"all .15s",
+                      borderColor: draft.minor === opt.val ? "#2d7a4a" : "#D4D4DC",
+                      background:  draft.minor === opt.val ? "#2d7a4a" : "#F7F5FB",
+                      color:       draft.minor === opt.val ? "#fff"    : "#5A3B7B",
+                      fontWeight:  draft.minor === opt.val ? 600 : 400,
+                    }}>{opt.label}</button>
+                  ))}
+                </div>
+                {draft.minor && (
+                  <div>
+                    <label style={pf.label}>Minor Name</label>
+                    <input className="pf-input" value={draft.minorName} onChange={e => set("minorName", e.target.value)}
+                      placeholder="e.g. Mathematics" style={{ ...pf.input, marginBottom:0 }} />
+                  </div>
+                )}
               </div>
 
               <label style={pf.label}>Academic Status</label>
