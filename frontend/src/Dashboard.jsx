@@ -205,8 +205,10 @@ export default function Dashboard({ onLogout }) {
     ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim()
     : "Student";
 
-  const [activePage,     setActivePage]    = useState("dashboard");
+  const [activePage, setActivePage] = useState(() => localStorage.getItem("kk_activePage") || "dashboard");
   const [sidebarOpen,    setSidebarOpen]   = useState(true);
+  useEffect(() => {
+    localStorage.setItem("kk_activePage", activePage); }, [activePage]);
   const [semester,       setSemester]      = useState("");
   const [apiSemesters,   setApiSemesters]  = useState([]);
   const [showToggle,    setShowToggle]    = useState(false);
@@ -490,7 +492,17 @@ const calKey = (d) => {
             </div>
           )}
 
+          <div style={{display:"flex", alignItems:"center", gap:8}}>
+          <button
+            onClick={() => window.location.reload()}
+            title="Refresh"
+            style={{...s.bell, fontSize:16, cursor:"pointer", border:"1px solid #D4D4DC", background:"#ffffff"}}
+          >
+            ↺
+          </button>
           <div style={s.bell}><Bell size={18} color="#8FB3E2" /></div>
+        </div>
+
           
         </header>
 
