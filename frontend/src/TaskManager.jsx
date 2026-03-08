@@ -32,7 +32,7 @@ const PRIORITIES = [
   { id:"medium", label:"Medium", color:"#b7680a", bg:"#fef9ee", dot:"#f39c12" },
   { id:"low",    label:"Low",    color:"#2d7a4a", bg:"#eef7f0", dot:"#27ae60" },
 ];
-const TYPES   = ["Assignment","Project","Quiz","Exam","Lab","Reading","Other"];
+const TYPES   = ["Assignment","Project","Quiz","Exam","Lab","Reading","Presentation","Other"];
 const FILTERS = ["All","Pending","Done","Overdue"];
 
 const priority  = id => PRIORITIES.find(p => p.id === id) || PRIORITIES[1];
@@ -50,7 +50,7 @@ const daysLeft  = iso => {
   return Math.round((due - today) / 86400000);
 };
 
-const EMPTY = { course:"", type:"Assignment", title:"", due:"", notes:"" };
+const EMPTY = { course:"", type:"Assignment", customType:"", title:"", due:"", notes:"" };
 
 function PriorityDot({ id }) {
   const p = priority(id);
@@ -168,6 +168,10 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
             <select value={form.type} onChange={e=>set("type",e.target.value)} style={{ ...tm.input, cursor:"pointer" }}>
               {TYPES.map(t => <option key={t}>{t}</option>)}
             </select>
+            {form.type === "Other" && (
+              <input value={form.customType||""} onChange={e=>set("customType",e.target.value)}
+                placeholder="Specify (optional)" style={{ ...tm.input, marginTop:6, fontSize:12 }} className="tm-input" />
+            )}
           </div>
         </div>
 
@@ -271,7 +275,8 @@ export default function TaskManager() {
 
   const saveTask = async (task, onError) => {
     const isEdit = tasks.some(t => t.id === task.id);
-    const payload = { title: task.title, course: task.course, type: task.type, deadline: task.due, notes: task.notes };
+    const resolvedType = task.type === "Other" ? (task.customType?.trim() || "Other") : task.type;
+    const payload = { title: task.title, course: task.course, type: resolvedType, deadline: task.due, notes: task.notes };
     if (isEdit) {
       const res = await fetch(`${API_BASE}/api/tasks/${USER_ID}/edit/${task.id}`, {
         method: "PATCH",
