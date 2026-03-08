@@ -546,9 +546,44 @@ const calKey = (d) => {
             {visible.gpa && (
               <section className="card-anim" style={s.card}>
                 <SectionTitle>GPA — {semester}</SectionTitle>
-                <div style={{textAlign:"center",padding:"14px 0 6px"}}>
-                  <div style={{fontSize:13,color:"#B8A9C9",padding:"30px 0"}}>GPA not yet available for this semester</div>
-                </div>
+                {(() => {
+                  const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
+                  const validCourses = courses => (courses||[]).filter(c => c.grade && gradePoints[c.grade?.trim().toUpperCase()] !== undefined && Number(c.credits) > 0);
+                  const calcGPA = courses => {
+                    const v = validCourses(courses);
+                    if (!v.length) return null;
+                    const pts = v.reduce((sum, c) => sum + gradePoints[c.grade.trim().toUpperCase()] * Number(c.credits), 0);
+                    const creds = v.reduce((sum, c) => sum + Number(c.credits), 0);
+                    return { gpa: (pts / creds).toFixed(2), creds, count: v.length };
+                  };
+                  const gpaColor = g => parseFloat(g) >= 3.7 ? "#27ae60" : parseFloat(g) >= 3.0 ? "#2980b9" : parseFloat(g) >= 2.0 ? "#e67e22" : "#c0392b";
+
+                  const currentSem = apiSemesters.find(s => s.semesterName === semester);
+                  const semResult = calcGPA(currentSem?.courses);
+
+                  if (semResult) return (
+                    <div style={{textAlign:"center", padding:"20px 0"}}>
+                      <div style={{fontFamily:"'Fraunces',serif", fontSize:48, fontWeight:700, color:gpaColor(semResult.gpa), lineHeight:1}}>{semResult.gpa}</div>
+                      <div style={{fontSize:12, color:"#A59AC9", marginTop:6}}>{semResult.creds} credits · {semResult.count} courses</div>
+                    </div>
+                  );
+
+                  const allCourses = apiSemesters.flatMap(s => s.courses || []);
+                  const cumResult = calcGPA(allCourses);
+
+                  if (cumResult) return (
+                    <div style={{textAlign:"center", padding:"20px 0"}}>
+                      <div style={{fontFamily:"'Fraunces',serif", fontSize:48, fontWeight:700, color:gpaColor(cumResult.gpa), lineHeight:1}}>{cumResult.gpa}</div>
+                      <div style={{fontSize:12, color:"#A59AC9", marginTop:6}}>Cumulative GPA · {cumResult.creds} credits</div>
+                    </div>
+                  );
+
+                  return (
+                    <div style={{fontSize:13, color:"#B8A9C9", textAlign:"center", padding:"24px 0"}}>
+                      No grades recorded yet.
+                    </div>
+                  );
+                })()}
               </section>
             )}
 
