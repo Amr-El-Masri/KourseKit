@@ -195,12 +195,7 @@ export default function Dashboard({ onLogout }) {
 ];
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
 
-  const [profile, setProfile] = useState(() => {
-    try {
-      const saved = localStorage.getItem("kk_profile");
-      return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
-  });
+  const [profile, setProfile] = useState({});
   const displayName = profile.firstName || profile.lastName
     ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim()
     : "Student";
@@ -388,7 +383,7 @@ const calKey = (d) => {
   const dd = String(d).padStart(2, "0");
   return `${calYear}-${mm}-${dd}`;};
 
-  const handleLogout = () => { localStorage.removeItem("kk_token"); localStorage.removeItem("kk_email"); onLogout(); };
+  const handleLogout = () => { Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); onLogout(); };
 
   const fetchSemesters = () => {
     const token = localStorage.getItem("kk_token");
@@ -401,6 +396,14 @@ const calKey = (d) => {
   };
 
   useEffect(() => { fetchSemesters(); }, []);
+
+  useEffect(() => {
+    const t = localStorage.getItem("kk_token");
+    if (!t) return;
+    fetch("http://localhost:8080/api/profile", {
+      headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
+    }).then(r => r.ok ? r.json() : null).then(data => { if (data) setProfile(data); }).catch(() => {});
+  }, []);
 
   // Courses from all saved semesters (deduplicated) for Grade Calculator dropdown
   const dashboardCourses = [...new Map(

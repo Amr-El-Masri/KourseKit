@@ -16,14 +16,12 @@ function hasValidToken() {
   try {
     const payload = JSON.parse(atob(kk_token.split(".")[1]));
     if (payload.exp * 1000 < Date.now()) {
-      localStorage.removeItem("kk_token");
-      localStorage.removeItem("kk_email");
+      Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k));
       return false;
     }
     return true;
   } catch {
-    localStorage.removeItem("kk_token");
-    localStorage.removeItem("kk_email");
+    Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k));
     return false;
   }
 }
@@ -51,7 +49,7 @@ export default function App() {
     <>
       {page === "login"          && <Login         onLogin={() => setPage("dashboard")} onGoToRegister={() => setPage("register")} onGoToForgotPassword={() => setPage("forgot-password")} prefillEmail={prefillEmail} />}
       {page === "register"       && <Register       onRegister={() => setPage("dashboard")} onGoToLogin={goToLogin} />}
-      {page === "dashboard"      && <Dashboard      onLogout={() => { localStorage.removeItem("kk_token"); localStorage.removeItem("kk_email"); setPage("login"); }} />}
+      {page === "dashboard"      && <Dashboard      onLogout={() => { Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); setPage("login"); }} />}
       {page === "forgot-password"&& <ForgotPassword onGoToLogin={goToLogin} />}
       {page === "reset-password" && <ResetPassword  token={resettoken} onGoToLogin={(email) => { setPrefillEmail(email || ""); goToLogin(); }} />}
       {page === "verify-email"   && <VerifyEmail    token={verifytoken} onVerified={onVerified} onGoToLogin={goToLogin} />}

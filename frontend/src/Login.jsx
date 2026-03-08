@@ -19,6 +19,10 @@ export default function Login({ onLogin, onGoToRegister, onGoToForgotPassword, p
       });
       const data = await res.json();
       if (data.success && data.token) {
+        const previousEmail = localStorage.getItem("kk_email");
+        if (previousEmail && previousEmail !== email) {
+          Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k));
+        }
         localStorage.setItem("kk_token", data.token);
         localStorage.setItem("kk_email", email);
         onLogin();
@@ -26,7 +30,7 @@ export default function Login({ onLogin, onGoToRegister, onGoToForgotPassword, p
         setError(data.message || "Invalid email or password.");
       }
     } catch (e) {
-      setError("Could not connect to server. Make sure the backend is running.");
+      setError("Could not connect to server.");
     }
   };
 

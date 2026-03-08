@@ -112,16 +112,14 @@ const DEFAULT_PROFILE = {
   secondFaculty: "Arts & Sciences",
 };
 
-function loadProfile(email) {
-  try {
-    const saved = localStorage.getItem("kk_profile");
-    if (saved) return { ...DEFAULT_PROFILE, ...JSON.parse(saved), email };
-  } catch {}
-  return { ...DEFAULT_PROFILE, email };
-}
-
-function saveProfile(profile) {
-  localStorage.setItem("kk_profile", JSON.stringify(profile));
+async function profileFetch(path, options = {}) {
+  const t = localStorage.getItem("kk_token");
+  const res = await fetch(`${API}${path}`, {
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${t}` },
+    ...options,
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
 }
 
 const gpaColor = g => {
@@ -199,9 +197,9 @@ export default function Profile({ onProfileSave, onLogout }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const isAdmin = getTokenRole() === "ADMIN";
   const [section, setSection] = useState("profile");
-  const [profile,    setProfile]    = useState(() => loadProfile(email));
+  const [profile,    setProfile]    = useState({ ...DEFAULT_PROFILE, email });
   const [editing,    setEditing]    = useState(false);
-  const [draft,      setDraft]      = useState(profile);
+  const [draft,      setDraft]      = useState({ ...DEFAULT_PROFILE, email });
   const [saved,      setSaved]      = useState(false);
   const [profilepic, setProfilepic] = useState(false);
 
@@ -226,6 +224,12 @@ export default function Profile({ onProfileSave, onLogout }) {
   const [editCourses,  setEditCourses]  = useState([]);
   const [semSaveLoad,  setSemSaveLoad]  = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  useEffect(() => {
+    profileFetch("/api/profile")
+      .then(data => { setProfile(data); setDraft(data); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch(`${API}/api/grades/saved`, { headers: semAuthHeaders() })
@@ -319,9 +323,12 @@ export default function Profile({ onProfileSave, onLogout }) {
     return updated;
   });
 
-  const handleSave = () => {
-    saveProfile(draft);
-    setProfile(draft);
+  const handleSave = async () => {
+    try {
+      const saved = await profileFetch("/api/profile", { method: "PUT", body: JSON.stringify(draft) });
+      setProfile(saved);
+      setDraft(saved);
+    } catch { setProfile(draft); }
     setEditing(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
@@ -330,9 +337,11 @@ export default function Profile({ onProfileSave, onLogout }) {
 
   const handleCancel = () => { setDraft(profile); setEditing(false); };
 
-  const selectAvatar = (iconId) => {
+  const selectAvatar = async (iconId) => {
     const updated = { ...profile, avatar: iconId };
-    saveProfile(updated);
+    try {
+      await profileFetch("/api/profile", { method: "PUT", body: JSON.stringify({ avatar: iconId }) });
+    } catch {}
     setProfile(updated);
     setProfilepic(false);
     if (onProfileSave) onProfileSave(updated);
