@@ -74,7 +74,6 @@ async function apiFetch(path, options = {}) {
     if (!res.ok) {
         const text = await res.text();
         console.error(`API ERROR ${res.status} ${path}:`, text);
-        alert(`${res.status} ${path}: ${text}`);
         let msg = `HTTP ${res.status}`;
         try { msg = JSON.parse(text).message || msg; } catch {}
         throw new Error(msg);
@@ -107,11 +106,19 @@ function normalizeBlock(block) {
     return { ...block, startTime };
 }
 
+const DAY_OF_WEEK_MAP = {
+    "1": "MONDAY", "2": "TUESDAY", "3": "WEDNESDAY",
+    "4": "THURSDAY", "5": "FRIDAY", "6": "SATURDAY", "7": "SUNDAY",
+    "MONDAY": "MONDAY", "TUESDAY": "TUESDAY", "WEDNESDAY": "WEDNESDAY",
+    "THURSDAY": "THURSDAY", "FRIDAY": "FRIDAY", "SATURDAY": "SATURDAY", "SUNDAY": "SUNDAY"
+};
+
 function normalizeWeeklyData(data) {
     if (!data) return {};
     const normalized = {};
     for (const [day, blocks] of Object.entries(data)) {
-        normalized[day] = blocks.map(normalizeBlock);
+        const key = DAY_OF_WEEK_MAP[day] || day;
+        normalized[key] = blocks.map(normalizeBlock);
     }
     return normalized;
 }
@@ -334,7 +341,7 @@ function DayColumn({
         if (!dragRef.current) return;
         const { startHour, endHour } = dragRef.current;
         if (endHour - startHour >= 0.5) {
-            onAddSlot(dayKey, { startHour, endHour, id: Date.now() });
+            onAddSlot(dayKey, { startHour, endHour, id: Date.now(), date });
         }
         dragRef.current = null;
         setDragging(null);
@@ -584,12 +591,12 @@ export default function StudyPlanner() {
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState(null);
     const [showGenerateModal, setShowGenerateModal] = useState(false);
-    const [showClearConfirm, setShowClearConfirm] = useState(false);
+    const [showClearModal, setShowClearModal] = useState(false);
     const [entries, setEntries] = useState([]);
     const [activePanel, setActivePanel] = useState("entries"); // "entries" | "slots"
     const [editingBlock, setEditingBlock] = useState(null);
-    const [hasGenerated, setHasGenerated] = useState(() => localStorage.getItem('kk_hasGenerated') === 'true');
-    const [showSlotOverlay, setShowSlotOverlay] = useState(() => localStorage.getItem('kk_hasGenerated') !== 'true');
+    const [hasGenerated, setHasGenerated] = useState(false);
+    const [showSlotOverlay, setShowSlotOverlay] = useState(true);
 
     const weekDates = getWeekDates(currentDate);
     const weekStart = weekDates[0].toISOString().split("T")[0];
@@ -601,17 +608,13 @@ export default function StudyPlanner() {
 
 
     useEffect(() => {
-        localStorage.setItem('kk_hasGenerated', String(hasGenerated));
-    }, [hasGenerated]);
-
-    useEffect(() => {
         if (Object.keys(colorMap).length > 0) {
             localStorage.setItem('kk_colorMap', JSON.stringify(colorMap));
         }
     }, [colorMap]);
 
     const loadEntries = useCallback(async (preserveColors = false) => {
-        const data = await apiFetch(`/api/study-plan/${getUserId()}/entries`);
+        const data = await apiFetch(`/api/study-plan/${getUserId()}/entries?weekStart=${weekStart}`);
         const list = Array.isArray(data) ? data : [];
         const mapped = list.map((entry, i) => ({
             id: entry.id,
@@ -634,7 +637,7 @@ export default function StudyPlanner() {
             Object.assign(next, savedColors);
             return next;
         });
-    }, []);
+    }, [weekStart]);
 
     const loadWeeklyView = useCallback(async () => {
         setLoading(true);
@@ -644,7 +647,7 @@ export default function StudyPlanner() {
     }, [weekStart]);
 
     const loadSlots = useCallback(async () => {
-        const data = await apiFetch(`/api/study-plan/${getUserId()}/slots`);
+        const data = await apiFetch(`/api/study-plan/${getUserId()}/slots?weekStart=${weekStart}`);
         if (data) {
             const map = {};
             data.forEach(s => {
@@ -658,36 +661,38 @@ export default function StudyPlanner() {
             });
             setAvailability(map);
         }
-    }, []);
+    }, [weekStart]);
 
-    const persistSlotsTimer = useRef(null);
+    // Restore per-week generated state when week changes
+    useEffect(() => {
+        const stored = localStorage.getItem(`kk_hasGenerated_${weekStart}`) === 'true';
+        setHasGenerated(stored);
+        setShowSlotOverlay(!stored);
+    }, [weekStart]);
 
-    const persistSlots = useCallback((newAvailability) => {
-        if (persistSlotsTimer.current) clearTimeout(persistSlotsTimer.current);
-        persistSlotsTimer.current = setTimeout(async () => {
-            const userId = getUserId();
-            if (!userId) return;
-            const slots = [];
-            const toTime = h => {
-                const hrs = Math.floor(h);
-                const mins = Math.round((h - hrs) * 60);
-                return `${String(hrs).padStart(2,"0")}:${String(mins).padStart(2,"0")}:00`;
-            };
-            Object.entries(newAvailability).forEach(([dayKey, daySlots]) => {
-                daySlots.forEach(s => slots.push({ dayKey, startTime: toTime(s.startHour), endTime: toTime(s.endHour) }));
+    const persistSlots = useCallback(async (newAvailability) => {
+        const userId = getUserId();
+        if (!userId) return;
+        const slots = [];
+        const toTime = h => {
+            const hrs = Math.floor(h);
+            const mins = Math.round((h - hrs) * 60);
+            return `${String(hrs).padStart(2,"0")}:${String(mins).padStart(2,"0")}:00`;
+        };
+        Object.entries(newAvailability).forEach(([dayKey, daySlots]) => {
+            daySlots.forEach(s => slots.push({ dayKey, startTime: toTime(s.startHour), endTime: toTime(s.endHour) }));
+        });
+        try {
+            await apiFetch(`/api/study-plan/${userId}/slots?weekStart=${weekStart}`, {
+                method: "POST",
+                body: JSON.stringify(slots),
             });
-            try {
-                await apiFetch(`/api/study-plan/${userId}/slots`, {
-                    method: "POST",
-                    body: JSON.stringify(slots),
-                });
-                // Reload slots to get backend-assigned IDs
-                await loadSlots();
-            } catch (e) {
-                console.error("Failed to persist slots:", e.message);
-            }
-        }, 600);
-    }, [showToast]);
+            // Reload slots to get backend-assigned IDs
+            await loadSlots();
+        } catch (e) {
+            console.error("Failed to persist slots:", e.message);
+        }
+    }, [weekStart, showToast]);
 
     useEffect(() => {
         loadEntries();
@@ -742,6 +747,25 @@ export default function StudyPlanner() {
     }, [showToast, loadWeeklyView, loadEntries]);
 
     const handleAddSlot = useCallback((dayKey, newSlot) => {
+        // Check if slot is in the past using the actual date
+        const now = new Date();
+        if (newSlot.date) {
+            const slotDate = new Date(newSlot.date);
+            slotDate.setHours(0, 0, 0, 0);
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            if (slotDate < today) {
+                showToast("Can't add a slot on a past day", "error");
+                return;
+            }
+            if (slotDate.getTime() === today.getTime()) {
+                const nowHour = now.getHours() + now.getMinutes() / 60;
+                if (newSlot.endHour <= nowHour) {
+                    showToast("Can't add a slot that's already in the past", "error");
+                    return;
+                }
+            }
+        }
+
         setAvailability(prev => {
             const existing = prev[dayKey] || [];
             if (existing.some(s => slotsOverlap(s, newSlot))) {
@@ -764,14 +788,15 @@ export default function StudyPlanner() {
 
     const handleClearAllSlots = useCallback(async () => {
         const userId = getUserId();
-        await apiFetch(`/api/study-plan/${userId}/slots`, { method: "DELETE" });
-        await apiFetch(`/api/study-plan/${userId}/blocks`, { method: "DELETE" });
+        await apiFetch(`/api/study-plan/${userId}/slots?weekStart=${weekStart}`, { method: "DELETE" });
+        await apiFetch(`/api/study-plan/${userId}/blocks?weekStart=${weekStart}`, { method: "DELETE" });
         setAvailability({});
         setWeekBlocks({});
         setHasGenerated(false);
+        localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
         setShowSlotOverlay(true);
         showToast("All slots cleared", "info");
-    }, [showToast]);
+    }, [showToast, weekStart]);
 
     const handleResizeSlot = useCallback((dayKey, slotId, newEndHour) => {
         setAvailability(prev => {
@@ -785,7 +810,7 @@ export default function StudyPlanner() {
         if (!entry.taskId) { showToast("No task selected", "error"); return; }
         try {
             await apiFetch(
-                `/api/study-plan/${getUserId()}/entries/add?taskId=${entry.taskId}&estimatedWorkload=${entry.hoursPerWeek}`,
+                `/api/study-plan/${getUserId()}/entries/add?taskId=${entry.taskId}&estimatedWorkload=${entry.hoursPerWeek}&weekStart=${weekStart}`,
                 { method: "POST" }
             );
             await loadEntries(true);
@@ -830,7 +855,7 @@ export default function StudyPlanner() {
         setShowGenerateModal(false);
         try {
             const payload = buildSettingsPayload();
-            const data = await apiFetch(`/api/study-plan/${getUserId()}/generate`, {
+            const data = await apiFetch(`/api/study-plan/${getUserId()}/generate?weekStart=${weekStart}`, {
                 method: "POST",
                 body: JSON.stringify(payload),
             });
@@ -838,6 +863,7 @@ export default function StudyPlanner() {
                 const weeklyView = data.weeklyView ?? data;
                 setWeekBlocks(normalizeWeeklyData(weeklyView));
                 setHasGenerated(true);
+                localStorage.setItem(`kk_hasGenerated_${weekStart}`, 'true');
                 setIsAvailabilityMode(false);
                 setShowSlotOverlay(false);
                 await loadEntries(true);
@@ -869,30 +895,36 @@ export default function StudyPlanner() {
         setLoading(false);
     }, [showToast, loadWeeklyView, loadEntries]);
 
-    const handleClearPlan = useCallback(async () => {
+    const handleClearPlan = useCallback(() => {
+        setShowClearModal(true);
+    }, []);
+
+    const handleClearPlanConfirmed = useCallback(async () => {
         const userId = getUserId();
         if (!userId) { showToast("Not logged in", "error"); return; }
+        setShowClearModal(false);
         setLoading(true);
         try {
-            await apiFetch(`/api/study-plan/${userId}/blocks`, { method: "DELETE" });
-            await apiFetch(`/api/study-plan/${userId}/slots`, { method: "DELETE" });
+            await apiFetch(`/api/study-plan/${userId}/blocks?weekStart=${weekStart}`, { method: "DELETE" });
+            await apiFetch(`/api/study-plan/${userId}/slots?weekStart=${weekStart}`, { method: "DELETE" });
             setWeekBlocks({});
             setAvailability({});
             setHasGenerated(false);
+            localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
             setShowSlotOverlay(true);
             showToast("Plan cleared", "info");
         } catch (e) {
             showToast(e.message || "Failed to clear plan", "error");
         }
         setLoading(false);
-    }, [showToast]);
+    }, [showToast, weekStart]);
 
     const handleRebalance = useCallback(async () => {
         setLoading(true);
         try {
             const payload = buildSettingsPayload();
             console.log("REBALANCE PAYLOAD:", JSON.stringify(payload, null, 2));
-            const data = await apiFetch(`/api/study-plan/${getUserId()}/rebalance`, {
+            const data = await apiFetch(`/api/study-plan/${getUserId()}/rebalance?weekStart=${weekStart}`, {
                 method: "POST",
                 body: JSON.stringify(payload),
             });
@@ -1694,7 +1726,7 @@ export default function StudyPlanner() {
                                     <button className="sp-btn sp-btn-outline" onClick={handleMarkPastDone} title="Mark all blocks that have already started as complete" style={{color:"#2d7a4a",borderColor:"#b7dfc4"}}>✓ Mark past done</button>
                                 )}
                                 {hasGenerated && (
-                                    <button className="sp-btn sp-btn-ghost" onClick={() => setShowClearConfirm(true)} style={{color:"#c0392b",borderColor:"#f5c6c6"}}>✕ Clear Plan</button>
+                                    <button className="sp-btn sp-btn-ghost" onClick={handleClearPlan} style={{color:"#c0392b",borderColor:"#f5c6c6"}}>✕ Clear Plan</button>
                                 )}
                                 {!hasGenerated && (
                                     <button className="sp-btn sp-btn-primary" onClick={() => setShowGenerateModal(true)}><Zap size={13} style={{verticalAlign:"middle",marginRight:4}}/>Generate</button>
@@ -1790,14 +1822,14 @@ export default function StudyPlanner() {
                     </div>
                 </div>
 
-                {showClearConfirm && (
-                    <div className="sp-modal-backdrop" onClick={() => setShowClearConfirm(false)}>
+                {showClearModal && (
+                    <div className="sp-modal-backdrop" onClick={() => setShowClearModal(false)}>
                         <div className="sp-modal" onClick={e => e.stopPropagation()}>
-                            <h2>Clear Plan</h2>
-                            <p style={{color:"#555",fontSize:14,marginBottom:20}}>Are you sure you want to delete your entire study plan and all availability slots? This cannot be undone.</p>
+                            <h2>Clear This Week's Plan?</h2>
+                            <p>This will delete all study blocks and availability slots for this week. This cannot be undone.</p>
                             <div className="sp-modal-actions">
-                                <button className="sp-btn sp-btn-ghost" onClick={() => setShowClearConfirm(false)}>Cancel</button>
-                                <button className="sp-btn sp-btn-primary" style={{background:"#c0392b",borderColor:"#c0392b"}} onClick={() => { setShowClearConfirm(false); handleClearPlan(); }}>Yes, Delete</button>
+                                <button className="sp-btn sp-btn-ghost" onClick={() => setShowClearModal(false)}>Cancel</button>
+                                <button className="sp-btn sp-btn-primary" style={{background:"#c0392b",borderColor:"#c0392b"}} onClick={handleClearPlanConfirmed}>Clear Plan</button>
                             </div>
                         </div>
                     </div>

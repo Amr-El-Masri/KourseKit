@@ -14,7 +14,8 @@ public class SchedulerService {
     public SchedulerResult generatePlan(
             List<StudyPlanEntry> entries,
             SchedulerSettings settings,
-            LocalDate startDate
+            LocalDate startDate,
+            LocalDate weekStart
     ) {
         List<StudyPlanEntry> sorted = entries.stream()
                 .sorted(Comparator.comparingDouble(e -> {
@@ -30,7 +31,7 @@ public class SchedulerService {
         List<String> warnings = new ArrayList<>();
 
         for (StudyPlanEntry entry : sorted) {
-            ScheduleResult result = scheduleEntry(entry, settings, startDate, slotLoad, subjectLoadPerDay);
+            ScheduleResult result = scheduleEntry(entry, settings, startDate, weekStart, slotLoad, subjectLoadPerDay);
             allBlocks.addAll(result.blocks());
             if (result.overloaded()) {
                 warnings.add(String.format(
@@ -48,7 +49,8 @@ public class SchedulerService {
     public SchedulerResult rebalance(
             List<StudyPlanEntry> entries,
             SchedulerSettings settings,
-            LocalDate startDate
+            LocalDate startDate,
+            LocalDate weekStart
     ) {
         Map<String, Double> slotLoad = new HashMap<>();
         Map<String, Double> subjectLoadPerDay = new HashMap<>();
@@ -85,7 +87,7 @@ public class SchedulerService {
 
         List<String> warnings = new ArrayList<>();
         for (StudyPlanEntry entry : sorted) {
-            ScheduleResult result = scheduleEntry(entry, settings, startDate, slotLoad, subjectLoadPerDay);
+            ScheduleResult result = scheduleEntry(entry, settings, startDate, weekStart, slotLoad, subjectLoadPerDay);
             allBlocks.addAll(result.blocks());
             if (result.overloaded()) {
                 warnings.add(String.format(
@@ -104,6 +106,7 @@ public class SchedulerService {
             StudyPlanEntry entry,
             SchedulerSettings settings,
             LocalDate startDate,
+            LocalDate weekStart,
             Map<String, Double> slotLoad,
             Map<String, Double> subjectLoadPerDay
     ) {
@@ -120,9 +123,17 @@ public class SchedulerService {
             effectiveDeadline = LocalDate.from(entry.getTask().getDeadline());
         }
 
-        List<LocalDate> availableDays = getAvailableDays(startDate, effectiveDeadline, settings);
+        List<LocalDate> availableDays = getAvailableDays(startDate, weekStart, effectiveDeadline, settings);
+        System.out.println("DEBUG scheduleEntry: task=" + entry.getTask().getTitle()
+                + " startDate=" + startDate + " weekStart=" + weekStart
+                + " effectiveDeadline=" + effectiveDeadline
+                + " availableDays=" + availableDays
+                + " studyDays=" + settings.getStudyDays()
+                + " availabilityKeys=" + settings.getAvailability().keySet()
+                + " remaining=" + remaining);
         List<StudyBlock> blocks = new ArrayList<>();
         String taskTitle = entry.getTask().getTitle();
+        LocalDate today = LocalDate.now();
         LocalTime now = LocalTime.now();
 
         for (LocalDate day : availableDays) {
@@ -144,12 +155,12 @@ public class SchedulerService {
                 if (remaining <= 0.001) break;
                 if (subjectCapacityToday <= 0.001) break;
 
-                if (day.equals(startDate) && slot.getEnd().isBefore(now)) continue;
+                if (day.equals(today) && slot.getEnd().isBefore(now)) continue;
 
                 String key = slotKey(day, slot.getStart());
                 double slotUsed = slotLoad.getOrDefault(key, 0.0);
 
-                if (day.equals(startDate) && slot.getStart().isBefore(now)) {
+                if (day.equals(today) && slot.getStart().isBefore(now)) {
                     long minutesPast = ChronoUnit.MINUTES.between(slot.getStart(), now);
                     double hoursPast = Math.ceil((minutesPast / 60.0) * 2) / 2.0;
                     slotUsed = Math.max(slotUsed, hoursPast);
@@ -196,12 +207,13 @@ public class SchedulerService {
 
     private List<LocalDate> getAvailableDays(
             LocalDate startDate,
+            LocalDate weekStart,
             LocalDate deadline,
             SchedulerSettings settings
     ) {
         List<LocalDate> days = new ArrayList<>();
 
-        LocalDate weekEnd = startDate.with(DayOfWeek.SUNDAY);
+        LocalDate weekEnd = weekStart.with(DayOfWeek.SUNDAY);
         LocalDate effectiveEnd = deadline.isBefore(weekEnd) ? deadline : weekEnd;
 
         LocalDate cursor = startDate;

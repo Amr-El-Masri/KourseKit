@@ -59,9 +59,10 @@ public class StudyPlanController {
 
     private PlanResponse buildPlanResponse(Long userId, SchedulerResult result,
                                            List<StudyPlanEntry> entries,
-                                           Map<Long, Double> remainingPerEntry) {
+                                           Map<Long, Double> remainingPerEntry,
+                                           LocalDate weekStart) {
         Map<DayOfWeek, List<StudyBlock>> weeklyView =
-                studyPlanService.getWeeklyView(userId, LocalDate.now());
+                studyPlanService.getWeeklyView(userId, weekStart);
 
         Map<Long, Double> scheduledHours = result.getScheduledHoursPerEntry();
 
@@ -82,33 +83,35 @@ public class StudyPlanController {
     @PostMapping("/{userId}/generate")
     public ResponseEntity<PlanResponse> generatePlan(
             @PathVariable Long userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
             @RequestBody SchedulerSettings settings) {
 
-        List<StudyPlanEntry> entriesBefore = studyPlanService.getActiveEntries(userId);
+        List<StudyPlanEntry> entriesBefore = studyPlanService.getActiveEntries(userId, weekStart);
         Map<Long, Double> remainingPerEntry = new HashMap<>();
         for (StudyPlanEntry e : entriesBefore) {
             remainingPerEntry.put(e.getId(), e.getEstimatedWorkload());
         }
 
-        SchedulerResult result = studyPlanService.generatePlan(userId, settings);
-        return ResponseEntity.ok(buildPlanResponse(userId, result, entriesBefore, remainingPerEntry));
+        SchedulerResult result = studyPlanService.generatePlan(userId, settings, weekStart);
+        return ResponseEntity.ok(buildPlanResponse(userId, result, entriesBefore, remainingPerEntry, weekStart));
     }
 
     @PostMapping("/{userId}/rebalance")
     public ResponseEntity<PlanResponse> rebalance(
             @PathVariable Long userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
             @RequestBody SchedulerSettings settings) {
 
-        List<StudyPlanEntry> entriesBefore = studyPlanService.getActiveEntries(userId);
+        List<StudyPlanEntry> entriesBefore = studyPlanService.getActiveEntries(userId, weekStart);
         Map<Long, Double> remainingPerEntry = new HashMap<>();
         for (StudyPlanEntry e : entriesBefore) {
             double rem = Math.max(0, e.getEstimatedWorkload() - e.getCompletedHours());
             remainingPerEntry.put(e.getId(), rem);
         }
 
-        studyPlanService.rebalance(userId, settings);
+        studyPlanService.rebalance(userId, settings, weekStart);
         SchedulerResult result = new SchedulerResult(new ArrayList<>(), new ArrayList<>());
-        return ResponseEntity.ok(buildPlanResponse(userId, result, entriesBefore, remainingPerEntry));
+        return ResponseEntity.ok(buildPlanResponse(userId, result, entriesBefore, remainingPerEntry, weekStart));
     }
 
     @PostMapping("/{userId}/blocks/complete-past")
@@ -118,8 +121,10 @@ public class StudyPlanController {
     }
 
     @GetMapping("/{userId}/entries")
-    public ResponseEntity<List<StudyPlanEntry>> getActiveEntries(@PathVariable Long userId) {
-        return ResponseEntity.ok(studyPlanService.getActiveEntries(userId));
+    public ResponseEntity<List<StudyPlanEntry>> getActiveEntries(
+            @PathVariable Long userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
+        return ResponseEntity.ok(studyPlanService.getActiveEntries(userId, weekStart));
     }
 
     @GetMapping("/entries/{entryId}")
@@ -153,8 +158,10 @@ public class StudyPlanController {
     }
 
     @DeleteMapping("/{userId}/blocks")
-    public ResponseEntity<Void> clearAllBlocks(@PathVariable Long userId) {
-        studyPlanService.clearAllBlocks(userId);
+    public ResponseEntity<Void> clearAllBlocks(
+            @PathVariable Long userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
+        studyPlanService.clearBlocksByWeek(userId, weekStart);
         return ResponseEntity.noContent().build();
     }
 
@@ -175,9 +182,10 @@ public class StudyPlanController {
     public ResponseEntity<?> createEntry(
             @PathVariable Long userId,
             @RequestParam Long taskId,
-            @RequestParam double estimatedWorkload) {
+            @RequestParam double estimatedWorkload,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
         try {
-            StudyPlanEntry entry = studyPlanService.createEntry(userId, taskId, estimatedWorkload);
+            StudyPlanEntry entry = studyPlanService.createEntry(userId, taskId, estimatedWorkload, weekStart);
             return ResponseEntity.status(HttpStatus.CREATED).body(entry);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -193,20 +201,25 @@ public class StudyPlanController {
 
     // Availability Slots
     @GetMapping("/{userId}/slots")
-    public ResponseEntity<List<AvailabilitySlot>> getSlots(@PathVariable Long userId) {
-        return ResponseEntity.ok(studyPlanService.getSlots(userId));
+    public ResponseEntity<List<AvailabilitySlot>> getSlots(
+            @PathVariable Long userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
+        return ResponseEntity.ok(studyPlanService.getSlots(userId, weekStart));
     }
 
     @PostMapping("/{userId}/slots")
     public ResponseEntity<List<AvailabilitySlot>> saveSlots(
             @PathVariable Long userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
             @RequestBody List<Map<String, Object>> slots) {
-        return ResponseEntity.ok(studyPlanService.saveSlots(userId, slots));
+        return ResponseEntity.ok(studyPlanService.saveSlots(userId, weekStart, slots));
     }
 
     @DeleteMapping("/{userId}/slots")
-    public ResponseEntity<Void> clearSlots(@PathVariable Long userId) {
-        studyPlanService.clearSlots(userId);
+    public ResponseEntity<Void> clearSlots(
+            @PathVariable Long userId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
+        studyPlanService.clearSlots(userId, weekStart);
         return ResponseEntity.noContent().build();
     }
 }

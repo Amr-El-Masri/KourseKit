@@ -35,29 +35,32 @@ public class StudyPlanService {
     private EntityManager entityManager;
 
     @Transactional
-    public StudyPlanEntry createEntry(Long userId, Long taskId, double estimatedWorkload) {
+    public StudyPlanEntry createEntry(Long userId, Long taskId, double estimatedWorkload, LocalDate weekStart) {
         User user = entityManager.getReference(User.class, userId);
         Task task = entityManager.find(Task.class, taskId);
         if (task == null) throw new RuntimeException("Task not found: " + taskId);
 
-        boolean duplicate = entryRepository.existsByUserIdAndTaskId(userId, taskId);
-        if (duplicate) throw new RuntimeException("Entry for this task already exists");
+        boolean duplicate = entryRepository.existsByUserIdAndTaskIdAndWeekStart(userId, taskId, weekStart);
+        if (duplicate) throw new RuntimeException("Entry for this task already exists this week");
 
         StudyPlanEntry entry = new StudyPlanEntry();
         entry.setUser(user);
         entry.setTask(task);
         entry.setEstimatedWorkload(estimatedWorkload);
         entry.setCompletedHours(0);
+        entry.setWeekStart(weekStart);
 
         return entryRepository.save(entry);
     }
 
     @Transactional
-    public SchedulerResult generatePlan(Long userId, SchedulerSettings settings) {
-        List<StudyPlanEntry> entries = entryRepository.findByUserId(userId);
+    public SchedulerResult generatePlan(Long userId, SchedulerSettings settings, LocalDate weekStart) {
+        List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStart(userId, weekStart);
 
+        // Delete only uncompleted blocks for this week
+        LocalDate weekEnd = weekStart.plusDays(6);
         for (StudyPlanEntry entry : entries) {
-            blockRepository.deleteAll(blockRepository.findByStudyPlanEntry(entry));
+            blockRepository.deleteByStudyPlanEntryAndCompletedFalseAndDayBetween(entry, weekStart, weekEnd);
         }
         entityManager.flush();
         for (StudyPlanEntry entry : entries) {
@@ -66,17 +69,19 @@ public class StudyPlanService {
             entityManager.refresh(entry);
         }
 
-        SchedulerResult result = schedulerService.generatePlan(entries, settings, LocalDate.now());
+        // Start from today if current week, otherwise from weekStart (Monday)
+        LocalDate startDate = weekStart.isAfter(LocalDate.now()) ? weekStart : LocalDate.now();
+        SchedulerResult result = schedulerService.generatePlan(entries, settings, startDate, weekStart);
         saveSchedule(entries, result.getBlocks());
 
         return result;
     }
 
     @Transactional
-    public SchedulerResult rebalance(Long userId, SchedulerSettings settings) {
+    public SchedulerResult rebalance(Long userId, SchedulerSettings settings, LocalDate weekStart) {
         try {
-            LocalDate today = LocalDate.now();
-            List<StudyPlanEntry> entries = entryRepository.findByUserId(userId);
+            LocalDate today = weekStart.isAfter(LocalDate.now()) ? weekStart : LocalDate.now();
+            List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStart(userId, weekStart);
 
             Map<Long, List<StudyBlock>> completedBlocksByEntry = new HashMap<>();
             Map<Long, Double> completedHoursByEntry = new HashMap<>();
@@ -109,7 +114,7 @@ public class StudyPlanService {
                 entry.getAssignedBlocks().addAll(completed);
             }
 
-            SchedulerResult result = schedulerService.rebalance(entries, settings, today);
+            SchedulerResult result = schedulerService.rebalance(entries, settings, today, weekStart);
 
             List<StudyBlock> newBlocks = result.getBlocks().stream()
                     .filter(b -> !b.isCompleted())
@@ -279,12 +284,23 @@ public class StudyPlanService {
         }
     }
 
+    @Transactional
+    public void clearBlocksByWeek(Long userId, LocalDate weekStart) {
+        List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStart(userId, weekStart);
+        blockRepository.deleteAllByUserIdAndWeekStart(userId, weekStart);
+        entityManager.flush();
+        for (StudyPlanEntry entry : entries) {
+            entry.setCompletedHours(0);
+            entryRepository.save(entry);
+        }
+    }
+
     private void saveSchedule(List<StudyPlanEntry> entries, List<StudyBlock> blocks) {
         blockRepository.saveAll(blocks);
     }
 
-    public List<StudyPlanEntry> getActiveEntries(Long userId) {
-        return entryRepository.findByUserId(userId);
+    public List<StudyPlanEntry> getActiveEntries(Long userId, LocalDate weekStart) {
+        return entryRepository.findByUserIdAndWeekStart(userId, weekStart);
     }
 
     public StudyPlanEntry getEntry(Long entryId) {
@@ -292,13 +308,13 @@ public class StudyPlanService {
                 .orElseThrow(() -> new RuntimeException("Entry not found"));
     }
 
-    public List<AvailabilitySlot> getSlots(Long userId) {
-        return slotRepository.findByUserId(userId);
+    public List<AvailabilitySlot> getSlots(Long userId, LocalDate weekStart) {
+        return slotRepository.findByUserIdAndWeekStart(userId, weekStart);
     }
 
     @org.springframework.transaction.annotation.Transactional
-    public List<AvailabilitySlot> saveSlots(Long userId, List<java.util.Map<String, Object>> slots) {
-        slotRepository.deleteAllByUserId(userId);
+    public List<AvailabilitySlot> saveSlots(Long userId, LocalDate weekStart, List<java.util.Map<String, Object>> slots) {
+        slotRepository.deleteByUserIdAndWeekStart(userId, weekStart);
         entityManager.flush();
         com.koursekit.model.User user = entityManager.getReference(com.koursekit.model.User.class, userId);
         List<AvailabilitySlot> toSave = new java.util.ArrayList<>();
@@ -308,13 +324,14 @@ public class StudyPlanService {
             slot.setDayKey((String) s.get("dayKey"));
             slot.setStartTime(java.time.LocalTime.parse((String) s.get("startTime")));
             slot.setEndTime(java.time.LocalTime.parse((String) s.get("endTime")));
+            slot.setWeekStart(weekStart);
             toSave.add(slot);
         }
         return slotRepository.saveAll(toSave);
     }
 
     @org.springframework.transaction.annotation.Transactional
-    public void clearSlots(Long userId) {
-        slotRepository.deleteAllByUserId(userId);
+    public void clearSlots(Long userId, LocalDate weekStart) {
+        slotRepository.deleteByUserIdAndWeekStart(userId, weekStart);
     }
 }
