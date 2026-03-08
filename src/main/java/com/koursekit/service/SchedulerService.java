@@ -116,12 +116,8 @@ public class SchedulerService {
             return new ScheduleResult(Collections.emptyList(), false, 0);
         }
 
-        LocalDate effectiveDeadline = LocalDate.from(entry.getTask().getDeadline()
-                .minusDays(settings.getDeadlineBufferDays()));
-
-        if (effectiveDeadline.isBefore(startDate)) {
-            effectiveDeadline = LocalDate.from(entry.getTask().getDeadline());
-        }
+        // Use deadline as-is — schedule blocks up to and including the deadline day
+        LocalDate effectiveDeadline = LocalDate.from(entry.getTask().getDeadline());
 
         List<LocalDate> availableDays = getAvailableDays(startDate, weekStart, effectiveDeadline, settings);
         System.out.println("DEBUG scheduleEntry: task=" + entry.getTask().getTitle()
@@ -213,10 +209,13 @@ public class SchedulerService {
     ) {
         List<LocalDate> days = new ArrayList<>();
 
-        LocalDate weekEnd = weekStart.with(DayOfWeek.SUNDAY);
+        // Normalize weekStart to Monday defensively (frontend timezone can shift it to Sunday)
+        LocalDate normalizedWeekStart = weekStart.with(java.time.temporal.TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate weekEnd = normalizedWeekStart.plusDays(6); // Sunday
         LocalDate effectiveEnd = deadline.isBefore(weekEnd) ? deadline : weekEnd;
 
-        LocalDate cursor = startDate;
+        // startDate should also not be before normalizedWeekStart
+        LocalDate cursor = startDate.isBefore(normalizedWeekStart) ? normalizedWeekStart : startDate;
         while (!cursor.isAfter(effectiveEnd)) {
             if (settings.getStudyDays().contains(cursor.getDayOfWeek())) {
                 days.add(cursor);

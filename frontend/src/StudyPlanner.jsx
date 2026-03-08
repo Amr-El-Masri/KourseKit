@@ -29,6 +29,14 @@ function getWeekDates(baseDate) {
     });
 }
 
+// Use local date parts to avoid UTC offset shifting the date (e.g. Lebanon UTC+2)
+function toLocalDateString(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
 function formatTime(hour, minute = 0) {
     const h = Math.floor(hour);
     const m = minute || (hour % 1) * 60;
@@ -599,7 +607,7 @@ export default function StudyPlanner() {
     const [showSlotOverlay, setShowSlotOverlay] = useState(true);
 
     const weekDates = getWeekDates(currentDate);
-    const weekStart = weekDates[0].toISOString().split("T")[0];
+    const weekStart = toLocalDateString(weekDates[0]);
 
     const showToast = useCallback((msg, type = "info") => {
         setToast({ msg, type });
@@ -642,7 +650,16 @@ export default function StudyPlanner() {
     const loadWeeklyView = useCallback(async () => {
         setLoading(true);
         const data = await apiFetch(`/api/study-plan/${getUserId()}/weekly?weekStart=${weekStart}`);
-        if (data) setWeekBlocks(normalizeWeeklyData(data));
+        if (data) {
+            const normalized = normalizeWeeklyData(data);
+            setWeekBlocks(normalized);
+            const hasBlocks = Object.values(normalized).some(arr => arr.length > 0);
+            if (!hasBlocks) {
+                setHasGenerated(false);
+                setShowSlotOverlay(true);
+                localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
+            }
+        }
         setLoading(false);
     }, [weekStart]);
 
@@ -729,8 +746,10 @@ export default function StudyPlanner() {
                 next[day] = blocks.filter(b => b.id !== blockId);
             return next;
         });
+        // Reload slots so the UI reflects any slot shrinkage/deletion
+        await loadSlots();
         showToast("Block deleted", "info");
-    }, [showToast]);
+    }, [showToast, loadSlots]);
 
     const handleSaveEditedBlock = useCallback(async (blockId, changes) => {
         try {

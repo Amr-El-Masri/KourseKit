@@ -191,6 +191,51 @@ public class StudyPlanService {
             entryRepository.save(entry);
         }
 
+        // Shrink or delete the availability slot that contains this block
+        Long userId = block.getStudyPlanEntry().getTask().getUserId();
+        // weekStart = Monday of the block's day
+        java.time.LocalDate weekStart = block.getDay()
+                .with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+        String dayKey = block.getDay().getDayOfWeek().name(); // e.g. "MONDAY"
+        java.time.LocalTime blockStart = block.getStartTime();
+        java.time.LocalTime blockEnd = blockStart.plusMinutes((long)(block.getDuration() * 60));
+
+        List<AvailabilitySlot> slots = slotRepository.findByUserIdAndWeekStart(userId, weekStart);
+        for (AvailabilitySlot slot : slots) {
+            if (!slot.getDayKey().equals(dayKey)) continue;
+            java.time.LocalTime slotStart = slot.getStartTime();
+            java.time.LocalTime slotEnd = slot.getEndTime();
+            // Check if block sits at the start of this slot
+            if (!blockStart.isBefore(slotStart) && !blockEnd.isAfter(slotEnd)) {
+                if (blockStart.equals(slotStart) && blockEnd.equals(slotEnd)) {
+                    // Block fills entire slot — delete slot
+                    slotRepository.delete(slot);
+                } else if (blockStart.equals(slotStart)) {
+                    // Block is at the start — shrink slot forward
+                    slot.setStartTime(blockEnd);
+                    slotRepository.save(slot);
+                } else if (blockEnd.equals(slotEnd)) {
+                    // Block is at the end — shrink slot backward
+                    slot.setEndTime(blockStart);
+                    slotRepository.save(slot);
+                } else {
+                    // Block is in the middle — split into two slots
+                    // First half: slotStart -> blockStart
+                    slot.setEndTime(blockStart);
+                    slotRepository.save(slot);
+                    // Second half: blockEnd -> slotEnd
+                    AvailabilitySlot second = new AvailabilitySlot();
+                    second.setUser(slot.getUser());
+                    second.setDayKey(slot.getDayKey());
+                    second.setWeekStart(slot.getWeekStart());
+                    second.setStartTime(blockEnd);
+                    second.setEndTime(slotEnd);
+                    slotRepository.save(second);
+                }
+                break;
+            }
+        }
+
         blockRepository.delete(block);
     }
 
