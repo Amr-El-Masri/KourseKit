@@ -37,52 +37,52 @@ const FACULTIES = [
   "Education",
 ];
 
-const MAJORS = [
-  "Agri-Business",
-  "Agri-culture",
-  "Applied Mathematics",
-  "Arabic Language and Literature",
-  "Archaeology",
-  "Architecture",
-  "Art History",
-  "Biology",
-  "Business Administration",
-  "Chemical Engineering",
-  "Chemistry",
-  "Civil and Environmental Engineering",
-  "Computer and Communications Engineering",
-  "Computer Science",
-  "Construction Engineering",
-  "Earth Sciences",
-  "Economics",
-  "Electrical and Computer Engineering",
-  "Elementary Education",
-  "English Language",
-  "English Literature",
-  "Environmental Health",
-  "Food Sciences and Management",
-  "Graphic Design",
-  "Health Communication",
-  "History",
-  "Industrial Engineering",
-  "Landscape Architecture",
-  "Mathematics",
-  "Mechanical Engineering",
-  "Media and Communication",
-  "Medical Imaging Sciences",
-  "Medical Laboratory Sciences",
-  "Nursing",
-  "Nutrition and Dietetics",
-  "Nutrition and Dietetics Coordinated Program",
-  "Philosophy",
-  "Physics",
-  "Political Studies",
-  "Psychology",
-  "Public Administration",
-  "Sociology-Anthropology",
-  "Statistics",
-  "Studio Arts",
-];
+const MAJORS_BY_FACULTY = {
+  "Arts & Sciences": [
+    "Applied Mathematics", "Arabic Language and Literature", "Archaeology",
+    "Art History", "Biology", "Chemistry", "Computer Science", "Earth Sciences",
+    "Economics", "English Language", "English Literature", "History",
+    "Mathematics", "Media and Communication", "Philosophy", "Physics",
+    "Political Studies", "Psychology", "Public Administration",
+    "Sociology-Anthropology", "Statistics", "Studio Arts",
+  ],
+  "Engineering & Architecture": [
+    "Architecture", "Chemical Engineering", "Civil and Environmental Engineering",
+    "Computer and Communications Engineering", "Construction Engineering",
+    "Electrical and Computer Engineering", "Graphic Design", "Industrial Engineering",
+    "Landscape Architecture", "Mechanical Engineering",
+  ],
+  "Business": [
+    "Agri-Business", "Business Administration",
+  ],
+  "Health Sciences": [
+    "Environmental Health", "Health Communication", "Medical Imaging Sciences",
+    "Medical Laboratory Sciences", "Nutrition and Dietetics",
+    "Nutrition and Dietetics Coordinated Program",
+  ],
+  "Medicine": ["Medicine"],
+  "Nursing":  ["Nursing"],
+  "Education": ["Elementary Education", "Agri-culture", "Food Sciences and Management"],
+};
+
+const MINORS_BY_FACULTY = {
+  "Arts & Sciences": [
+    "Applied Mathematics", "Arabic Studies", "Archaeology", "Art History",
+    "Biology", "Chemistry", "Computer Science", "Economics", "English Literature",
+    "Environmental Studies", "History", "Mathematics", "Media and Communication",
+    "Philosophy", "Physics", "Political Studies", "Psychology",
+    "Public Administration", "Sociology-Anthropology", "Statistics", "Studio Arts",
+  ],
+  "Engineering & Architecture": [
+    "Architecture", "Computer and Communications Engineering",
+    "Electrical and Computer Engineering", "Industrial Engineering",
+  ],
+  "Business": ["Business Administration", "Finance", "Marketing"],
+  "Health Sciences": ["Health Communication", "Nutrition and Dietetics"],
+  "Medicine":  [],
+  "Nursing":   [],
+  "Education": ["Elementary Education"],
+};
 
 const STUDENT_STATUSES = [
   { id:"freshman",  label:"Freshman",  desc:"1st year" },
@@ -102,6 +102,7 @@ const DEFAULT_PROFILE = {
   email:        "",
   faculty:      "Arts & Sciences",
   major:        "Computer Science",
+  minor:        "",
   status:       "freshman",
   cumGPA:       "",
   totalCredits: "",
@@ -110,6 +111,7 @@ const DEFAULT_PROFILE = {
   doubleMajor:   false,
   secondMajor:   "",
   secondFaculty: "Arts & Sciences",
+  secondMinor:   "",
 };
 
 async function profileFetch(path, options = {}) {
@@ -498,19 +500,32 @@ const refetchSemesters = () =>
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                 <div style={{ flex:1, minWidth:200 }}>
                   <label style={pf.label}>Faculty</label>
-                  <select className="pf-input" value={draft.faculty} onChange={e => set("faculty", e.target.value)} style={{ ...pf.input, cursor:"pointer" }}>
+                  <select className="pf-input" value={draft.faculty}
+                    onChange={e => { set("faculty", e.target.value); set("major", ""); set("minor", ""); }}
+                    style={{ ...pf.input, cursor:"pointer" }}>
                     {FACULTIES.map(f => <option key={f}>{f}</option>)}
                   </select>
                 </div>
                 <div style={{ flex:1, minWidth:200 }}>
                   <label style={pf.label}>Major</label>
-                  <select className="pf-input" value={draft.major} onChange={e => set("major", e.target.value)} style={{ ...pf.input, cursor:"pointer" }}>
-                    {MAJORS.map(m => <option key={m}>{m}</option>)}
+                  <select className="pf-input" value={draft.major}
+                    onChange={e => set("major", e.target.value)}
+                    style={{ ...pf.input, cursor:"pointer" }}>
+                    <option value="">Select major…</option>
+                    {(MAJORS_BY_FACULTY[draft.faculty] || []).map(m => <option key={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div style={{ flex:1, minWidth:200 }}>
+                  <label style={pf.label}>Minor <span style={{ fontWeight:400, color:"#B8A9C9" }}>(optional)</span></label>
+                  <select className="pf-input" value={draft.minor || ""}
+                    onChange={e => set("minor", e.target.value)}
+                    style={{ ...pf.input, cursor:"pointer" }}>
+                    <option value="">None</option>
+                    {(MINORS_BY_FACULTY[draft.faculty] || []).map(m => <option key={m}>{m}</option>)}
                   </select>
                 </div>
               </div>
 
-              {/* if the student has a double major */}
               <div style={{ marginBottom:14 }}>
                 <label style={{ ...pf.label, marginBottom:10 }}>Double Major?</label>
                 <div style={{ display:"flex", gap:8, marginBottom: draft.doubleMajor ? 12 : 0 }}>
@@ -529,14 +544,28 @@ const refetchSemesters = () =>
                   <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                     <div style={{ flex:1, minWidth:200 }}>
                       <label style={pf.label}>Second Faculty</label>
-                      <select className="pf-input" value={draft.secondFaculty} onChange={e => set("secondFaculty", e.target.value)} style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
+                      <select className="pf-input" value={draft.secondFaculty}
+                        onChange={e => { set("secondFaculty", e.target.value); set("secondMajor", ""); set("secondMinor", ""); }}
+                        style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
                         {FACULTIES.map(f => <option key={f}>{f}</option>)}
                       </select>
                     </div>
                     <div style={{ flex:1, minWidth:200 }}>
                       <label style={pf.label}>Second Major</label>
-                      <select className="pf-input" value={draft.secondMajor} onChange={e => set("secondMajor", e.target.value)} style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
-                        {MAJORS.map(m => <option key={m}>{m}</option>)}
+                      <select className="pf-input" value={draft.secondMajor}
+                        onChange={e => set("secondMajor", e.target.value)}
+                        style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
+                        <option value="">Select major…</option>
+                        {(MAJORS_BY_FACULTY[draft.secondFaculty] || []).map(m => <option key={m}>{m}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ flex:1, minWidth:200 }}>
+                      <label style={pf.label}>Second Minor <span style={{ fontWeight:400, color:"#B8A9C9" }}>(optional)</span></label>
+                      <select className="pf-input" value={draft.secondMinor || ""}
+                        onChange={e => set("secondMinor", e.target.value)}
+                        style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
+                        <option value="">None</option>
+                        {(MINORS_BY_FACULTY[draft.secondFaculty] || []).map(m => <option key={m}>{m}</option>)}
                       </select>
                     </div>
                   </div>
