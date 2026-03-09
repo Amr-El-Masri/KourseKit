@@ -310,46 +310,53 @@ useEffect(() => {
 const [studyBlocks, setStudyBlocks] = useState({});
 const [studySlots, setStudySlots] = useState({});
 const [studyEntries, setStudyEntries] = useState([]);
+const [schedColorMap, setSchedColorMap] = useState(() => {
+  try { const s = localStorage.getItem("kk_colorMap"); return s ? JSON.parse(s) : {}; } catch { return {}; }
+});
+const [schedWeekOffset, setSchedWeekOffset] = useState(0);
 
-const loadStudyBlocks = useCallback(() => {
+const getWeekStartForOffset = (offset) => {
+  const d = new Date();
+  const diff = d.getDay() === 0 ? -6 : 1 - d.getDay();
+  d.setDate(d.getDate() + diff + offset * 7);
+  return d.toISOString().split("T")[0];
+};
+
+const loadStudyBlocks = useCallback((offset = 0) => {
   const token = localStorage.getItem("kk_token");
   const userId = token ? JSON.parse(atob(token.split(".")[1])).sub : null;
   if (!userId) return;
-  const monday = new Date();
-  const diff = monday.getDay() === 0 ? -6 : 1 - monday.getDay();
-  monday.setDate(monday.getDate() + diff);
-  const weekStart = monday.toISOString().split("T")[0];
-
+  const weekStart = getWeekStartForOffset(offset);
+  try { const s = localStorage.getItem("kk_colorMap"); if (s) setSchedColorMap(JSON.parse(s)); } catch {}
   fetch(`http://localhost:8080/api/study-plan/${userId}/weekly?weekStart=${weekStart}`, {
     headers: { "Authorization": `Bearer ${token}` }
   }).then(r => r.json()).then(data => { if (data) setStudyBlocks(data); }).catch(() => {});
-
-  fetch(`http://localhost:8080/api/study-plan/${userId}/slots`, {
+  fetch(`http://localhost:8080/api/study-plan/${userId}/slots?weekStart=${weekStart}`, {
     headers: { "Authorization": `Bearer ${token}` }
   }).then(r => r.json()).then(data => {
     if (Array.isArray(data)) {
       const map = {};
-      data.forEach(s => {
-        if (!map[s.dayKey]) map[s.dayKey] = [];
-        map[s.dayKey].push(s);
-      });
+      data.forEach(s => { if (!map[s.dayKey]) map[s.dayKey] = []; map[s.dayKey].push(s); });
       setStudySlots(map);
     }
   }).catch(() => {});
-
-  fetch(`http://localhost:8080/api/study-plan/${userId}/entries`, {
-  headers: { "Authorization": `Bearer ${token}` }
-}).then(r => r.json()).then(data => {
-  if (Array.isArray(data)) setStudyEntries(data);
-}).catch(() => {});
+  fetch(`http://localhost:8080/api/study-plan/${userId}/entries?weekStart=${weekStart}`, {
+    headers: { "Authorization": `Bearer ${token}` }
+  }).then(r => r.json()).then(data => {
+    if (Array.isArray(data)) setStudyEntries(data);
+  }).catch(() => {});
 }, []);
 
 useEffect(() => {
   if (activePage === "dashboard") {
     loadTasksForCalendar();
-    loadStudyBlocks();
+    loadStudyBlocks(schedWeekOffset);
   }
 }, [activePage]);
+
+useEffect(() => {
+  if (activePage === "dashboard") loadStudyBlocks(schedWeekOffset);
+}, [schedWeekOffset]);
 
 const saveTasks = (next) => {
   setTasks(next);
@@ -391,9 +398,34 @@ const calKey = (d) => {
       headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
     })
       .then(r => r.json())
-      .then(data => { if (Array.isArray(data)) { setApiSemesters(data); setSemester(s => s || (data[0]?.semesterName ?? "")); return data; } return []; })
+      .then(data => {
+        if (Array.isArray(data)) {
+          const sorted = sortSemesters(data);
+          setApiSemesters(sorted);
+          setSemester(s => s || (sorted[sorted.length - 1]?.semesterName ?? ""));
+          return sorted;
+        }
+        return []; })
       .catch(() => []);
   };
+
+const SEMESTER_ORDER = { "fall": 0, "spring": 1, "summer": 2 };
+const sortSemesters = (list) => {
+  return [...list].sort((a, b) => {
+    const parse = name => {
+      if (!name) return { year: 0, term: 0 };
+      const lower = name.toLowerCase();
+      const yearMatch = name.match(/(\d{2,4})/g);
+      const year = yearMatch ? parseInt(yearMatch[0]) : 0;
+      const term = Object.entries(SEMESTER_ORDER).find(([k]) => lower.includes(k))?.[1] ?? 99;
+      return { year, term };
+    };
+    const pa = parse(a.semesterName);
+    const pb = parse(b.semesterName);
+    if (pa.year !== pb.year) return pa.year - pb.year;
+    return pa.term - pb.term;
+  });
+};
 
   useEffect(() => { fetchSemesters(); }, []);
 
@@ -743,96 +775,128 @@ const calKey = (d) => {
 
 {visible.schedule && (
   <section className="card-anim" style={s.card}>
-    <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14}}>
+    <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10}}>
       <SectionTitle>Weekly Schedule</SectionTitle>
       <button onClick={() => setActivePage("planner")} style={sd.smallAddBtn}>
         Open Planner →
       </button>
     </div>
 
-    <div style={{display:"flex", flexDirection:"column", gap:6, maxHeight:240, overflowY:"auto"}}>
+    {(() => {
+      const weekStartDate = (() => {
+        const d = new Date();
+        const diff = d.getDay() === 0 ? -6 : 1 - d.getDay();
+        d.setDate(d.getDate() + diff + schedWeekOffset * 7);
+        return d;
+      })();
+
+      const weekEndDate = new Date(weekStartDate);
+      weekEndDate.setDate(weekStartDate.getDate() + 6);
+      const fmtDate = d => d.toLocaleDateString("en-US", { month:"short", day:"numeric" });
+      return (
+        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, background:"#F7F5FB", borderRadius:10, padding:"6px 10px"}}>
+          <button onClick={() => setSchedWeekOffset(o => o - 1)} style={{background:"none", border:"1px solid #D4D4DC", borderRadius:7, width:26, height:26, cursor:"pointer", fontSize:14, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center"}}>‹</button>
+          <span style={{fontSize:12, fontWeight:600, color:"#31487A"}}>
+            {schedWeekOffset === 0 ? "This Week" : schedWeekOffset === 1 ? "Next Week" : schedWeekOffset === -1 ? "Last Week" : `${fmtDate(weekStartDate)} – ${fmtDate(weekEndDate)}`}
+            <span style={{fontWeight:400, color:"#A59AC9", marginLeft:6}}>{fmtDate(weekStartDate)} – {fmtDate(weekEndDate)}</span>
+          </span>
+          <button onClick={() => setSchedWeekOffset(o => o + 1)} style={{background:"none", border:"1px solid #D4D4DC", borderRadius:7, width:26, height:26, cursor:"pointer", fontSize:14, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center"}}>›</button>
+        </div>
+      );
+    })()}
+
+    <div style={{display:"flex", flexDirection:"column", gap:6, maxHeight:220, overflowY:"auto"}}>
       {(() => {
-        const DAY_KEYS = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"];
+        const DAY_KEYS   = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"];
         const DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-        const hasBlocks = DAY_KEYS.some(k => (studyBlocks[k]||[]).length > 0);
-        const hasSlots  = DAY_KEYS.some(k => (studySlots[k]||[]).length > 0);
+        const hasBlocks  = DAY_KEYS.some(k => (studyBlocks[k]||[]).length > 0);
+        const hasSlots   = DAY_KEYS.some(k => (studySlots[k]||[]).length > 0);
 
         if (!hasBlocks && !hasSlots) return (
           <div style={{fontSize:13, color:"#B8A9C9", textAlign:"center", padding:"20px 0"}}>
-            No schedule yet — open the planner to get started!
-          </div>
-        );
+            No schedule for this week — open the planner to generate one!
+          </div> );
 
         const fmt = timeStr => {
           if (!timeStr) return "";
           const parts = Array.isArray(timeStr) ? timeStr : timeStr.split(":");
-          const h = String(parts[0]).padStart(2,"0");
-          const m = String(parts[1]||0).padStart(2,"0");
-          return `${h}:${m}`;
+          return `${String(parts[0]).padStart(2,"0")}:${String(parts[1]||0).padStart(2,"0")}`;
         };
 
+        const fmtH = h => `${String(Math.floor(h)).padStart(2,"0")}:${String(Math.round((h%1)*60)).padStart(2,"0")}`;
+        const PALETTE = ["#5A3B7B","#31487A","#2d7a4a","#7a4a2d","#7a2d5a","#2d5a7a","#6b2d7a"];
+        const entryLookup = {};
+        studyEntries.forEach((e, idx) => {
+          const entryIdStr = String(e.id);
+          const course = e.task?.course || "";
+          const title  = e.task?.title  || "Study";
+          const label  = course ? `${course} — ${title}` : title;
+          const color  = schedColorMap[entryIdStr] || courseColors[course] || PALETTE[idx % PALETTE.length];
+          entryLookup[entryIdStr] = { label, color };
+        });
+
         return DAY_KEYS.map((key, i) => {
-          const blocks = studyBlocks[key] || [];
-          const slots  = studySlots[key]  || [];
+          const blocks = (studyBlocks[key] || []).slice().sort((a,b) => fmt(a.startTime).localeCompare(fmt(b.startTime)));
+          const slots  = studySlots[key] || [];
           if (!blocks.length && !slots.length) return null;
 
           return (
-            <div key={key}>
+            <div key={key} style={{marginBottom:2}}>
               <div style={{fontSize:11, fontWeight:700, color:"#8FB3E2", marginBottom:4, textTransform:"uppercase", letterSpacing:"0.06em"}}>
                 {DAY_LABELS[i]}
               </div>
 
-              {/* Study blocks if generated */}
               {blocks.map((b, bi) => {
                 const startH = Array.isArray(b.startTime)
                   ? b.startTime[0] + b.startTime[1]/60
-                  : parseFloat(b.startTime?.split(":")[0]) + parseFloat(b.startTime?.split(":")[1]||0)/60;
+                  : parseFloat(b.startTime?.split(":")[0]||0) + parseFloat(b.startTime?.split(":")[1]||0)/60;
                 const endH = startH + (b.duration || 1);
-                const fmtH = h => `${String(Math.floor(h)).padStart(2,"0")}:${String(Math.round((h%1)*60)).padStart(2,"0")}`;
+                const info  = entryLookup[String(b.studyPlanEntryId)] || {};
+                const color = info.color || "#7B5EA7";
+                const label = info.label || "Study Block";
                 return (
                   <div key={bi} style={{
                     display:"flex", alignItems:"center", justifyContent:"space-between",
                     padding:"6px 10px", borderRadius:8, marginBottom:4,
-                    background: b.completed ? "#f5f5f5" : "#F0EEF7",
-                    borderLeft: `3px solid ${b.completed ? "#ccc" : "#7B5EA7"}`,
-                    opacity: b.completed ? 0.6 : 1,
+                    background: b.completed ? "#f5f5f5" : color + "18",
+                    borderLeft: `3px solid ${b.completed ? "#ccc" : color}`,
+                    opacity: b.completed ? 0.65 : 1,
                   }}>
-                    <div>
-                      <span style={{fontSize:13, fontWeight:600, color: b.completed ? "#aaa" : "#5A3B7B"}}>
-                        {b.entryName || "Study Block"}
+                    <div style={{minWidth:0}}>
+                      <span style={{fontSize:12, fontWeight:700, color: b.completed ? "#aaa" : color, display:"block", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>
+                        {label}
                       </span>
-                      <span style={{fontSize:11, color:"#B8A9C9", marginLeft:8}}>
-                        {fmtH(startH)} – {fmtH(endH)}
+                      <span style={{fontSize:11, color:"#B8A9C9"}}>
+                        {fmtH(startH)} – {fmtH(endH)} · {b.duration}h
                       </span>
                     </div>
-                    {b.completed && <span style={{fontSize:10, background:"#eef7f0", color:"#2d7a4a", padding:"2px 6px", borderRadius:4, fontWeight:600}}>✓ Done</span>}
+                    {b.completed
+                      ? <span style={{fontSize:10, background:"#eef7f0", color:"#2d7a4a", padding:"2px 6px", borderRadius:4, fontWeight:600, flexShrink:0}}>✓ Done</span>
+                      : <span style={{fontSize:10, background:color+"22", color, padding:"2px 6px", borderRadius:4, fontWeight:600, flexShrink:0}}>{b.duration}h</span>
+                    }
                   </div>
                 );
               })}
 
-            {/* Availability slots as fallback */}
-            {!blocks.length && slots.map((slot, si) => (
-            <div key={si} style={{
-            display:"flex", alignItems:"center", justifyContent:"space-between",
-            padding:"6px 10px", borderRadius:8, marginBottom:4,
-            background:"#eef2fb", borderLeft:"3px solid #8FB3E2",
-          }}>
-            <div>
-                <span style={{fontSize:13, fontWeight:600, color:"#31487A"}}>
-                  {fmt(slot.startTime)} – {fmt(slot.endTime)} </span>
-                <div style={{fontSize:11, color:"#A59AC9", marginTop:2}}>
-                  {studyEntries.map(e => e.task?.title).filter(Boolean).join(" · ") || "Free to study"}
-                  </div>
+              {!blocks.length && slots.map((slot, si) => (
+                <div key={si} style={{
+                  display:"flex", alignItems:"center", justifyContent:"space-between",
+                  padding:"6px 10px", borderRadius:8, marginBottom:4,
+                  background:"#eef2fb", borderLeft:"3px solid #8FB3E2",
+                }}>    <div>
+                        <span style={{fontSize:12, fontWeight:600, color:"#31487A"}}>{fmt(slot.startTime)} – {fmt(slot.endTime)}</span>
+                        <div style={{fontSize:11, color:"#A59AC9", marginTop:1}}>Available slot</div>
+                      </div>
+                      <span style={{fontSize:10, background:"#D9E1F1", color:"#31487A", padding:"2px 6px", borderRadius:4, flexShrink:0}}>Free</span>
+                    </div>
+                  ))}
                 </div>
-              <span style={{fontSize:10, background:"#D9E1F1", color:"#31487A", padding:"2px 6px", borderRadius:4}}>Available</span>
-              </div> ))}
-              </div>
               );
             });
           })()}
         </div>
       </section>
-      )}
+    )}
   </div>
 )}
         {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} />}

@@ -234,15 +234,34 @@ export default function Profile({ onProfileSave, onLogout }) {
   useEffect(() => {
     fetch(`${API}/api/grades/saved`, { headers: semAuthHeaders() })
       .then(r => r.json())
-      .then(data => Array.isArray(data) && setSemesters(data))
+      .then(data => Array.isArray(data) && setSemesters(sortSemesters(data)))
       .catch(() => {});
   }, []);
 
-  const refetchSemesters = () =>
-    fetch(`${API}/api/grades/saved`, { headers: semAuthHeaders() })
-      .then(r => r.json())
-      .then(data => Array.isArray(data) && setSemesters(data))
-      .catch(() => {});
+  const SEMESTER_ORDER = { "fall": 0, "spring": 1, "summer": 2 };
+
+const sortSemesters = (list) => {
+  return [...list].sort((a, b) => {
+    const parse = name => {
+      if (!name) return { year: 0, term: 0 };
+      const lower = name.toLowerCase();
+      const yearMatch = name.match(/(\d{2,4})/g);
+      const year = yearMatch ? parseInt(yearMatch[0]) : 0;
+      const term = Object.entries(SEMESTER_ORDER).find(([k]) => lower.includes(k))?.[1] ?? 99;
+      return { year, term };
+    };
+    const pa = parse(a.semesterName);
+    const pb = parse(b.semesterName);
+    if (pa.year !== pb.year) return pa.year - pb.year;
+    return pa.term - pb.term;
+  });
+};
+
+const refetchSemesters = () =>
+  fetch(`${API}/api/grades/saved`, { headers: semAuthHeaders() })
+    .then(r => r.json())
+    .then(data => Array.isArray(data) && setSemesters(sortSemesters(data)))
+    .catch(() => {});
 
   const createSemester = async () => {
     if (!newSemName.trim()) return;
