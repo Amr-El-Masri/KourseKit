@@ -26,6 +26,7 @@ export default function AdminDashboard({ token }) {
   const [flaggedProf,          setFlaggedProf]          = useState([]);
   const [flaggedProfLoading,   setFlaggedProfLoading]   = useState(false);
   const [expandedId,           setExpandedId]           = useState(null);
+  const [deleteConfirmId,      setDeleteConfirmId]      = useState(null);
   const [err, setErr] = useState("");
   // user profile panel
   const [selectedUser,    setSelectedUser]    = useState(null);
@@ -192,10 +193,17 @@ export default function AdminDashboard({ token }) {
                   <span style={{ fontSize:12, color:"#A59AC9", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:12 }}>{r.userId || "—"}</span>
                   <span style={{ fontSize:13, color:"#F5A623", letterSpacing:1 }}>{stars(r.rating)}</span>
                   <span style={{ fontSize:12, color:"#A59AC9" }}>{formatDate(r.createdAt)}</span>
-                  <button className="action-btn" onClick={e => { e.stopPropagation(); onDelete(r.id); }} style={{
-                    padding:"6px 14px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
-                    background:"#fef0f0", color:"#c0392b",
-                  }}>Delete</button>
+                  {deleteConfirmId === r.id ? (
+                    <div style={{ display:"flex", gap:4 }} onClick={e => e.stopPropagation()}>
+                      <button onClick={() => { onDelete(r.id); setDeleteConfirmId(null); }} style={{ padding:"5px 10px", border:"none", borderRadius:8, fontSize:11, fontWeight:600, cursor:"pointer", background:"#c0392b", color:"#fff" }}>Confirm</button>
+                      <button onClick={() => setDeleteConfirmId(null)} style={{ padding:"5px 10px", border:"1px solid #D4D4DC", borderRadius:8, fontSize:11, cursor:"pointer", background:"#fff", color:"#A59AC9" }}>Cancel</button>
+                    </div>
+                  ) : (
+                    <button className="action-btn" onClick={e => { e.stopPropagation(); setDeleteConfirmId(r.id); }} style={{
+                      padding:"6px 14px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
+                      background:"#fef0f0", color:"#c0392b",
+                    }}>Delete</button>
+                  )}
                 </div>
                 {expanded && (
                   <div style={{ padding:"12px 20px 16px", background: i % 2 === 0 ? "#F7F5FB" : "#F2F0FA", borderTop:"1px solid #E8E4F4" }}>

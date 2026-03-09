@@ -243,6 +243,7 @@ const toggleWidget = id => {
 });
 
   const [todoInput, setTodoInput] = useState("");
+  const [todoError, setTodoError] = useState(false);
 
   const today = new Date();
   const [calYear,  setCalYear]  = useState(today.getFullYear());
@@ -258,7 +259,8 @@ const toggleWidget = id => {
   const semCourseList = (selectedSem.courses || []).map(c => ({ id: c.id, name: c.courseCode }));
   
   const addTodo = () => {
-  if (!todoInput.trim()) return;
+  if (!todoInput.trim()) { setTodoError(true); return; }
+  setTodoError(false);
   const next = [...todos, { id:Date.now(), text:todoInput.trim(), done:false }];
   setTodos(next);
   localStorage.setItem("kk_todos", JSON.stringify(next));
@@ -619,6 +621,14 @@ const sortSemesters = (list) => {
                     </div>
                   );
 
+                  if (profile.cumGPA) return (
+                    <div style={{textAlign:"center", padding:"20px 0"}}>
+                      <div style={{fontFamily:"'Fraunces',serif", fontSize:48, fontWeight:700, color:gpaColor(profile.cumGPA), lineHeight:1}}>{parseFloat(profile.cumGPA).toFixed(2)}</div>
+                      <div style={{fontSize:12, color:"#A59AC9", marginTop:6}}>Cumulative GPA (from profile)</div>
+                      <div style={{fontSize:11, color:"#D4C9E8", marginTop:4}}>No semester data yet</div>
+                    </div>
+                  );
+
                   return (
                     <div style={{fontSize:13, color:"#B8A9C9", textAlign:"center", padding:"24px 0"}}>
                       No grades recorded yet.
@@ -646,9 +656,10 @@ const sortSemesters = (list) => {
               <section className="card-anim" style={s.card}>
                 <SectionTitle>To-Do List</SectionTitle>
                 <div style={{display:"flex",gap:8,marginTop:14}}>
-                  <input value={todoInput} onChange={e=>setTodoInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addTodo()} placeholder="Add a task…" style={s.todoInput}/>
+                  <input value={todoInput} onChange={e=>{setTodoInput(e.target.value);setTodoError(false);}} onKeyDown={e=>e.key==="Enter"&&addTodo()} placeholder="Add a task…" style={{...s.todoInput, borderColor: todoError ? "#c0392b" : "#D4D4DC"}}/>
                   <button className="add-btn" onClick={addTodo} style={s.addBtn}>+</button>
                 </div>
+                {todoError && <div style={{fontSize:12,color:"#c0392b",marginTop:4}}>Please type a task first, then add.</div>}
                 <div style={{marginTop:10,maxHeight:160,overflowY:"auto",display:"flex",flexDirection:"column",gap:5}}>
                   {todos.length===0 && <div style={{fontSize:13,color:"#B8A9C9",textAlign:"center",padding:"16px 0"}}>No tasks yet!</div>}
                   {todos.map(t=>(
