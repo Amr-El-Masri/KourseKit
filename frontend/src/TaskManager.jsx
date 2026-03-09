@@ -92,7 +92,7 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
           </button>
 
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:2, flexWrap:"wrap" }}>
             <span style={{ fontSize:14, fontWeight:600, color: task.done?"#B8A9C9":"#2a2050", textDecoration: task.done?"line-through":"none" }}>
               {task.title || <em style={{ color:"#B8A9C9" }}>Untitled task</em>}
             </span>
@@ -187,7 +187,7 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
         <textarea value={form.notes} onChange={e=>set("notes",e.target.value)}
                   placeholder="Any extra details..."
                   rows={3}
-                  style={{ ...tm.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
+                  style={{ ...tm.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6, marginBottom:0 }}
         />
 
         <div style={{ display:"flex", gap:10, marginTop:4 }}>
@@ -200,13 +200,13 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
   );
 }
 
-export default function TaskManager() {
+export default function TaskManager({ initialEditTask }) {
   const [tasks,        setTasks]        = useState([]);
   const [filter,       setFilter]       = useState("All");
   const [search,       setSearch]       = useState("");
   const [courseFilter, setCourseFilter] = useState("");
   const [composing,    setComposing]    = useState(false);
-  const [editing,      setEditing]      = useState(null);
+  const [editing,      setEditing]      = useState(initialEditTask || null);
 
   const USER_ID = getUserId();
 
@@ -349,14 +349,14 @@ export default function TaskManager() {
           </button>
         </div>
 
-        {(composing || editing) && (
-            <TaskForm
-                initial={editing}
-                onSave={saveTask}
-                onCancel={() => { setComposing(false); setEditing(null); }}
-                courses={savedCourses}
-            />
-        )}
+        {composing && (
+        <TaskForm
+          initial={null}
+          onSave={saveTask}
+          onCancel={() => setComposing(false)}
+          courses={savedCourses}
+        />
+      )}
 
         <div style={{ display:"flex", gap:10, marginBottom:20, flexWrap:"wrap" }}>
           {[
@@ -408,11 +408,24 @@ export default function TaskManager() {
         ) : (
             <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               {displayed.map(t => (
-                  <TaskRow key={t.id} task={t}
-                           onToggle={toggleDone}
-                           onDelete={deleteTask}
-                           onEdit={task => { setEditing(task); setComposing(false); }}
+                <div key={t.id}>
+                  <TaskRow
+                    task={t}
+                    onToggle={toggleDone}
+                    onDelete={deleteTask}
+                    onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }}
                   />
+                  {editing?.id === t.id && (
+                    <div style={{marginTop:5}}>
+                    <TaskForm
+                      initial={editing}
+                      onSave={saveTask}
+                      onCancel={() => setEditing(null)}
+                      courses={savedCourses}
+                     />
+                  </div>
+                  )}
+                </div>
               ))}
             </div>
         )}
@@ -421,7 +434,7 @@ export default function TaskManager() {
 }
 
 const tm = {
-  formCard:  { background:"#ffffff", borderRadius:18, padding:"24px 26px", border:"1px solid #D4D4DC", boxShadow:"0 4px 20px rgba(49,72,122,0.09)", marginBottom:20 },
+  formCard:  { background:"#ffffff", borderRadius:18, padding:"24px 26px", border:"1px solid #D4D4DC", boxShadow:"0 4px 20px rgba(49,72,122,0.09)", marginBottom:0 },
   label:     { display:"block", fontSize:12, fontWeight:600, color:"#2a2050", marginBottom:6 },
   input:     { width:"100%", padding:"10px 14px", border:"1px solid #D4D4DC", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"#2a2050", background:"#F7F5FB", marginBottom:14, display:"block", transition:"border-color .15s", outline:"none" },
   saveBtn:   { padding:"10px 24px", background:"#31487A", color:"white", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },

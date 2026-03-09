@@ -4,6 +4,7 @@ import Reviews from "./Reviews";
 import TaskManager from "./TaskManager";
 import Profile from "./Profile";
 import StudyPlanner from "./StudyPlanner";
+import CourseDetails from "./CourseDetails";
 import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle } from 'lucide-react';
 
 const AVATAR_ICONS = [
@@ -193,13 +194,16 @@ export default function Dashboard({ onLogout }) {
   { id:"grades",    label:"Grade Calculator", icon:<Calculator size={17}/> },
   { id:"reviews",   label:"Reviews",          icon:<Star size={17}/> },
 ];
+
+  const [editingTask, setEditingTask] = useState(null);
+  const [courseDetailsTarget, setCourseDetailsTarget] = useState(null);
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
 
   const [profile, setProfile] = useState({});
   const displayName = profile.firstName || profile.lastName
     ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim()
     : "Student";
-
+  
   const [activePage, setActivePage] = useState(() => localStorage.getItem("kk_activePage") || "dashboard");
   const [sidebarOpen,    setSidebarOpen]   = useState(true);
   useEffect(() => {
@@ -252,7 +256,7 @@ const toggleWidget = id => {
 
   const selectedSem = apiSemesters.find(s => s.semesterName === semester) ?? { courses: [] };
   const semCourseList = (selectedSem.courses || []).map(c => ({ id: c.id, name: c.courseCode }));
-
+  
   const addTodo = () => {
   if (!todoInput.trim()) return;
   const next = [...todos, { id:Date.now(), text:todoInput.trim(), done:false }];
@@ -545,38 +549,40 @@ const sortSemesters = (list) => {
           <div style={s.grid}>
 
             {visible.courses && (
-              <section className="card-anim" style={{...s.card, gridColumn:"span 2"}}>
-                <SectionTitle>My Courses — {semester}</SectionTitle>
-                {semCourseList.length === 0
-                  ? <div style={{fontSize:13,color:"#B8A9C9",marginTop:16,textAlign:"center",padding:"20px 0"}}>No courses registered for this semester yet.</div>
-                  : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
-                  {semCourseList.map(c => (
-                    <div key={c.id} className="course-card" style={{
-                    ...s.courseCard,border: `2px solid ${courseColors[c.name] || "#A59AC9"}`}}>
-                    <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
-                    <div style={{fontWeight:700, fontSize:15, color:"#31487A"}}>{c.name}</div>
-                    <label style={{
-                      width:20, height:20, borderRadius:"50%",
-                      background: courseColors[c.name] || "#A59AC9",
-                      cursor:"pointer", flexShrink:0,
-                      boxShadow:"0 1px 4px rgba(0,0,0,0.15)",
-                      border:"2px solid white",
-                      display:"inline-block",
-                      transition:"transform .15s, box-shadow .15s ease",
-                    }}>
-                  <input
-                    type="color"
-                    value={courseColors[c.name] || "#A59AC9"}
-                    onChange={e => saveCourseColor(c.name, e.target.value)}
-                    style={{ opacity:0, width:0, height:0, position:"absolute" }}
-                  />
-                </label>
-                    </div>
-                  </div> ))}
-                </div>
-                }
-              </section>
-            )}
+            <section className="card-anim" style={{...s.card, gridColumn:"span 2"}}>
+              <SectionTitle>My Courses — {semester}</SectionTitle>
+              {semCourseList.length === 0
+                ? <div style={{fontSize:13,color:"#B8A9C9",marginTop:16,textAlign:"center",padding:"20px 0"}}>No courses registered for this semester yet.</div>
+                : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
+                    {semCourseList.map(c => (
+                      <div key={c.id} className="course-card"
+                        onClick={() => setCourseDetailsTarget(c)}
+                        style={{...s.courseCard, border: `2px solid ${courseColors[c.name] || "#A59AC9"}`}}>
+                        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+                          <div style={{fontWeight:700, fontSize:15, color:"#31487A"}}>{c.name}</div>
+                          <label style={{
+                            width:20, height:20, borderRadius:"50%",
+                            background: courseColors[c.name] || "#A59AC9",
+                            cursor:"pointer", flexShrink:0,
+                            boxShadow:"0 1px 4px rgba(0,0,0,0.15)",
+                            border:"2px solid white",
+                            display:"inline-block",
+                            transition:"transform .15s, box-shadow .15s ease",
+                          }}>
+                            <input
+                              type="color"
+                              value={courseColors[c.name] || "#A59AC9"}
+                              onChange={e => { e.stopPropagation(); saveCourseColor(c.name, e.target.value); }}
+                              style={{ opacity:0, width:0, height:0, position:"absolute" }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+              }
+            </section>
+          )}
 
             {visible.gpa && (
               <section className="card-anim" style={s.card}>
@@ -716,6 +722,7 @@ const sortSemesters = (list) => {
                       });
                     }}
                     onMouseLeave={() => setHoveredTask(null)}
+                    onClick={() => { setEditingTask(t); setActivePage("tasks"); }}
                     style={{
                       width:"90%", height:3, borderRadius:2,
                       background: color, marginBottom:1,
@@ -900,8 +907,17 @@ const sortSemesters = (list) => {
   </div>
 )}
         {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} />}
-        {activePage === "tasks" && (<TaskManager tasks={tasks}onToggle={toggleTask} onDelete={deleteTask} onSave={upsertTask}/>)}
-        {activePage === "reviews" && <Reviews />}
+        {activePage === "tasks" && (
+          <TaskManager
+            tasks={tasks}
+            onToggle={toggleTask}
+            onDelete={deleteTask}
+            onSave={upsertTask}
+            initialEditTask={editingTask}
+            key={editingTask?.id || "tasks"}
+          />
+        )}
+        {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
         {activePage === "planner" && <StudyPlanner />}
         {activePage === "profile" && (
           <Profile onProfileSave={p => setProfile(p)} onLogout={handleLogout} />
