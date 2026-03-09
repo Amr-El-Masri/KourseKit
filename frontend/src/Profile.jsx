@@ -478,8 +478,10 @@ const refetchSemesters = () =>
           <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom: editing ? 24 : 0 }}>
             <StatChip label="Status"         value={`${st.label} · ${st.desc}`} color="#7B5EA7" bg="#F0EEF7" />
             <StatChip label="Major" value={profile.major || "—"} color="#31487A" bg="#eef2fb" />
+            {profile.minor && <StatChip label="Minor" value={profile.minor} color="#2d7a4a" bg="#eef7f0" />}
             {profile.doubleMajor && profile.secondMajor && <StatChip label="Second Major" value={profile.secondMajor} color="#5A3B7B" bg="#F0EEF7" />}
-            <StatChip label="Cumulative GPA" value={profile.cumGPA || "—"}      color={gpaColor(profile.cumGPA)} bg="#F4F4F8" />
+            {profile.doubleMajor && profile.secondMinor && <StatChip label="Second Minor" value={profile.secondMinor} color="#1a7a6a" bg="#edfaf6" />}
+            <StatChip label="Cumulative GPA" value={profile.cumGPA || "—"} color={gpaColor(profile.cumGPA)} bg="#F4F4F8" />
             {profile.totalCredits && <StatChip label="Credits" value={`${profile.totalCredits} cr`} color="#5A3B7B" bg="#F0EEF7" />}
           </div>
 
