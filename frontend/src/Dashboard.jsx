@@ -5,6 +5,7 @@ import TaskManager from "./TaskManager";
 import Profile from "./Profile";
 import StudyPlanner from "./StudyPlanner";
 import CourseDetails from "./CourseDetails";
+import SyllabusModal from "./SyllabusModal";
 import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle } from 'lucide-react';
 
 const AVATAR_ICONS = [
@@ -197,6 +198,8 @@ export default function Dashboard({ onLogout }) {
 
   const [editingTask, setEditingTask] = useState(null);
   const [courseDetailsTarget, setCourseDetailsTarget] = useState(null);
+  const [syllabusTarget, setSyllabusTarget] = useState(null); // course name for syllabus modal
+  const [syllabusCalcData, setSyllabusCalcData] = useState(null); // pre-fill data for calculator
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
 
   const [profile, setProfile] = useState({});
@@ -579,6 +582,12 @@ const sortSemesters = (list) => {
                             />
                           </label>
                         </div>
+                        <button
+                          onClick={e => { e.stopPropagation(); setSyllabusTarget(c.name); }}
+                          style={{ marginTop:8, fontSize:11, color:"#7B5EA7", background:"none", border:"1px solid #D4D4DC", borderRadius:6, padding:"3px 8px", cursor:"pointer", width:"100%", textAlign:"left" }}
+                        >
+                          + Upload Syllabus
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -917,7 +926,7 @@ const sortSemesters = (list) => {
     )}
   </div>
 )}
-        {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} />}
+        {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} syllabusData={syllabusCalcData} onSyllabusApplied={() => setSyllabusCalcData(null)} />}
         {activePage === "tasks" && (
           <TaskManager
             tasks={tasks}
@@ -935,6 +944,20 @@ const sortSemesters = (list) => {
         )}
 
       </main>
+
+      {syllabusTarget && (
+        <SyllabusModal
+          courseName={syllabusTarget}
+          onClose={() => setSyllabusTarget(null)}
+          onApply={data => {
+            setSyllabusTarget(null);
+            if (data) {
+              setSyllabusCalcData(data);
+              setActivePage("grades");
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

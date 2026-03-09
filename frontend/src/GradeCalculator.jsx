@@ -128,7 +128,7 @@ const SEMESTER_OPTIONS = [
 ];
 
 // Grade Calculator page
-export default function GradeCalculator({ dashboardCourses = [], savedSemesters = [] }) {
+export default function GradeCalculator({ dashboardCourses = [], savedSemesters = [], syllabusData: syllabusDataProp = null, onSyllabusApplied }) {
   const [activeTab, setActiveTab] = useState("semester");
 
   // Row helpers (UI only)
@@ -458,6 +458,79 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
   }, [activeTab]);
 
 
+  // Syllabus Upload
+  const [syllabusFile,     setSyllabusFile]     = useState(null);
+  const [syllabusLoading,  setSyllabusLoading]  = useState(false);
+  const [syllabusError,    setSyllabusError]     = useState(null);
+  const [syllabusData,     setSyllabusData]      = useState(null); // extracted JSON
+  const [syllabusConfirm,  setSyllabusConfirm]   = useState(false); // show confirm screen
+  const syllabusInputRef = useRef(null);
+
+  const uploadSyllabus = async () => {
+    if (!syllabusFile) { setSyllabusError("Please select a file first."); return; }
+    setSyllabusLoading(true); setSyllabusError(null);
+    try {
+      const fd = new FormData();
+      fd.append("file", syllabusFile);
+      const res = await fetch(`${API}/api/syllabus/extract`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${localStorage.getItem("kk_token")}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Extraction failed.");
+      setSyllabusData(data);
+      setSyllabusConfirm(true);
+    } catch (e) {
+      setSyllabusError(e.message);
+    } finally {
+      setSyllabusLoading(false);
+    }
+  };
+
+  // Apply syllabus data coming from Dashboard modal prop
+  useEffect(() => {
+    if (!syllabusDataProp) return;
+    if (syllabusDataProp.assessments?.length) {
+      setComponents(syllabusDataProp.assessments.map((a, i) => ({
+        id: Date.now() + i, type: "Other", weight: String(a.weight ?? ""),
+        grade: "", customType: a.name || "",
+      })));
+      setActiveTab("course");
+    }
+    if (syllabusDataProp.courseCode || syllabusDataProp.credits) {
+      setSemCourses([{ id: Date.now(), name: syllabusDataProp.courseCode || "", grade: "", credits: String(syllabusDataProp.credits ?? "") }]);
+    }
+    if (syllabusDataProp.finalExamWeight) {
+      setFinalWeight(String(syllabusDataProp.finalExamWeight));
+    }
+    onSyllabusApplied?.();
+  }, [syllabusDataProp]);
+
+  const applySyllabusData = () => {
+    if (!syllabusData) return;
+    // Auto-fill Course Grade tab
+    if (syllabusData.assessments?.length) {
+      setComponents(syllabusData.assessments.map((a, i) => ({
+        id: Date.now() + i, type: "Other", weight: String(a.weight ?? ""),
+        grade: "", customType: a.name || "",
+      })));
+      setActiveTab("course");
+    }
+    // Auto-fill Semester GPA tab
+    if (syllabusData.courseCode || syllabusData.credits) {
+      setSemCourses([{ id: Date.now(), name: syllabusData.courseCode || "", grade: "", credits: String(syllabusData.credits ?? "") }]);
+    }
+    // Auto-fill Target Grade final exam weight
+    if (syllabusData.finalExamWeight) {
+      setFinalWeight(String(syllabusData.finalExamWeight));
+    }
+    setSyllabusConfirm(false);
+    setSyllabusData(null);
+    setSyllabusFile(null);
+    if (syllabusInputRef.current) syllabusInputRef.current.value = "";
+  };
+
   const TABS = [
     { id:"semester",   label:"Semester GPA"    },
     { id:"cumulative", label:"Cumulative GPA"   },
@@ -488,6 +561,73 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
           Calculate your averages, plan your grades, and simulate future scores
         </div>
       </div>
+
+      {/* Syllabus Upload */}
+      {!syllabusConfirm && (
+        <div style={{ background:"#F7F5FB", border:"1px solid #E0D9F0", borderRadius:12, padding:"14px 18px", marginBottom:20, display:"flex", gap:12, alignItems:"center", flexWrap:"wrap" }}>
+          <span style={{ fontSize:13, fontWeight:600, color:"#31487A", flexShrink:0 }}>Upload Syllabus</span>
+          <input ref={syllabusInputRef} type="file" accept=".pdf,.txt" onChange={e => { setSyllabusFile(e.target.files[0] || null); setSyllabusError(null); }}
+            style={{ fontSize:12, color:"#5A3B7B", flex:1, minWidth:180 }} />
+          <button onClick={uploadSyllabus} disabled={syllabusLoading || !syllabusFile} style={{ ...gc.calcBtn, padding:"8px 18px", opacity: syllabusFile ? 1 : 0.5 }}>
+            {syllabusLoading ? "Extracting…" : "Extract"}
+          </button>
+          {syllabusError && <span style={{ fontSize:12, color:"#c0392b", width:"100%" }}>{syllabusError}</span>}
+        </div>
+      )}
+
+      {/* Syllabus Confirmation Screen */}
+      {syllabusConfirm && syllabusData && (
+        <div style={{ background:"#fff", border:"1px solid #E0D9F0", borderRadius:12, padding:"20px 24px", marginBottom:20 }}>
+          <div style={{ fontWeight:700, fontSize:15, color:"#31487A", marginBottom:14 }}>Review Extracted Info</div>
+
+          <div style={{ display:"flex", gap:24, flexWrap:"wrap", marginBottom:16, fontSize:13 }}>
+            {syllabusData.courseCode && <span><b>Course:</b> {syllabusData.courseCode}</span>}
+            {syllabusData.credits    && <span><b>Credits:</b> {syllabusData.credits}</span>}
+            {syllabusData.professor  && <span><b>Professor:</b> {syllabusData.professor}</span>}
+            {syllabusData.finalExamWeight && <span><b>Final Exam Weight:</b> {syllabusData.finalExamWeight}%</span>}
+          </div>
+
+          {syllabusData.assessments?.length > 0 && (
+            <div style={{ marginBottom:14 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:"#7B5EA7", marginBottom:6 }}>Assessments (will fill Course Grade tab)</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                {syllabusData.assessments.map((a, i) => (
+                  <span key={i} style={{ background:"#F0EEF7", borderRadius:8, padding:"4px 10px", fontSize:12, color:"#31487A" }}>
+                    {a.name} — {a.weight}%
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {syllabusData.deadlines?.length > 0 && (
+            <div style={{ marginBottom:14 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:"#7B5EA7", marginBottom:6 }}>Deadlines</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                {syllabusData.deadlines.map((d, i) => (
+                  <span key={i} style={{ fontSize:12, color:"#5A3B7B" }}>{d.title} — {d.date} ({d.type})</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {syllabusData.officeHours?.length > 0 && (
+            <div style={{ marginBottom:14 }}>
+              <div style={{ fontSize:12, fontWeight:600, color:"#7B5EA7", marginBottom:6 }}>Office Hours</div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                {syllabusData.officeHours.map((o, i) => (
+                  <span key={i} style={{ fontSize:12, color:"#5A3B7B" }}>{o.day} {o.time} — {o.location}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display:"flex", gap:10, marginTop:16 }}>
+            <button onClick={applySyllabusData} style={gc.calcBtn}>Apply & Fill Calculator</button>
+            <button onClick={() => { setSyllabusConfirm(false); setSyllabusData(null); }} style={gc.clearBtn}>Cancel</button>
+          </div>
+        </div>
+      )}
 
       {/* Tab bar */}
       <div style={gc.tabBar}>
