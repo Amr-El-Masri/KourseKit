@@ -221,6 +221,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
 
   const [allCourses,   setAllCourses]   = useState([]);
   const [savedCourses, setSavedCourses] = useState([]);
+  const [undoSyllabus, setUndoSyllabus] = useState(null); // { task, timer }
 
   useEffect(() => {
     const token = localStorage.getItem("kk_token");
@@ -280,6 +281,38 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
   const deleteTask = async id => {
     await apiFetch(`/api/tasks/${USER_ID}/delete/${id}`, { method: "DELETE" });
     setTasks(p => p.filter(t => t.id !== id));
+  };
+
+  const deleteSyllabusTask = async (id) => {
+    const task = tasks.find(t => t.id === id);
+    try {
+      const ids = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "[]").filter(x => String(x) !== String(id));
+      localStorage.setItem("kk_syllabus_task_ids", JSON.stringify(ids));
+    } catch {}
+    await deleteTask(id);
+    if (undoSyllabus?.timer) clearTimeout(undoSyllabus.timer);
+    const timer = setTimeout(() => setUndoSyllabus(null), 6000);
+    setUndoSyllabus({ task, timer });
+  };
+
+  const undoDelete = async () => {
+    if (!undoSyllabus) return;
+    clearTimeout(undoSyllabus.timer);
+    const { task } = undoSyllabus;
+    setUndoSyllabus(null);
+    const res = await fetch(`${API_BASE}/api/tasks/${USER_ID}/add`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getToken()}` },
+      body: JSON.stringify({ title: task.title, course: task.course, type: task.type, deadline: task.due, notes: task.notes || "" }),
+    });
+    if (res.ok) {
+      const created = await res.json();
+      try {
+        const existing = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "[]");
+        localStorage.setItem("kk_syllabus_task_ids", JSON.stringify([...existing, String(created.id)]));
+      } catch {}
+      await loadTasks();
+    }
   };
 
   const saveTask = async (task, onError) => {
@@ -448,13 +481,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                   {syllabusDisplayed.map(t => (
                     <div key={t.id}>
-                      <TaskRow task={t} onToggle={toggleDone} onDelete={id => {
-                        deleteTask(id);
-                        try {
-                          const ids = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "[]").filter(x => String(x) !== String(id));
-                          localStorage.setItem("kk_syllabus_task_ids", JSON.stringify(ids));
-                        } catch {}
-                      }} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
+                      <TaskRow task={t} onToggle={toggleDone} onDelete={deleteSyllabusTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
                       {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
                     </div>
                   ))}
@@ -481,6 +508,14 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
               </div>
             )}
         </>)}
+
+      {undoSyllabus && (
+        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:"#31487A", color:"white", borderRadius:14, padding:"12px 20px", display:"flex", alignItems:"center", gap:14, boxShadow:"0 4px 24px rgba(49,72,122,0.28)", zIndex:9999, fontFamily:"'DM Sans',sans-serif", whiteSpace:"nowrap" }}>
+          <span style={{ fontSize:13 }}>Syllabus task deleted</span>
+          <button onClick={undoDelete} style={{ background:"white", color:"#31487A", border:"none", borderRadius:8, padding:"5px 14px", fontSize:13, fontWeight:700, cursor:"pointer" }}>Undo</button>
+          <button onClick={() => { clearTimeout(undoSyllabus.timer); setUndoSyllabus(null); }} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.6)", fontSize:16, cursor:"pointer", padding:"0 2px", lineHeight:1 }}>✕</button>
+        </div>
+      )}
       </div>
   );
 }

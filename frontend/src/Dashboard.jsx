@@ -296,6 +296,31 @@ const saveCourseColor = (courseName, color) => {
   localStorage.setItem("kk_course_colors", JSON.stringify(next));
 };
 
+const [courseOfficeHours, setCourseOfficeHours] = useState(() => {
+  try {
+    const saved = localStorage.getItem("kk_course_office_hours");
+    return saved ? JSON.parse(saved) : {};
+  } catch { return {}; }
+});
+const [expandedOH, setExpandedOH] = useState({});
+
+const [courseSyllabi, setCourseSyllabi] = useState(() => {
+  try { return JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"); } catch { return {}; }
+});
+useEffect(() => {
+  const sync = () => {
+    try { setCourseSyllabi(JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}")); } catch {}
+  };
+  window.addEventListener("kk_syllabus_changed", sync);
+  return () => window.removeEventListener("kk_syllabus_changed", sync);
+}, []);
+
+const saveCourseOfficeHours = (courseName, hours) => {
+  const next = { ...courseOfficeHours, [courseName]: hours };
+  setCourseOfficeHours(next);
+  localStorage.setItem("kk_course_office_hours", JSON.stringify(next));
+};
+
 const loadTasksForCalendar = useCallback(() => {
   const token = localStorage.getItem("kk_token");
   const userId = token ? JSON.parse(atob(token.split(".")[1])).sub : null;
@@ -481,8 +506,9 @@ const sortSemesters = (list) => {
       `}</style>
 
       <aside style={{ ...s.sidebar, width:sidebarOpen ? 224 : 66 }}>
-        <div style={s.sidebarTop}>
+        <div style={{ ...s.sidebarTop, justifyContent: sidebarOpen ? "space-between" : "center" }}>
           {sidebarOpen && <span style={s.logoLabel}>KourseKit</span>}
+          <button onClick={() => setSidebarOpen(o=>!o)} style={s.collapseBtn}>{sidebarOpen?"◀":"▶"}</button>
         </div>
         <nav style={{flex:1,paddingTop:10}}>
           {NAV_ITEMS.map(item => (
@@ -499,7 +525,6 @@ const sortSemesters = (list) => {
             </div>
           ))}
         </nav>
-        <button onClick={() => setSidebarOpen(o=>!o)} style={s.collapseBtn}>{sidebarOpen?"◀":"▶"}</button>
         <div className="nav-btn" onClick={() => setActivePage("profile")} style={{display:"flex",alignItems:"center",padding:"10px 16px",margin:"2px 8px 4px",borderRadius:10,justifyContent:sidebarOpen?"flex-start":"center",cursor:"pointer",userSelect:"none",background:activePage==="profile"?"rgba(255,255,255,0.15)":"transparent"}}>
           <div style={{width:28,height:28,borderRadius:"50%",background:"#31487A",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,border:activePage==="profile"?"2px solid #7B5EA7":"2px solid transparent",transition:"border-color .15s"}}>
             {profile.avatar
@@ -582,12 +607,37 @@ const sortSemesters = (list) => {
                             />
                           </label>
                         </div>
-                        <button
-                          onClick={e => { e.stopPropagation(); setSyllabusTarget(c.name); }}
-                          style={{ marginTop:8, fontSize:11, color:"#7B5EA7", background:"none", border:"1px solid #D4D4DC", borderRadius:6, padding:"3px 8px", cursor:"pointer", width:"100%", textAlign:"left" }}
-                        >
-                          + Upload Syllabus
-                        </button>
+                        {courseSyllabi[c.name] ? (
+                          <div style={{ marginTop:8, fontSize:11, color:"#2d7a4a", background:"#eef7f0", border:"1px solid #b7dfc5", borderRadius:6, padding:"3px 8px", display:"flex", alignItems:"center", gap:4 }}>
+                            <span>✓</span> Syllabus uploaded
+                          </div>
+                        ) : (
+                          <button
+                            onClick={e => { e.stopPropagation(); setSyllabusTarget(c.name); }}
+                            style={{ marginTop:8, fontSize:11, color:"#7B5EA7", background:"none", border:"1px solid #D4D4DC", borderRadius:6, padding:"3px 8px", cursor:"pointer", width:"100%", textAlign:"left" }}
+                          >
+                            + Upload Syllabus
+                          </button>
+                        )}
+                        {courseOfficeHours[c.name]?.length > 0 && (
+                          <div style={{ marginTop:6 }}>
+                            <button
+                              onClick={e => { e.stopPropagation(); setExpandedOH(p => ({ ...p, [c.name]: !p[c.name] })); }}
+                              style={{ fontSize:11, color:"#5A3B7B", background:"none", border:"none", padding:0, cursor:"pointer", display:"flex", alignItems:"center", gap:3 }}
+                            >
+                              <span style={{ fontSize:9 }}>{expandedOH[c.name] ? "▼" : "▶"}</span> Office Hours
+                            </button>
+                            {expandedOH[c.name] && (
+                              <div style={{ marginTop:4, paddingLeft:4 }}>
+                                {courseOfficeHours[c.name].map((oh, i) => (
+                                  <div key={i} style={{ fontSize:11, color:"#444", lineHeight:1.5 }}>
+                                    {[oh.day, oh.time, oh.location].filter(Boolean).join(" · ")}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -926,7 +976,7 @@ const sortSemesters = (list) => {
     )}
   </div>
 )}
-        {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} syllabusData={syllabusCalcData} onSyllabusApplied={() => setSyllabusCalcData(null)} />}
+        {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} />}
         {activePage === "tasks" && (
           <TaskManager
             tasks={tasks}
@@ -935,6 +985,7 @@ const sortSemesters = (list) => {
             onSave={upsertTask}
             initialEditTask={editingTask}
             key={editingTask?.id || "tasks"}
+            onNavigate={setActivePage}
           />
         )}
         {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
@@ -950,10 +1001,22 @@ const sortSemesters = (list) => {
           courseName={syllabusTarget}
           onClose={() => setSyllabusTarget(null)}
           onApply={data => {
+            const name = syllabusTarget;
             setSyllabusTarget(null);
             if (data) {
-              setSyllabusCalcData(data);
-              setActivePage("grades");
+              if (data.officeHours?.length) saveCourseOfficeHours(name, data.officeHours);
+              // Save syllabus extract for GradeCalculator to pick up
+              if (data.assessments?.length || data.finalExamWeight) {
+                try {
+                  const all = JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}");
+                  const next = { ...all, [name]: { assessments: data.assessments || [], finalExamWeight: data.finalExamWeight ?? null } };
+                  localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
+                  setCourseSyllabi(next);
+                } catch {}
+              }
+              if (data.assessments) {
+                setSyllabusCalcData(data);
+              }
             }
           }}
         />

@@ -415,6 +415,18 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
   const [simLoading,      setSimLoading]      = useState(false);
   const [simError,        setSimError]        = useState(null);
 
+  // Confirm states for Clear all and row deletes
+  const [confirmClearSem,    setConfirmClearSem]    = useState(false);
+  const [confirmClearCum,    setConfirmClearCum]    = useState(false);
+  const [confirmClearCourse, setConfirmClearCourse] = useState(false);
+  const [confirmClearTarget, setConfirmClearTarget] = useState(false);
+  const [confirmClearSim,    setConfirmClearSim]    = useState(false);
+  const [confirmDelSem,      setConfirmDelSem]      = useState(null);
+  const [confirmDelCum,      setConfirmDelCum]      = useState(null);
+  const [confirmDelComp,     setConfirmDelComp]     = useState(null);
+  const [confirmDelGraded,   setConfirmDelGraded]   = useState(null);
+  const [confirmDelSim,      setConfirmDelSim]      = useState(null);
+
   // Per-course persistence helpers
   const loadCourseData = (courseName) => {
     try { return JSON.parse(localStorage.getItem("kk_course_data") || "{}")[courseName] ?? null; } catch { return null; }
@@ -664,7 +676,14 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                 {LETTER_GRADES.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
               <input className="gc-input" value={c.credits} onChange={e=>updateRow(setSemCourses,c.id,"credits",e.target.value)} placeholder="e.g. 3" type="number" style={{ ...gc.input, maxWidth:90 }} />
-              <button onClick={() => removeRow(setSemCourses,c.id)} style={gc.removeBtn}>✕</button>
+              {confirmDelSem === c.id ? (
+                <span style={{ display:"flex", alignItems:"center", gap:2 }}>
+                  <button onClick={() => { setConfirmDelSem(null); removeRow(setSemCourses,c.id); }} style={{ ...gc.removeBtn, color:"#c0392b", fontWeight:700 }}>✓</button>
+                  <button onClick={() => setConfirmDelSem(null)} style={gc.removeBtn}>✗</button>
+                </span>
+              ) : (
+                <button onClick={() => setConfirmDelSem(c.id)} style={gc.removeBtn}>✕</button>
+              )}
             </div>
           ))}
           <button className="gc-addbtn" onClick={() => addRow(setSemCourses)} style={gc.addRowBtn}>+ Add Course</button>
@@ -672,9 +691,15 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             <button className="gc-calcbtn" onClick={calcSemGPA} disabled={semLoading} style={gc.calcBtn}>
               {semLoading ? "Calculating…" : "Calculate GPA"}
             </button>
-            <button onClick={() => { setSemCourses([{ id:Date.now(), name:"", grade:"", credits:"" }]); setSemResult(null); setSemError(null); setImpactResult(null); setImpactError(null); }} style={gc.clearBtn}>
-              Clear all
-            </button>
+            {confirmClearSem ? (
+              <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                <span style={{ fontSize:12, color:"#c0392b", fontWeight:600 }}>Clear all?</span>
+                <button onClick={() => { setConfirmClearSem(false); setSemCourses([{ id:Date.now(), name:"", grade:"", credits:"" }]); setSemResult(null); setSemError(null); setImpactResult(null); setImpactError(null); }} style={{ ...gc.clearBtn, padding:"6px 10px", fontSize:12 }}>Yes</button>
+                <button onClick={() => setConfirmClearSem(false)} style={{ ...gc.clearBtn, color:"#A59AC9", borderColor:"#D4D4DC", padding:"6px 10px", fontSize:12 }}>No</button>
+              </span>
+            ) : (
+              <button onClick={() => setConfirmClearSem(true)} style={gc.clearBtn}>Clear all</button>
+            )}
             {semResult && !semError && (
               <ResultBadge
                 value={semResult}
@@ -780,7 +805,14 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
               </select>
               <input className="gc-input" value={c.gpa}     onChange={e=>updateRow(setCumSems,c.id,"gpa",e.target.value)}     placeholder="e.g. 3.67" type="number" step="0.01" style={{ ...gc.input, maxWidth:120 }} />
               <input className="gc-input" value={c.credits} onChange={e=>updateRow(setCumSems,c.id,"credits",e.target.value)} placeholder="e.g. 15"   type="number" style={{ ...gc.input, maxWidth:90 }} />
-              <button onClick={() => removeRow(setCumSems,c.id)} style={gc.removeBtn}>✕</button>
+              {confirmDelCum === c.id ? (
+                <span style={{ display:"flex", alignItems:"center", gap:2 }}>
+                  <button onClick={() => { setConfirmDelCum(null); removeRow(setCumSems,c.id); }} style={{ ...gc.removeBtn, color:"#c0392b", fontWeight:700 }}>✓</button>
+                  <button onClick={() => setConfirmDelCum(null)} style={gc.removeBtn}>✗</button>
+                </span>
+              ) : (
+                <button onClick={() => setConfirmDelCum(c.id)} style={gc.removeBtn}>✕</button>
+              )}
             </div>
           ))}
           <button className="gc-addbtn" onClick={() => addRow(setCumSems)} style={gc.addRowBtn}>+ Add Semester</button>
@@ -788,9 +820,15 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             <button className="gc-calcbtn" onClick={calcCumGPA} disabled={cumLoading} style={gc.calcBtn}>
               {cumLoading ? "Calculating…" : "Calculate Cumulative GPA"}
             </button>
-            <button onClick={() => { setCumSems([{ id:Date.now(), name:"", gpa:"", credits:"" }]); setCumResult(null); setCumError(null); setFutureResult(null); setFutureError(null); setFutureTargetGPA(""); setFutureRemainingCreds(""); }} style={gc.clearBtn}>
-              Clear all
-            </button>
+            {confirmClearCum ? (
+              <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                <span style={{ fontSize:12, color:"#c0392b", fontWeight:600 }}>Clear all?</span>
+                <button onClick={() => { setConfirmClearCum(false); setCumSems([{ id:Date.now(), name:"", gpa:"", credits:"" }]); setCumResult(null); setCumError(null); setFutureResult(null); setFutureError(null); setFutureTargetGPA(""); setFutureRemainingCreds(""); }} style={{ ...gc.clearBtn, padding:"6px 10px", fontSize:12 }}>Yes</button>
+                <button onClick={() => setConfirmClearCum(false)} style={{ ...gc.clearBtn, color:"#A59AC9", borderColor:"#D4D4DC", padding:"6px 10px", fontSize:12 }}>No</button>
+              </span>
+            ) : (
+              <button onClick={() => setConfirmClearCum(true)} style={gc.clearBtn}>Clear all</button>
+            )}
             {cumResult && !cumError && (
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                 <ResultBadge
@@ -902,7 +940,14 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                 updateRow(setComponents, c.id, "weight", val);
               }} placeholder="e.g. 30" type="number" style={{ ...gc.input, maxWidth:110 }} />
               <input className="gc-input" value={c.grade}  onChange={e=>updateRow(setComponents,c.id,"grade",e.target.value)}  placeholder="e.g. 85 or A-" style={{ ...gc.input, maxWidth:110 }} />
-              <button onClick={() => removeRow(setComponents,c.id)} style={gc.removeBtn}>✕</button>
+              {confirmDelComp === c.id ? (
+                <span style={{ display:"flex", alignItems:"center", gap:2 }}>
+                  <button onClick={() => { setConfirmDelComp(null); removeRow(setComponents,c.id); }} style={{ ...gc.removeBtn, color:"#c0392b", fontWeight:700 }}>✓</button>
+                  <button onClick={() => setConfirmDelComp(null)} style={gc.removeBtn}>✗</button>
+                </span>
+              ) : (
+                <button onClick={() => setConfirmDelComp(c.id)} style={gc.removeBtn}>✕</button>
+              )}
             </div>
           ))}
           <button className="gc-addbtn" onClick={() => addRow(setComponents)} style={gc.addRowBtn}>+ Add Component</button>
@@ -913,9 +958,15 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             <button className="gc-calcbtn" onClick={calcCourse} disabled={courseLoading} style={gc.calcBtn}>
               {courseLoading ? "Calculating…" : "Calculate Grade"}
             </button>
-            <button onClick={() => { setComponents([{ id:Date.now(), type:"", weight:"", grade:"", customType:"" }]); setCourseResult(null); setCourseError(null); }} style={gc.clearBtn}>
-              Clear all
-            </button>
+            {confirmClearCourse ? (
+              <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                <span style={{ fontSize:12, color:"#c0392b", fontWeight:600 }}>Clear all?</span>
+                <button onClick={() => { setConfirmClearCourse(false); setComponents([{ id:Date.now(), type:"", weight:"", grade:"", customType:"" }]); setCourseResult(null); setCourseError(null); }} style={{ ...gc.clearBtn, padding:"6px 10px", fontSize:12 }}>Yes</button>
+                <button onClick={() => setConfirmClearCourse(false)} style={{ ...gc.clearBtn, color:"#A59AC9", borderColor:"#D4D4DC", padding:"6px 10px", fontSize:12 }}>No</button>
+              </span>
+            ) : (
+              <button onClick={() => setConfirmClearCourse(true)} style={gc.clearBtn}>Clear all</button>
+            )}
             {courseResult && !courseError && (
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                 <ResultBadge
@@ -951,7 +1002,14 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             <div key={g.id} style={gc.row}>
               <input className="gc-input" value={g.weight} onChange={e=>updateRow(setGraded,g.id,"weight",e.target.value)} placeholder="e.g. 30" type="number" style={gc.input} />
               <input className="gc-input" value={g.grade}  onChange={e=>updateRow(setGraded,g.id,"grade",e.target.value)}  placeholder="e.g. 78 or B+" style={gc.input} />
-              <button onClick={() => removeRow(setGraded,g.id)} style={gc.removeBtn}>✕</button>
+              {confirmDelGraded === g.id ? (
+                <span style={{ display:"flex", alignItems:"center", gap:2 }}>
+                  <button onClick={() => { setConfirmDelGraded(null); removeRow(setGraded,g.id); }} style={{ ...gc.removeBtn, color:"#c0392b", fontWeight:700 }}>✓</button>
+                  <button onClick={() => setConfirmDelGraded(null)} style={gc.removeBtn}>✗</button>
+                </span>
+              ) : (
+                <button onClick={() => setConfirmDelGraded(g.id)} style={gc.removeBtn}>✕</button>
+              )}
             </div>
           ))}
           <button className="gc-addbtn" onClick={() => addRow(setGraded)} style={gc.addRowBtn}>+ Add Component</button>
@@ -975,9 +1033,15 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             <button className="gc-calcbtn" onClick={calcTarget} disabled={targetLoading} style={gc.calcBtn}>
               {targetLoading ? "Calculating…" : "Calculate"}
             </button>
-            <button onClick={() => { setGraded([{ id:Date.now(), weight:"", grade:"" }]); setFinalWeight(""); setTargetGoal(""); setTargetResult(null); setTargetError(null); }} style={gc.clearBtn}>
-              Clear all
-            </button>
+            {confirmClearTarget ? (
+              <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                <span style={{ fontSize:12, color:"#c0392b", fontWeight:600 }}>Clear all?</span>
+                <button onClick={() => { setConfirmClearTarget(false); setGraded([{ id:Date.now(), weight:"", grade:"" }]); setFinalWeight(""); setTargetGoal(""); setTargetResult(null); setTargetError(null); }} style={{ ...gc.clearBtn, padding:"6px 10px", fontSize:12 }}>Yes</button>
+                <button onClick={() => setConfirmClearTarget(false)} style={{ ...gc.clearBtn, color:"#A59AC9", borderColor:"#D4D4DC", padding:"6px 10px", fontSize:12 }}>No</button>
+              </span>
+            ) : (
+              <button onClick={() => setConfirmClearTarget(true)} style={gc.clearBtn}>Clear all</button>
+            )}
           </div>
 
           {targetError && <ErrorBox>{targetError}</ErrorBox>}
@@ -1047,7 +1111,14 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                   updateRow(setSimPast, c.id, "weight", val);
                 }} placeholder="e.g. 30" type="number" style={{ ...gc.input, maxWidth:110 }} />
                 <input className="gc-input" value={c.grade}  onChange={e=>updateRow(setSimPast,c.id,"grade",e.target.value)}  placeholder="e.g. 85 or A-" style={{ ...gc.input, maxWidth:110 }} />
-                <button onClick={() => removeRow(setSimPast,c.id)} style={gc.removeBtn}>✕</button>
+                {confirmDelSim === c.id ? (
+                  <span style={{ display:"flex", alignItems:"center", gap:2 }}>
+                    <button onClick={() => { setConfirmDelSim(null); removeRow(setSimPast,c.id); }} style={{ ...gc.removeBtn, color:"#c0392b", fontWeight:700 }}>✓</button>
+                    <button onClick={() => setConfirmDelSim(null)} style={gc.removeBtn}>✗</button>
+                  </span>
+                ) : (
+                  <button onClick={() => setConfirmDelSim(c.id)} style={gc.removeBtn}>✕</button>
+                )}
               </div>
             ))}
             <button className="gc-addbtn" onClick={() => addRow(setSimPast)} style={gc.addRowBtn}>+ Add Component</button>
@@ -1091,9 +1162,15 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                   <button className="gc-calcbtn" onClick={calcSim} disabled={simLoading} style={gc.calcBtn}>
                     {simLoading ? "Simulating…" : "Simulate"}
                   </button>
-                  <button onClick={() => { setSimPast([{ id:Date.now(), type:"", weight:"", grade:"", customType:"" }]); setSimFutureGrade(""); setSimFutureWeight(""); setSimResult(null); setSimError(null); }} style={gc.clearBtn}>
-                    Clear all
-                  </button>
+                  {confirmClearSim ? (
+                    <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                      <span style={{ fontSize:12, color:"#c0392b", fontWeight:600 }}>Clear all?</span>
+                      <button onClick={() => { setConfirmClearSim(false); setSimPast([{ id:Date.now(), type:"", weight:"", grade:"", customType:"" }]); setSimFutureGrade(""); setSimFutureWeight(""); setSimResult(null); setSimError(null); }} style={{ ...gc.clearBtn, padding:"6px 10px", fontSize:12 }}>Yes</button>
+                      <button onClick={() => setConfirmClearSim(false)} style={{ ...gc.clearBtn, color:"#A59AC9", borderColor:"#D4D4DC", padding:"6px 10px", fontSize:12 }}>No</button>
+                    </span>
+                  ) : (
+                    <button onClick={() => setConfirmClearSim(true)} style={gc.clearBtn}>Clear all</button>
+                  )}
                 </div>
               </div>
             </div>

@@ -199,6 +199,8 @@ export default function Profile({ onProfileSave, onLogout }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const isAdmin = getTokenRole() === "ADMIN";
   const [section, setSection] = useState("profile");
+  const [syllabi, setSyllabi] = useState(() => { try { return JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"); } catch { return {}; } });
+  const [confirmingRemove, setConfirmingRemove] = useState(null); // course name
   const [profile,    setProfile]    = useState({ ...DEFAULT_PROFILE, email });
   const [editing,    setEditing]    = useState(false);
   const [draft,      setDraft]      = useState({ ...DEFAULT_PROFILE, email });
@@ -843,6 +845,74 @@ const refetchSemesters = () =>
           </div>
         ))}
       </div>
+
+      {/* Course Syllabi */}
+      {Object.keys(syllabi).length > 0 && (
+        <div style={{ background:"#ffffff", borderRadius:16, border:"1px solid #D4D4DC", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px", marginTop:20 }}>
+          <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"#31487A", marginBottom:4 }}>Uploaded Syllabi</div>
+          <div style={{ fontSize:13, color:"#A59AC9", marginBottom:16 }}>Remove a syllabus to re-upload or clear its extracted data.</div>
+          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+            {Object.keys(syllabi).map(course => (
+              <div key={course} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"#F7F5FB", borderRadius:10, padding:"10px 14px", border:"1px solid #E8E4F0" }}>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:600, color:"#31487A" }}>{course}</div>
+                  <div style={{ fontSize:12, color:"#A59AC9", marginTop:2 }}>
+                    {syllabi[course]?.assessments?.length ? `${syllabi[course].assessments.length} assessment${syllabi[course].assessments.length !== 1 ? "s" : ""}` : "No assessments"}
+                  </div>
+                </div>
+                {confirmingRemove === course ? (
+                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                    <span style={{ fontSize:12, color:"#c0392b", fontWeight:600 }}>Remove?</span>
+                    <button
+                      onClick={async () => {
+                        try {
+                          // Delete syllabus-imported tasks from backend
+                          const token = localStorage.getItem("kk_token");
+                          const userId = token ? JSON.parse(atob(token.split(".")[1])).sub : null;
+                          const taskIds = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "[]");
+                          if (userId && taskIds.length > 0) {
+                            await Promise.all(taskIds.map(id =>
+                              fetch(`http://localhost:8080/api/tasks/${userId}/delete/${id}`, {
+                                method: "DELETE",
+                                headers: { "Authorization": `Bearer ${token}` },
+                              }).catch(() => {})
+                            ));
+                          }
+                          const next = { ...syllabi };
+                          delete next[course];
+                          localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
+                          setSyllabi(next);
+                          window.dispatchEvent(new Event("kk_syllabus_changed"));
+                          const data = JSON.parse(localStorage.getItem("kk_course_data") || "{}");
+                          delete data[course];
+                          localStorage.setItem("kk_course_data", JSON.stringify(data));
+                          const oh = JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}");
+                          delete oh[course];
+                          localStorage.setItem("kk_course_office_hours", JSON.stringify(oh));
+                          localStorage.removeItem("kk_syllabus_task_ids");
+                        } catch {}
+                        setConfirmingRemove(null);
+                      }}
+                      style={{ background:"#c0392b", border:"none", borderRadius:8, padding:"4px 10px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}
+                    >Yes</button>
+                    <button
+                      onClick={() => setConfirmingRemove(null)}
+                      style={{ background:"#F4F4F8", border:"1px solid #D4D4DC", borderRadius:8, padding:"4px 10px", color:"#A59AC9", fontSize:12, cursor:"pointer" }}
+                    >Cancel</button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmingRemove(course)}
+                    style={{ background:"#fff0f0", border:"1px solid #f5c6c6", borderRadius:8, padding:"5px 12px", color:"#c0392b", fontSize:12, fontWeight:600, cursor:"pointer" }}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div style={{ marginTop:24 }}>
         <button onClick={onLogout} style={{ display:"flex", alignItems:"center", gap:8, background:"#fff0f0", border:"1px solid #f5c6c6", borderRadius:10, padding:"10px 20px", color:"#c0392b", fontWeight:600, fontSize:14, cursor:"pointer" }}>
