@@ -102,6 +102,7 @@ const DEFAULT_PROFILE = {
   email:        "",
   faculty:      "Arts & Sciences",
   major:        "Computer Science",
+  minorFaculty: "",
   minor:        "",
   status:       "freshman",
   cumGPA:       "",
@@ -111,6 +112,7 @@ const DEFAULT_PROFILE = {
   doubleMajor:   false,
   secondMajor:   "",
   secondFaculty: "Arts & Sciences",
+  secondMinorFaculty: "",
   secondMinor:   "",
 };
 
@@ -482,7 +484,7 @@ const refetchSemesters = () =>
             <StatChip label="Major" value={profile.major || "—"} color="#31487A" bg="#eef2fb" />
             {profile.minor && <StatChip label="Minor" value={profile.minor} color="#2d7a4a" bg="#eef7f0" />}
             {profile.doubleMajor && profile.secondMajor && <StatChip label="Second Major" value={profile.secondMajor} color="#5A3B7B" bg="#F0EEF7" />}
-            {profile.doubleMajor && profile.secondMinor && <StatChip label="Second Minor" value={profile.secondMinor} color="#1a7a6a" bg="#edfaf6" />}
+            {profile.secondMinor && <StatChip label="Second Minor" value={profile.secondMinor} color="#1a7a6a" bg="#edfaf6" />}
             <StatChip label="Cumulative GPA" value={profile.cumGPA || "—"} color={gpaColor(profile.cumGPA)} bg="#F4F4F8" />
             {profile.totalCredits && <StatChip label="Credits" value={`${profile.totalCredits} cr`} color="#5A3B7B" bg="#F0EEF7" />}
           </div>
@@ -505,7 +507,7 @@ const refetchSemesters = () =>
                 <div style={{ flex:1, minWidth:200 }}>
                   <label style={pf.label}>Faculty</label>
                   <select className="pf-input" value={draft.faculty}
-                    onChange={e => { set("faculty", e.target.value); set("major", ""); set("minor", ""); }}
+                    onChange={e => { set("faculty", e.target.value); set("major", ""); }}
                     style={{ ...pf.input, cursor:"pointer" }}>
                     {FACULTIES.map(f => <option key={f}>{f}</option>)}
                   </select>
@@ -519,15 +521,43 @@ const refetchSemesters = () =>
                     {(MAJORS_BY_FACULTY[draft.faculty] || []).map(m => <option key={m}>{m}</option>)}
                   </select>
                 </div>
-                <div style={{ flex:1, minWidth:200 }}>
-                  <label style={pf.label}>Minor <span style={{ fontWeight:400, color:"#B8A9C9" }}>(optional)</span></label>
-                  <select className="pf-input" value={draft.minor || ""}
-                    onChange={e => set("minor", e.target.value)}
-                    style={{ ...pf.input, cursor:"pointer" }}>
-                    <option value="">None</option>
-                    {(MINORS_BY_FACULTY[draft.faculty] || []).map(m => <option key={m}>{m}</option>)}
-                  </select>
+              </div>
+
+              <div style={{ marginBottom:14 }}>
+                <label style={{ ...pf.label, marginBottom:10 }}>Minor?</label>
+                <div style={{ display:"flex", gap:8, marginBottom: draft.minorFaculty ? 12 : 0 }}>
+                  {[{val:true,label:"Yes"},{val:false,label:"No"}].map(opt => (
+                    <button key={String(opt.val)} onClick={() => { set("minorFaculty", opt.val ? (draft.minorFaculty || "Arts & Sciences") : ""); set("minor", ""); }} style={{
+                      padding:"7px 18px", borderRadius:10, border:"1px solid", cursor:"pointer",
+                      fontFamily:"'DM Sans',sans-serif", fontSize:13, transition:"all .15s",
+                      borderColor: !!draft.minorFaculty === opt.val ? "#7B5EA7" : "#D4D4DC",
+                      background:  !!draft.minorFaculty === opt.val ? "#7B5EA7" : "#F7F5FB",
+                      color:       !!draft.minorFaculty === opt.val ? "#fff"    : "#5A3B7B",
+                      fontWeight:  !!draft.minorFaculty === opt.val ? 600 : 400,
+                    }}>{opt.label}</button>
+                  ))}
                 </div>
+                {draft.minorFaculty && (
+                  <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                    <div style={{ flex:1, minWidth:200 }}>
+                      <label style={pf.label}>Minor Faculty</label>
+                      <select className="pf-input" value={draft.minorFaculty}
+                        onChange={e => { set("minorFaculty", e.target.value); set("minor", ""); }}
+                        style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
+                        {FACULTIES.map(f => <option key={f}>{f}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ flex:1, minWidth:200 }}>
+                      <label style={pf.label}>Minor</label>
+                      <select className="pf-input" value={draft.minor || ""}
+                        onChange={e => set("minor", e.target.value)}
+                        style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
+                        <option value="">Select minor…</option>
+                        {(MINORS_BY_FACULTY[draft.minorFaculty] || []).map(m => <option key={m}>{m}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div style={{ marginBottom:14 }}>
@@ -563,19 +593,46 @@ const refetchSemesters = () =>
                         {(MAJORS_BY_FACULTY[draft.secondFaculty] || []).map(m => <option key={m}>{m}</option>)}
                       </select>
                     </div>
+                  </div>
+                )}
+              </div>
+
+               <div style={{ marginBottom:14 }}>
+                <label style={{ ...pf.label, marginBottom:10 }}>Second Minor?</label>
+                <div style={{ display:"flex", gap:8, marginBottom: draft.secondMinorFaculty ? 12 : 0 }}>
+                  {[{val:true,label:"Yes"},{val:false,label:"No"}].map(opt => (
+                    <button key={String(opt.val)} onClick={() => { set("secondMinorFaculty", opt.val ? (draft.secondMinorFaculty || "Arts & Sciences") : ""); set("secondMinor", ""); }} style={{
+                      padding:"7px 18px", borderRadius:10, border:"1px solid", cursor:"pointer",
+                      fontFamily:"'DM Sans',sans-serif", fontSize:13, transition:"all .15s",
+                      borderColor: !!draft.secondMinorFaculty === opt.val ? "#7B5EA7" : "#D4D4DC",
+                      background:  !!draft.secondMinorFaculty === opt.val ? "#7B5EA7" : "#F7F5FB",
+                      color:       !!draft.secondMinorFaculty === opt.val ? "#fff"    : "#5A3B7B",
+                      fontWeight:  !!draft.secondMinorFaculty === opt.val ? 600 : 400,
+                    }}>{opt.label}</button>
+                  ))}
+                </div>
+                {draft.secondMinorFaculty && (
+                  <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                     <div style={{ flex:1, minWidth:200 }}>
-                      <label style={pf.label}>Second Minor <span style={{ fontWeight:400, color:"#B8A9C9" }}>(optional)</span></label>
+                      <label style={pf.label}>Second Minor Faculty</label>
+                      <select className="pf-input" value={draft.secondMinorFaculty}
+                        onChange={e => { set("secondMinorFaculty", e.target.value); set("secondMinor", ""); }}
+                        style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
+                        {FACULTIES.map(f => <option key={f}>{f}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ flex:1, minWidth:200 }}>
+                      <label style={pf.label}>Second Minor</label>
                       <select className="pf-input" value={draft.secondMinor || ""}
                         onChange={e => set("secondMinor", e.target.value)}
                         style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
-                        <option value="">None</option>
-                        {(MINORS_BY_FACULTY[draft.secondFaculty] || []).map(m => <option key={m}>{m}</option>)}
+                        <option value="">Select minor…</option>
+                        {(MINORS_BY_FACULTY[draft.secondMinorFaculty] || []).map(m => <option key={m}>{m}</option>)}
                       </select>
                     </div>
                   </div>
                 )}
               </div>
-
 
               <label style={pf.label}>Academic Status</label>
               <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:16 }}>
