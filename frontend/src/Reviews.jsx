@@ -36,15 +36,47 @@ function Stars({ count, interactive, onSet }) {
   );
 }
 
-function ReviewCard({ review }) {
-  // section info might be nested in the response
+function ReviewCard({ review, token, userEmail, reviewType = "course" }) {
+  const [reporting,  setReporting]  = useState(false);
+  const [reason,     setReason]     = useState("");
+  const [submitted,  setSubmitted]  = useState(false);
+  const [err,        setErr]        = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
   const sectionInfo = review.section
     ? `${review.section.sectionNumber || ""} — ${review.section.professorName || ""}`.trim()
     : "";
 
+  const REASONS = [
+    "Offensive or inappropriate language",
+    "Not a serious / troll review",
+    "Spam or repeated content",
+    "False or misleading information",
+    "Other",
+  ];
+
+  const submitReport = async () => {
+    if (!reason) { setErr("Please select a reason."); return; }
+    if (!token)  { setErr("You must be logged in to report."); return; }
+    setSubmitting(true); setErr("");
+    const endpoint = reviewType === "professor"
+      ? `${API}/api/reports/professor-review/${review.id}`
+      : `${API}/api/reports/review/${review.id}`;
+    try {
+      const res = await fetch(
+        `${endpoint}?userId=${encodeURIComponent(userEmail)}&reason=${encodeURIComponent(reason)}`,
+        { method: "POST", headers: { "Authorization": `Bearer ${token}` } }
+      );
+      if (res.ok) { setSubmitted(true); setReporting(false); }
+      else { const msg = await res.text(); setErr(msg || "Failed to submit report."); }
+    } catch { setErr("Network error. Please try again."); }
+    finally { setSubmitting(false); }
+  };
+
   return (
     <div style={rv.card}>
-      <div style={{ flex:1 }}>
+      <div style={{ flex: 1 }}>
+        {/* Header row */}
         <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap", marginBottom:8 }}>
           <div style={rv.avatar}>{randomAnon()[0]}</div>
           <span style={{ fontSize:13, fontWeight:600, color:"#31487A" }}>Anonymous</span>
@@ -58,9 +90,68 @@ function ReviewCard({ review }) {
               </span>
             </>
           )}
-          <div style={{ marginLeft:"auto" }}><Stars count={review.rating} /></div>
+          <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:10 }}>
+            <Stars count={review.rating} />
+            {/* Report button — only show if logged in and not already reported */}
+            {token && !submitted && (
+              <button
+                onClick={() => { setReporting(r => !r); setErr(""); setReason(""); }}
+                title="Report this review"
+                style={{
+                  background: reporting ? "#fef0f0" : "none",
+                  border: reporting ? "1px solid #f5c6c6" : "none",
+                  borderRadius: 6, padding:"2px 8px", cursor:"pointer",
+                  fontSize:11, color: reporting ? "#c0392b" : "#C8B8D8",
+                  fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
+                }}
+              >
+                {reporting ? "✕ Cancel" : "⚑ Report"}
+              </button>
+            )}
+            {submitted && (
+              <span style={{ fontSize:11, color:"#b7680a", fontWeight:600 }}> Reported</span>
+            )}
+          </div>
         </div>
+
+        {/* Review text */}
         <p style={{ fontSize:14, color:"#4a3a6a", lineHeight:1.65, margin:0 }}>{review.comment}</p>
+
+        {/* Report panel */}
+        {reporting && (
+          <div style={{
+            marginTop:14, background:"#fef9f0", border:"1px solid #f5dfa6",
+            borderRadius:10, padding:"14px 16px",
+          }}>
+            <div style={{ fontSize:12, fontWeight:700, color:"#b7680a", marginBottom:10 }}>
+              Why are you reporting this review?
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:12 }}>
+              {REASONS.map(r => (
+                <label key={r} style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", fontSize:13, color:"#4a3a6a" }}>
+                  <input
+                    type="radio" name={`report-${review.id}`} value={r}
+                    checked={reason === r}
+                    onChange={() => { setReason(r); setErr(""); }}
+                    style={{ accentColor:"#b7680a" }}
+                  />
+                  {r}
+                </label>
+              ))}
+            </div>
+            {err && <div style={{ fontSize:12, color:"#c0392b", marginBottom:8 }}>{err}</div>}
+            <button
+              onClick={submitReport} disabled={submitting}
+              style={{
+                padding:"7px 20px", background:"#b7680a", color:"white",
+                border:"none", borderRadius:8, fontSize:12, fontWeight:600,
+                cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+              }}
+            >
+              {submitting ? "Submitting…" : "Submit Report"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -387,7 +478,7 @@ export default function Reviews() {
 
       {!loading && displayed.length > 0 && (
         <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-          {displayed.map(r => <ReviewCard key={r.id} review={r} />)}
+          {displayed.map(r => <ReviewCard key={r.id} review={r} token={token} userEmail={userEmail} reviewType="course" />)}
         </div>
       )}
       </>}
@@ -578,7 +669,7 @@ function ProfessorReviewsTab({ token, userEmail }) {
 
           {!loading && displayed.length > 0 && (
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              {displayed.map(r => <ReviewCard key={r.id} review={r} />)}
+              {displayed.map(r => <ReviewCard key={r.id} review={r} token={token} userEmail={userEmail} reviewType="professor" />)}
             </div>
           )}
         </>

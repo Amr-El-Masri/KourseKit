@@ -34,6 +34,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN") // admin only
                 .requestMatchers(HttpMethod.GET, "/api/professor-reviews").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/professor-reviews/submit").authenticated()//only aauthenticated users can post prof reviews
+                .requestMatchers(HttpMethod.POST, "/api/reports/**").authenticated()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
