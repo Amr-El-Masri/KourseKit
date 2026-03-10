@@ -29,7 +29,7 @@ public class SyllabusService {
     public Map<String, Object> extract(MultipartFile file) throws Exception {
         String text = extractText(file);
         if (text.isBlank()) throw new IllegalArgumentException("Could not extract text from file.");
-        if (text.length() > 12000) text = text.substring(0, 12000);
+        if (text.length() > 30000) text = text.substring(0, 30000);
         return callOpenAI(text);
     }
 
@@ -37,7 +37,9 @@ public class SyllabusService {
         String name = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
         if (name.endsWith(".pdf")) {
             try (PDDocument doc = Loader.loadPDF(file.getBytes())) {
-                return new PDFTextStripper().getText(doc);
+                PDFTextStripper stripper = new PDFTextStripper();
+                stripper.setSortByPosition(true);
+                return stripper.getText(doc);
             }
         }
         return new String(file.getBytes(), StandardCharsets.UTF_8);
@@ -58,17 +60,19 @@ public class SyllabusService {
               "professor": "string or null",
               "finalExamWeight": number or null,
               "assessments": [{"name": "string", "weight": number}],
-              "deadlines": [{"title": "string", "date": "string", "type": "string"}],
+              "deadlines": [{"title": "string", "date": "YYYY-MM-DD or empty string if unknown", "type": "Assignment|Quiz|Midterm Exam|Final Exam|Project|Lab|Reading|Presentation|Other"}],
               "gradingScale": {"A": "string", "B": "string", "C": "string"} or null,
               "officeHours": [{"day": "string", "time": "string", "location": "string"}]
             }
+
+            For "deadlines": include EVERY graded item (exams, quizzes, assignments, projects, labs, presentations). For "type" use ONLY one of: Assignment, Quiz, Midterm Exam, Final Exam, Project, Lab, Reading, Presentation, Other — infer from the item name (e.g. "Midterm" → "Midterm Exam", "Final" → "Final Exam", "Quiz 1" → "Quiz"). For "date": search the entire syllabus for any exam schedule table, course calendar, or dated event and use YYYY-MM-DD format. Use empty string if truly not found.
 
             Syllabus:
             """ + syllabusText;
 
         String body = mapper.writeValueAsString(Map.of(
             "model", "gpt-4o-mini",
-            "max_tokens", 1024,
+            "max_tokens", 3000,
             "messages", List.of(
                 Map.of("role", "system", "content", "You are a helpful assistant that extracts structured data from course syllabi. Return only valid JSON."),
                 Map.of("role", "user", "content", prompt)
@@ -94,6 +98,6 @@ public class SyllabusService {
         if (content.startsWith("```")) {
             content = content.replaceAll("^```[a-z]*\\n?", "").replaceAll("```$", "").strip();
         }
-        return mapper.readValue(content, Map.class);
+        return mapper.readValue(content, new com.fasterxml.jackson.core.type.TypeReference<Map<String,Object>>(){});
     }
 }

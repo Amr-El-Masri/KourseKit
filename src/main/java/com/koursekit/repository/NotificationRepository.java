@@ -32,6 +32,11 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     @Modifying
     @Transactional
+    @Query("DELETE FROM Notification n WHERE n.task.id IN :taskIds")
+    void deleteByTaskIdIn(@Param("taskIds") java.util.List<Long> taskIds);
+
+    @Modifying
+    @Transactional
     @Query("DELETE FROM Notification n WHERE n.createdAt < :cutoffDate")
     void deleteOlderThan(@Param("cutoffDate") LocalDateTime cutoffDate);
 

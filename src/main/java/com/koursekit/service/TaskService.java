@@ -110,4 +110,17 @@ public class TaskService {
         return taskRepository.findByDeadlineBetween(from, to);
     }
 
+    public void deleteOverdueTasks(Long userId) {
+        LocalDateTime now = LocalDateTime.now();
+        List<Long> overdueIds = taskRepository.findOverdueTaskIds(now, userId);
+        if (!overdueIds.isEmpty()) {
+            notificationRepository.deleteByTaskIdIn(overdueIds);
+            taskRepository.deleteTasksPastDeadline(now, userId);
+        }
+    }
+
+    public List<TaskResponseDTO> getTasksByUser(Long userId) {
+        return taskRepository.findByUserId(userId)
+                .stream().map(taskMapper::toDto).toList();
+    }
 }
