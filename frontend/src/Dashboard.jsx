@@ -507,7 +507,10 @@ const sortSemesters = (list) => {
 
       <aside style={{ ...s.sidebar, width:sidebarOpen ? 224 : 66 }}>
         <div style={{ ...s.sidebarTop, justifyContent: sidebarOpen ? "space-between" : "center" }}>
-          {sidebarOpen && <span style={s.logoLabel}>KourseKit</span>}
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <img src="/KourseKit.jpeg" alt="KourseKit" style={{ width:34, height:34, borderRadius:10, objectFit:"cover", flexShrink:0 }} />
+            {sidebarOpen && <span style={s.logoLabel}>KourseKit</span>}
+          </div>
           <button onClick={() => setSidebarOpen(o=>!o)} style={s.collapseBtn}>{sidebarOpen?"◀":"▶"}</button>
         </div>
         <nav style={{flex:1,paddingTop:10}}>
