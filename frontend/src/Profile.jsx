@@ -103,7 +103,8 @@ const DEFAULT_PROFILE = {
   faculty:      "Arts & Sciences",
   major:        "Computer Science",
   minorFaculty: "",
-  minor:        "",
+  minor:        false,
+  minorName:    "",
   status:       "freshman",
   cumGPA:       "",
   totalCredits: "",
@@ -112,6 +113,7 @@ const DEFAULT_PROFILE = {
   doubleMajor:   false,
   secondMajor:   "",
   secondFaculty: "Arts & Sciences",
+  doubleMinor:   false,
   secondMinorFaculty: "",
   secondMinor:   "",
 };
@@ -349,15 +351,17 @@ const refetchSemesters = () =>
   });
 
   const handleSave = async () => {
+    let savedData = draft;
     try {
-      const saved = await profileFetch("/api/profile", { method: "PUT", body: JSON.stringify(draft) });
-      setProfile(saved);
-      setDraft(saved);
+      const res = await profileFetch("/api/profile", { method: "PUT", body: JSON.stringify(draft) });
+      savedData = res;
+      setProfile(res);
+      setDraft(res);
     } catch { setProfile(draft); }
     setEditing(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
-    if (onProfileSave) onProfileSave(draft);
+    if (onProfileSave) onProfileSave(savedData);
   };
 
   const handleCancel = () => { setDraft(profile); setEditing(false); };
@@ -482,9 +486,9 @@ const refetchSemesters = () =>
           <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom: editing ? 24 : 0 }}>
             <StatChip label="Status"         value={`${st.label} · ${st.desc}`} color="#7B5EA7" bg="#F0EEF7" />
             <StatChip label="Major" value={profile.major || "—"} color="#31487A" bg="#eef2fb" />
-            {profile.minor && <StatChip label="Minor" value={profile.minor} color="#2d7a4a" bg="#eef7f0" />}
-            {profile.doubleMajor && profile.secondMajor && <StatChip label="Second Major" value={profile.secondMajor} color="#5A3B7B" bg="#F0EEF7" />}
-            {profile.secondMinor && <StatChip label="Second Minor" value={profile.secondMinor} color="#1a7a6a" bg="#edfaf6" />}
+            {!!profile.minor && <StatChip label="Minor" value={profile.minorName} color="#2d7a4a" bg="#eef7f0" />}
+            {!!profile.doubleMajor && profile.secondMajor && <StatChip label="Second Major" value={profile.secondMajor} color="#5A3B7B" bg="#F0EEF7" />}
+            {!!profile.doubleMinor && profile.secondMinor && <StatChip label="Second Minor" value={profile.secondMinor} color="#1a7a6a" bg="#edfaf6" />}
             <StatChip label="Cumulative GPA" value={profile.cumGPA || "—"} color={gpaColor(profile.cumGPA)} bg="#F4F4F8" />
             {profile.totalCredits && <StatChip label="Credits" value={`${profile.totalCredits} cr`} color="#5A3B7B" bg="#F0EEF7" />}
           </div>
@@ -527,13 +531,13 @@ const refetchSemesters = () =>
                 <label style={{ ...pf.label, marginBottom:10 }}>Minor?</label>
                 <div style={{ display:"flex", gap:8, marginBottom: draft.minorFaculty ? 12 : 0 }}>
                   {[{val:true,label:"Yes"},{val:false,label:"No"}].map(opt => (
-                    <button key={String(opt.val)} onClick={() => { set("minorFaculty", opt.val ? (draft.minorFaculty || "Arts & Sciences") : ""); set("minor", ""); }} style={{
+                    <button key={String(opt.val)} onClick={() => { set("minor", opt.val); set("minorFaculty", opt.val ? (draft.minorFaculty || "Arts & Sciences") : ""); set("minorName", ""); }} style={{
                       padding:"7px 18px", borderRadius:10, border:"1px solid", cursor:"pointer",
                       fontFamily:"'DM Sans',sans-serif", fontSize:13, transition:"all .15s",
-                      borderColor: !!draft.minorFaculty === opt.val ? "#7B5EA7" : "#D4D4DC",
-                      background:  !!draft.minorFaculty === opt.val ? "#7B5EA7" : "#F7F5FB",
-                      color:       !!draft.minorFaculty === opt.val ? "#fff"    : "#5A3B7B",
-                      fontWeight:  !!draft.minorFaculty === opt.val ? 600 : 400,
+                      borderColor: !!draft.minor === opt.val ? "#7B5EA7" : "#D4D4DC",
+                      background:  !!draft.minor === opt.val ? "#7B5EA7" : "#F7F5FB",
+                      color:       !!draft.minor === opt.val ? "#fff"    : "#5A3B7B",
+                      fontWeight:  !!draft.minor === opt.val ? 600 : 400,
                     }}>{opt.label}</button>
                   ))}
                 </div>
@@ -542,15 +546,15 @@ const refetchSemesters = () =>
                     <div style={{ flex:1, minWidth:200 }}>
                       <label style={pf.label}>Minor Faculty</label>
                       <select className="pf-input" value={draft.minorFaculty}
-                        onChange={e => { set("minorFaculty", e.target.value); set("minor", ""); }}
+                        onChange={e => { set("minorFaculty", e.target.value); set("minorName", ""); }}
                         style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
                         {FACULTIES.map(f => <option key={f}>{f}</option>)}
                       </select>
                     </div>
                     <div style={{ flex:1, minWidth:200 }}>
                       <label style={pf.label}>Minor</label>
-                      <select className="pf-input" value={draft.minor || ""}
-                        onChange={e => set("minor", e.target.value)}
+                      <select className="pf-input" value={draft.minorName || ""}
+                        onChange={e => set("minorName", e.target.value)}
                         style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
                         <option value="">Select minor…</option>
                         {(MINORS_BY_FACULTY[draft.minorFaculty] || []).map(m => <option key={m}>{m}</option>)}
@@ -564,13 +568,13 @@ const refetchSemesters = () =>
                 <label style={{ ...pf.label, marginBottom:10 }}>Double Major?</label>
                 <div style={{ display:"flex", gap:8, marginBottom: draft.doubleMajor ? 12 : 0 }}>
                   {[{val:true,label:"Yes"},{val:false,label:"No"}].map(opt => (
-                    <button key={String(opt.val)} onClick={() => set("doubleMajor", opt.val)} style={{
+                    <button key={String(opt.val)} onClick={() => { set("doubleMajor", opt.val); if (!opt.val) { set("secondMajor", ""); set("secondFaculty", "Arts & Sciences"); } else { set("secondFaculty", draft.secondFaculty || "Arts & Sciences"); } }} style={{
                       padding:"7px 18px", borderRadius:10, border:"1px solid", cursor:"pointer",
                       fontFamily:"'DM Sans',sans-serif", fontSize:13, transition:"all .15s",
-                      borderColor: draft.doubleMajor === opt.val ? "#7B5EA7" : "#D4D4DC",
-                      background:  draft.doubleMajor === opt.val ? "#7B5EA7" : "#F7F5FB",
-                      color:       draft.doubleMajor === opt.val ? "#fff"    : "#5A3B7B",
-                      fontWeight:  draft.doubleMajor === opt.val ? 600 : 400,
+                      borderColor: !!draft.doubleMajor === opt.val ? "#7B5EA7" : "#D4D4DC",
+                      background:  !!draft.doubleMajor === opt.val ? "#7B5EA7" : "#F7F5FB",
+                      color:       !!draft.doubleMajor === opt.val ? "#fff"    : "#5A3B7B",
+                      fontWeight:  !!draft.doubleMajor === opt.val ? 600 : 400,
                     }}>{opt.label}</button>
                   ))}
                 </div>
@@ -578,7 +582,7 @@ const refetchSemesters = () =>
                   <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                     <div style={{ flex:1, minWidth:200 }}>
                       <label style={pf.label}>Second Faculty</label>
-                      <select className="pf-input" value={draft.secondFaculty}
+                      <select className="pf-input" value={draft.secondFaculty || "Arts & Sciences"}
                         onChange={e => { set("secondFaculty", e.target.value); set("secondMajor", ""); set("secondMinor", ""); }}
                         style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
                         {FACULTIES.map(f => <option key={f}>{f}</option>)}
@@ -601,13 +605,13 @@ const refetchSemesters = () =>
                 <label style={{ ...pf.label, marginBottom:10 }}>Second Minor?</label>
                 <div style={{ display:"flex", gap:8, marginBottom: draft.secondMinorFaculty ? 12 : 0 }}>
                   {[{val:true,label:"Yes"},{val:false,label:"No"}].map(opt => (
-                    <button key={String(opt.val)} onClick={() => { set("secondMinorFaculty", opt.val ? (draft.secondMinorFaculty || "Arts & Sciences") : ""); set("secondMinor", ""); }} style={{
+                    <button key={String(opt.val)} onClick={() => { set("doubleMinor", opt.val); set("secondMinorFaculty", opt.val ? (draft.secondMinorFaculty || "Arts & Sciences") : ""); set("secondMinor", ""); }} style={{
                       padding:"7px 18px", borderRadius:10, border:"1px solid", cursor:"pointer",
                       fontFamily:"'DM Sans',sans-serif", fontSize:13, transition:"all .15s",
-                      borderColor: !!draft.secondMinorFaculty === opt.val ? "#7B5EA7" : "#D4D4DC",
-                      background:  !!draft.secondMinorFaculty === opt.val ? "#7B5EA7" : "#F7F5FB",
-                      color:       !!draft.secondMinorFaculty === opt.val ? "#fff"    : "#5A3B7B",
-                      fontWeight:  !!draft.secondMinorFaculty === opt.val ? 600 : 400,
+                      borderColor: !!draft.doubleMinor === opt.val ? "#7B5EA7" : "#D4D4DC",
+                      background:  !!draft.doubleMinor === opt.val ? "#7B5EA7" : "#F7F5FB",
+                      color:       !!draft.doubleMinor === opt.val ? "#fff"    : "#5A3B7B",
+                      fontWeight:  !!draft.doubleMinor === opt.val ? 600 : 400,
                     }}>{opt.label}</button>
                   ))}
                 </div>

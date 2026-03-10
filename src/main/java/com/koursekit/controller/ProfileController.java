@@ -98,6 +98,10 @@ public class ProfileController {
         m.put("doubleMajor",   user.isDoubleMajor());
         m.put("minor",         user.isMinor());
         m.put("minorName",     user.getMinorName()     != null ? user.getMinorName()     : "");
+        m.put("minorFaculty", user.getMinorFaculty() != null ? user.getMinorFaculty() : "");
+        m.put("doubleMinor",   user.isDoubleMinor());
+        m.put("secondMinor",   user.getSecondMinor()   != null ? user.getSecondMinor()   : "");
+        m.put("secondMinorFaculty", user.getSecondMinorFaculty() != null ? user.getSecondMinorFaculty() : "");
         return m;
     }
 
