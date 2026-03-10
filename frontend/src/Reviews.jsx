@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Pen, Search, Inbox, CheckCircle } from "lucide-react";
+import { Pen, Search, Inbox, CheckCircle, Clock } from "lucide-react";
 import CourseDetails from "./CourseDetails";
 
 const API = "http://localhost:8080";
@@ -258,7 +258,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
         const data = await res.json().catch(() => null);
         const status = data?.status || "APPROVED";
         setSuccess(status);
-        setTimeout(() => { setSuccess(false); onDone(); }, 3000);
+        setTimeout(() => { setSuccess(false); onDone(); }, 6000);
       } else {
         const msg = await res.text();
         setErr(msg || "Failed to submit review.");
@@ -271,7 +271,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
     <div style={{ ...rv.composeCard, textAlign:"center", padding:40 }}>
       {success === "PENDING" ? (
         <>
-          <div style={{ marginBottom:12 }}>⏳</div>
+          <div style={{ marginBottom:12 }}><Clock size={36} color="#A59AC9" /></div>
           <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Review submitted for moderation</div>
           <div style={{ fontSize:13, color:"#A59AC9", marginTop:8 }}>Your review will be visible once approved by a moderator.</div>
         </>
@@ -563,7 +563,7 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
         const data = await res.json().catch(() => null);
         const status = data?.status || "APPROVED";
         setSuccess(status);
-        setTimeout(() => { setSuccess(false); onDone(); }, 3000);
+        setTimeout(() => { setSuccess(false); onDone(); }, 6000);
       }
       else { const msg = await res.text(); setErr(msg || "Failed to submit."); }
     } catch { setErr("Network error. Please try again."); }
@@ -574,7 +574,7 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
     <div style={{ ...rv.composeCard, textAlign:"center", padding:40 }}>
       {success === "PENDING" ? (
         <>
-          <div style={{ marginBottom:12 }}>⏳</div>
+          <div style={{ marginBottom:12 }}><Clock size={36} color="#A59AC9" /></div>
           <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Review submitted for moderation</div>
           <div style={{ fontSize:13, color:"#A59AC9", marginTop:8 }}>Your review will be visible once approved by a moderator.</div>
         </>
