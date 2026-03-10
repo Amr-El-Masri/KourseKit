@@ -662,6 +662,26 @@ const saveCourseColor = (courseName, color) => {
                             <div style={{padding:"24px 16px", textAlign:"center", color:"#B8A9C9", fontSize:13}}>No notifications</div>
                         ) : (
                             <>
+                              {/* Overdue */}
+                              {notifications.filter(n => n.urgency === "overdue").length > 0 && (
+                                  <div>
+                                    <div style={{padding:"7px 16px 5px", fontSize:10, fontWeight:700, color:"#B0270A", letterSpacing:"0.07em", textTransform:"uppercase"}}>
+                                      Overdue
+                                    </div>
+                                    {notifications.filter(n => n.urgency === "overdue").map((n, i, arr) => (
+                                        <div key={i} style={{
+                                          padding:"9px 16px 10px",
+                                          background:"#FFF2F0",
+                                          borderBottom: i < arr.length - 1 ? "1px solid #FCDDD8" : "1px solid #F0EDF7"
+                                        }}>
+                                          <div style={{fontSize:12, color:"#B0270A", lineHeight:1.5}}>{n.message}</div>
+                                          <div style={{fontSize:10, color:"#C4BAD8", marginTop:3}}>
+                                            {n.createdAt}
+                                          </div>
+                                        </div>
+                                    ))}
+                                  </div>
+                              )}
                               {/* Due Today */}
                               {notifications.filter(n => n.urgency === "today").length > 0 && (
                                   <div>
@@ -676,7 +696,7 @@ const saveCourseColor = (courseName, color) => {
                                         }}>
                                           <div style={{fontSize:12, color:"#31487A", lineHeight:1.5}}>{n.message}</div>
                                           <div style={{fontSize:10, color:"#C4BAD8", marginTop:3}}>
-                                            {new Date(n.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"})}
+                                            {n.createdAt}
                                           </div>
                                         </div>
                                     ))}
@@ -696,7 +716,7 @@ const saveCourseColor = (courseName, color) => {
                                         }}>
                                           <div style={{fontSize:12, color:"#31487A", lineHeight:1.5}}>{n.message}</div>
                                           <div style={{fontSize:10, color:"#C4BAD8", marginTop:3}}>
-                                            {new Date(n.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"})}
+                                            {n.createdAt}
                                           </div>
                                         </div>
                                     ))}
@@ -716,7 +736,7 @@ const saveCourseColor = (courseName, color) => {
                                         }}>
                                           <div style={{fontSize:12, color:"#31487A", lineHeight:1.5}}>{n.message}</div>
                                           <div style={{fontSize:10, color:"#C4BAD8", marginTop:3}}>
-                                            {new Date(n.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"})}
+                                            {n.createdAt}
                                           </div>
                                         </div>
                                     ))}
