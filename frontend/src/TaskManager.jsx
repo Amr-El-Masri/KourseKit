@@ -32,7 +32,7 @@ const PRIORITIES = [
   { id:"medium", label:"Medium", color:"#b7680a", bg:"#fef9ee", dot:"#f39c12" },
   { id:"low",    label:"Low",    color:"#2d7a4a", bg:"#eef7f0", dot:"#27ae60" },
 ];
-const TYPES   = ["Assignment","Project","Quiz","Exam","Lab","Reading","Presentation","Other"];
+const TYPES   = ["Assignment","Project","Quiz","Midterm Exam","Final Exam","Lab","Reading","Presentation","Other"];
 const FILTERS = ["All","Pending","Done","Overdue"];
 
 const priority  = id => PRIORITIES.find(p => p.id === id) || PRIORITIES[1];
@@ -71,6 +71,7 @@ function DueBadge({ due, done }) {
 
 function TaskRow({ task, onToggle, onDelete, onEdit }) {
   const [expanded, setExpanded] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const p = priority(task.priority);
   const over = isOverdue(task.due, task.done);
 
@@ -110,7 +111,15 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
               {task.notes ? <NotebookPen size={15} /> : <Notebook size={15} />}
             </button>
             <button onClick={() => onEdit(task)} style={tm.iconBtn} title="Edit"><Pencil size={15} /></button>
-            <button onClick={() => onDelete(task.id)} style={{ ...tm.iconBtn, color:"#e07070" }} title="Delete">✕</button>
+            {confirming ? (
+              <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                <span style={{ fontSize:11, color:"#c0392b", fontWeight:600, whiteSpace:"nowrap" }}>Delete?</span>
+                <button onClick={() => { setConfirming(false); onDelete(task.id); }} style={{ ...tm.iconBtn, color:"#c0392b", fontSize:11, fontWeight:700, padding:"2px 6px" }}>Yes</button>
+                <button onClick={() => setConfirming(false)} style={{ ...tm.iconBtn, fontSize:11, padding:"2px 6px" }}>No</button>
+              </span>
+            ) : (
+              <button onClick={() => setConfirming(true)} style={{ ...tm.iconBtn, color:"#e07070" }} title="Delete">✕</button>
+            )}
           </div>
         </div>
 
@@ -200,7 +209,7 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
   );
 }
 
-export default function TaskManager({ initialEditTask }) {
+export default function TaskManager({ initialEditTask, onNavigate }) {
   const [tasks,        setTasks]        = useState([]);
   const [filter,       setFilter]       = useState("All");
   const [search,       setSearch]       = useState("");
@@ -310,13 +319,20 @@ export default function TaskManager({ initialEditTask }) {
     }
   };
 
-  let displayed = tasks
-      .filter(t => {
-        if (filter==="Pending") return !t.done;
-        if (filter==="Done")    return t.done;
-        if (filter==="Overdue") return isOverdue(t.due, t.done);
-        return true;
-      });
+  const syllabusIds = (() => {
+    try { return new Set(JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "[]").map(String)); } catch { return new Set(); }
+  })();
+
+  const filterFn = t => {
+    if (filter==="Pending") return !t.done;
+    if (filter==="Done")    return t.done;
+    if (filter==="Overdue") return isOverdue(t.due, t.done);
+    return true;
+  };
+
+  let displayed = tasks.filter(filterFn);
+  const syllabusDisplayed = displayed.filter(t => syllabusIds.has(String(t.id)));
+  const manualDisplayed   = displayed.filter(t => !syllabusIds.has(String(t.id)));
 
 
 
@@ -347,6 +363,22 @@ export default function TaskManager({ initialEditTask }) {
           <button onClick={() => { setEditing(null); setComposing(true); }} style={tm.newBtn}>
             + New Task
           </button>
+        </div>
+
+        {/* Study planner tip */}
+        <div style={{ background:"#F0EEF7", border:"1px solid #D4C9F0", borderRadius:12, padding:"12px 16px", marginBottom:20, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+          <div style={{ fontSize:13, color:"#5A3B7B", lineHeight:1.5 }}>
+            <span style={{ fontWeight:600 }}>Want a personalized study plan?</span>
+            {" "}Set your weekly availability in the Study Planner and KourseKit will auto-generate study blocks around your deadlines.
+          </div>
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate("planner")}
+              style={{ flexShrink:0, background:"#7B5EA7", color:"#fff", border:"none", borderRadius:9, padding:"7px 16px", fontSize:13, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" }}
+            >
+              Go to Study Planner →
+            </button>
+          )}
         </div>
 
         {composing && (
@@ -405,30 +437,50 @@ export default function TaskManager({ initialEditTask }) {
               </div>
               {filter==="All" && <div style={{ fontSize:13, marginTop:6 }}>Hit "+ New Task" to add one.</div>}
             </div>
-        ) : (
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {displayed.map(t => (
-                <div key={t.id}>
-                  <TaskRow
-                    task={t}
-                    onToggle={toggleDone}
-                    onDelete={deleteTask}
-                    onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }}
-                  />
-                  {editing?.id === t.id && (
-                    <div style={{marginTop:5}}>
-                    <TaskForm
-                      initial={editing}
-                      onSave={saveTask}
-                      onCancel={() => setEditing(null)}
-                      courses={savedCourses}
-                     />
-                  </div>
-                  )}
+        ) : (<>
+            {syllabusDisplayed.length > 0 && (
+              <div style={{ marginBottom:20 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+                  <div style={{ width:3, height:16, background:"#7B5EA7", borderRadius:2 }} />
+                  <span style={{ fontSize:13, fontWeight:700, color:"#7B5EA7", fontFamily:"'DM Sans',sans-serif" }}>From Syllabus</span>
+                  <span style={{ fontSize:12, color:"#B8A9C9" }}>— imported automatically</span>
                 </div>
-              ))}
-            </div>
-        )}
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {syllabusDisplayed.map(t => (
+                    <div key={t.id}>
+                      <TaskRow task={t} onToggle={toggleDone} onDelete={id => {
+                        deleteTask(id);
+                        try {
+                          const ids = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "[]").filter(x => String(x) !== String(id));
+                          localStorage.setItem("kk_syllabus_task_ids", JSON.stringify(ids));
+                        } catch {}
+                      }} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
+                      {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {manualDisplayed.length > 0 && (
+              <div>
+                {syllabusDisplayed.length > 0 && (
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+                    <div style={{ width:3, height:16, background:"#31487A", borderRadius:2 }} />
+                    <span style={{ fontSize:13, fontWeight:700, color:"#31487A", fontFamily:"'DM Sans',sans-serif" }}>My Tasks</span>
+                  </div>
+                )}
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {manualDisplayed.map(t => (
+                    <div key={t.id}>
+                      <TaskRow task={t} onToggle={toggleDone} onDelete={deleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
+                      {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+        </>)}
       </div>
   );
 }

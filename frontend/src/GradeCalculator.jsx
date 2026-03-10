@@ -127,12 +127,32 @@ const SEMESTER_OPTIONS = [
   "Fall 21-22","Spring 21-22","Summer 21-22",
 ];
 
+const COMP_TYPES = ["Midterm Exam","Final Exam","Assignment","Project","Quiz","Lab","Attendance","Participation","Other"];
+
+function inferType(name) {
+  const n = (name || "").toLowerCase();
+  // Combined names like "Assignment/Attendance" stay as Other so the label is preserved
+  if (n.includes("/") || n.includes("&")) return "Other";
+  if (/final/.test(n)) return "Final Exam";
+  if (/midterm/.test(n)) return "Midterm Exam";
+  if (/exam/.test(n)) return "Final Exam";
+  if (/quiz/.test(n)) return "Quiz";
+  if (/^assignment$/.test(n) || /\bhw\b/.test(n) || /homework/.test(n)) return "Assignment";
+  if (/project/.test(n)) return "Project";
+  if (/lab/.test(n)) return "Lab";
+  if (/^attendance$/.test(n)) return "Attendance";
+  if (/^participation$/.test(n)) return "Participation";
+  const exact = COMP_TYPES.find(t => t.toLowerCase() === n);
+  if (exact) return exact;
+  return "Other";
+}
+
 // Grade Calculator page
-export default function GradeCalculator({ dashboardCourses = [], savedSemesters = [], syllabusData: syllabusDataProp = null, onSyllabusApplied }) {
+export default function GradeCalculator({ dashboardCourses = [], savedSemesters = [] }) {
   const [activeTab, setActiveTab] = useState("semester");
 
   // Row helpers (UI only)
-  const addRow    = setter => setter(p => [...p, { id:Date.now(), name:"", grade:"", credits:"", weight:"", type:"Exam", gpa:"", customType:"" }]);
+  const addRow    = setter => setter(p => [...p, { id:Date.now(), name:"", grade:"", credits:"", weight:"", type:"", gpa:"", customType:"" }]);
   const removeRow = (setter, id) => setter(p => p.length > 1 ? p.filter(r => r.id !== id) : p);
   const updateRow = (setter, id, field, val) => setter(p => p.map(r => r.id === id ? { ...r, [field]:val } : r));
 
@@ -299,7 +319,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
   };
 
   // Course Grade
-  const [components,    setComponents]    = useState([{ id:1, type:"Exam", weight:"", grade:"", customType:"" }]);
+  const [components,    setComponents]    = useState([{ id:1, type:"", weight:"", grade:"", customType:"" }]);
   const [courseResult,  setCourseResult]  = useState(null);
   const [courseLoading, setCourseLoading] = useState(false);
   const [courseError,   setCourseError]   = useState(null);
@@ -388,12 +408,78 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
   };
 
   // Grade Simulator
-  const [simPast,         setSimPast]         = useState([{ id:1, type:"Exam", weight:"", grade:"", customType:"" }]);
+  const [simPast,         setSimPast]         = useState([{ id:1, type:"", weight:"", grade:"", customType:"" }]);
   const [simFutureGrade,  setSimFutureGrade]  = useState("");
   const [simFutureWeight, setSimFutureWeight] = useState("");
   const [simResult,       setSimResult]       = useState(null);
   const [simLoading,      setSimLoading]      = useState(false);
   const [simError,        setSimError]        = useState(null);
+
+  // Per-course persistence helpers
+  const loadCourseData = (courseName) => {
+    try { return JSON.parse(localStorage.getItem("kk_course_data") || "{}")[courseName] ?? null; } catch { return null; }
+  };
+  const saveCourseData = (courseName, data) => {
+    try {
+      const all = JSON.parse(localStorage.getItem("kk_course_data") || "{}");
+      localStorage.setItem("kk_course_data", JSON.stringify({ ...all, [courseName]: data }));
+    } catch {}
+  };
+  const loadSyllabus = (courseName) => {
+    try { return JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}")[courseName] ?? null; } catch { return null; }
+  };
+
+  // Selected course (shared across course/target/simulator tabs)
+  const [selectedCourse, setSelectedCourse] = useState("");
+
+  // Switch course — loads saved state or falls back to syllabus extract
+  const switchCourse = (courseName) => {
+    setSelectedCourse(courseName);
+    setCourseResult(null); setTargetResult(null); setSimResult(null);
+    setCourseError(null);  setTargetError(null);  setSimError(null);
+    if (!courseName) {
+      setComponents([{ id: Date.now(), type:"", weight:"", grade:"", customType:"" }]);
+      setSimPast([{ id: Date.now(), type:"", weight:"", grade:"", customType:"" }]);
+      setGraded([{ id: Date.now(), weight:"", grade:"" }]);
+      setFinalWeight(""); setTargetGoal(""); setSimFutureGrade(""); setSimFutureWeight("");
+      return;
+    }
+    const saved = loadCourseData(courseName);
+    if (saved) {
+      if (saved.components?.length)  setComponents(saved.components);
+      if (saved.graded?.length)      setGraded(saved.graded);
+      if (saved.finalWeight != null) setFinalWeight(saved.finalWeight);
+      if (saved.targetGoal != null)  setTargetGoal(saved.targetGoal);
+      if (saved.simPast?.length)     setSimPast(saved.simPast);
+      if (saved.simFutureGrade != null)  setSimFutureGrade(saved.simFutureGrade);
+      if (saved.simFutureWeight != null) setSimFutureWeight(saved.simFutureWeight);
+    } else {
+      const syl = loadSyllabus(courseName);
+      if (syl?.assessments?.length) {
+        setComponents(syl.assessments.map((a, i) => {
+          const t = inferType(a.name);
+          return { id: Date.now() + i, type: t, weight: String(a.weight ?? ""), grade: "", customType: t === "Other" ? (a.name || "") : "" };
+        }));
+        setSimPast(syl.assessments.map((a, i) => {
+          const t = inferType(a.name);
+          return { id: Date.now() + i, type: t, weight: String(a.weight ?? ""), grade: "", customType: t === "Other" ? (a.name || "") : "" };
+        }));
+      } else {
+        setComponents([{ id: Date.now(), type:"", weight:"", grade:"", customType:"" }]);
+        setSimPast([{ id: Date.now(), type:"", weight:"", grade:"", customType:"" }]);
+      }
+      setGraded([{ id: Date.now(), weight:"", grade:"" }]);
+      setFinalWeight(syl?.finalExamWeight != null ? String(syl.finalExamWeight) : "");
+      setTargetGoal("");
+      setSimFutureGrade(""); setSimFutureWeight("");
+    }
+  };
+
+  // Auto-save whenever course-specific state changes
+  useEffect(() => {
+    if (!selectedCourse) return;
+    saveCourseData(selectedCourse, { components, graded, finalWeight, targetGoal, simPast, simFutureGrade, simFutureWeight });
+  }, [selectedCourse, components, graded, finalWeight, targetGoal, simPast, simFutureGrade, simFutureWeight]);
 
   const calcSim = async () => {
     setSimError(null);
@@ -458,78 +544,6 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
   }, [activeTab]);
 
 
-  // Syllabus Upload
-  const [syllabusFile,     setSyllabusFile]     = useState(null);
-  const [syllabusLoading,  setSyllabusLoading]  = useState(false);
-  const [syllabusError,    setSyllabusError]     = useState(null);
-  const [syllabusData,     setSyllabusData]      = useState(null); // extracted JSON
-  const [syllabusConfirm,  setSyllabusConfirm]   = useState(false); // show confirm screen
-  const syllabusInputRef = useRef(null);
-
-  const uploadSyllabus = async () => {
-    if (!syllabusFile) { setSyllabusError("Please select a file first."); return; }
-    setSyllabusLoading(true); setSyllabusError(null);
-    try {
-      const fd = new FormData();
-      fd.append("file", syllabusFile);
-      const res = await fetch(`${API}/api/syllabus/extract`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${localStorage.getItem("kk_token")}` },
-        body: fd,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Extraction failed.");
-      setSyllabusData(data);
-      setSyllabusConfirm(true);
-    } catch (e) {
-      setSyllabusError(e.message);
-    } finally {
-      setSyllabusLoading(false);
-    }
-  };
-
-  // Apply syllabus data coming from Dashboard modal prop
-  useEffect(() => {
-    if (!syllabusDataProp) return;
-    if (syllabusDataProp.assessments?.length) {
-      setComponents(syllabusDataProp.assessments.map((a, i) => ({
-        id: Date.now() + i, type: "Other", weight: String(a.weight ?? ""),
-        grade: "", customType: a.name || "",
-      })));
-      setActiveTab("course");
-    }
-    if (syllabusDataProp.courseCode || syllabusDataProp.credits) {
-      setSemCourses([{ id: Date.now(), name: syllabusDataProp.courseCode || "", grade: "", credits: String(syllabusDataProp.credits ?? "") }]);
-    }
-    if (syllabusDataProp.finalExamWeight) {
-      setFinalWeight(String(syllabusDataProp.finalExamWeight));
-    }
-    onSyllabusApplied?.();
-  }, [syllabusDataProp]);
-
-  const applySyllabusData = () => {
-    if (!syllabusData) return;
-    // Auto-fill Course Grade tab
-    if (syllabusData.assessments?.length) {
-      setComponents(syllabusData.assessments.map((a, i) => ({
-        id: Date.now() + i, type: "Other", weight: String(a.weight ?? ""),
-        grade: "", customType: a.name || "",
-      })));
-      setActiveTab("course");
-    }
-    // Auto-fill Semester GPA tab
-    if (syllabusData.courseCode || syllabusData.credits) {
-      setSemCourses([{ id: Date.now(), name: syllabusData.courseCode || "", grade: "", credits: String(syllabusData.credits ?? "") }]);
-    }
-    // Auto-fill Target Grade final exam weight
-    if (syllabusData.finalExamWeight) {
-      setFinalWeight(String(syllabusData.finalExamWeight));
-    }
-    setSyllabusConfirm(false);
-    setSyllabusData(null);
-    setSyllabusFile(null);
-    if (syllabusInputRef.current) syllabusInputRef.current.value = "";
-  };
 
   const TABS = [
     { id:"semester",   label:"Semester GPA"    },
@@ -562,70 +576,29 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
         </div>
       </div>
 
-      {/* Syllabus Upload */}
-      {!syllabusConfirm && (
-        <div style={{ background:"#F7F5FB", border:"1px solid #E0D9F0", borderRadius:12, padding:"14px 18px", marginBottom:20, display:"flex", gap:12, alignItems:"center", flexWrap:"wrap" }}>
-          <span style={{ fontSize:13, fontWeight:600, color:"#31487A", flexShrink:0 }}>Upload Syllabus</span>
-          <input ref={syllabusInputRef} type="file" accept=".pdf,.txt" onChange={e => { setSyllabusFile(e.target.files[0] || null); setSyllabusError(null); }}
-            style={{ fontSize:12, color:"#5A3B7B", flex:1, minWidth:180 }} />
-          <button onClick={uploadSyllabus} disabled={syllabusLoading || !syllabusFile} style={{ ...gc.calcBtn, padding:"8px 18px", opacity: syllabusFile ? 1 : 0.5 }}>
-            {syllabusLoading ? "Extracting…" : "Extract"}
-          </button>
-          {syllabusError && <span style={{ fontSize:12, color:"#c0392b", width:"100%" }}>{syllabusError}</span>}
-        </div>
-      )}
 
-      {/* Syllabus Confirmation Screen */}
-      {syllabusConfirm && syllabusData && (
-        <div style={{ background:"#fff", border:"1px solid #E0D9F0", borderRadius:12, padding:"20px 24px", marginBottom:20 }}>
-          <div style={{ fontWeight:700, fontSize:15, color:"#31487A", marginBottom:14 }}>Review Extracted Info</div>
-
-          <div style={{ display:"flex", gap:24, flexWrap:"wrap", marginBottom:16, fontSize:13 }}>
-            {syllabusData.courseCode && <span><b>Course:</b> {syllabusData.courseCode}</span>}
-            {syllabusData.credits    && <span><b>Credits:</b> {syllabusData.credits}</span>}
-            {syllabusData.professor  && <span><b>Professor:</b> {syllabusData.professor}</span>}
-            {syllabusData.finalExamWeight && <span><b>Final Exam Weight:</b> {syllabusData.finalExamWeight}%</span>}
+      {/* Course picker — shown on course/target/simulator tabs */}
+      {["course","target","simulator"].includes(activeTab) && dashboardCourses.length > 0 && (
+        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16, flexWrap:"wrap" }}>
+          <span style={{ fontSize:13, fontWeight:600, color:"#5A3B7B" }}>Course:</span>
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+            {dashboardCourses.map(c => (
+              <button key={c.name} onClick={() => switchCourse(selectedCourse === c.name ? "" : c.name)} style={{
+                fontSize:12, fontWeight:600, padding:"5px 14px", borderRadius:20,
+                border: selectedCourse === c.name ? "none" : "1px solid #D4D4DC",
+                background: selectedCourse === c.name ? "#31487A" : "#F4F4F8",
+                color: selectedCourse === c.name ? "#fff" : "#5A3B7B",
+                cursor:"pointer", transition:"all .15s",
+              }}>
+                {c.name}
+              </button>
+            ))}
           </div>
-
-          {syllabusData.assessments?.length > 0 && (
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:12, fontWeight:600, color:"#7B5EA7", marginBottom:6 }}>Assessments (will fill Course Grade tab)</div>
-              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                {syllabusData.assessments.map((a, i) => (
-                  <span key={i} style={{ background:"#F0EEF7", borderRadius:8, padding:"4px 10px", fontSize:12, color:"#31487A" }}>
-                    {a.name} — {a.weight}%
-                  </span>
-                ))}
-              </div>
-            </div>
+          {selectedCourse && (
+            <span style={{ fontSize:11, color:"#A59AC9" }}>
+              {loadCourseData(selectedCourse) ? "● Saved data loaded" : loadSyllabus(selectedCourse) ? "● Syllabus loaded" : ""}
+            </span>
           )}
-
-          {syllabusData.deadlines?.length > 0 && (
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:12, fontWeight:600, color:"#7B5EA7", marginBottom:6 }}>Deadlines</div>
-              <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                {syllabusData.deadlines.map((d, i) => (
-                  <span key={i} style={{ fontSize:12, color:"#5A3B7B" }}>{d.title} — {d.date} ({d.type})</span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {syllabusData.officeHours?.length > 0 && (
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:12, fontWeight:600, color:"#7B5EA7", marginBottom:6 }}>Office Hours</div>
-              <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                {syllabusData.officeHours.map((o, i) => (
-                  <span key={i} style={{ fontSize:12, color:"#5A3B7B" }}>{o.day} {o.time} — {o.location}</span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div style={{ display:"flex", gap:10, marginTop:16 }}>
-            <button onClick={applySyllabusData} style={gc.calcBtn}>Apply & Fill Calculator</button>
-            <button onClick={() => { setSyllabusConfirm(false); setSyllabusData(null); }} style={gc.clearBtn}>Cancel</button>
-          </div>
         </div>
       )}
 
@@ -915,7 +888,8 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             <div key={c.id} style={{ ...gc.row, alignItems: c.type === "Other" ? "flex-start" : "center" }}>
               <div style={{ flex:1, maxWidth:140 }}>
                 <select className="gc-input" value={c.type} onChange={e=>updateRow(setComponents,c.id,"type",e.target.value)} style={{ ...gc.input, width:"100%", cursor:"pointer" }}>
-                  {["Exam","Assignment","Project","Quiz","Lab","Attendance","Participation","Other"].map(t=><option key={t}>{t}</option>)}
+                  <option value="">Select type…</option>
+                  {COMP_TYPES.map(t=><option key={t}>{t}</option>)}
                 </select>
                 {c.type === "Other" && (
                   <input className="gc-input" value={c.customType||""} onChange={e=>updateRow(setComponents,c.id,"customType",e.target.value)} placeholder="Specify (optional)" style={{ ...gc.input, width:"100%", marginTop:4, fontSize:12 }} />
@@ -939,7 +913,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             <button className="gc-calcbtn" onClick={calcCourse} disabled={courseLoading} style={gc.calcBtn}>
               {courseLoading ? "Calculating…" : "Calculate Grade"}
             </button>
-            <button onClick={() => { setComponents([{ id:Date.now(), type:"Exam", weight:"", grade:"", customType:"" }]); setCourseResult(null); setCourseError(null); }} style={gc.clearBtn}>
+            <button onClick={() => { setComponents([{ id:Date.now(), type:"", weight:"", grade:"", customType:"" }]); setCourseResult(null); setCourseError(null); }} style={gc.clearBtn}>
               Clear all
             </button>
             {courseResult && !courseError && (
@@ -1059,7 +1033,8 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
               <div key={c.id} style={{ ...gc.row, alignItems: c.type === "Other" ? "flex-start" : "center" }}>
                 <div style={{ flex:1, maxWidth:140 }}>
                   <select className="gc-input" value={c.type} onChange={e=>updateRow(setSimPast,c.id,"type",e.target.value)} style={{ ...gc.input, width:"100%", cursor:"pointer" }}>
-                    {["Exam","Assignment","Project","Quiz","Lab","Attendance","Participation","Other"].map(t=><option key={t}>{t}</option>)}
+                    <option value="">Select type…</option>
+                    {COMP_TYPES.map(t=><option key={t}>{t}</option>)}
                   </select>
                   {c.type === "Other" && (
                     <input className="gc-input" value={c.customType||""} onChange={e=>updateRow(setSimPast,c.id,"customType",e.target.value)} placeholder="Specify (optional)" style={{ ...gc.input, width:"100%", marginTop:4, fontSize:12 }} />
@@ -1116,7 +1091,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                   <button className="gc-calcbtn" onClick={calcSim} disabled={simLoading} style={gc.calcBtn}>
                     {simLoading ? "Simulating…" : "Simulate"}
                   </button>
-                  <button onClick={() => { setSimPast([{ id:Date.now(), type:"Exam", weight:"", grade:"", customType:"" }]); setSimFutureGrade(""); setSimFutureWeight(""); setSimResult(null); setSimError(null); }} style={gc.clearBtn}>
+                  <button onClick={() => { setSimPast([{ id:Date.now(), type:"", weight:"", grade:"", customType:"" }]); setSimFutureGrade(""); setSimFutureWeight(""); setSimResult(null); setSimError(null); }} style={gc.clearBtn}>
                     Clear all
                   </button>
                 </div>

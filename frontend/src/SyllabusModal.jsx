@@ -2,10 +2,27 @@ import { useState, useRef } from "react";
 
 const API = "http://localhost:8080";
 const token = () => localStorage.getItem("kk_token");
-const userId = () => localStorage.getItem("kk_email");
+const userId = () => {
+  const t = token();
+  try { return t ? JSON.parse(atob(t.split(".")[1])).sub : null; } catch { return null; }
+};
+
+function inferDeadlineType(name) {
+  const n = (name || "").toLowerCase();
+  if (/final/.test(n)) return "Final Exam";
+  if (/midterm/.test(n)) return "Midterm Exam";
+  if (/exam/.test(n)) return "Final Exam";
+  if (/quiz/.test(n)) return "Quiz";
+  if (/project/.test(n)) return "Project";
+  if (/lab/.test(n)) return "Lab";
+  if (/presentation/.test(n)) return "Presentation";
+  if (/reading/.test(n)) return "Reading";
+  return "Assignment";
+}
 
 export default function SyllabusModal({ courseName, onClose, onApply }) {
-  const [step, setStep] = useState("upload"); // upload | confirm
+  const [step, setStep] = useState("upload"); // upload | confirm | done
+  const [doneStats, setDoneStats] = useState({ tasks: 0, hasCalc: false, hasOfficeHours: false });
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -45,8 +62,23 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
         professor: data.professor || "",
         finalExamWeight: data.finalExamWeight != null ? String(data.finalExamWeight) : "",
       });
-      setAssessments((data.assessments || []).map((a, i) => ({ id: i, name: a.name || "", weight: String(a.weight ?? "") })));
-      setDeadlines((data.deadlines || []).map((d, i) => ({ id: i, title: d.title || "", date: d.date || "", type: d.type || "Assignment", include: true })));
+      const extractedAssessments = (data.assessments || []).map((a, i) => ({ id: i, name: a.name || "", weight: String(a.weight ?? "") }));
+      setAssessments(extractedAssessments);
+
+      // Build deadline rows from extracted deadlines; fall back to seeding from assessments
+      const extractedDeadlines = (data.deadlines || []).map((d, i) => ({
+        id: i, title: d.title || "", date: d.date || "",
+        type: inferDeadlineType(d.title || "") || d.type || "Assignment",
+        include: !!d.date,
+      }));
+      if (extractedDeadlines.length > 0) {
+        setDeadlines(extractedDeadlines);
+      } else {
+        // No deadlines found — seed from assessments so the user can fill in dates
+        setDeadlines(extractedAssessments.map((a, i) => ({
+          id: i, title: a.name, date: "", type: inferDeadlineType(a.name), include: false,
+        })));
+      }
       setOfficeHours(data.officeHours || []);
       setStep("confirm");
     } catch (e) {
@@ -58,44 +90,65 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
 
   const apply = async () => {
     setApplying(true); setApplyError(null);
+    let taskCount = 0;
     try {
       // Create tasks from deadlines
       if (applyTasks) {
         const uid = userId();
-        for (const d of deadlines.filter(d => d.include && d.date)) {
-          let iso = d.date;
-          // try to parse date string into ISO datetime
+        if (!uid) throw new Error("Not logged in.");
+        for (const d of deadlines.filter(d => d.include && d.date && d.title)) {
+          // Parse to "yyyy-MM-dd'T'HH:mm" — skip if unparseable
+          let iso;
           try {
-            const parsed = new Date(d.date);
-            if (!isNaN(parsed)) iso = parsed.toISOString().slice(0, 16).replace("T", "T");
-            else iso = new Date().toISOString().slice(0, 16);
-          } catch { iso = new Date().toISOString().slice(0, 16); }
-          await fetch(`${API}/api/tasks/${uid}/add`, {
+            // If already YYYY-MM-DD (from date picker or AI), use directly
+            const isoDate = /^\d{4}-\d{2}-\d{2}$/.test(d.date.trim())
+              ? d.date.trim()
+              : (() => {
+                  const parsed = new Date(d.date);
+                  if (isNaN(parsed)) return null;
+                  const pad = n => String(n).padStart(2, "0");
+                  return `${parsed.getFullYear()}-${pad(parsed.getMonth()+1)}-${pad(parsed.getDate())}`;
+                })();
+            if (!isoDate) continue;
+            iso = `${isoDate}T23:59`;
+          } catch { continue; }
+          const res = await fetch(`${API}/api/tasks/${uid}/add`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
             body: JSON.stringify({
               course: info.courseCode || courseName,
               title: d.title,
               type: d.type || "Assignment",
-              priority: "MEDIUM",
               deadline: iso,
+              completed: false,
               notes: "",
             }),
           });
+          if (res.ok) {
+            const created = await res.json();
+            if (created?.id) {
+              taskCount++;
+              try {
+                const existing = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "[]");
+                localStorage.setItem("kk_syllabus_task_ids", JSON.stringify([...existing, String(created.id)]));
+              } catch {}
+            }
+          }
         }
       }
 
-      // Pass data to parent for calculator auto-fill
-      if (applyCalc) {
-        onApply({
+      // Pass data to parent for calculator auto-fill + office hours
+      onApply({
+        officeHours,
+        ...(applyCalc ? {
           courseCode: info.courseCode || courseName,
           credits: info.credits,
           finalExamWeight: info.finalExamWeight,
           assessments,
-        });
-      } else {
-        onApply(null);
-      }
+        } : {}),
+      });
+      setDoneStats({ tasks: taskCount, hasCalc: applyCalc && assessments.length > 0, hasOfficeHours: officeHours.length > 0 });
+      setStep("done");
     } catch (e) {
       setApplyError("Some items may not have saved: " + e.message);
     } finally {
@@ -178,26 +231,39 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
               </div>
             )}
 
-            {/* Deadlines */}
+            {/* Deadlines → Tasks */}
             {deadlines.length > 0 && (
               <div style={{ marginBottom: 20 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "#31487A" }}>Deadlines → Tasks</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "#31487A" }}>Tasks</div>
                   <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#A59AC9", cursor: "pointer" }}>
                     <input type="checkbox" checked={applyTasks} onChange={e => setApplyTasks(e.target.checked)} />
-                    Auto-create tasks
+                    Auto-create in Task Manager
                   </label>
                 </div>
+                <div style={{ fontSize: 12, color: "#A59AC9", marginBottom: 10 }}>
+                  Check items and set a date to create them as tasks. Items without a date are skipped.
+                </div>
                 {deadlines.map((d, i) => (
-                  <div key={d.id} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "center", opacity: d.include ? 1 : 0.4 }}>
-                    <input type="checkbox" checked={d.include} onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, include: e.target.checked } : x))} />
+                  <div key={d.id} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "center", opacity: d.include ? 1 : 0.5 }}>
+                    <input
+                      type="checkbox"
+                      checked={d.include}
+                      onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, include: e.target.checked } : x))}
+                    />
                     <input style={{ ...input, flex: 2 }} value={d.title} onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, title: e.target.value } : x))} placeholder="Title" />
-                    <input style={{ ...input, flex: 1 }} value={d.date} onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, date: e.target.value } : x))} placeholder="Date" />
-                    <select style={{ ...input, flex: 1, maxWidth: 110, cursor: "pointer" }} value={d.type} onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, type: e.target.value } : x))}>
-                      {["Assignment","Exam","Quiz","Project","Lab","Presentation","Other"].map(t => <option key={t}>{t}</option>)}
+                    <input
+                      type="date"
+                      style={{ ...input, flex: 1, minWidth: 130, cursor: "pointer" }}
+                      value={d.date}
+                      onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, date: e.target.value, include: !!e.target.value } : x))}
+                    />
+                    <select style={{ ...input, flex: 1, maxWidth: 130, cursor: "pointer" }} value={d.type} onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, type: e.target.value } : x))}>
+                      {["Assignment","Project","Quiz","Midterm Exam","Final Exam","Lab","Reading","Presentation","Other"].map(t => <option key={t}>{t}</option>)}
                     </select>
                   </div>
                 ))}
+                <button onClick={() => setDeadlines(p => [...p, { id: Date.now(), title: "", date: "", type: "Assignment", include: false }])} style={{ fontSize: 12, color: "#7B5EA7", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}>+ Add task</button>
               </div>
             )}
 
@@ -216,7 +282,7 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
             {/* Apply to Calculator checkbox */}
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#5A3B7B", marginBottom: 20, cursor: "pointer" }}>
               <input type="checkbox" checked={applyCalc} onChange={e => setApplyCalc(e.target.checked)} />
-              Auto-fill Grade Calculator (assessments, credits, final exam weight)
+              Auto-fill KourseKit tools with extracted data
             </label>
 
             {applyError && <div style={{ fontSize: 12, color: "#c0392b", marginBottom: 10 }}>{applyError}</div>}
@@ -228,6 +294,39 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
               </button>
             </div>
           </>
+        )}
+
+        {step === "done" && (
+          <div style={{ textAlign: "center", padding: "12px 0 4px" }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>✓</div>
+            <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 18, color: "#31487A", marginBottom: 16 }}>
+              Syllabus applied!
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24, textAlign: "left" }}>
+              {doneStats.tasks > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#eef7f0", borderRadius: 10, padding: "10px 14px", border: "1px solid #b7dfc5" }}>
+                  <span style={{ fontSize: 16 }}>📋</span>
+                  <span style={{ fontSize: 13, color: "#2d7a4a", fontWeight: 600 }}>{doneStats.tasks} task{doneStats.tasks !== 1 ? "s" : ""} added to Task Manager</span>
+                </div>
+              )}
+              {doneStats.hasCalc && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#F0EEF7", borderRadius: 10, padding: "10px 14px", border: "1px solid #D4D4DC" }}>
+                  <span style={{ fontSize: 16 }}>🧮</span>
+                  <span style={{ fontSize: 13, color: "#5A3B7B", fontWeight: 600 }}>Grade Calculator pre-filled — select this course in the calculator</span>
+                </div>
+              )}
+              {doneStats.hasOfficeHours && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#eef2fb", borderRadius: 10, padding: "10px 14px", border: "1px solid #c3d0ed" }}>
+                  <span style={{ fontSize: 16 }}>🕐</span>
+                  <span style={{ fontSize: 13, color: "#31487A", fontWeight: 600 }}>Office hours saved to the course card</span>
+                </div>
+              )}
+              {doneStats.tasks === 0 && !doneStats.hasCalc && !doneStats.hasOfficeHours && (
+                <div style={{ fontSize: 13, color: "#A59AC9", textAlign: "center" }}>Nothing was applied — no items were checked.</div>
+              )}
+            </div>
+            <button onClick={onClose} style={{ ...btn, background: "#31487A", color: "#fff" }}>Done</button>
+          </div>
         )}
       </div>
     </div>

@@ -149,6 +149,7 @@ function TimeGutter() {
 
 function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUncomplete, onEdit, colIndex = 0, totalCols = 1 }) {
     const [showMenu, setShowMenu] = useState(false);
+    const [confirmingDelete, setConfirmingDelete] = useState(false);
     useEffect(() => {
         if (!showMenu) return;
         const close = () => setShowMenu(false);
@@ -186,7 +187,14 @@ function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUnco
                     : <button className="sp-block-action-btn" title="Undo complete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onUncomplete(block.id); }}>↩</button>
                 }
                 <button className="sp-block-action-btn" title="Edit" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onEdit(block); }}>✎</button>
-                <button className="sp-block-action-btn danger" title="Delete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(block.id); }}>✕</button>
+                {confirmingDelete ? (
+                    <>
+                        <button className="sp-block-action-btn danger" title="Confirm delete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(block.id); }} style={{ fontSize:9, padding:"1px 4px" }}>✓ Yes</button>
+                        <button className="sp-block-action-btn" title="Cancel" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); setConfirmingDelete(false); }} style={{ fontSize:9, padding:"1px 4px" }}>✗ No</button>
+                    </>
+                ) : (
+                    <button className="sp-block-action-btn danger" title="Delete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); setConfirmingDelete(true); }}>✕</button>
+                )}
             </div>
             {showMenu && (
                 <div className="sp-block-menu" onClick={e => e.stopPropagation()}>
@@ -195,7 +203,13 @@ function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUnco
                         : <button onClick={() => { onUncomplete(block.id); setShowMenu(false); }}>↩ Undo</button>
                     }
                     <button onClick={() => { onEdit(block); setShowMenu(false); }}><Pencil size={13} style={{verticalAlign:"middle",marginRight:4}}/>Edit</button>
-                    <button className="danger" onClick={() => { onDelete(block.id); setShowMenu(false); }}>✕ Delete</button>
+                    {confirmingDelete
+                        ? <>
+                            <button className="danger" onClick={() => { onDelete(block.id); setShowMenu(false); }}>✓ Confirm Delete</button>
+                            <button onClick={() => { setConfirmingDelete(false); setShowMenu(false); }}>✗ Cancel</button>
+                          </>
+                        : <button className="danger" onClick={() => { setConfirmingDelete(true); }}>✕ Delete</button>
+                    }
                 </div>
             )}
         </div>
@@ -267,6 +281,7 @@ function EditBlockModal({ block, entries, dayBlocks, onClose, onSave }) {
 
 function AvailabilitySlot({ slot, dayKey, onDelete, onResize }) {
     const [liveEndHour, setLiveEndHour] = useState(null);
+    const [confirmingDelete, setConfirmingDelete] = useState(false);
     const liveEndHourRef = useRef(null);
     const dragRef = useRef(null);
     const endHour = liveEndHour ?? slot.endHour;
@@ -306,7 +321,14 @@ function AvailabilitySlot({ slot, dayKey, onDelete, onResize }) {
             onMouseDown={e => e.stopPropagation()}
         >
             <span className="sp-slot-time">{formatTime(slot.startHour)}–{formatTime(endHour)}</span>
-            <button className="sp-slot-delete" onMouseDown={e => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onDelete(dayKey, slot.id); }}>×</button>
+            {confirmingDelete ? (
+                <span style={{ display:"flex", alignItems:"center", gap:2 }} onMouseDown={e => e.stopPropagation()}>
+                    <button className="sp-slot-delete" onClick={e => { e.stopPropagation(); onDelete(dayKey, slot.id); }} style={{ fontSize:9, opacity:1, position:"static", padding:"1px 4px" }}>✓</button>
+                    <button className="sp-slot-delete" onClick={e => { e.stopPropagation(); setConfirmingDelete(false); }} style={{ fontSize:9, opacity:1, position:"static", padding:"1px 4px" }}>✗</button>
+                </span>
+            ) : (
+                <button className="sp-slot-delete" onMouseDown={e => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setConfirmingDelete(true); }}>×</button>
+            )}
             <div onMouseDown={handleResizeStart} style={{ position:"absolute", bottom:0, left:0, right:0, height:8, cursor:"ns-resize", display:"flex", alignItems:"center", justifyContent:"center" }}>
                 <div style={{ width:24, height:3, borderRadius:2, background:"rgba(123,94,167,0.4)" }} />
             </div>
@@ -427,6 +449,7 @@ function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId 
     const [selectedTaskId, setSelectedTaskId] = useState("");
     const [hoursPerWeek, setHoursPerWeek] = useState("");
     const [color, setColor] = useState(PALETTE[0]);
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
     useEffect(() => {
         apiFetch(`/api/tasks/${userId}/list-all`).then(data => {
@@ -551,7 +574,14 @@ function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId 
                                     <span className="sp-hours-badge">{entry.hoursPerWeek}h/wk</span>
                                 </div>
                             </div>
-                            <button className="sp-entry-delete" onClick={() => onDelete(entry.id)}>×</button>
+                            {confirmDeleteId === entry.id ? (
+                                <span style={{ display:"flex", alignItems:"center", gap:3 }}>
+                                    <button className="sp-entry-delete" onClick={() => { setConfirmDeleteId(null); onDelete(entry.id); }} style={{ opacity:1, fontSize:11, padding:"2px 5px" }} title="Confirm">✓</button>
+                                    <button className="sp-entry-delete" onClick={() => setConfirmDeleteId(null)} style={{ opacity:1, fontSize:11, padding:"2px 5px" }} title="Cancel">✗</button>
+                                </span>
+                            ) : (
+                                <button className="sp-entry-delete" onClick={() => setConfirmDeleteId(entry.id)}>×</button>
+                            )}
                         </div>
                     );
                 })}
