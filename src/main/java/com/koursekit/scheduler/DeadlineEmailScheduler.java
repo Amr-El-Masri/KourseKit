@@ -58,7 +58,7 @@ public class DeadlineEmailScheduler {
         String firstName = userOpt.get().getFirstName();
         String name = (firstName != null && !firstName.isBlank()) ? firstName : "Student";
 
-        String subject = "Urgent: " + task.getCourse() + " — " + task.getTitle() + " is due soon";
+        String subject = "Reminder: " + task.getCourse() + " — " + task.getTitle() + " is due soon";
 
         String deadlineStr = task.getDeadline().format(FMT);
         String timeLabel = "very soon";
