@@ -51,6 +51,10 @@ public class ProfileController {
         if (body.containsKey("doubleMajor"))   user.setDoubleMajor(Boolean.TRUE.equals(body.get("doubleMajor")));
         if (body.containsKey("minor"))         user.setMinor(Boolean.TRUE.equals(body.get("minor")));
         if (body.containsKey("minorName"))     user.setMinorName((String) body.get("minorName"));
+        if (body.containsKey("minorFaculty"))  user.setMinorFaculty((String) body.get("minorFaculty"));
+        if (body.containsKey("doubleMinor"))   user.setDoubleMinor(Boolean.TRUE.equals(body.get("doubleMinor")));
+        if (body.containsKey("secondMinor"))   user.setSecondMinor((String) body.get("secondMinor"));
+        if (body.containsKey("secondMinorFaculty")) user.setSecondMinorFaculty((String) body.get("secondMinorFaculty"));
 
         userRepo.save(user);
         return ResponseEntity.ok(toMap(user));

@@ -29,13 +29,23 @@ public class NotificationScheduler {
         this.notificationRepository = notificationRepository;
     }
 
-    @Scheduled(fixedRate = 60000)
+    @Scheduled(fixedRate = 10000)
     public void createDeadlineNotifications() {
         LocalDateTime now = LocalDateTime.now();
+
+        // Overdue: deadline has already passed, task not completed
+        List<Task> overdueTasks = taskService.findByDeadlineBetween(now.minusYears(1), now);
+        for (Task task : overdueTasks) {
+            if (task.isCompleted()) continue;
+            if (!notificationRepository.existsOverdueByTaskId(task.getId())) {
+                notificationService.createNotification(task, task.getCourse() + " — " + task.getTitle() + " is overdue");
+            }
+        }
 
         // Today: due within 6 hours
         List<Task> todayTasks = taskService.findByDeadlineBetween(now, now.plusHours(6));
         for (Task task : todayTasks) {
+            if (task.isCompleted()) continue;
             if (!notificationRepository.existsByTask_IdAndCreatedAtAfter(task.getId(), now.minusHours(DEDUP_HOURS))) {
                 notificationService.createNotification(task, "");
             }
@@ -44,6 +54,7 @@ public class NotificationScheduler {
         // Tomorrow: due between 6h and 48h from now
         List<Task> tomorrowTasks = taskService.findByDeadlineBetween(now.plusHours(6), now.plusHours(48));
         for (Task task : tomorrowTasks) {
+            if (task.isCompleted()) continue;
             if (!notificationRepository.existsByTask_IdAndCreatedAtAfter(task.getId(), now.minusHours(DEDUP_HOURS))) {
                 notificationService.createNotification(task, "");
             }
@@ -52,6 +63,7 @@ public class NotificationScheduler {
         // 3 days: due between 48h and 78h from now
         List<Task> threeDayTasks = taskService.findByDeadlineBetween(now.plusHours(48), now.plusHours(78));
         for (Task task : threeDayTasks) {
+            if (task.isCompleted()) continue;
             if (!notificationRepository.existsByTask_IdAndCreatedAtAfter(task.getId(), now.minusHours(DEDUP_HOURS))) {
                 notificationService.createNotification(task, "");
             }
