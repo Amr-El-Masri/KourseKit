@@ -6,6 +6,7 @@ import Profile from "./Profile";
 import StudyPlanner from "./StudyPlanner";
 import CourseDetails from "./CourseDetails";
 import SyllabusModal from "./SyllabusModal";
+import ThemeToggle from "./ThemeToggle";
 import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle } from 'lucide-react';
 
 const AVATAR_ICONS = [
@@ -22,7 +23,7 @@ const DAYS_OF_WEEK = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const EVENT_TYPES  = [
   { label:"Class",   color:"#31487A", bg:"#eef2fb" },
   { label:"Gym",     color:"#2d7a4a", bg:"#eef7f0" },
-  { label:"Study",   color:"#5A3B7B", bg:"#F0EEF7" },
+  { label:"Study",   color:"var(--accent2)", bg:"#F0EEF7" },
   { label:"Meeting", color:"#6b2d7a", bg:"#f5eefb" },
   { label:"Other",   color:"#555",    bg:"#f5f5f5" },
 ];
@@ -41,8 +42,8 @@ const ALL_WIDGETS = [
 function SectionTitle({ children }) {
   return (
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
-        <div style={{ width:3, height:18, background:"#7B5EA7", borderRadius:2 }} />
-        <h3 style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:"#31487A", margin:0 }}>{children}</h3>
+        <div style={{ width:3, height:18, background:"var(--accent)", borderRadius:2 }} />
+        <h3 style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:"var(--primary)", margin:0 }}>{children}</h3>
       </div>
   );
 }
@@ -61,15 +62,15 @@ function SemesterSelect({ value, onChange, semesters }) {
       <div ref={ref} style={{ position:"relative" }}>
         <button onClick={() => setOpen(o => !o)} style={sd.trigger}>
           <span style={{ fontSize:14 }}></span>
-          <span style={{ fontWeight:600, color:"#31487A", fontSize:13 }}>{value || "Select semester"}</span>
-          <span style={{ color:"#A59AC9", fontSize:11, transition:"transform .2s", display:"inline-block", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+          <span style={{ fontWeight:600, color:"var(--primary)", fontSize:13 }}>{value || "Select semester"}</span>
+          <span style={{ color:"var(--text2)", fontSize:11, transition:"transform .2s", display:"inline-block", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
         </button>
         {open && (
             <div style={sd.dropdown}>
               {semesters.map(sem => (
                   <div key={sem} onClick={() => { onChange(sem); setOpen(false); }}
-                       style={{ ...sd.option, background: sem === value ? "#F0EEF7" : "transparent", color: sem === value ? "#31487A" : "#4a3a6a", fontWeight: sem === value ? 600 : 400 }}>
-                    {sem === value && <span style={{ color:"#7B5EA7", marginRight:8, fontSize:12 }}>✓</span>}
+                       style={{ ...sd.option, background: sem === value ? "var(--surface3)" : "transparent", color: sem === value ? "var(--primary)" : "var(--text-body)", fontWeight: sem === value ? 600 : 400 }}>
+                    {sem === value && <span style={{ color:"var(--accent)", marginRight:8, fontSize:12 }}>✓</span>}
                     {sem}
                   </div>
               ))}
@@ -82,12 +83,12 @@ function SemesterSelect({ value, onChange, semesters }) {
 function WidgetTogglePanel({ visible, onToggle }) {
   return (
       <div style={sd.togglePanel}>
-        <div style={{ fontSize:12, fontWeight:700, color:"#A59AC9", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:10 }}>Widgets</div>
+        <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:10 }}>Widgets</div>
         {ALL_WIDGETS.map(w => (
             <div key={w.id} onClick={() => onToggle(w.id)}
-                 style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 10px", borderRadius:8, marginBottom:4, cursor:"pointer", background: visible[w.id] ? "#F0EEF7" : "transparent", transition:"background .15s" }}>
-              <span style={{ fontSize:13, color: visible[w.id] ? "#31487A" : "#A59AC9" }}>{w.label}</span>
-              <div style={{ width:32, height:18, borderRadius:9, background: visible[w.id] ? "#7B5EA7" : "#D4D4DC", position:"relative", transition:"background .2s" }}>
+                 style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 10px", borderRadius:8, marginBottom:4, cursor:"pointer", background: visible[w.id] ? "var(--surface3)" : "transparent", transition:"background .15s" }}>
+              <span style={{ fontSize:13, color: visible[w.id] ? "var(--primary)" : "var(--text2)" }}>{w.label}</span>
+              <div style={{ width:32, height:18, borderRadius:9, background: visible[w.id] ? "var(--accent)" : "var(--border)", position:"relative", transition:"background .2s" }}>
                 <div style={{ position:"absolute", top:2, left: visible[w.id] ? 16 : 2, width:14, height:14, borderRadius:"50%", background:"white", transition:"left .2s", boxShadow:"0 1px 3px rgba(0,0,0,0.2)" }} />
               </div>
             </div>
@@ -100,7 +101,7 @@ function PomodoroTimer() {
   const MODES = [
     { label:"Focus",      duration:25*60, color:"#31487A", bg:"#eef2fb" },
     { label:"Short Break",duration:5*60,  color:"#2d7a4a", bg:"#eef7f0" },
-    { label:"Long Break", duration:15*60, color:"#5A3B7B", bg:"#F0EEF7" },
+    { label:"Long Break", duration:15*60, color:"var(--accent2)", bg:"#F0EEF7" },
   ];
   const [modeIdx,   setModeIdx]   = useState(0);
   const [timeLeft,  setTimeLeft]  = useState(MODES[0].duration);
@@ -144,13 +145,13 @@ function PomodoroTimer() {
 
   return (
       <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14,paddingTop:6}}>
-        <div style={{display:"flex",gap:4,background:"#F4F4F8",padding:4,borderRadius:12,width:"100%"}}>
+        <div style={{display:"flex",gap:4,background:"var(--surface2)",padding:4,borderRadius:12,width:"100%"}}>
           {MODES.map((m,i) => (
               <button key={m.label} onClick={() => switchMode(i)} style={{
                 flex:1, padding:"6px 0", border:"none", borderRadius:8, fontSize:11, fontWeight:600,
                 cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
                 background: modeIdx===i ? m.color : "transparent",
-                color: modeIdx===i ? "#fff" : "#A59AC9",
+                color: modeIdx===i ? "#fff" : "var(--text2)",
               }}>{m.label}</button>
           ))}
         </div>
@@ -164,12 +165,12 @@ function PomodoroTimer() {
           </svg>
           <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
             <div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:mode.color,lineHeight:1}}>{mins}:{secs}</div>
-            <div style={{fontSize:10,color:"#A59AC9",marginTop:2}}>{mode.label}</div>
+            <div style={{fontSize:10,color:"var(--text2)",marginTop:2}}>{mode.label}</div>
           </div>
         </div>
 
         <div style={{display:"flex",gap:10}}>
-          <button onClick={reset} style={{padding:"7px 14px",background:"#F4F4F8",border:"1px solid #D4D4DC",borderRadius:9,fontSize:12,cursor:"pointer",color:"#A59AC9",fontFamily:"'DM Sans',sans-serif"}}>↺ Reset</button>
+          <button onClick={reset} style={{padding:"7px 14px",background:"var(--surface2)",border:"1px solid var(--border)",borderRadius:9,fontSize:12,cursor:"pointer",color:"var(--text2)",fontFamily:"'DM Sans',sans-serif"}}>↺ Reset</button>
           <button onClick={() => setRunning(r => !r)} style={{
             padding:"7px 22px", background:running?"#e07070":mode.color, color:"white",
             border:"none", borderRadius:9, fontSize:13, fontWeight:600, cursor:"pointer",
@@ -177,9 +178,9 @@ function PomodoroTimer() {
           }}>{running ? <><Pause size={13} style={{verticalAlign:"middle",marginRight:4}}/>Pause</> : <><Play size={13} style={{verticalAlign:"middle",marginRight:4}}/>Start</>}</button>
         </div>
 
-        <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"#A59AC9"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text2)"}}>
           <span></span>
-          <span style={{color:"#31487A",fontWeight:600}}>{sessions}</span>
+          <span style={{color:"var(--primary)",fontWeight:600}}>{sessions}</span>
           <span>session{sessions!==1?"s":""} completed</span>
         </div>
       </div>
@@ -541,7 +542,7 @@ const saveCourseColor = (courseName, color) => {
         <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; margin:0; padding:0; }
-        body { font-family:'DM Sans',sans-serif; background:#F4F4F8; }
+        body { font-family:'DM Sans',sans-serif; background:var(--bg); }
         ::-webkit-scrollbar { width:5px; }
         ::-webkit-scrollbar-thumb { background:#8FB3E2; border-radius:10px; }
         @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
@@ -559,7 +560,7 @@ const saveCourseColor = (courseName, color) => {
         .add-btn:hover { background:#221866 !important; }
         .add-btn { transition:background .15s; }
         .cal-day:hover { background:#D9E1F1 !important; border-radius:6px; }
-        .toggle-opt:hover { background:#F0EEF7; }
+        .toggle-opt:hover { background:var(--surface3); }
         label:has(input[type="color"]):hover { transform: scale(1.2); box-shadow: 0 3px 10px rgba(0,0,0,0.2) !important; }
       `}</style>
 
@@ -577,7 +578,7 @@ const saveCourseColor = (courseName, color) => {
                   display:"flex", alignItems:"center", padding:"10px 16px", margin:"2px 8px", borderRadius:10,
                   justifyContent:sidebarOpen?"flex-start":"center",
                   background:activePage===item.id?"rgba(255,255,255,0.15)":"transparent",
-                  color:activePage===item.id?"#ffffff":"#B8A9C9",
+                  color:activePage===item.id?"#ffffff":"var(--text3)",
                   fontWeight:activePage===item.id?600:400, userSelect:"none", position:"relative",
                 }}>
                   <span style={{fontSize:17,minWidth:22,textAlign:"center"}}>{item.icon}</span>
@@ -595,7 +596,7 @@ const saveCourseColor = (courseName, color) => {
             {sidebarOpen && (
                 <div style={{marginLeft:10,display:"flex",flexDirection:"column",lineHeight:1.3,overflow:"hidden"}}>
                   <span style={{fontSize:13,fontWeight:600,color:activePage==="profile"?"#ffffff":"#D9E1F1"}}>Student Profile</span>
-                  <span style={{fontSize:11,color:"#B8A9C9",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{email}</span>
+                  <span style={{fontSize:11,color:"var(--text3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{email}</span>
                 </div>
             )}
           </div>
@@ -604,8 +605,8 @@ const saveCourseColor = (courseName, color) => {
         <main style={s.main}>
           <header style={s.topbar}>
             <div>
-              <div style={s.greeting}>Hello, <span style={{fontFamily:"'Fraunces',serif",fontStyle:"italic",color:"#31487A"}}>{displayName}!</span></div>
-              <div style={{fontSize:13,color:"#5A3B7B",marginTop:2}}>{today.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</div>
+              <div style={s.greeting}>Hello, <span style={{fontFamily:"'Fraunces',serif",fontStyle:"italic",color:"var(--primary)"}}>{displayName}!</span></div>
+              <div style={{fontSize:13,color:"var(--accent2)",marginTop:2}}>{today.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</div>
             </div>
 
             {activePage === "dashboard" && (
@@ -616,7 +617,7 @@ const saveCourseColor = (courseName, color) => {
             {activePage === "dashboard" && (
                 <div ref={toggleRef} style={{position:"relative"}}>
                   <button onClick={() => setShowToggle(o=>!o)} style={sd.toggleBtn} title="Customize widgets">
-                    <span style={{fontSize:12,fontWeight:600,color:"#31487A",marginLeft:4}}>Widgets</span>
+                    <span style={{fontSize:12,fontWeight:600,color:"var(--primary)",marginLeft:4}}>Widgets</span>
                   </button>
                   {showToggle && <WidgetTogglePanel visible={visible} onToggle={toggleWidget} />}
                 </div>
@@ -626,7 +627,7 @@ const saveCourseColor = (courseName, color) => {
               <button
                   onClick={() => window.location.reload()}
                   title="Refresh"
-                  style={{...s.bell, fontSize:16, cursor:"pointer", border:"1px solid #D4D4DC", background:"#ffffff"}}
+                  style={{...s.bell, fontSize:16, cursor:"pointer", border:"1px solid var(--border)", background:"var(--surface)", color:"var(--border2)"}}
               >
                 ↺
               </button>
@@ -654,12 +655,12 @@ const saveCourseColor = (courseName, color) => {
                       border:"1px solid #E8E8F0", zIndex:9999, overflow:"hidden"
                     }}>
                       <div style={{padding:"12px 16px", borderBottom:"1px solid #F0F0F5", display:"flex", alignItems:"center", justifyContent:"space-between"}}>
-                        <span style={{fontWeight:700, fontSize:13, color:"#31487A"}}>Notifications</span>
-                        {notifications.length > 0 && <span style={{fontSize:11, color:"#B8A9C9"}}>{notifications.length} total</span>}
+                        <span style={{fontWeight:700, fontSize:13, color:"var(--primary)"}}>Notifications</span>
+                        {notifications.length > 0 && <span style={{fontSize:11, color:"var(--text3)"}}>{notifications.length} total</span>}
                       </div>
                       <div style={{maxHeight:380, overflowY:"auto"}}>
                         {notifications.length === 0 ? (
-                            <div style={{padding:"24px 16px", textAlign:"center", color:"#B8A9C9", fontSize:13}}>No notifications</div>
+                            <div style={{padding:"24px 16px", textAlign:"center", color:"var(--text3)", fontSize:13}}>No notifications</div>
                         ) : (
                             <>
                               {/* Overdue */}
@@ -694,7 +695,7 @@ const saveCourseColor = (courseName, color) => {
                                           background:"#FDF7F6",
                                           borderBottom: i < arr.length - 1 ? "1px solid #F5F0EF" : "1px solid #F0EDF7"
                                         }}>
-                                          <div style={{fontSize:12, color:"#31487A", lineHeight:1.5}}>{n.message}</div>
+                                          <div style={{fontSize:12, color:"var(--primary)", lineHeight:1.5}}>{n.message}</div>
                                           <div style={{fontSize:10, color:"#C4BAD8", marginTop:3}}>
                                             {n.createdAt}
                                           </div>
@@ -714,7 +715,7 @@ const saveCourseColor = (courseName, color) => {
                                           background:"#FDFAF6",
                                           borderBottom: i < arr.length - 1 ? "1px solid #F5F0E8" : "1px solid #F0EDF7"
                                         }}>
-                                          <div style={{fontSize:12, color:"#31487A", lineHeight:1.5}}>{n.message}</div>
+                                          <div style={{fontSize:12, color:"var(--primary)", lineHeight:1.5}}>{n.message}</div>
                                           <div style={{fontSize:10, color:"#C4BAD8", marginTop:3}}>
                                             {n.createdAt}
                                           </div>
@@ -725,7 +726,7 @@ const saveCourseColor = (courseName, color) => {
                               {/* Due in 3 Days */}
                               {notifications.filter(n => n.urgency === "3day").length > 0 && (
                                   <div>
-                                    <div style={{padding:"7px 16px 5px", fontSize:10, fontWeight:700, color:"#7B5EA7", letterSpacing:"0.07em", textTransform:"uppercase"}}>
+                                    <div style={{padding:"7px 16px 5px", fontSize:10, fontWeight:700, color:"var(--accent)", letterSpacing:"0.07em", textTransform:"uppercase"}}>
                                       Due in 3 Days
                                     </div>
                                     {notifications.filter(n => n.urgency === "3day").map((n, i, arr) => (
@@ -734,7 +735,7 @@ const saveCourseColor = (courseName, color) => {
                                           background:"#FAF8FF",
                                           borderBottom: i < arr.length - 1 ? "1px solid #F0EDF7" : "none"
                                         }}>
-                                          <div style={{fontSize:12, color:"#31487A", lineHeight:1.5}}>{n.message}</div>
+                                          <div style={{fontSize:12, color:"var(--primary)", lineHeight:1.5}}>{n.message}</div>
                                           <div style={{fontSize:10, color:"#C4BAD8", marginTop:3}}>
                                             {n.createdAt}
                                           </div>
@@ -760,17 +761,17 @@ const saveCourseColor = (courseName, color) => {
                     <section className="card-anim" style={{...s.card, gridColumn:"span 2"}}>
                       <SectionTitle>My Courses — {semester}</SectionTitle>
                       {semCourseList.length === 0
-                          ? <div style={{fontSize:13,color:"#B8A9C9",marginTop:16,textAlign:"center",padding:"20px 0"}}>No courses registered for this semester yet.</div>
+                          ? <div style={{fontSize:13,color:"var(--text3)",marginTop:16,textAlign:"center",padding:"20px 0"}}>No courses registered for this semester yet.</div>
                           : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
                             {semCourseList.map(c => (
                                 <div key={c.id} className="course-card"
                                      onClick={() => setCourseDetailsTarget(c)}
-                                     style={{...s.courseCard, border: `2px solid ${courseColors[c.name] || "#A59AC9"}`}}>
+                                     style={{...s.courseCard, border: `2px solid ${courseColors[c.name] || "var(--text2)"}`}}>
                                   <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
-                                    <div style={{fontWeight:700, fontSize:15, color:"#31487A"}}>{c.name}</div>
+                                    <div style={{fontWeight:700, fontSize:15, color:"var(--primary)"}}>{c.name}</div>
                                     <label style={{
                                       width:20, height:20, borderRadius:"50%",
-                                      background: courseColors[c.name] || "#A59AC9",
+                                      background: courseColors[c.name] || "var(--text2)",
                                       cursor:"pointer", flexShrink:0,
                                       boxShadow:"0 1px 4px rgba(0,0,0,0.15)",
                                       border:"2px solid white",
@@ -779,7 +780,7 @@ const saveCourseColor = (courseName, color) => {
                                     }}>
                                       <input
                                           type="color"
-                                          value={courseColors[c.name] || "#A59AC9"}
+                                          value={courseColors[c.name] || "var(--text2)"}
                                           onChange={e => { e.stopPropagation(); saveCourseColor(c.name, e.target.value); }}
                                           style={{ opacity:0, width:0, height:0, position:"absolute" }}
                                       />
@@ -792,7 +793,7 @@ const saveCourseColor = (courseName, color) => {
                                   ) : (
                                       <button
                                           onClick={e => { e.stopPropagation(); setSyllabusTarget(c.name); }}
-                                          style={{ marginTop:8, fontSize:11, color:"#7B5EA7", background:"none", border:"1px solid #D4D4DC", borderRadius:6, padding:"3px 8px", cursor:"pointer", width:"100%", textAlign:"left" }}
+                                          style={{ marginTop:8, fontSize:11, color:"var(--accent)", background:"none", border:"1px solid var(--border)", borderRadius:6, padding:"3px 8px", cursor:"pointer", width:"100%", textAlign:"left" }}
                                       >
                                         + Upload Syllabus
                                       </button>
@@ -801,14 +802,14 @@ const saveCourseColor = (courseName, color) => {
                                       <div style={{ marginTop:6 }}>
                                         <button
                                             onClick={e => { e.stopPropagation(); setExpandedOH(p => ({ ...p, [c.name]: !p[c.name] })); }}
-                                            style={{ fontSize:11, color:"#5A3B7B", background:"none", border:"none", padding:0, cursor:"pointer", display:"flex", alignItems:"center", gap:3 }}
+                                            style={{ fontSize:11, color:"var(--accent2)", background:"none", border:"none", padding:0, cursor:"pointer", display:"flex", alignItems:"center", gap:3 }}
                                         >
                                           <span style={{ fontSize:9 }}>{expandedOH[c.name] ? "▼" : "▶"}</span> Office Hours
                                         </button>
                                         {expandedOH[c.name] && (
                                             <div style={{ marginTop:4, paddingLeft:4 }}>
                                               {courseOfficeHours[c.name].map((oh, i) => (
-                                                  <div key={i} style={{ fontSize:11, color:"#444", lineHeight:1.5 }}>
+                                                  <div key={i} style={{ fontSize:11, color:"var(--text)", lineHeight:1.5 }}>
                                                     {[oh.day, oh.time, oh.location].filter(Boolean).join(" · ")}
                                                   </div>
                                               ))}
@@ -836,7 +837,7 @@ const saveCourseColor = (courseName, color) => {
                           const creds = v.reduce((sum, c) => sum + Number(c.credits), 0);
                           return { gpa: (pts / creds).toFixed(2), creds, count: v.length };
                         };
-                        const gpaColor = g => parseFloat(g) >= 3.7 ? "#27ae60" : parseFloat(g) >= 3.0 ? "#2980b9" : parseFloat(g) >= 2.0 ? "#e67e22" : "#c0392b";
+                        const gpaColor = g => parseFloat(g) >= 3.7 ? "#27ae60" : parseFloat(g) >= 3.0 ? "#2980b9" : parseFloat(g) >= 2.0 ? "#e67e22" : "var(--error)";
 
                         const currentSem = apiSemesters.find(s => s.semesterName === semester);
                         const semResult = calcGPA(currentSem?.courses);
@@ -844,7 +845,7 @@ const saveCourseColor = (courseName, color) => {
                         if (semResult) return (
                             <div style={{textAlign:"center", padding:"20px 0"}}>
                               <div style={{fontFamily:"'Fraunces',serif", fontSize:48, fontWeight:700, color:gpaColor(semResult.gpa), lineHeight:1}}>{semResult.gpa}</div>
-                              <div style={{fontSize:12, color:"#A59AC9", marginTop:6}}>{semResult.creds} credits · {semResult.count} courses</div>
+                              <div style={{fontSize:12, color:"var(--text2)", marginTop:6}}>{semResult.creds} credits · {semResult.count} courses</div>
                             </div>
                         );
 
@@ -854,20 +855,20 @@ const saveCourseColor = (courseName, color) => {
                         if (cumResult) return (
                             <div style={{textAlign:"center", padding:"20px 0"}}>
                               <div style={{fontFamily:"'Fraunces',serif", fontSize:48, fontWeight:700, color:gpaColor(cumResult.gpa), lineHeight:1}}>{cumResult.gpa}</div>
-                              <div style={{fontSize:12, color:"#A59AC9", marginTop:6}}>Cumulative GPA · {cumResult.creds} credits</div>
+                              <div style={{fontSize:12, color:"var(--text2)", marginTop:6}}>Cumulative GPA · {cumResult.creds} credits</div>
                             </div>
                         );
 
                         if (profile.cumGPA) return (
                             <div style={{textAlign:"center", padding:"20px 0"}}>
                               <div style={{fontFamily:"'Fraunces',serif", fontSize:48, fontWeight:700, color:gpaColor(profile.cumGPA), lineHeight:1}}>{parseFloat(profile.cumGPA).toFixed(2)}</div>
-                              <div style={{fontSize:12, color:"#A59AC9", marginTop:6}}>Cumulative GPA (from profile)</div>
+                              <div style={{fontSize:12, color:"var(--text2)", marginTop:6}}>Cumulative GPA (from profile)</div>
                               <div style={{fontSize:11, color:"#D4C9E8", marginTop:4}}>No semester data yet</div>
                             </div>
                         );
 
                         return (
-                            <div style={{fontSize:13, color:"#B8A9C9", textAlign:"center", padding:"24px 0"}}>
+                            <div style={{fontSize:13, color:"var(--text3)", textAlign:"center", padding:"24px 0"}}>
                               No grades recorded yet.
                             </div>
                         );
@@ -881,8 +882,8 @@ const saveCourseColor = (courseName, color) => {
                       <div style={{marginTop:18,display:"flex",gap:10}}>
                         {[{label:"Courses",val:semCourseList.length||"—"},{label:"To-Do",val:todos.filter(t=>!t.done).length},{label:"Due Today", val: tasks.filter(t => !t.done && t.due?.slice(0,10) === new Date().toISOString().slice(0,10)).length}].map(chip=>(
                             <div key={chip.label} style={s.chip}>
-                              <div style={{fontSize:11,color:"#A59AC9"}}>{chip.label}</div>
-                              <div style={{fontWeight:600,fontSize:13,color:"#31487A"}}>{chip.val}</div>
+                              <div style={{fontSize:11,color:"var(--text2)"}}>{chip.label}</div>
+                              <div style={{fontWeight:600,fontSize:13,color:"var(--primary)"}}>{chip.val}</div>
                             </div>
                         ))}
                       </div>
@@ -893,18 +894,18 @@ const saveCourseColor = (courseName, color) => {
                     <section className="card-anim" style={s.card}>
                       <SectionTitle>To-Do List</SectionTitle>
                       <div style={{display:"flex",gap:8,marginTop:14}}>
-                        <input value={todoInput} onChange={e=>{setTodoInput(e.target.value);setTodoError(false);}} onKeyDown={e=>e.key==="Enter"&&addTodo()} placeholder="Add a task…" style={{...s.todoInput, borderColor: todoError ? "#c0392b" : "#D4D4DC"}}/>
+                        <input value={todoInput} onChange={e=>{setTodoInput(e.target.value);setTodoError(false);}} onKeyDown={e=>e.key==="Enter"&&addTodo()} placeholder="Add a task…" style={{...s.todoInput, borderColor: todoError ? "var(--error)" : "var(--border)"}}/>
                         <button className="add-btn" onClick={addTodo} style={s.addBtn}>+</button>
                       </div>
-                      {todoError && <div style={{fontSize:12,color:"#c0392b",marginTop:4}}>Please type a task first, then add.</div>}
+                      {todoError && <div style={{fontSize:12,color:"var(--error)",marginTop:4}}>Please type a task first, then add.</div>}
                       <div style={{marginTop:10,maxHeight:160,overflowY:"auto",display:"flex",flexDirection:"column",gap:5}}>
-                        {todos.length===0 && <div style={{fontSize:13,color:"#B8A9C9",textAlign:"center",padding:"16px 0"}}>No tasks yet!</div>}
+                        {todos.length===0 && <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"16px 0"}}>No tasks yet!</div>}
                         {todos.map(t=>(
                             <div key={t.id} className="todo-row" style={s.todoRow}>
-                      <span onClick={()=>toggleTodo(t.id)} style={{fontSize:13,flex:1,cursor:"pointer",textDecoration:t.done?"line-through":"none",color:t.done?"#B8A9C9":"#2a2050"}}>
+                      <span onClick={()=>toggleTodo(t.id)} style={{fontSize:13,flex:1,cursor:"pointer",textDecoration:t.done?"line-through":"none",color:t.done?"var(--text3)":"var(--text)"}}>
                         {t.done?"":<LayoutList size={13} style={{verticalAlign:"middle",marginRight:4}}/>}{t.text}
                       </span>
-                              <button onClick={()=>deleteTodo(t.id)} style={{background:"none",border:"none",color:"#B8A9C9",cursor:"pointer",fontSize:12}}>✕</button>
+                              <button onClick={()=>deleteTodo(t.id)} style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",fontSize:12}}>✕</button>
                             </div>
                         ))}
                       </div>
@@ -924,13 +925,13 @@ const saveCourseColor = (courseName, color) => {
                       <div style={{marginTop:14}}>
                         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
                           <button onClick={prevMonth} style={s.calNavBtn}>‹</button>
-                          <span style={{fontWeight:600,fontSize:14,color:"#31487A"}}>{monthName} {calYear}</span>
+                          <span style={{fontWeight:600,fontSize:14,color:"var(--primary)"}}>{monthName} {calYear}</span>
                           <button onClick={nextMonth} style={s.calNavBtn}>›</button>
                         </div>
 
                         <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
                           {["Mo","Tu","We","Th","Fr","Sa","Su"].map(d=>(
-                              <div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"#B8A9C9",padding:"2px 0"}}>{d}</div>
+                              <div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"var(--text3)",padding:"2px 0"}}>{d}</div>
                           ))}
                         </div>
 
@@ -941,14 +942,14 @@ const saveCourseColor = (courseName, color) => {
                                 <div key={i} className={d?"cal-day":""} style={{
                                   display:"flex", flexDirection:"column", alignItems:"center",
                                   borderRadius:6, cursor:d?"pointer":"default",
-                                  background:isToday(d)?"#31487A":"transparent",
+                                  background:isToday(d)?"var(--primary)":"transparent",
                                   paddingBottom: dayTasks.length ? 3 : 0,
                                 }}>
                                   {/* day number */}
                                   <div style={{
                                     minHeight:28, display:"flex", alignItems:"center", justifyContent:"center",
                                     fontSize:12, width:"100%",
-                                    color:isToday(d)?"#fff":d?"#2a2050":"transparent",
+                                    color:isToday(d)?"#fff":d?"var(--text)":"transparent",
                                     fontWeight:isToday(d)?700:400,
                                   }}>
                                     {d||""}
@@ -956,7 +957,7 @@ const saveCourseColor = (courseName, color) => {
 
                                   {/* colored task lines */}
                                   {dayTasks.map((t, ti) => {
-                                    const color = t.done ? "#27ae60": new Date(t.due) < new Date() ? "#c0392b": courseColors[t.course] || "#A59AC9";
+                                    const color = t.done ? "#27ae60": new Date(t.due) < new Date() ? "var(--error)": courseColors[t.course] || "var(--text2)";
                                     return (
                                         <div
                                             key={ti}
@@ -985,7 +986,7 @@ const saveCourseColor = (courseName, color) => {
                           })}
                         </div>
 
-                        <div style={{marginTop:10,fontSize:11,color:"#B8A9C9",textAlign:"center"}}>
+                        <div style={{marginTop:10,fontSize:11,color:"var(--text3)",textAlign:"center"}}>
                           Today is {today.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
                         </div>
                       </div>
@@ -996,8 +997,8 @@ const saveCourseColor = (courseName, color) => {
                             position:"absolute",
                             left: Math.min(hoveredTask.x, 220),
                             top: hoveredTask.y,
-                            background:"#ffffff",
-                            border:"1px solid #D4D4DC",
+                            background:"var(--surface)",
+                            border:"1px solid var(--border)",
                             borderRadius:10,
                             padding:"9px 13px",
                             boxShadow:"0 6px 24px rgba(49,72,122,0.13)",
@@ -1006,13 +1007,13 @@ const saveCourseColor = (courseName, color) => {
                             maxWidth:220,
                             pointerEvents:"none",
                           }}>
-                            <div style={{fontSize:11,fontWeight:700,color:"#A59AC9",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>
+                            <div style={{fontSize:11,fontWeight:700,color:"var(--text2)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>
                               {hoveredTask.task.type} · {hoveredTask.task.course}
                             </div>
-                            <div style={{fontSize:13,fontWeight:600,color:"#2a2050",marginBottom:4,lineHeight:1.3}}>
+                            <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4,lineHeight:1.3}}>
                               {hoveredTask.task.title}
                             </div>
-                            <div style={{fontSize:11,color:"#B8A9C9"}}>
+                            <div style={{fontSize:11,color:"var(--text3)"}}>
                               {hoveredTask.task.due
                                   ? new Date(hoveredTask.task.due).toLocaleDateString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false})
                                   : "No due date"}
@@ -1021,7 +1022,7 @@ const saveCourseColor = (courseName, color) => {
                                 <div style={{fontSize:11,color:"#27ae60",fontWeight:600,marginTop:4}}>✓ Completed</div>
                             )}
                             {!hoveredTask.task.done && new Date(hoveredTask.task.due) < new Date() && (
-                                <div style={{fontSize:11,color:"#c0392b",fontWeight:600,marginTop:4}}>Overdue</div>
+                                <div style={{fontSize:11,color:"var(--error)",fontWeight:600,marginTop:4}}>Overdue</div>
                             )}
                           </div>
                       )}
@@ -1049,13 +1050,13 @@ const saveCourseColor = (courseName, color) => {
                         weekEndDate.setDate(weekStartDate.getDate() + 6);
                         const fmtDate = d => d.toLocaleDateString("en-US", { month:"short", day:"numeric" });
                         return (
-                            <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, background:"#F7F5FB", borderRadius:10, padding:"6px 10px"}}>
-                              <button onClick={() => setSchedWeekOffset(o => o - 1)} style={{background:"none", border:"1px solid #D4D4DC", borderRadius:7, width:26, height:26, cursor:"pointer", fontSize:14, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center"}}>‹</button>
-                              <span style={{fontSize:12, fontWeight:600, color:"#31487A"}}>
+                            <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, background:"var(--surface2)", borderRadius:10, padding:"6px 10px"}}>
+                              <button onClick={() => setSchedWeekOffset(o => o - 1)} style={{background:"none", border:"1px solid var(--border)", borderRadius:7, width:26, height:26, cursor:"pointer", fontSize:14, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center"}}>‹</button>
+                              <span style={{fontSize:12, fontWeight:600, color:"var(--primary)"}}>
             {schedWeekOffset === 0 ? "This Week" : schedWeekOffset === 1 ? "Next Week" : schedWeekOffset === -1 ? "Last Week" : `${fmtDate(weekStartDate)} – ${fmtDate(weekEndDate)}`}
-                                <span style={{fontWeight:400, color:"#A59AC9", marginLeft:6}}>{fmtDate(weekStartDate)} – {fmtDate(weekEndDate)}</span>
+                                <span style={{fontWeight:400, color:"var(--text2)", marginLeft:6}}>{fmtDate(weekStartDate)} – {fmtDate(weekEndDate)}</span>
           </span>
-                              <button onClick={() => setSchedWeekOffset(o => o + 1)} style={{background:"none", border:"1px solid #D4D4DC", borderRadius:7, width:26, height:26, cursor:"pointer", fontSize:14, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center"}}>›</button>
+                              <button onClick={() => setSchedWeekOffset(o => o + 1)} style={{background:"none", border:"1px solid var(--border)", borderRadius:7, width:26, height:26, cursor:"pointer", fontSize:14, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center"}}>›</button>
                             </div>
                         );
                       })()}
@@ -1068,7 +1069,7 @@ const saveCourseColor = (courseName, color) => {
                           const hasSlots   = DAY_KEYS.some(k => (studySlots[k]||[]).length > 0);
 
                           if (!hasBlocks && !hasSlots) return (
-                              <div style={{fontSize:13, color:"#B8A9C9", textAlign:"center", padding:"20px 0"}}>
+                              <div style={{fontSize:13, color:"var(--text3)", textAlign:"center", padding:"20px 0"}}>
                                 No schedule for this week — open the planner to generate one!
                               </div> );
 
@@ -1079,7 +1080,7 @@ const saveCourseColor = (courseName, color) => {
                           };
 
                           const fmtH = h => `${String(Math.floor(h)).padStart(2,"0")}:${String(Math.round((h%1)*60)).padStart(2,"0")}`;
-                          const PALETTE = ["#5A3B7B","#31487A","#2d7a4a","#7a4a2d","#7a2d5a","#2d5a7a","#6b2d7a"];
+                          const PALETTE = ["var(--accent2)","#31487A","#2d7a4a","#7a4a2d","#7a2d5a","#2d5a7a","#6b2d7a"];
                           const entryLookup = {};
                           studyEntries.forEach((e, idx) => {
                             const entryIdStr = String(e.id);
@@ -1121,7 +1122,7 @@ const saveCourseColor = (courseName, color) => {
                       <span style={{fontSize:12, fontWeight:700, color: b.completed ? "#aaa" : color, display:"block", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>
                         {label}
                       </span>
-                                            <span style={{fontSize:11, color:"#B8A9C9"}}>
+                                            <span style={{fontSize:11, color:"var(--text3)"}}>
                         {fmtH(startH)} – {fmtH(endH)} · {b.duration}h
                       </span>
                                           </div>
@@ -1137,12 +1138,12 @@ const saveCourseColor = (courseName, color) => {
                                       <div key={si} style={{
                                         display:"flex", alignItems:"center", justifyContent:"space-between",
                                         padding:"6px 10px", borderRadius:8, marginBottom:4,
-                                        background:"#eef2fb", borderLeft:"3px solid #8FB3E2",
+                                        background:"var(--blue2-bg)", borderLeft:"3px solid var(--border2)",
                                       }}>    <div>
-                                        <span style={{fontSize:12, fontWeight:600, color:"#31487A"}}>{fmt(slot.startTime)} – {fmt(slot.endTime)}</span>
-                                        <div style={{fontSize:11, color:"#A59AC9", marginTop:1}}>Available slot</div>
+                                        <span style={{fontSize:12, fontWeight:600, color:"var(--primary)"}}>{fmt(slot.startTime)} – {fmt(slot.endTime)}</span>
+                                        <div style={{fontSize:11, color:"var(--text2)", marginTop:1}}>Available slot</div>
                                       </div>
-                                        <span style={{fontSize:10, background:"#D9E1F1", color:"#31487A", padding:"2px 6px", borderRadius:4, flexShrink:0}}>Free</span>
+                                        <span style={{fontSize:10, background:"var(--blue2-bg)", color:"var(--primary)", padding:"2px 6px", borderRadius:4, flexShrink:0}}>Free</span>
                                       </div>
                                   ))}
                                 </div>
@@ -1204,7 +1205,7 @@ const saveCourseColor = (courseName, color) => {
 }
 
 const s = {
-  root:         { display:"flex", minHeight:"100vh", background:"#F4F4F8", fontFamily:"'DM Sans',sans-serif" },
+  root:         { display:"flex", minHeight:"100vh", background:"var(--bg)", fontFamily:"'DM Sans',sans-serif" },
   sidebar:      { display:"flex", flexDirection:"column", background:"#31487A", height:"100vh", position:"sticky", top:0, transition:"width 0.25s ease", overflow:"hidden", flexShrink:0, zIndex:100 },
   sidebarTop:   { display:"flex", alignItems:"center", gap:10, padding:"22px 16px 16px", borderBottom:"1px solid rgba(255,255,255,0.1)" },
   logoMark:     { width:34, height:34, borderRadius:10, background:"#7B5EA7", color:"white", fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:18, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
@@ -1213,31 +1214,31 @@ const s = {
   avatar:       { width:32, height:32, borderRadius:"50%", background:"linear-gradient(135deg, #8FB3E2, #A59AC9)", color:"white", fontWeight:700, fontSize:14, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
   collapseBtn:  { margin:"8px auto", display:"block", background:"none", border:"1px solid rgba(255,255,255,0.2)", borderRadius:8, padding:"4px 10px", cursor:"pointer", color:"rgba(255,255,255,0.5)", fontSize:12 },
   main:         { flex:1, overflowY:"auto", minHeight:"100vh" },
-  topbar:       { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", background:"rgba(244,244,248,0.95)", backdropFilter:"blur(10px)", position:"sticky", top:0, zIndex:50, borderBottom:"1px solid #D4D4DC", gap:14, flexWrap:"wrap" },
-  greeting:     { fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:20, color:"#31487A" },
-  bell:         { width:38, height:38, borderRadius:10, background:"#ffffff", border:"1px solid #D4D4DC", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:16 },
+  topbar:       { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", background:"var(--bg)", backdropFilter:"blur(10px)", position:"sticky", top:0, zIndex:50, borderBottom:"1px solid var(--border)", gap:14, flexWrap:"wrap" },
+  greeting:     { fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:20, color:"var(--primary)" },
+  bell:         { width:38, height:38, borderRadius:10, background:"var(--surface)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:16 },
   grid:         { display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:20, padding:"24px 28px 40px" },
-  card:         { background:"#ffffff", borderRadius:18, padding:"20px 22px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid #D4D4DC" },
-  courseCard:   { background:"#F4F4F8", borderRadius:12, padding:"12px 14px", minWidth:140, flex:"1 1 140px", boxShadow:"0 2px 8px rgba(49,72,122,0.08)" },
+  card:         { background:"var(--surface)", borderRadius:18, padding:"20px 22px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid var(--border)" },
+  courseCard:   { background:"var(--bg)", borderRadius:12, padding:"12px 14px", minWidth:140, flex:"1 1 140px", boxShadow:"0 2px 8px rgba(49,72,122,0.08)" },
   progressTrack:{ height:10, background:"#D9E1F1", borderRadius:10, overflow:"hidden" },
   progressFill: { height:"100%", background:"linear-gradient(90deg, #31487A, #8FB3E2)", borderRadius:10, transition:"width 0.6s ease" },
-  chip:         { flex:1, background:"#F4F4F8", borderRadius:10, padding:"8px 12px", textAlign:"center" },
-  todoInput:    { flex:1, padding:"9px 12px", border:"1px solid #D4D4DC", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:"none", background:"#F4F4F8" },
-  addBtn:       { padding:"9px 16px", background:"#31487A", color:"white", border:"none", borderRadius:10, fontSize:18, cursor:"pointer", lineHeight:1 },
-  todoRow:      { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 10px", borderRadius:8, background:"#F7F5FB" },
-  reviewCard:   { flex:"1 1 260px", background:"#F4F4F8", borderRadius:12, padding:"14px 16px" },
-  calNavBtn:    { background:"none", border:"1px solid #D4D4DC", borderRadius:8, width:28, height:28, cursor:"pointer", fontSize:16, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center" },
+  chip:         { flex:1, background:"var(--surface2)", borderRadius:10, padding:"8px 12px", textAlign:"center" },
+  todoInput:    { flex:1, padding:"9px 12px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:"none", background:"var(--surface2)" },
+  addBtn:       { padding:"9px 16px", background:"var(--primary)", color:"white", border:"none", borderRadius:10, fontSize:18, cursor:"pointer", lineHeight:1 },
+  todoRow:      { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 10px", borderRadius:8, background:"var(--surface2)" },
+  reviewCard:   { flex:"1 1 260px", background:"var(--bg)", borderRadius:12, padding:"14px 16px" },
+  calNavBtn:    { background:"none", border:"1px solid var(--border)", borderRadius:8, width:28, height:28, cursor:"pointer", fontSize:16, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center" },
 };
 
 const sd = {
-  trigger: { display:"flex", alignItems:"center", gap:8, padding:"8px 14px", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:12, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", boxShadow:"0 1px 4px rgba(49,72,122,0.06)" },
-  dropdown: { position:"absolute", top:"calc(100% + 8px)", left:0, minWidth:200, background:"#ffffff", borderRadius:14, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid #D4D4DC", zIndex:200, padding:"6px", overflow:"hidden" },
+  trigger: { display:"flex", alignItems:"center", gap:8, padding:"8px 14px", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", boxShadow:"0 1px 4px rgba(49,72,122,0.06)" },
+  dropdown: { position:"absolute", top:"calc(100% + 8px)", left:0, minWidth:200, background:"var(--surface)", borderRadius:14, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:"6px", overflow:"hidden" },
   option: { padding:"10px 14px", borderRadius:10, cursor:"pointer", fontSize:13, fontFamily:"'DM Sans',sans-serif", transition:"background .12s", display:"flex", alignItems:"center" },
-  toggleBtn: { display:"flex", alignItems:"center", padding:"8px 12px", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:12, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", fontSize:15 },
-  togglePanel: { position:"absolute", top:"calc(100% + 8px)", right:0, width:220, background:"#ffffff", borderRadius:14, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid #D4D4DC", zIndex:200, padding:"14px" },
-  smallAddBtn: { fontSize:12, fontWeight:600, padding:"5px 12px", borderRadius:8, border:"1px solid #D4D4DC", background:"#F4F4F8", color:"#31487A", cursor:"pointer" },
-  addEventForm: { display:"flex", gap:6, flexWrap:"wrap", marginBottom:12, padding:"12px", background:"#F7F5FB", borderRadius:10, border:"1px solid #D4D4DC", alignItems:"center" },
-  miniSelect: { padding:"6px 8px", border:"1px solid #D4D4DC", borderRadius:8, fontSize:12, fontFamily:"'DM Sans',sans-serif", color:"#2a2050", background:"#fff", cursor:"pointer", outline:"none" },
-  miniInput: { padding:"6px 10px", border:"1px solid #D4D4DC", borderRadius:8, fontSize:12, fontFamily:"'DM Sans',sans-serif", color:"#2a2050", background:"#fff", outline:"none" },
-  miniSaveBtn: { padding:"6px 14px", background:"#31487A", color:"white", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" },
+  toggleBtn: { display:"flex", alignItems:"center", padding:"8px 12px", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", fontSize:15 },
+  togglePanel: { position:"absolute", top:"calc(100% + 8px)", right:0, width:220, background:"var(--surface)", borderRadius:14, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:"14px" },
+  smallAddBtn: { fontSize:12, fontWeight:600, padding:"5px 12px", borderRadius:8, border:"1px solid var(--border)", background:"var(--surface2)", color:"var(--primary)", cursor:"pointer" },
+  addEventForm: { display:"flex", gap:6, flexWrap:"wrap", marginBottom:12, padding:"12px", background:"var(--surface2)", borderRadius:10, border:"1px solid var(--border)", alignItems:"center" },
+  miniSelect: { padding:"6px 8px", border:"1px solid var(--border)", borderRadius:8, fontSize:12, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", cursor:"pointer", outline:"none" },
+  miniInput: { padding:"6px 10px", border:"1px solid var(--border)", borderRadius:8, fontSize:12, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", outline:"none" },
+  miniSaveBtn: { padding:"6px 14px", background:"var(--primary)", color:"white", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" },
 };

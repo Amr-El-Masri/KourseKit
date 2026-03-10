@@ -51,10 +51,6 @@ public class ProfileController {
         if (body.containsKey("doubleMajor"))   user.setDoubleMajor(Boolean.TRUE.equals(body.get("doubleMajor")));
         if (body.containsKey("minor"))         user.setMinor(Boolean.TRUE.equals(body.get("minor")));
         if (body.containsKey("minorName"))     user.setMinorName((String) body.get("minorName"));
-        if (body.containsKey("minorFaculty"))  user.setMinorFaculty((String) body.get("minorFaculty"));
-        if (body.containsKey("doubleMinor"))   user.setDoubleMinor(Boolean.TRUE.equals(body.get("doubleMinor")));
-        if (body.containsKey("secondMinor"))   user.setSecondMinor((String) body.get("secondMinor"));
-        if (body.containsKey("secondMinorFaculty")) user.setSecondMinorFaculty((String) body.get("secondMinorFaculty"));
 
         userRepo.save(user);
         return ResponseEntity.ok(toMap(user));
@@ -69,6 +65,17 @@ public class ProfileController {
                 return ResponseEntity.ok(objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {}));
         } catch (Exception ignored) {}
         return ResponseEntity.ok(new HashMap<>());
+    }
+
+    @PutMapping("/theme")
+    public ResponseEntity<Map<String, Object>> updateTheme(@RequestBody Map<String, String> body) {
+        User user = getAuthenticatedUser();
+        String theme = body.getOrDefault("theme", "light");
+        user.setTheme(theme);
+        userRepo.save(user);
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("theme", theme);
+        return ResponseEntity.ok(resp);
     }
 
     @PutMapping("/colors")
@@ -98,10 +105,7 @@ public class ProfileController {
         m.put("doubleMajor",   user.isDoubleMajor());
         m.put("minor",         user.isMinor());
         m.put("minorName",     user.getMinorName()     != null ? user.getMinorName()     : "");
-        m.put("minorFaculty", user.getMinorFaculty() != null ? user.getMinorFaculty() : "");
-        m.put("doubleMinor",   user.isDoubleMinor());
-        m.put("secondMinor",   user.getSecondMinor()   != null ? user.getSecondMinor()   : "");
-        m.put("secondMinorFaculty", user.getSecondMinorFaculty() != null ? user.getSecondMinorFaculty() : "");
+        m.put("theme",         user.getTheme()         != null ? user.getTheme()         : "light");
         return m;
     }
 

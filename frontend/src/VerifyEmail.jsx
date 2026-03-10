@@ -43,7 +43,7 @@ export default function VerifyEmail({ token, onVerified, onGoToLogin }) {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'DM Sans', sans-serif; }
-        .ve-btn:hover { background: #221866 !important; }
+        .ve-btn:hover { background: var(--primary-hover) !important; }
         .ve-btn { transition: background 0.15s; }
       `}</style>
 
@@ -102,20 +102,20 @@ const s = {
     border: "1px solid rgba(255,255,255,0.06)", top: -60, left: -60,
   },
   rightPanel: {
-    flex: 1, background: "#F4F4F8",
+    flex: 1, background: "var(--bg)",
     display: "flex", alignItems: "center", justifyContent: "center", padding: 32,
   },
   card: {
-    background: "#ffffff", borderRadius: 20, padding: "48px 40px",
+    background: "var(--surface)", borderRadius: 20, padding: "48px 40px",
     boxShadow: "0 4px 24px rgba(30,58,110,0.1)", width: "100%", maxWidth: 400,
   },
   title: {
     fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 26,
-    color: "#31487A", marginBottom: 12,
+    color: "var(--primary)", marginBottom: 12,
   },
-  msg: { fontSize: 14, color: "#7a8fa8", lineHeight: 1.7, marginBottom: 24 },
+  msg: { fontSize: 14, color: "var(--text2)", lineHeight: 1.7, marginBottom: 24 },
   btn: {
-    padding: "13px 32px", background: "#31487A", color: "white",
+    padding: "13px 32px", background: "var(--primary)", color: "white",
     border: "none", borderRadius: 10, fontSize: 15, fontWeight: 600,
     cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
   },

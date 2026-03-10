@@ -28,9 +28,9 @@ async function apiFetch(path, options = {}) {
 }
 
 const PRIORITIES = [
-  { id:"high",   label:"High",   color:"#c0392b", bg:"#fef0f0", dot:"#e74c3c" },
-  { id:"medium", label:"Medium", color:"#b7680a", bg:"#fef9ee", dot:"#f39c12" },
-  { id:"low",    label:"Low",    color:"#2d7a4a", bg:"#eef7f0", dot:"#27ae60" },
+  { id:"high",   label:"High",   color:"var(--error)", bg:"var(--error-bg)", dot:"var(--error)" },
+  { id:"medium", label:"Medium", color:"var(--warn)", bg:"var(--warn-bg)", dot:"var(--warn)" },
+  { id:"low",    label:"Low",    color:"var(--success)", bg:"var(--success-bg)", dot:"var(--success)" },
 ];
 const TYPES   = ["Midterm Exam","Final Exam","Assignment","Project","Quiz","Lab","Attendance","Participation","Other"];
 const FILTERS = ["All","Pending","Done","Overdue"];
@@ -61,12 +61,12 @@ function DueBadge({ due, done }) {
   if (!due) return null;
   const d = daysLeft(due);
   const over = isOverdue(due, done);
-  if (done) return <span style={tm.badge("#2d7a4a","#eef7f0")}>✓ Done</span>;
-  if (over)  return <span style={tm.badge("#c0392b","#fef0f0")}>Overdue</span>;
-  if (d === 0) return <span style={tm.badge("#b7680a","#fef9ee")}>Due today</span>;
-  if (d === 1) return <span style={tm.badge("#b7680a","#fef9ee")}>Due tomorrow</span>;
-  if (d <= 3)  return <span style={tm.badge("#b7680a","#fef9ee")}>{d}d left</span>;
-  return <span style={tm.badge("#5A3B7B","#F0EEF7")}>{d}d left</span>;
+  if (done) return <span style={tm.badge("var(--success)","var(--success-bg)")}>✓ Done</span>;
+  if (over)  return <span style={tm.badge("var(--error)","var(--error-bg)")}>Overdue</span>;
+  if (d === 0) return <span style={tm.badge("var(--warn)","var(--warn-bg)")}>Due today</span>;
+  if (d === 1) return <span style={tm.badge("var(--warn)","var(--warn-bg)")}>Due tomorrow</span>;
+  if (d <= 3)  return <span style={tm.badge("var(--warn)","var(--warn-bg)")}>{d}d left</span>;
+  return <span style={tm.badge("var(--accent2)","var(--divider)")}>{d}d left</span>;
 }
 
 function TaskRow({ task, onToggle, onDelete, onEdit }) {
@@ -77,16 +77,16 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
 
   return (
       <div style={{
-        background: task.done ? "#fafafa" : "#ffffff",
-        border: `1px solid ${over && !task.done ? "#f5c6c6" : "#D4D4DC"}`,
-        borderLeft: `3px solid ${task.done ? "#D4D4DC" : p.dot}`,
+        background: task.done ? "var(--surface2)" : "var(--surface)",
+        border: `1px solid ${over && !task.done ? "var(--error-border)" : "var(--border)"}`,
+        borderLeft: `3px solid ${task.done ? "var(--border)" : p.dot}`,
         borderRadius:12, padding:"13px 16px", transition:"box-shadow .15s",
         opacity: task.done ? 0.6 : 1,
       }} className="task-row">
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           <button onClick={() => onToggle(task.id)} style={{
-            width:20, height:20, borderRadius:6, border:`2px solid ${task.done?"#2d7a4a":"#D4D4DC"}`,
-            background: task.done?"#2d7a4a":"white", cursor:"pointer", flexShrink:0,
+            width:20, height:20, borderRadius:6, border:`2px solid ${task.done?"var(--success)":"var(--border)"}`,
+            background: task.done?"var(--success)":"white", cursor:"pointer", flexShrink:0,
             display:"flex", alignItems:"center", justifyContent:"center", transition:"all .15s",
           }}>
             {task.done && <span style={{ color:"white", fontSize:11, lineHeight:1 }}>✓</span>}
@@ -94,15 +94,15 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
 
           <div style={{ flex:1, minWidth:0 }}>
             <div style={{ display:"flex", alignItems:"center", gap:2, flexWrap:"wrap" }}>
-            <span style={{ fontSize:14, fontWeight:600, color: task.done?"#B8A9C9":"#2a2050", textDecoration: task.done?"line-through":"none" }}>
-              {task.title || <em style={{ color:"#B8A9C9" }}>Untitled task</em>}
+            <span style={{ fontSize:14, fontWeight:600, color: task.done?"var(--text3)":"var(--text)", textDecoration: task.done?"line-through":"none" }}>
+              {task.title || <em style={{ color:"var(--text3)" }}>Untitled task</em>}
             </span>
-              <span style={{ fontSize:11, background:"#F0EEF7", color:"#7B5EA7", padding:"2px 8px", borderRadius:6, fontWeight:600, flexShrink:0 }}>{task.course}</span>
-              <span style={{ fontSize:11, background:"#F4F4F8", color:"#A59AC9", padding:"2px 8px", borderRadius:6, flexShrink:0 }}>{task.type}</span>
+              <span style={{ fontSize:11, background:"var(--divider)", color:"var(--accent)", padding:"2px 8px", borderRadius:6, fontWeight:600, flexShrink:0 }}>{task.course}</span>
+              <span style={{ fontSize:11, background:"var(--bg)", color:"var(--text2)", padding:"2px 8px", borderRadius:6, flexShrink:0 }}>{task.type}</span>
               <DueBadge due={task.due} done={task.done} />
             </div>
             {task.due && (
-                <div style={{ fontSize:11, color:"#B8A9C9", marginTop:3 }}>{fmt(task.due)}</div>
+                <div style={{ fontSize:11, color:"var(--text3)", marginTop:3 }}>{fmt(task.due)}</div>
             )}
           </div>
 
@@ -113,19 +113,19 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
             <button onClick={() => onEdit(task)} style={tm.iconBtn} title="Edit"><Pencil size={15} /></button>
             {confirming ? (
               <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                <span style={{ fontSize:11, color:"#c0392b", fontWeight:600, whiteSpace:"nowrap" }}>Delete?</span>
-                <button onClick={() => { setConfirming(false); onDelete(task.id); }} style={{ ...tm.iconBtn, color:"#c0392b", fontSize:11, fontWeight:700, padding:"2px 6px" }}>Yes</button>
+                <span style={{ fontSize:11, color:"var(--error)", fontWeight:600, whiteSpace:"nowrap" }}>Delete?</span>
+                <button onClick={() => { setConfirming(false); onDelete(task.id); }} style={{ ...tm.iconBtn, color:"var(--error)", fontSize:11, fontWeight:700, padding:"2px 6px" }}>Yes</button>
                 <button onClick={() => setConfirming(false)} style={{ ...tm.iconBtn, fontSize:11, padding:"2px 6px" }}>No</button>
               </span>
             ) : (
-              <button onClick={() => setConfirming(true)} style={{ ...tm.iconBtn, color:"#e07070" }} title="Delete">✕</button>
+              <button onClick={() => setConfirming(true)} style={{ ...tm.iconBtn, color:"var(--error)" }} title="Delete">✕</button>
             )}
           </div>
         </div>
 
         {expanded && (
-            <div style={{ marginTop:10, paddingTop:10, borderTop:"1px solid #F4F4F8", fontSize:13, color:"#5A3B7B", lineHeight:1.6 }}>
-              {task.notes || <span style={{ color:"#B8A9C9" }}>No notes added.</span>}
+            <div style={{ marginTop:10, paddingTop:10, borderTop:"1px solid var(--border)", fontSize:13, color:"var(--accent2)", lineHeight:1.6 }}>
+              {task.notes || <span style={{ color:"var(--text3)" }}>No notes added.</span>}
             </div>
         )}
       </div>
@@ -147,11 +147,11 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
 
   return (
       <div style={tm.formCard}>
-        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"#31487A", marginBottom:18 }}>
+        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)", marginBottom:18 }}>
           {initial?.id ? "Edit Task" : "New Task"}
         </div>
 
-        {err && <div style={{ background:"#fef0f0", border:"1px solid #f5c6c6", borderRadius:10, padding:"9px 14px", fontSize:13, color:"#c0392b", marginBottom:14 }}>{err}</div>}
+        {err && <div style={{ background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:10, padding:"9px 14px", fontSize:13, color:"var(--error)", marginBottom:14 }}>{err}</div>}
 
         <label style={tm.label}>Task Title</label>
         <input value={form.title} onChange={e=>set("title",e.target.value)}
@@ -193,7 +193,7 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
 
         </div>
 
-        <label style={tm.label}>Notes <span style={{ color:"#B8A9C9", fontWeight:400 }}>(optional)</span></label>
+        <label style={tm.label}>Notes <span style={{ color:"var(--text3)", fontWeight:400 }}>(optional)</span></label>
         <textarea value={form.notes} onChange={e=>set("notes",e.target.value)}
                   placeholder="Any extra details..."
                   rows={3}
@@ -382,16 +382,16 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
         <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; }
-        .tm-input:focus { border-color:#8FB3E2 !important; outline:none; }
+        .tm-input:focus { border-color:var(--border2) !important; outline:none; }
         .task-row:hover { box-shadow:0 3px 16px rgba(49,72,122,0.1) !important; }
-        .tm-icon-btn:hover { background:#F0EEF7 !important; }
+        .tm-icon-btn:hover { background:var(--divider) !important; }
       `}</style>
 
         <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:24, flexWrap:"wrap", gap:12 }}>
           <div>
-            <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"#31487A", marginBottom:4 }}>Task Manager</div>
-            <div style={{ fontSize:13, color:"#A59AC9" }}>
-              {counts.pending} pending · {counts.overdue > 0 && <span style={{ color:"#c0392b", fontWeight:600 }}>{counts.overdue} overdue · </span>}{counts.done} done
+            <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:4 }}>Task Manager</div>
+            <div style={{ fontSize:13, color:"var(--text2)" }}>
+              {counts.pending} pending · {counts.overdue > 0 && <span style={{ color:"var(--error)", fontWeight:600 }}>{counts.overdue} overdue · </span>}{counts.done} done
             </div>
           </div>
           <button onClick={() => { setEditing(null); setComposing(true); }} style={tm.newBtn}>
@@ -400,15 +400,15 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
         </div>
 
         {/* Study planner tip */}
-        <div style={{ background:"#F0EEF7", border:"1px solid #D4C9F0", borderRadius:12, padding:"12px 16px", marginBottom:20, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
-          <div style={{ fontSize:13, color:"#5A3B7B", lineHeight:1.5 }}>
+        <div style={{ background:"var(--divider)", border:"1px solid var(--border)", borderRadius:12, padding:"12px 16px", marginBottom:20, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+          <div style={{ fontSize:13, color:"var(--accent2)", lineHeight:1.5 }}>
             <span style={{ fontWeight:600 }}>Want a personalized study plan?</span>
             {" "}Set your weekly availability in the Study Planner and KourseKit will auto-generate study blocks around your deadlines.
           </div>
           {onNavigate && (
             <button
               onClick={() => onNavigate("planner")}
-              style={{ flexShrink:0, background:"#7B5EA7", color:"#fff", border:"none", borderRadius:9, padding:"7px 16px", fontSize:13, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" }}
+              style={{ flexShrink:0, background:"var(--accent)", color:"#fff", border:"none", borderRadius:9, padding:"7px 16px", fontSize:13, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" }}
             >
               Go to Study Planner →
             </button>
@@ -434,9 +434,9 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
               <button key={c.filter} onClick={() => setFilter(c.filter)} style={{
                 padding:"7px 16px", borderRadius:10, border:"1px solid",
                 fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:600, cursor:"pointer", transition:"all .15s",
-                borderColor: filter===c.filter ? "#31487A" : "#D4D4DC",
-                background:  filter===c.filter ? "#31487A" : "#ffffff",
-                color:       filter===c.filter ? "#ffffff" : c.warn?"#c0392b":"#A59AC9",
+                borderColor: filter===c.filter ? "var(--primary)" : "var(--border)",
+                background:  filter===c.filter ? "var(--primary)" : "var(--surface)",
+                color:       filter===c.filter ? "#ffffff" : c.warn?"var(--error)":"var(--text2)",
               }}>
                 {c.label} <span style={{ opacity:.7 }}>{c.val}</span>
               </button>
@@ -444,15 +444,15 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
         </div>
 
         <div style={{ display:"flex", gap:10, marginBottom:18, flexWrap:"wrap", alignItems:"center" }}>
-          <div style={{ display:"flex", alignItems:"center", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px", flex:"1 1 200px", maxWidth:300 }}>
-            <Search size={15} style={{ color:"#B8A9C9", marginRight:8, flexShrink:0 }} />
+          <div style={{ display:"flex", alignItems:"center", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"8px 14px", flex:"1 1 200px", maxWidth:300 }}>
+            <Search size={15} style={{ color:"var(--text3)", marginRight:8, flexShrink:0 }} />
             <input value={search} onChange={e => { setCourseFilter(""); setSearch(e.target.value); }} placeholder="Search tasks…"
                    className="tm-input"
-                   style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"#333", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
+                   style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"var(--text)", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
           </div>
-          <div style={{ display:"flex", alignItems:"center", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px", flex:"1 1 160px", maxWidth:200 }}>
+          <div style={{ display:"flex", alignItems:"center", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"8px 14px", flex:"1 1 160px", maxWidth:200 }}>
             <select value={courseFilter} onChange={e => { setSearch(""); setCourseFilter(e.target.value); }}
-                    style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color: courseFilter ? "#2a2050" : "#B8A9C9", width:"100%", fontFamily:"'DM Sans',sans-serif", cursor:"pointer" }}>
+                    style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color: courseFilter ? "var(--text)" : "var(--text3)", width:"100%", fontFamily:"'DM Sans',sans-serif", cursor:"pointer" }}>
               <option value="">All Courses</option>
               {allCourses.map(c => (
                   <option key={c} value={c}>{c}</option>
@@ -464,9 +464,9 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
 
 
         {displayed.length === 0 ? (
-            <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
-              <div style={{ marginBottom:12 }}><ListChecks size={40} color="#B8A9C9" /></div>
-              <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>
+            <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+              <div style={{ marginBottom:12 }}><ListChecks size={40} color="var(--text3)" /></div>
+              <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>
                 {filter==="Done" ? "No completed tasks yet." : filter==="Overdue" ? "Nothing overdue!" : "No tasks found."}
               </div>
               {filter==="All" && <div style={{ fontSize:13, marginTop:6 }}>Hit "+ New Task" to add one.</div>}
@@ -475,9 +475,9 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
             {syllabusDisplayed.length > 0 && (
               <div style={{ marginBottom:20 }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-                  <div style={{ width:3, height:16, background:"#7B5EA7", borderRadius:2 }} />
-                  <span style={{ fontSize:13, fontWeight:700, color:"#7B5EA7", fontFamily:"'DM Sans',sans-serif" }}>From Syllabus</span>
-                  <span style={{ fontSize:12, color:"#B8A9C9" }}>— imported automatically</span>
+                  <div style={{ width:3, height:16, background:"var(--accent)", borderRadius:2 }} />
+                  <span style={{ fontSize:13, fontWeight:700, color:"var(--accent)", fontFamily:"'DM Sans',sans-serif" }}>From Syllabus</span>
+                  <span style={{ fontSize:12, color:"var(--text3)" }}>— imported automatically</span>
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                   {syllabusDisplayed.map(t => (
@@ -494,8 +494,8 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
               <div>
                 {syllabusDisplayed.length > 0 && (
                   <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-                    <div style={{ width:3, height:16, background:"#31487A", borderRadius:2 }} />
-                    <span style={{ fontSize:13, fontWeight:700, color:"#31487A", fontFamily:"'DM Sans',sans-serif" }}>My Tasks</span>
+                    <div style={{ width:3, height:16, background:"var(--primary)", borderRadius:2 }} />
+                    <span style={{ fontSize:13, fontWeight:700, color:"var(--primary)", fontFamily:"'DM Sans',sans-serif" }}>My Tasks</span>
                   </div>
                 )}
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
@@ -511,9 +511,9 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
         </>)}
 
       {undoSyllabus && (
-        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:"#31487A", color:"white", borderRadius:14, padding:"12px 20px", display:"flex", alignItems:"center", gap:14, boxShadow:"0 4px 24px rgba(49,72,122,0.28)", zIndex:9999, fontFamily:"'DM Sans',sans-serif", whiteSpace:"nowrap" }}>
+        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:"var(--primary)", color:"white", borderRadius:14, padding:"12px 20px", display:"flex", alignItems:"center", gap:14, boxShadow:"0 4px 24px rgba(49,72,122,0.28)", zIndex:9999, fontFamily:"'DM Sans',sans-serif", whiteSpace:"nowrap" }}>
           <span style={{ fontSize:13 }}>Syllabus task deleted</span>
-          <button onClick={undoDelete} style={{ background:"white", color:"#31487A", border:"none", borderRadius:8, padding:"5px 14px", fontSize:13, fontWeight:700, cursor:"pointer" }}>Undo</button>
+          <button onClick={undoDelete} style={{ background:"white", color:"var(--primary)", border:"none", borderRadius:8, padding:"5px 14px", fontSize:13, fontWeight:700, cursor:"pointer" }}>Undo</button>
           <button onClick={() => { clearTimeout(undoSyllabus.timer); setUndoSyllabus(null); }} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.6)", fontSize:16, cursor:"pointer", padding:"0 2px", lineHeight:1 }}>✕</button>
         </div>
       )}
@@ -522,12 +522,12 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
 }
 
 const tm = {
-  formCard:  { background:"#ffffff", borderRadius:18, padding:"24px 26px", border:"1px solid #D4D4DC", boxShadow:"0 4px 20px rgba(49,72,122,0.09)", marginBottom:0 },
-  label:     { display:"block", fontSize:12, fontWeight:600, color:"#2a2050", marginBottom:6 },
-  input:     { width:"100%", padding:"10px 14px", border:"1px solid #D4D4DC", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"#2a2050", background:"#F7F5FB", marginBottom:14, display:"block", transition:"border-color .15s", outline:"none" },
-  saveBtn:   { padding:"10px 24px", background:"#31487A", color:"white", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
-  cancelBtn: { padding:"10px 18px", background:"#F4F4F8", color:"#A59AC9", border:"1px solid #D4D4DC", borderRadius:10, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
-  newBtn:    { padding:"10px 20px", background:"#7B5EA7", color:"white", border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  formCard:  { background:"var(--surface)", borderRadius:18, padding:"24px 26px", border:"1px solid var(--border)", boxShadow:"0 4px 20px rgba(49,72,122,0.09)", marginBottom:0 },
+  label:     { display:"block", fontSize:12, fontWeight:600, color:"var(--text)", marginBottom:6 },
+  input:     { width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", marginBottom:14, display:"block", transition:"border-color .15s", outline:"none" },
+  saveBtn:   { padding:"10px 24px", background:"var(--primary)", color:"white", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  cancelBtn: { padding:"10px 18px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  newBtn:    { padding:"10px 20px", background:"var(--accent)", color:"white", border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
   iconBtn:   { background:"none", border:"none", cursor:"pointer", fontSize:15, borderRadius:6, padding:"3px 5px", transition:"background .15s" },
   badge:     (color, bg) => ({ fontSize:11, fontWeight:600, padding:"2px 8px", borderRadius:6, color, background:bg, flexShrink:0 }),
 };

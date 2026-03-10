@@ -62,6 +62,7 @@ public class AuthService {
         response.setsuccess(true);
         response.setmessage("Signup successful.\nYou can login now.");
         response.settoken(jwttoken);
+        response.settheme(user.getTheme() != null ? user.getTheme() : "light");
         return response;
     }
 
@@ -101,6 +102,7 @@ public class AuthService {
         response.setsuccess(true);
         response.setmessage("Login successful.");
         response.settoken(jwttoken);
+        response.settheme(user.getTheme() != null ? user.getTheme() : "light");
 
         System.out.println("JWT token: " + jwttoken);
         System.out.println("Response token: " + response.gettoken());

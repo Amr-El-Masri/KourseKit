@@ -168,10 +168,10 @@ export default function AdminDashboard({ token }) {
 
   const reviewTable = (list, loading, emptyMsg, onDelete, expandKey) => (
     <>
-      {loading && <div style={{ textAlign:"center", padding:40, color:"#B8A9C9" }}>Loading…</div>}
+      {loading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
       {!loading && list.length === 0 && (
-        <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>{emptyMsg}</div>
+        <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>{emptyMsg}</div>
         </div>
       )}
       {!loading && list.length > 0 && (
@@ -186,37 +186,37 @@ export default function AdminDashboard({ token }) {
           {list.map((r, i) => {
             const expanded = expandedId === `${expandKey}-${r.id}`;
             return (
-              <div key={r.id} style={{ borderBottom: i < list.length - 1 ? "1px solid #F0EEF7" : "none" }}>
+              <div key={r.id} style={{ borderBottom: i < list.length - 1 ? "1px solid var(--divider)" : "none" }}>
                 <div
                   onClick={() => setExpandedId(expanded ? null : `${expandKey}-${r.id}`)}
-                  style={{ ...ad.row, gridTemplateColumns:"1fr 1fr 80px 120px 100px", background: i % 2 === 0 ? "#fff" : "#FAFAFA", cursor:"pointer" }}
+                  style={{ ...ad.row, gridTemplateColumns:"1fr 1fr 80px 120px 100px", background: i % 2 === 0 ? "var(--surface)" : "var(--surface2)", cursor:"pointer" }}
                 >
-                  <span style={{ fontSize:13, color:"#31487A", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:12 }}>{r.comment || "—"}</span>
-                  <span style={{ fontSize:12, color:"#A59AC9", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:12 }}>{r.userId || "—"}</span>
-                  <span style={{ fontSize:13, color:"#F5A623", letterSpacing:1 }}>{stars(r.rating)}</span>
-                  <span style={{ fontSize:12, color:"#A59AC9" }}>{formatDate(r.createdAt)}</span>
+                  <span style={{ fontSize:13, color:"var(--primary)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:12 }}>{r.comment || "—"}</span>
+                  <span style={{ fontSize:12, color:"var(--text2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:12 }}>{r.userId || "—"}</span>
+                  <span style={{ fontSize:13, color:"var(--star)", letterSpacing:1 }}>{stars(r.rating)}</span>
+                  <span style={{ fontSize:12, color:"var(--text2)" }}>{formatDate(r.createdAt)}</span>
                   {deleteConfirmId === r.id ? (
                     <div style={{ display:"flex", gap:4 }} onClick={e => e.stopPropagation()}>
-                      <button onClick={() => { onDelete(r.id); setDeleteConfirmId(null); }} style={{ padding:"5px 10px", border:"none", borderRadius:8, fontSize:11, fontWeight:600, cursor:"pointer", background:"#c0392b", color:"#fff" }}>Confirm</button>
-                      <button onClick={() => setDeleteConfirmId(null)} style={{ padding:"5px 10px", border:"1px solid #D4D4DC", borderRadius:8, fontSize:11, cursor:"pointer", background:"#fff", color:"#A59AC9" }}>Cancel</button>
+                      <button onClick={() => { onDelete(r.id); setDeleteConfirmId(null); }} style={{ padding:"5px 10px", border:"none", borderRadius:8, fontSize:11, fontWeight:600, cursor:"pointer", background:"var(--error)", color:"#fff" }}>Confirm</button>
+                      <button onClick={() => setDeleteConfirmId(null)} style={{ padding:"5px 10px", border:"1px solid var(--border)", borderRadius:8, fontSize:11, cursor:"pointer", background:"var(--surface)", color:"var(--text2)" }}>Cancel</button>
                     </div>
                   ) : (
                     <button className="action-btn" onClick={e => { e.stopPropagation(); setDeleteConfirmId(r.id); }} style={{
                       padding:"6px 14px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
-                      background:"#fef0f0", color:"#c0392b",
+                      background:"var(--error-bg)", color:"var(--error)",
                     }}>Delete</button>
                   )}
                 </div>
                 {expanded && (
-                  <div style={{ padding:"12px 20px 16px", background: i % 2 === 0 ? "#F7F5FB" : "#F2F0FA", borderTop:"1px solid #E8E4F4" }}>
+                  <div style={{ padding:"12px 20px 16px", background: i % 2 === 0 ? "var(--surface2)" : "var(--surface3)", borderTop:"1px solid var(--border)" }}>
                     {r.courseCode && (
-                      <div style={{ fontSize:12, fontWeight:600, color:"#31487A", marginBottom:6 }}>{r.courseCode} — {r.courseTitle}</div>
+                      <div style={{ fontSize:12, fontWeight:600, color:"var(--primary)", marginBottom:6 }}>{r.courseCode} — {r.courseTitle}</div>
                     )}
                     {r.professorName && (
-                      <div style={{ fontSize:12, fontWeight:600, color:"#31487A", marginBottom:6 }}>{r.professorName}</div>
+                      <div style={{ fontSize:12, fontWeight:600, color:"var(--primary)", marginBottom:6 }}>{r.professorName}</div>
                     )}
-                    <div style={{ fontSize:11, fontWeight:600, color:"#A59AC9", marginBottom:4, textTransform:"uppercase", letterSpacing:.5 }}>Full comment</div>
-                    <div style={{ fontSize:13, color:"#31487A", lineHeight:1.6, whiteSpace:"pre-wrap" }}>{r.comment || "—"}</div>
+                    <div style={{ fontSize:11, fontWeight:600, color:"var(--text2)", marginBottom:4, textTransform:"uppercase", letterSpacing:.5 }}>Full comment</div>
+                    <div style={{ fontSize:13, color:"var(--primary)", lineHeight:1.6, whiteSpace:"pre-wrap" }}>{r.comment || "—"}</div>
                   </div>
                 )}
               </div>
@@ -224,14 +224,14 @@ export default function AdminDashboard({ token }) {
           })}
         </div>
       )}
-      <div style={{ marginTop:14, fontSize:12, color:"#B8A9C9" }}>
+      <div style={{ marginTop:14, fontSize:12, color:"var(--text3)" }}>
         {list.length} review{list.length !== 1 ? "s" : ""} shown
       </div>
     </>
   );
 
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif", minHeight:"100vh", background:"#F4F4F8", paddingBottom:32 }}>
+    <div style={{ fontFamily:"'DM Sans',sans-serif", minHeight:"100vh", background:"var(--bg)", paddingBottom:32 }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; }
@@ -240,35 +240,35 @@ export default function AdminDashboard({ token }) {
       `}</style>
 
       <div style={{ marginBottom:28 }}>
-        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"#31487A", marginBottom:4 }}>Admin Dashboard</div>
-        <div style={{ fontSize:13, color:"#A59AC9" }}>Manage users and moderate reviews.</div>
+        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:4 }}>Admin Dashboard</div>
+        <div style={{ fontSize:13, color:"var(--text2)" }}>Manage users and moderate reviews.</div>
       </div>
 
-      <div style={{ background:"#fff", borderRadius:20, border:"1px solid #D4D4DC", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px" }}>
+      <div style={{ background:"var(--surface)", borderRadius:20, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px" }}>
 
-        <div style={{ display:"flex", gap:4, background:"#F4F4F8", padding:4, borderRadius:10, marginBottom:24, width:"fit-content", alignItems:"center" }}>
+        <div style={{ display:"flex", gap:4, background:"var(--bg)", padding:4, borderRadius:10, marginBottom:24, width:"fit-content", alignItems:"center" }}>
           <button onClick={() => { setErr(""); setTab("users"); setReviewDropdownOpen(false); }} style={{
             padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer",
-            background: tab === "users" ? "#31487A" : "transparent",
-            color:      tab === "users" ? "#fff"    : "#A59AC9",
+            background: tab === "users" ? "var(--primary)" : "transparent",
+            color:      tab === "users" ? "#fff"    : "var(--text2)",
           }}>Users</button>
 
           <div style={{ position:"relative" }}>
             <button onClick={() => { setErr(""); setReviewDropdownOpen(o => !o); if (tab !== "reviews") setTab("reviews"); }} style={{
               padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6,
-              background: tab === "reviews" ? "#31487A" : "transparent",
-              color:      tab === "reviews" ? "#fff"    : "#A59AC9",
+              background: tab === "reviews" ? "var(--primary)" : "transparent",
+              color:      tab === "reviews" ? "#fff"    : "var(--text2)",
             }}>
               Reviews
               <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
             </button>
             {reviewDropdownOpen && (
-              <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, background:"#fff", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid #D4D4DC", zIndex:200, padding:6, minWidth:140 }}>
+              <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:140 }}>
                 {[{id:"course",label:"Course"},{id:"professor",label:"Professor"}].map(opt => (
                   <div key={opt.id} onClick={() => { setReviewType(opt.id); setReviewDropdownOpen(false); setExpandedId(null); }}
                     style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
-                      background: reviewType === opt.id ? "#F0EEF7" : "transparent",
-                      color:      reviewType === opt.id ? "#7B5EA7" : "#31487A" }}>
+                      background: reviewType === opt.id ? "var(--divider)" : "transparent",
+                      color:      reviewType === opt.id ? "var(--accent)" : "var(--primary)" }}>
                     {opt.label}
                   </div>
                 ))}
@@ -278,7 +278,7 @@ export default function AdminDashboard({ token }) {
         </div>
 
       {err && (
-        <div style={{ background:"#fef0f0", border:"1px solid #f5c6c6", borderRadius:10, padding:"9px 14px", fontSize:13, color:"#c0392b", marginBottom:16 }}>
+        <div style={{ background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:10, padding:"9px 14px", fontSize:13, color:"var(--error)", marginBottom:16 }}>
           {err}
         </div>
       )}
@@ -286,31 +286,31 @@ export default function AdminDashboard({ token }) {
       {tab === "users" && (
         <>
           <div style={{ display:"flex", gap:12, marginBottom:20, flexWrap:"wrap", alignItems:"center" }}>
-            <div style={{ flex:1, minWidth:200, display:"flex", alignItems:"center", background:"#fff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px" }}>
-              <Search size={14} color="#B8A9C9" style={{ marginRight:8, flexShrink:0 }} />
+            <div style={{ flex:1, minWidth:200, display:"flex", alignItems:"center", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"8px 14px" }}>
+              <Search size={14} color="var(--text3)" style={{ marginRight:8, flexShrink:0 }} />
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search by email…"
-                style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"#333", width:"100%", fontFamily:"'DM Sans',sans-serif" }}
+                style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"var(--text)", width:"100%", fontFamily:"'DM Sans',sans-serif" }}
               />
             </div>
-            <div style={{ display:"flex", gap:4, background:"#F4F4F8", padding:4, borderRadius:10 }}>
+            <div style={{ display:"flex", gap:4, background:"var(--bg)", padding:4, borderRadius:10 }}>
               {[{id:"all",label:"All"},{id:"active",label:"Active"},{id:"deactivated",label:"Deactivated"}].map(f => (
                 <button key={f.id} onClick={() => setFilter(f.id)} style={{
                   padding:"6px 14px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
-                  background: filter === f.id ? "#31487A" : "transparent",
-                  color:      filter === f.id ? "#fff"    : "#A59AC9",
+                  background: filter === f.id ? "var(--primary)" : "transparent",
+                  color:      filter === f.id ? "#fff"    : "var(--text2)",
                 }}>{f.label}</button>
               ))}
             </div>
           </div>
 
-          {loading && <div style={{ textAlign:"center", padding:40, color:"#B8A9C9" }}>Loading…</div>}
+          {loading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
 
           {!loading && displayed.length === 0 && (
-            <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
-              <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>No users found</div>
+            <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+              <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>No users found</div>
             </div>
           )}
 
@@ -325,23 +325,23 @@ export default function AdminDashboard({ token }) {
                 <span>Account</span>
               </div>
               {displayed.map((u, i) => (
-                <div key={u.id} style={{ borderBottom: i < displayed.length - 1 ? "1px solid #F0EEF7" : "none" }}>
+                <div key={u.id} style={{ borderBottom: i < displayed.length - 1 ? "1px solid var(--divider)" : "none" }}>
                   <div
                     onClick={() => openUser(u)}
-                    style={{ ...ad.row, gridTemplateColumns:"1fr 100px 120px 120px 120px 120px", background: selectedUser?.id === u.id ? "#F7F5FB" : i % 2 === 0 ? "#fff" : "#FAFAFA", cursor:"pointer" }}>
-                    <span style={{ fontSize:13, color:"#31487A", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:12 }}>{u.email}</span>
-                    <span style={{ fontSize:12, background: u.role === "ADMIN" ? "#F0EEF7" : "#EEF2FB", color: u.role === "ADMIN" ? "#7B5EA7" : "#31487A", padding:"3px 6px", borderRadius:6, fontWeight:600, display:"inline-block", whiteSpace:"nowrap", justifySelf:"start" }}>{u.role}</span>
-                    <span style={{ fontSize:12, fontWeight:600, color: u.active ? "#2d7a4a" : "#c0392b" }}>{u.active ? "Active" : "Deactivated"}</span>
-                    <span style={{ fontSize:12, color:"#A59AC9" }}>{formatDate(u.createdat)}</span>
+                    style={{ ...ad.row, gridTemplateColumns:"1fr 100px 120px 120px 120px 120px", background: selectedUser?.id === u.id ? "var(--surface2)" : i % 2 === 0 ? "var(--surface)" : "var(--surface2)", cursor:"pointer" }}>
+                    <span style={{ fontSize:13, color:"var(--primary)", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:12 }}>{u.email}</span>
+                    <span style={{ fontSize:12, background: u.role === "ADMIN" ? "var(--divider)" : "var(--blue-light-bg)", color: u.role === "ADMIN" ? "var(--accent)" : "var(--primary)", padding:"3px 6px", borderRadius:6, fontWeight:600, display:"inline-block", whiteSpace:"nowrap", justifySelf:"start" }}>{u.role}</span>
+                    <span style={{ fontSize:12, fontWeight:600, color: u.active ? "var(--success)" : "var(--error)" }}>{u.active ? "Active" : "Deactivated"}</span>
+                    <span style={{ fontSize:12, color:"var(--text2)" }}>{formatDate(u.createdat)}</span>
                     {(!u.active && u.role !== "ADMIN") ? (
-                      <button disabled style={{ padding:"6px 12px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, whiteSpace:"nowrap", width:"fit-content", cursor:"not-allowed", opacity:0.4, background:"#E8E8EE", color:"#999" }}>
+                      <button disabled style={{ padding:"6px 12px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, whiteSpace:"nowrap", width:"fit-content", cursor:"not-allowed", opacity:0.4, background:"var(--border)", color:"var(--text2)" }}>
                         Not Permitted
                       </button>
                     ) : confirmAdminId === u.id ? (
                       <div onClick={e => e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:6 }}>
-                        <span style={{ fontSize:11, color:"#7B5EA7", fontWeight:600 }}>Sure?</span>
-                        <button onClick={e => { e.stopPropagation(); setRole(u.id, u.role === "ADMIN" ? "STUDENT" : "ADMIN"); setConfirmAdminId(null); }} style={{ padding:"4px 10px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background:"#7B5EA7", color:"#fff", cursor:"pointer" }}>Yes</button>
-                        <button onClick={e => { e.stopPropagation(); setConfirmAdminId(null); }} style={{ padding:"4px 10px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background:"#E8E4F4", color:"#7B5EA7", cursor:"pointer" }}>No</button>
+                        <span style={{ fontSize:11, color:"var(--accent)", fontWeight:600 }}>Sure?</span>
+                        <button onClick={e => { e.stopPropagation(); setRole(u.id, u.role === "ADMIN" ? "STUDENT" : "ADMIN"); setConfirmAdminId(null); }} style={{ padding:"4px 10px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background:"var(--accent)", color:"#fff", cursor:"pointer" }}>Yes</button>
+                        <button onClick={e => { e.stopPropagation(); setConfirmAdminId(null); }} style={{ padding:"4px 10px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background:"var(--surface2)", color:"var(--accent)", cursor:"pointer" }}>No</button>
                       </div>
                     ) : (
                       <button className="action-btn" onClick={e => { e.stopPropagation(); setConfirmAdminId(u.id); }}
@@ -350,54 +350,72 @@ export default function AdminDashboard({ token }) {
                           padding:"6px 12px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, whiteSpace:"nowrap", width:"fit-content",
                           cursor:     String(u.id) === myId && u.role === "ADMIN" ? "not-allowed" : "pointer",
                           opacity:    String(u.id) === myId && u.role === "ADMIN" ? 0.4 : 1,
-                          background: u.role === "ADMIN" ? "#F0EEF7" : "#EEF2FB",
-                          color:      u.role === "ADMIN" ? "#7B5EA7" : "#31487A",
+                          background: u.role === "ADMIN" ? "var(--divider)" : "var(--blue-light-bg)",
+                          color:      u.role === "ADMIN" ? "var(--accent)" : "var(--primary)",
                       }}>
                         {u.role === "ADMIN" ? "Remove Admin" : "Make Admin"}
                       </button>
                     )}
+
                     {confirmActiveId === u.id ? (
                       <div onClick={e => e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:6 }}>
-                        <span style={{ fontSize:11, color: u.active ? "#c0392b" : "#2d7a4a", fontWeight:600 }}>Sure?</span>
-                        <button onClick={e => { e.stopPropagation(); setActive(u.id, !u.active); setConfirmActiveId(null); }} style={{ padding:"4px 10px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background: u.active ? "#c0392b" : "#2d7a4a", color:"#fff", cursor:"pointer" }}>Yes</button>
-                        <button onClick={e => { e.stopPropagation(); setConfirmActiveId(null); }} style={{ padding:"4px 10px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background:"#E8E8EE", color:"#666", cursor:"pointer" }}>No</button>
-                      </div>
-                    ) : (
-                      <button className="action-btn" onClick={e => { e.stopPropagation(); setConfirmActiveId(u.id); }} style={{
-                        padding:"6px 12px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, whiteSpace:"nowrap", width:"fit-content", cursor:"pointer",
-                        background: u.active ? "#fef0f0" : "#eef7f0",
-                        color:      u.active ? "#c0392b" : "#2d7a4a",
-                      }}>
-                        {u.active ? "Deactivate" : "Activate"}
-                      </button>
-                    )}
-                  </div>
+                        <span style={{ fontSize:11, color: u.active ? "var(--error)" : "var(--success)", fontWeight:600 }}>Sure?</span>
+                        <button 
+                          onClick={e => { e.stopPropagation(); setActive(u.id, !u.active); setConfirmActiveId(null); }} 
+                        style={{ 
+                          padding:"4px 10px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, 
+                          background: u.active ? "var(--error)" : "var(--success)", 
+                          color:"#fff", cursor:"pointer" 
+                        }}
+                          >Yes</button>
+                        <button 
+                          onClick={e => { e.stopPropagation(); setConfirmActiveId(null); }} 
+                        style={{ 
+                          padding:"4px 10px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, 
+                          background:"var(--surface2)", color:"var(--text2)", cursor:"pointer" 
+                        }}
+                          >No</button>
+                        </div>
+                      ) : (
+                        <button 
+                          className="action-btn" 
+                            onClick={e => { e.stopPropagation(); setConfirmActiveId(u.id); }} 
+                          style={{
+                            padding:"6px 12px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, 
+                            whiteSpace:"nowrap", width:"fit-content", cursor:"pointer",
+                            background: u.active ? "var(--error-bg)" : "var(--success-bg)",
+                            color:      u.active ? "var(--error)" : "var(--success)",
+                          }}
+                        >
+                      {u.active ? "Deactivate" : "Activate"}
+                    </button>
+                  )}
 
                   {selectedUser?.id === u.id && (
-                    <div style={{ padding:"16px 20px", background:"#F7F5FB", borderTop:"1px solid #E8E4F4" }}>
-                      <div style={{ fontSize:11, fontWeight:600, color:"#A59AC9", marginBottom:10 }}>Reviews by {u.email}</div>
-                      {userRevLoading && <div style={{ fontSize:13, color:"#B8A9C9" }}>Loading…</div>}
+                    <div style={{ padding:"16px 20px", background:"var(--surface2)", borderTop:"1px solid var(--border)" }}>
+                      <div style={{ fontSize:11, fontWeight:600, color:"var(--text2)", marginBottom:10 }}>Reviews by {u.email}</div>
+                      {userRevLoading && <div style={{ fontSize:13, color:"var(--text3)" }}>Loading…</div>}
                       {!userRevLoading && userReviews.length === 0 && userProfReviews.length === 0 && (
-                        <div style={{ fontSize:13, color:"#B8A9C9" }}>No reviews yet.</div>
+                        <div style={{ fontSize:13, color:"var(--text3)" }}>No reviews yet.</div>
                       )}
                       {!userRevLoading && userReviews.map(r => (
-                        <div key={`c-${r.id}`} style={{ background:"#fff", borderRadius:10, border:"1px solid #E8E4F4", padding:"10px 14px", marginBottom:8 }}>
+                        <div key={`c-${r.id}`} style={{ background:"var(--surface)", borderRadius:10, border:"1px solid var(--border)", padding:"10px 14px", marginBottom:8 }}>
                           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
-                            <span style={{ fontSize:12, fontWeight:600, color:"#31487A" }}>{r.courseCode ? `${r.courseCode} — ${r.courseTitle}` : "—"}</span>
-                            <span style={{ fontSize:11, color:"#A59AC9" }}>{formatDate(r.createdAt)}</span>
+                            <span style={{ fontSize:12, fontWeight:600, color:"var(--primary)" }}>{r.courseCode ? `${r.courseCode} — ${r.courseTitle}` : "—"}</span>
+                            <span style={{ fontSize:11, color:"var(--text2)" }}>{formatDate(r.createdAt)}</span>
                           </div>
-                          <div style={{ marginBottom:4 }}><span style={{ fontSize:13, color:"#F5A623" }}>{stars(r.rating)}</span></div>
-                          <div style={{ fontSize:13, color:"#31487A", lineHeight:1.6 }}>{r.comment || "—"}</div>
+                          <div style={{ marginBottom:4 }}><span style={{ fontSize:13, color:"var(--star)" }}>{stars(r.rating)}</span></div>
+                          <div style={{ fontSize:13, color:"var(--primary)", lineHeight:1.6 }}>{r.comment || "—"}</div>
                         </div>
                       ))}
                       {!userRevLoading && userProfReviews.map(r => (
-                        <div key={`p-${r.id}`} style={{ background:"#fff", borderRadius:10, border:"1px solid #E8E4F4", padding:"10px 14px", marginBottom:8 }}>
+                        <div key={`p-${r.id}`} style={{ background:"var(--surface)", borderRadius:10, border:"1px solid var(--border)", padding:"10px 14px", marginBottom:8 }}>
                           <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
-                            <span style={{ fontSize:12, fontWeight:600, color:"#31487A" }}>{r.professorName || "—"}</span>
-                            <span style={{ fontSize:11, color:"#A59AC9" }}>{formatDate(r.createdAt)}</span>
+                            <span style={{ fontSize:12, fontWeight:600, color:"var(--primary)" }}>{r.professorName || "—"}</span>
+                            <span style={{ fontSize:11, color:"var(--text2)" }}>{formatDate(r.createdAt)}</span>
                           </div>
-                          <div style={{ marginBottom:4 }}><span style={{ fontSize:13, color:"#F5A623" }}>{stars(r.rating)}</span></div>
-                          <div style={{ fontSize:13, color:"#31487A", lineHeight:1.6 }}>{r.comment || "—"}</div>
+                          <div style={{ marginBottom:4 }}><span style={{ fontSize:13, color:"var(--star)" }}>{stars(r.rating)}</span></div>
+                          <div style={{ fontSize:13, color:"var(--primary)", lineHeight:1.6 }}>{r.comment || "—"}</div>
                         </div>
                       ))}
                     </div>
@@ -407,7 +425,7 @@ export default function AdminDashboard({ token }) {
             </div>
           )}
 
-          <div style={{ marginTop:14, fontSize:12, color:"#B8A9C9" }}>
+          <div style={{ marginTop:14, fontSize:12, color:"var(--text3)" }}>
             {displayed.length} user{displayed.length !== 1 ? "s" : ""} shown
           </div>
         </>
@@ -416,12 +434,12 @@ export default function AdminDashboard({ token }) {
       {tab === "reviews" && (
         <>
           {/* All | Flagged */}
-          <div style={{ display:"flex", gap:4, background:"#F4F4F8", padding:4, borderRadius:10, marginBottom:20, width:"fit-content" }}>
+          <div style={{ display:"flex", gap:4, background:"var(--bg)", padding:4, borderRadius:10, marginBottom:20, width:"fit-content" }}>
             {[{id:"all",label:"All"},{id:"flagged",label:"Flagged"}].map(t => (
               <button key={t.id} onClick={() => { setReviewStatus(t.id); setExpandedId(null); }} style={{
                 padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer",
-                background: reviewStatus === t.id ? "#31487A" : "transparent",
-                color:      reviewStatus === t.id ? "#fff"    : "#A59AC9",
+                background: reviewStatus === t.id ? "var(--primary)" : "transparent",
+                color:      reviewStatus === t.id ? "#fff"    : "var(--text2)",
               }}>{t.label}</button>
             ))}
           </div>
@@ -432,21 +450,21 @@ export default function AdminDashboard({ token }) {
           {reviewStatus === "flagged" && reviewType === "professor" && reviewTable(flaggedProf,   flaggedProfLoading,   "No flagged professor reviews",    deleteProfReview,   "fp")}
         </>
       )}
-
+      
       </div> {/* white card */}
-    </div>
-  );
+    </div>   {/* container */}
+  );         
 }
 
 const ad = {
   table: {
-    background:"#ffffff", borderRadius:16, border:"1px solid #D4D4DC",
+    background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)",
     overflow:"hidden", boxShadow:"0 2px 14px rgba(49,72,122,0.07)",
   },
   tableHeader: {
     display:"grid", gridTemplateColumns:"1fr 100px 120px 120px 130px",
-    padding:"12px 20px", background:"#F7F5FB", borderBottom:"1px solid #D4D4DC",
-    fontSize:12, fontWeight:600, color:"#7B5EA7",
+    padding:"12px 20px", background:"var(--surface2)", borderBottom:"1px solid var(--border)",
+    fontSize:12, fontWeight:600, color:"var(--accent)",
   },
   row: {
     display:"grid", gridTemplateColumns:"1fr 100px 120px 120px 130px",

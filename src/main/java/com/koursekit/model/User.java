@@ -57,18 +57,12 @@ public class User {
     private boolean doubleMajor = false;
     @Column(name = "minor_flag", columnDefinition = "TINYINT(1) DEFAULT 0")
     private boolean minor = false;
-    @Column(name = "double_minor_flag", columnDefinition = "TINYINT(1) DEFAULT 0")
-    private boolean double_minor = false;
     @Column(name = "minor_name")
     private String minorName;
     @Column(name = "course_colors", columnDefinition = "TEXT")
     private String courseColorsJson;
-    @Column(name = "minor_faculty")
-    private String minorFaculty;
-    @Column(name = "second_minor")
-    private String secondMinor;
-    @Column(name = "second_minor_faculty")
-    private String secondMinorFaculty;
+    @Column(name = "theme", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'light'")
+    private String theme = "light";
 
     public User() {}
     public User(String email, String pass) {
@@ -148,17 +142,8 @@ public class User {
     public String getCourseColorsJson() { return courseColorsJson; }
     public void setCourseColorsJson(String courseColorsJson) { this.courseColorsJson = courseColorsJson; }
 
-    public String getMinorFaculty() { return minorFaculty; }
-    public void setMinorFaculty(String minorFaculty) { this.minorFaculty = minorFaculty; }
-
-    public boolean isDoubleMinor() { return double_minor; }
-    public void setDoubleMinor(boolean double_minor) { this.double_minor = double_minor; }
-
-    public String getSecondMinor() { return secondMinor; }
-    public void setSecondMinor(String secondMinor) { this.secondMinor = secondMinor; }
-
-    public String getSecondMinorFaculty() { return secondMinorFaculty; }
-    public void setSecondMinorFaculty(String secondMinorFaculty) { this.secondMinorFaculty = secondMinorFaculty; }
+    public String getTheme() { return theme; }
+    public void setTheme(String theme) { this.theme = theme; }
 
     // integrate microsoft login?
 }

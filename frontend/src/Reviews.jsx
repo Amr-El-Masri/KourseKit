@@ -28,7 +28,7 @@ function Stars({ count, interactive, onSet }) {
     <span style={{ display:"inline-flex", gap:2 }}>
       {[1,2,3,4,5].map(i => (
         <span key={i} onClick={() => interactive && onSet(i)} style={{
-          color: i<=count ? "#f5a623" : "#D4D4DC", fontSize:16,
+          color: i<=count ? "var(--star)" : "var(--border)", fontSize:16,
           cursor: interactive ? "pointer" : "default", transition:"color .1s"
         }}>★</span>
       ))}
@@ -79,13 +79,13 @@ function ReviewCard({ review, token, userEmail, reviewType = "course" }) {
         {/* Header row */}
         <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap", marginBottom:8 }}>
           <div style={rv.avatar}>{randomAnon()[0]}</div>
-          <span style={{ fontSize:13, fontWeight:600, color:"#31487A" }}>Anonymous</span>
-          <span style={{ fontSize:11, color:"#B8A9C9" }}>·</span>
-          <span style={{ fontSize:11, color:"#B8A9C9" }}>{timeAgo(review.createdAt)}</span>
+          <span style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>Anonymous</span>
+          <span style={{ fontSize:11, color:"var(--text3)" }}>·</span>
+          <span style={{ fontSize:11, color:"var(--text3)" }}>{timeAgo(review.createdAt)}</span>
           {sectionInfo && (
             <>
-              <span style={{ fontSize:11, color:"#B8A9C9" }}>·</span>
-              <span style={{ fontSize:11, background:"#F0EEF7", color:"#7B5EA7", padding:"2px 8px", borderRadius:6, fontWeight:600 }}>
+              <span style={{ fontSize:11, color:"var(--text3)" }}>·</span>
+              <span style={{ fontSize:11, background:"var(--divider)", color:"var(--accent)", padding:"2px 8px", borderRadius:6, fontWeight:600 }}>
                 {sectionInfo}
               </span>
             </>
@@ -98,10 +98,10 @@ function ReviewCard({ review, token, userEmail, reviewType = "course" }) {
                 onClick={() => { setReporting(r => !r); setErr(""); setReason(""); }}
                 title="Report this review"
                 style={{
-                  background: reporting ? "#fef0f0" : "none",
-                  border: reporting ? "1px solid #f5c6c6" : "none",
+                  background: reporting ? "var(--error-bg)" : "none",
+                  border: reporting ? "1px solid var(--error-border)" : "none",
                   borderRadius: 6, padding:"2px 8px", cursor:"pointer",
-                  fontSize:11, color: reporting ? "#c0392b" : "#C8B8D8",
+                  fontSize:11, color: reporting ? "var(--error)" : "var(--text3)",
                   fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
                 }}
               >
@@ -109,41 +109,41 @@ function ReviewCard({ review, token, userEmail, reviewType = "course" }) {
               </button>
             )}
             {submitted && (
-              <span style={{ fontSize:11, color:"#b7680a", fontWeight:600 }}> Reported</span>
+              <span style={{ fontSize:11, color:"var(--warn)", fontWeight:600 }}> Reported</span>
             )}
           </div>
         </div>
 
         {/* Review text */}
-        <p style={{ fontSize:14, color:"#4a3a6a", lineHeight:1.65, margin:0 }}>{review.comment}</p>
+        <p style={{ fontSize:14, color:"var(--text-body)", lineHeight:1.65, margin:0 }}>{review.comment}</p>
 
         {/* Report panel */}
         {reporting && (
           <div style={{
-            marginTop:14, background:"#fef9f0", border:"1px solid #f5dfa6",
+            marginTop:14, background:"var(--warn-bg)", border:"1px solid #f5dfa6",
             borderRadius:10, padding:"14px 16px",
           }}>
-            <div style={{ fontSize:12, fontWeight:700, color:"#b7680a", marginBottom:10 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:"var(--warn)", marginBottom:10 }}>
               Why are you reporting this review?
             </div>
             <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:12 }}>
               {REASONS.map(r => (
-                <label key={r} style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", fontSize:13, color:"#4a3a6a" }}>
+                <label key={r} style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", fontSize:13, color:"var(--text-body)" }}>
                   <input
                     type="radio" name={`report-${review.id}`} value={r}
                     checked={reason === r}
                     onChange={() => { setReason(r); setErr(""); }}
-                    style={{ accentColor:"#b7680a" }}
+                    style={{ accentColor:"var(--warn)" }}
                   />
                   {r}
                 </label>
               ))}
             </div>
-            {err && <div style={{ fontSize:12, color:"#c0392b", marginBottom:8 }}>{err}</div>}
+            {err && <div style={{ fontSize:12, color:"var(--error)", marginBottom:8 }}>{err}</div>}
             <button
               onClick={submitReport} disabled={submitting}
               style={{
-                padding:"7px 20px", background:"#b7680a", color:"white",
+                padding:"7px 20px", background:"var(--warn)", color:"white",
                 border:"none", borderRadius:8, fontSize:12, fontWeight:600,
                 cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
               }}
@@ -180,27 +180,27 @@ function CourseSearch({ onSelect }) {
 
   return (
     <div style={{ position:"relative", marginBottom:20 }}>
-      <div style={{ display:"flex", alignItems:"center", background:"#fff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px" }}>
-        <Search size={15} style={{ color:"#B8A9C9", marginRight:8, flexShrink:0 }} />
+      <div style={{ display:"flex", alignItems:"center", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"8px 14px" }}>
+        <Search size={15} style={{ color:"var(--text3)", marginRight:8, flexShrink:0 }} />
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder="Search by course code or title (e.g. CMPS 200)…"
-          style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"#333", width:"100%", fontFamily:"'DM Sans',sans-serif" }}
+          style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"var(--text)", width:"100%", fontFamily:"'DM Sans',sans-serif" }}
         />
-        {loading && <span style={{ fontSize:11, color:"#B8A9C9" }}>searching…</span>}
+        {loading && <span style={{ fontSize:11, color:"var(--text3)" }}>searching…</span>}
       </div>
 
       {results.length > 0 && (
-        <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#fff", border:"1px solid #D4D4DC", borderRadius:12, boxShadow:"0 4px 20px rgba(0,0,0,0.1)", zIndex:100, maxHeight:240, overflowY:"auto", marginTop:4 }}>
+        <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, boxShadow:"0 4px 20px rgba(0,0,0,0.1)", zIndex:100, maxHeight:240, overflowY:"auto", marginTop:4 }}>
           {results.map(course => (
             <div key={course.id} onClick={() => { onSelect(course); setQuery(""); setResults([]); }}
-              style={{ padding:"12px 16px", cursor:"pointer", borderBottom:"1px solid #F0EEF7", transition:"background .1s" }}
-              onMouseEnter={e => e.currentTarget.style.background = "#F7F5FB"}
+              style={{ padding:"12px 16px", cursor:"pointer", borderBottom:"1px solid var(--divider)", transition:"background .1s" }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--surface2)"}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}
             >
-              <span style={{ fontWeight:700, color:"#31487A", fontSize:13 }}>{course.courseCode}</span>
-              <span style={{ color:"#A59AC9", fontSize:13 }}> — {course.title}</span>
+              <span style={{ fontWeight:700, color:"var(--primary)", fontSize:13 }}>{course.courseCode}</span>
+              <span style={{ color:"var(--text2)", fontSize:13 }}> — {course.title}</span>
             </div>
           ))}
         </div>
@@ -268,29 +268,37 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
   };
 
   if (success) return (
-    <div style={{ ...rv.composeCard, textAlign:"center", padding:40 }}>
-      {success === "PENDING" ? (
-        <>
-          <div style={{ marginBottom:12 }}><Clock size={36} color="#A59AC9" /></div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Review submitted for moderation</div>
-          <div style={{ fontSize:13, color:"#A59AC9", marginTop:8 }}>Your review will be visible once approved by a moderator.</div>
-        </>
-      ) : (
-        <>
-          <div style={{ marginBottom:12 }}><CheckCircle size={40} color="#2d7a4a" /></div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Review submitted!</div>
-        </>
-      )}
-    </div>
+   <div style={{ ...rv.composeCard, textAlign:"center", padding:40 }}>
+    {success === "PENDING" ? (
+    <>
+      <div style={{ marginBottom:12 }}>⏳</div>
+      <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>
+        Review submitted for moderation
+      </div>
+      <div style={{ fontSize:13, color:"var(--text2)", marginTop:8 }}>
+        Your review will be visible once approved by a moderator.
+      </div>
+    </>
+  ) : (
+    <>
+      <div style={{ marginBottom:12 }}>
+        <CheckCircle size={40} color="var(--success)" />
+      </div>
+      <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>
+        Review submitted!
+      </div>
+    </>
+  )}
+</div>
   );
 
   return (
     <div style={rv.composeCard}>
-      <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"#31487A", marginBottom:16 }}>
+      <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)", marginBottom:16 }}>
         Write a Course Review
       </div>
 
-      {err && <div style={{ background:"#fef0f0", border:"1px solid #f5c6c6", borderRadius:10, padding:"9px 14px", fontSize:13, color:"#c0392b", marginBottom:14 }}>{err}</div>}
+      {err && <div style={{ background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:10, padding:"9px 14px", fontSize:13, color:"var(--error)", marginBottom:14 }}>{err}</div>}
 
       {!preselectedCourse && (
         <>
@@ -301,8 +309,8 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
 
       {selectedCourse && (
         <>
-          <div style={{ background:"#F7F5FB", borderRadius:10, padding:"10px 14px", marginBottom:16, fontSize:13 }}>
-            Selected: <strong style={{ color:"#31487A" }}>{selectedCourse.courseCode}</strong> — {selectedCourse.title}
+          <div style={{ background:"var(--surface2)", borderRadius:10, padding:"10px 14px", marginBottom:16, fontSize:13 }}>
+            Selected: <strong style={{ color:"var(--primary)" }}>{selectedCourse.courseCode}</strong> — {selectedCourse.title}
           </div>
 
           <label style={rv.label}>Select Section</label>
@@ -328,7 +336,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
             rows={4}
             style={{ ...rv.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
           />
-          <div style={{ fontSize:11, color:"#B8A9C9", marginTop:-10, marginBottom:16 }}>{comment.length} chars</div>
+          <div style={{ fontSize:11, color:"var(--text3)", marginTop:-10, marginBottom:16 }}>{comment.length} chars</div>
 
           <div style={{ display:"flex", gap:10 }}>
             <button onClick={submit} disabled={submitting} style={rv.submitBtn}>
@@ -387,8 +395,8 @@ export default function Reviews() {
       `}</style>
 
       <div style={{ marginBottom:24 }}>
-        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"#31487A", marginBottom:12 }}>Reviews</div>
-        <div style={{ display:"flex", background:"#ffffff", border:"1px solid #D4D4DC", borderRadius:14, padding:5, width:"fit-content", gap:4 }}>
+        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:12 }}>Reviews</div>
+        <div style={{ display:"flex", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:14, padding:5, width:"fit-content", gap:4 }}>
           {[
             { id:"course",    icon:"", label:"Course Reviews"    },
             { id:"professor", icon:"", label:"Professor Reviews" },
@@ -396,8 +404,8 @@ export default function Reviews() {
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600,
               cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
-              background: tab===t.id ? "#31487A" : "transparent",
-              color:       tab===t.id ? "#ffffff" : "#A59AC9",
+              background: tab===t.id ? "var(--primary)" : "transparent",
+              color:       tab===t.id ? "#ffffff" : "var(--text2)",
             }}>
               {t.icon} {t.label}
             </button>
@@ -418,14 +426,14 @@ export default function Reviews() {
         <>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, marginBottom:18 }}>
               <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
-                <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>
+                <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>
                   {activeCourse.courseCode} — {activeCourse.title}
                 </div>
                 <button
                   onClick={() => setDetailsCourse(activeCourse)}
                   style={{
-                    padding:"7px 16px", background:"#eef2fb", color:"#31487A",
-                    border:"1px solid #c5d4ef", borderRadius:10, fontSize:12,
+                    padding:"7px 16px", background:"var(--primary)", color:"#ffffff",
+                    border:"none", borderRadius:10, fontSize:12,
                     fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
                   }}
                 >
@@ -433,18 +441,18 @@ export default function Reviews() {
                 </button>
               </div>
             <div style={{ display:"flex", gap:8 }}>
-              <div style={{ display:"flex", gap:4, background:"#F4F4F8", padding:4, borderRadius:10 }}>
+              <div style={{ display:"flex", gap:4, background:"var(--bg)", padding:4, borderRadius:10 }}>
                 {[{id:"top",label:"Top"},{id:"new",label:"New"}].map(s => (
                   <button key={s.id} onClick={() => setSort(s.id)} style={{
                     padding:"6px 14px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
-                    background: sort===s.id ? "#31487A" : "transparent",
-                    color:      sort===s.id ? "#ffffff" : "#A59AC9",
+                    background: sort===s.id ? "var(--primary)" : "transparent",
+                    color:      sort===s.id ? "#ffffff" : "var(--text2)",
                   }}>{s.label}</button>
                 ))}
               </div>
               {token && (
                 <button onClick={() => setComposing(c => !c)} style={{
-                  padding:"9px 20px 9px 12px", background:"#7B5EA7", color:"white",
+                  padding:"9px 20px 9px 12px", background:"var(--accent)", color:"white",
                   border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer",
                 }}><Pen size={14} style={{ marginRight: 6, verticalAlign: "middle" }} /> Write a Review</button>
               )}
@@ -452,11 +460,11 @@ export default function Reviews() {
           </div>
 
           {/* search within reviews */}
-          <div style={{ display:"flex", alignItems:"center", background:"#fff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px", marginBottom:18 }}>
-            <Search size={15} style={{ color:"#B8A9C9", marginRight:8, flexShrink:0 }} />
+          <div style={{ display:"flex", alignItems:"center", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"8px 14px", marginBottom:18 }}>
+            <Search size={15} style={{ color:"var(--text3)", marginRight:8, flexShrink:0 }} />
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search within reviews…"
-              style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"#333", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
+              style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"var(--text)", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
           </div>
         </>
       )}
@@ -470,20 +478,20 @@ export default function Reviews() {
         />
       )}
 
-      {loading && <div style={{ textAlign:"center", padding:40, color:"#B8A9C9" }}>Loading reviews…</div>}
+      {loading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading reviews…</div>}
 
       {!loading && activeCourse && displayed.length === 0 && !composing && (
-        <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
-          <div style={{ marginBottom:12 }}><Inbox size={40} color="#B8A9C9" /></div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>No reviews yet for this course</div>
+        <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+          <div style={{ marginBottom:12 }}><Inbox size={40} color="var(--text3)" /></div>
+          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>No reviews yet for this course</div>
           <div style={{ fontSize:13, marginTop:6 }}>Be the first to write one!</div>
         </div>
       )}
 
       {!loading && !activeCourse && (
-        <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
+        <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
           <div style={{ fontSize:40, marginBottom:12 }}></div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Search for a course above</div>
+          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>Search for a course above</div>
           <div style={{ fontSize:13, marginTop:6 }}>to view or submit reviews</div>
         </div>
       )}
@@ -519,21 +527,21 @@ function ProfessorSearch({ onSelect }) {
 
   return (
     <div style={{ position:"relative", marginBottom:20 }}>
-      <div style={{ display:"flex", alignItems:"center", background:"#fff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px" }}>
-        <Search size={15} style={{ color:"#B8A9C9", marginRight:8, flexShrink:0 }} />
+      <div style={{ display:"flex", alignItems:"center", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"8px 14px" }}>
+        <Search size={15} style={{ color:"var(--text3)", marginRight:8, flexShrink:0 }} />
         <input value={query} onChange={e => setQuery(e.target.value)}
           placeholder="Search by professor name (e.g. Dr. Sakr)…"
-          style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"#333", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
-        {loading && <span style={{ fontSize:11, color:"#B8A9C9" }}>searching…</span>}
+          style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"var(--text)", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
+        {loading && <span style={{ fontSize:11, color:"var(--text3)" }}>searching…</span>}
       </div>
       {results.length > 0 && (
-        <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#fff", border:"1px solid #D4D4DC", borderRadius:12, boxShadow:"0 4px 20px rgba(0,0,0,0.1)", zIndex:100, maxHeight:240, overflowY:"auto", marginTop:4 }}>
+        <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, boxShadow:"0 4px 20px rgba(0,0,0,0.1)", zIndex:100, maxHeight:240, overflowY:"auto", marginTop:4 }}>
           {results.map(name => (
             <div key={name} onClick={() => { onSelect(name); setQuery(""); setResults([]); }}
-              style={{ padding:"12px 16px", cursor:"pointer", borderBottom:"1px solid #F0EEF7" }}
-              onMouseEnter={e => e.currentTarget.style.background = "#F7F5FB"}
+              style={{ padding:"12px 16px", cursor:"pointer", borderBottom:"1px solid var(--divider)" }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--surface2)"}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-              <span style={{ fontWeight:700, color:"#31487A", fontSize:13 }}> {name}</span>
+              <span style={{ fontWeight:700, color:"var(--primary)", fontSize:13 }}> {name}</span>
             </div>
           ))}
         </div>
@@ -574,25 +582,33 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
     <div style={{ ...rv.composeCard, textAlign:"center", padding:40 }}>
       {success === "PENDING" ? (
         <>
-          <div style={{ marginBottom:12 }}><Clock size={36} color="#A59AC9" /></div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Review submitted for moderation</div>
-          <div style={{ fontSize:13, color:"#A59AC9", marginTop:8 }}>Your review will be visible once approved by a moderator.</div>
-        </>
-      ) : (
-        <>
-          <div style={{ marginBottom:12 }}><CheckCircle size={40} color="#2d7a4a" /></div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Review submitted!</div>
-        </>
-      )}
-    </div>
+        <div style={{ marginBottom:12 }}>
+          <Clock size={40} color="var(--primary)" />
+        </div>
+        <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>
+        Review submitted for moderation
+      </div>
+      <div style={{ fontSize:13, color:"var(--text2)", marginTop:8 }}>
+        Your review will be visible once approved by a moderator.
+      </div>
+    </>
+  ) : (
+    <>
+      <CheckCircle size={40} color="var(--success)" style={{ marginBottom:12 }} />
+      <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>
+        Review submitted!
+      </div>
+    </>
+  )}
+</div>
   );
 
   return (
     <div style={rv.composeCard}>
-      <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"#31487A", marginBottom:16 }}>
+      <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)", marginBottom:16 }}>
         Write a Review for {professorName}
       </div>
-      {err && <div style={{ background:"#fef0f0", border:"1px solid #f5c6c6", borderRadius:10, padding:"9px 14px", fontSize:13, color:"#c0392b", marginBottom:14 }}>{err}</div>}
+      {err && <div style={{ background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:10, padding:"9px 14px", fontSize:13, color:"var(--error)", marginBottom:14 }}>{err}</div>}
       <label style={rv.label}>Rating</label>
       <div style={{ marginBottom:16 }}>
         <Stars count={rating} interactive onSet={r => { setRating(r); setErr(""); }} />
@@ -603,7 +619,7 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
         rows={4}
         style={{ ...rv.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
       />
-      <div style={{ fontSize:11, color:"#B8A9C9", marginTop:-10, marginBottom:16 }}>{comment.length} chars</div>
+      <div style={{ fontSize:11, color:"var(--text3)", marginTop:-10, marginBottom:16 }}>{comment.length} chars</div>
       <div style={{ display:"flex", gap:10 }}>
         <button onClick={submit} disabled={submitting} style={rv.submitBtn}>
           {submitting ? "Submitting…" : "Post Review"}
@@ -650,31 +666,31 @@ function ProfessorReviewsTab({ token, userEmail }) {
       {selected && (
         <>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, marginBottom:18 }}>
-            <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}> {selected}</div>
+            <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}> {selected}</div>
             <div style={{ display:"flex", gap:8 }}>
-              <div style={{ display:"flex", gap:4, background:"#F4F4F8", padding:4, borderRadius:10 }}>
+              <div style={{ display:"flex", gap:4, background:"var(--bg)", padding:4, borderRadius:10 }}>
                 {[{id:"top",label:"Top"},{id:"new",label:"New"}].map(s => (
                   <button key={s.id} onClick={() => setSort(s.id)} style={{
                     padding:"6px 14px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
-                    background: sort===s.id ? "#31487A" : "transparent",
-                    color:      sort===s.id ? "#ffffff" : "#A59AC9",
+                    background: sort===s.id ? "var(--primary)" : "transparent",
+                    color:      sort===s.id ? "#ffffff" : "var(--text2)",
                   }}>{s.label}</button>
                 ))}
               </div>
               {token && (
                 <button onClick={() => setComposing(c => !c)} style={{
-                  padding:"9px 20px 9px 12px", background:"#7B5EA7", color:"white",
+                  padding:"9px 20px 9px 12px", background:"var(--accent)", color:"white",
                   border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer",
                 }}><Pen size={14} style={{ marginRight:6, verticalAlign:"middle" }} />Write a Review</button>
               )}
             </div>
           </div>
 
-          <div style={{ display:"flex", alignItems:"center", background:"#fff", border:"1px solid #D4D4DC", borderRadius:12, padding:"8px 14px", marginBottom:18 }}>
-            <Search size={15} style={{ color:"#B8A9C9", marginRight:8, flexShrink:0 }} />
+          <div style={{ display:"flex", alignItems:"center", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"8px 14px", marginBottom:18 }}>
+            <Search size={15} style={{ color:"var(--text3)", marginRight:8, flexShrink:0 }} />
             <input value={search} onChange={e => setSearch(e.target.value)}
               placeholder="Search within reviews…"
-              style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"#333", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
+              style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"var(--text)", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
           </div>
 
           {composing && (
@@ -684,12 +700,12 @@ function ProfessorReviewsTab({ token, userEmail }) {
             />
           )}
 
-          {loading && <div style={{ textAlign:"center", padding:40, color:"#B8A9C9" }}>Loading reviews…</div>}
+          {loading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading reviews…</div>}
 
           {!loading && displayed.length === 0 && !composing && (
-            <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
-              <div style={{ marginBottom:12 }}><Inbox size={40} color="#B8A9C9" /></div>
-              <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>No reviews yet for this professor</div>
+            <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+              <div style={{ marginBottom:12 }}><Inbox size={40} color="var(--text3)" /></div>
+              <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>No reviews yet for this professor</div>
               <div style={{ fontSize:13, marginTop:6 }}>Be the first to write one!</div>
             </div>
           )}
@@ -703,9 +719,9 @@ function ProfessorReviewsTab({ token, userEmail }) {
       )}
 
       {!selected && (
-        <div style={{ textAlign:"center", padding:"60px 0", color:"#B8A9C9" }}>
+        <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
           <div style={{ fontSize:40, marginBottom:12 }}></div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Search for a professor above</div>
+          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>Search for a professor above</div>
           <div style={{ fontSize:13, marginTop:6 }}>to view or submit reviews</div>
         </div>
       )}
@@ -715,12 +731,12 @@ function ProfessorReviewsTab({ token, userEmail }) {
 
 const rv = {
   card: {
-    display:"flex", gap:14, background:"#ffffff", borderRadius:16, padding:"18px 20px",
-    border:"1px solid #D4D4DC", boxShadow:"0 2px 10px rgba(49,72,122,0.06)",
+    display:"flex", gap:14, background:"var(--surface)", borderRadius:16, padding:"18px 20px",
+    border:"1px solid var(--border)", boxShadow:"0 2px 10px rgba(49,72,122,0.06)",
   },
   composeCard: {
-    background:"#ffffff", borderRadius:18, padding:"24px 26px",
-    border:"1px solid #D4D4DC", boxShadow:"0 4px 20px rgba(49,72,122,0.10)", marginBottom:20,
+    background:"var(--surface)", borderRadius:18, padding:"24px 26px",
+    border:"1px solid var(--border)", boxShadow:"0 4px 20px rgba(49,72,122,0.10)", marginBottom:20,
   },
   avatar: {
     width:28, height:28, borderRadius:"50%",
@@ -728,8 +744,8 @@ const rv = {
     color:"white", fontWeight:700, fontSize:12,
     display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0,
   },
-  label:     { display:"block", fontSize:12, fontWeight:600, color:"#2a2050", marginBottom:6 },
-  input:     { width:"100%", padding:"10px 14px", border:"1px solid #D4D4DC", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"#2a2050", background:"#F7F5FB", marginBottom:16, display:"block" },
-  submitBtn: { padding:"10px 24px", background:"#31487A", color:"white", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
-  cancelBtn: { padding:"10px 18px", background:"#F4F4F8", color:"#A59AC9", border:"1px solid #D4D4DC", borderRadius:10, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  label:     { display:"block", fontSize:12, fontWeight:600, color:"var(--text)", marginBottom:6 },
+  input:     { width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", marginBottom:16, display:"block" },
+  submitBtn: { padding:"10px 24px", background:"var(--primary)", color:"white", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  cancelBtn: { padding:"10px 18px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
 };

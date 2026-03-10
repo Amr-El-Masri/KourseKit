@@ -62,22 +62,22 @@ function resolveGrade(input) {
 function SectionTitle({ children }) {
   return (
     <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
-      <div style={{ width:3, height:18, background:"#7B5EA7", borderRadius:2 }} />
-      <h3 style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:"#31487A" }}>{children}</h3>
+      <div style={{ width:3, height:18, background:"var(--accent)", borderRadius:2 }} />
+      <h3 style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:"var(--primary)" }}>{children}</h3>
     </div>
   );
 }
 
-function ResultBadge({ value, label, color="#31487A" }) {
+function ResultBadge({ value, label, color="var(--primary)" }) {
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:12, background:"#F0EEF7", borderRadius:12, padding:"12px 20px", border:"1px solid #D4D4DC" }}>
+    <div style={{ display:"flex", alignItems:"center", gap:12, background:"var(--divider)", borderRadius:12, padding:"12px 20px", border:"1px solid var(--border)" }}>
       <div style={{ fontFamily:"'Fraunces',serif", fontSize:32, fontWeight:700, color, lineHeight:1 }}>{value}</div>
-      <div style={{ fontSize:12, color:"#A59AC9" }}>{label}</div>
+      <div style={{ fontSize:12, color:"var(--text2)" }}>{label}</div>
     </div>
   );
 }
 
-function InfoBox({ children, color="#31487A", bg="#F0EEF7", border="#7B5EA7" }) {
+function InfoBox({ children, color="var(--primary)", bg="var(--divider)", border="var(--accent)" }) {
   return (
     <div style={{ marginTop:16, padding:"14px 18px", background:bg, borderRadius:12, borderLeft:`3px solid ${border}`, fontSize:14, color, fontWeight:500, lineHeight:1.6 }}>
       {children}
@@ -87,14 +87,14 @@ function InfoBox({ children, color="#31487A", bg="#F0EEF7", border="#7B5EA7" }) 
 
 function ErrorBox({ children }) {
   return (
-    <InfoBox color="#c0392b" bg="#fef0f0" border="#c0392b">{children}</InfoBox>
+    <InfoBox color="var(--error)" bg="var(--error-bg)" border="var(--error)">{children}</InfoBox>
   );
 }
 
 function WeightIndicator({ total }) {
   const pct = isNaN(total) ? 0 : total;
-  const color  = pct === 100 ? "#2d7a4a" : pct > 100 ? "#c0392b" : "#c97d00";
-  const bg     = pct === 100 ? "#eef7f0" : pct > 100 ? "#fef0f0" : "#fffbe6";
+  const color  = pct === 100 ? "var(--success)" : pct > 100 ? "var(--error)" : "var(--warn1)";
+  const bg     = pct === 100 ? "var(--success-bg)" : pct > 100 ? "var(--error-bg)" : "var(--warn-bg)";
   const border = pct === 100 ? "#2d7a4a33" : pct > 100 ? "#c0392b33" : "#c97d0033";
   return (
     <span style={{ fontSize:13, fontWeight:600, color, padding:"5px 11px", background:bg, borderRadius:8, border:`1px solid ${border}` }}>
@@ -573,20 +573,20 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; }
-        .gc-input:focus { border-color:#8FB3E2 !important; outline:none; }
-        .gc-row-hover:hover { background:#F0EEF7 !important; }
-        .gc-tab-hover:hover { background:#F4F4F8; }
-        .gc-addbtn:hover { background:#e8e0f7 !important; }
-        .gc-calcbtn:hover:not(:disabled) { background:#221866 !important; }
+        .gc-input:focus { border-color:var(--border2) !important; outline:none; }
+        .gc-row-hover:hover { background:var(--divider) !important; }
+        .gc-tab-hover:hover { background:var(--bg); }
+        .gc-addbtn:hover { background:var(--surface3) !important; }
+        .gc-calcbtn:hover:not(:disabled) { background:var(--primary2) !important; }
         .gc-calcbtn:disabled { opacity:0.6; cursor:not-allowed; }
       `}</style>
 
       {/* Header */}
       <div style={{ marginBottom:28 }}>
-        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"#31487A", marginBottom:4 }}>
+        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:4 }}>
           Grade Calculator
         </div>
-        <div style={{ fontSize:13, color:"#A59AC9" }}>
+        <div style={{ fontSize:13, color:"var(--text2)" }}>
           Calculate your averages, plan your grades, and simulate future scores
         </div>
       </div>
@@ -595,14 +595,14 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       {/* Course picker — shown on course/target/simulator tabs */}
       {["course","target","simulator"].includes(activeTab) && semesterCourses.length > 0 && (
         <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16, flexWrap:"wrap" }}>
-          <span style={{ fontSize:13, fontWeight:600, color:"#5A3B7B" }}>Course:</span>
+          <span style={{ fontSize:13, fontWeight:600, color:"var(--accent2)" }}>Course:</span>
           <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
             {semesterCourses.map(c => (
               <button key={c.name} onClick={() => switchCourse(selectedCourse === c.name ? "" : c.name)} style={{
                 fontSize:12, fontWeight:600, padding:"5px 14px", borderRadius:20,
-                border: selectedCourse === c.name ? "none" : "1px solid #D4D4DC",
-                background: selectedCourse === c.name ? "#31487A" : "#F4F4F8",
-                color: selectedCourse === c.name ? "#fff" : "#5A3B7B",
+                border: selectedCourse === c.name ? "none" : "1px solid var(--border)",
+                background: selectedCourse === c.name ? "var(--primary)" : "var(--bg)",
+                color: selectedCourse === c.name ? "#fff" : "var(--accent2)",
                 cursor:"pointer", transition:"all .15s",
               }}>
                 {c.name}
@@ -610,7 +610,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             ))}
           </div>
           {selectedCourse && (
-            <span style={{ fontSize:11, color:"#A59AC9" }}>
+            <span style={{ fontSize:11, color:"var(--text2)" }}>
               {loadCourseData(selectedCourse) ? "● Saved data loaded" : loadSyllabus(selectedCourse) ? "● Syllabus loaded" : ""}
             </span>
           )}
@@ -622,8 +622,8 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
         {TABS.map(t => (
           <button key={t.id} className="gc-tab-hover" onClick={() => setActiveTab(t.id)} style={{
             ...gc.tab,
-            background: activeTab===t.id ? "#31487A" : "transparent",
-            color:       activeTab===t.id ? "#ffffff" : "#A59AC9",
+            background: activeTab===t.id ? "var(--primary)" : "transparent",
+            color:       activeTab===t.id ? "#ffffff" : "var(--text2)",
             fontWeight:  activeTab===t.id ? 600 : 400,
           }}>
             {t.label}
@@ -635,7 +635,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       {activeTab==="semester" && (
         <div style={gc.card}>
           <SectionTitle>Current Semester GPA</SectionTitle>
-          <p style={{ fontSize:13, color:"#A59AC9", marginTop:6, marginBottom:18 }}>
+          <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:18 }}>
             Enter each course, your grade (letter or GPA point), and its credit hours.
           </p>
 
@@ -681,7 +681,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
               <input className="gc-input" value={c.credits} onChange={e=>updateRow(setSemCourses,c.id,"credits",e.target.value)} placeholder="e.g. 3" type="number" style={{ ...gc.input, maxWidth:90 }} />
               {confirmDelSem === c.id ? (
                 <span style={{ display:"flex", alignItems:"center", gap:2 }}>
-                  <button onClick={() => { setConfirmDelSem(null); removeRow(setSemCourses,c.id); }} style={{ ...gc.removeBtn, color:"#c0392b", fontWeight:700 }}>✓</button>
+                  <button onClick={() => { setConfirmDelSem(null); removeRow(setSemCourses,c.id); }} style={{ ...gc.removeBtn, color:"var(--error)", fontWeight:700 }}>✓</button>
                   <button onClick={() => setConfirmDelSem(null)} style={gc.removeBtn}>✗</button>
                 </span>
               ) : (
@@ -696,9 +696,9 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             </button>
             {confirmClearSem ? (
               <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                <span style={{ fontSize:12, color:"#c0392b", fontWeight:600 }}>Clear all?</span>
+                <span style={{ fontSize:12, color:"var(--error)", fontWeight:600 }}>Clear all?</span>
                 <button onClick={() => { setConfirmClearSem(false); setSemCourses([{ id:Date.now(), name:"", grade:"", credits:"" }]); setSemResult(null); setSemError(null); setImpactResult(null); setImpactError(null); }} style={{ ...gc.clearBtn, padding:"6px 10px", fontSize:12 }}>Yes</button>
-                <button onClick={() => setConfirmClearSem(false)} style={{ ...gc.clearBtn, color:"#A59AC9", borderColor:"#D4D4DC", padding:"6px 10px", fontSize:12 }}>No</button>
+                <button onClick={() => setConfirmClearSem(false)} style={{ ...gc.clearBtn, color:"var(--text2)", borderColor:"var(--border)", padding:"6px 10px", fontSize:12 }}>No</button>
               </span>
             ) : (
               <button onClick={() => setConfirmClearSem(true)} style={gc.clearBtn}>Clear all</button>
@@ -707,7 +707,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
               <ResultBadge
                 value={semResult}
                 label="Semester GPA"
-                color={parseFloat(semResult)>=3.7?"#2d7a4a":parseFloat(semResult)>=2.7?"#31487A":"#c0392b"}
+                color={parseFloat(semResult)>=3.7?"var(--success)":parseFloat(semResult)>=2.7?"var(--primary)":"var(--error)"}
               />
             )}
           </div>
@@ -715,12 +715,12 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
           {/* Highest Impact — auto result after GPA calculation */}
           {semResult && !semError && semCourses.length >= 2 && (
-            <div style={{ marginTop:24, paddingTop:20, borderTop:"1px solid #F0EEF7" }}>
-              <div style={{ fontSize:12, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:12 }}>
+            <div style={{ marginTop:24, paddingTop:20, borderTop:"1px solid var(--divider)" }}>
+              <div style={{ fontSize:12, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:12 }}>
                 Highest Impact Course
               </div>
               {impactLoading && (
-                <InfoBox color="#7B5EA7" bg="#F7F5FB" border="#7B5EA7">Analyzing which course has the greatest impact on your GPA…</InfoBox>
+                <InfoBox color="var(--accent)" bg="var(--surface2)" border="var(--accent)">Analyzing which course has the greatest impact on your GPA…</InfoBox>
               )}
               {impactResult && !impactError && (
                 <>
@@ -728,20 +728,20 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                     <ResultBadge
                       value={impactResult.courseName || `Course ${impactResult.courseIndex + 1}`}
                       label="Highest Impact Course"
-                      color="#7B5EA7"
+                      color="var(--accent)"
                     />
                     <ResultBadge
                       value={impactResult.grade}
                       label="Current Grade"
-                      color="#31487A"
+                      color="var(--primary)"
                     />
                     <ResultBadge
                       value={`${impactResult.credits} cr`}
                       label="Credit Hours"
-                      color="#31487A"
+                      color="var(--primary)"
                     />
                   </div>
-                  <InfoBox color="#5A3B7B" bg="#F7F5FB" border="#7B5EA7">
+                  <InfoBox color="var(--accent2)" bg="var(--surface2)" border="var(--accent)">
                     {impactResult.message}
                   </InfoBox>
                 </>
@@ -756,7 +756,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       {activeTab==="cumulative" && (
         <div style={gc.card}>
           <SectionTitle>Cumulative GPA</SectionTitle>
-          <p style={{ fontSize:13, color:"#A59AC9", marginTop:6, marginBottom:18 }}>
+          <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:18 }}>
             Enter your GPA and credit hours for each completed semester.
           </p>
 
@@ -810,7 +810,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
               <input className="gc-input" value={c.credits} onChange={e=>updateRow(setCumSems,c.id,"credits",e.target.value)} placeholder="e.g. 15"   type="number" style={{ ...gc.input, maxWidth:90 }} />
               {confirmDelCum === c.id ? (
                 <span style={{ display:"flex", alignItems:"center", gap:2 }}>
-                  <button onClick={() => { setConfirmDelCum(null); removeRow(setCumSems,c.id); }} style={{ ...gc.removeBtn, color:"#c0392b", fontWeight:700 }}>✓</button>
+                  <button onClick={() => { setConfirmDelCum(null); removeRow(setCumSems,c.id); }} style={{ ...gc.removeBtn, color:"var(--error)", fontWeight:700 }}>✓</button>
                   <button onClick={() => setConfirmDelCum(null)} style={gc.removeBtn}>✗</button>
                 </span>
               ) : (
@@ -825,9 +825,9 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             </button>
             {confirmClearCum ? (
               <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                <span style={{ fontSize:12, color:"#c0392b", fontWeight:600 }}>Clear all?</span>
+                <span style={{ fontSize:12, color:"var(--error)", fontWeight:600 }}>Clear all?</span>
                 <button onClick={() => { setConfirmClearCum(false); setCumSems([{ id:Date.now(), name:"", gpa:"", credits:"" }]); setCumResult(null); setCumError(null); setFutureResult(null); setFutureError(null); setFutureTargetGPA(""); setFutureRemainingCreds(""); }} style={{ ...gc.clearBtn, padding:"6px 10px", fontSize:12 }}>Yes</button>
-                <button onClick={() => setConfirmClearCum(false)} style={{ ...gc.clearBtn, color:"#A59AC9", borderColor:"#D4D4DC", padding:"6px 10px", fontSize:12 }}>No</button>
+                <button onClick={() => setConfirmClearCum(false)} style={{ ...gc.clearBtn, color:"var(--text2)", borderColor:"var(--border)", padding:"6px 10px", fontSize:12 }}>No</button>
               </span>
             ) : (
               <button onClick={() => setConfirmClearCum(true)} style={gc.clearBtn}>Clear all</button>
@@ -837,12 +837,12 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                 <ResultBadge
                   value={cumResult.gpa}
                   label="Cumulative GPA"
-                  color={parseFloat(cumResult.gpa)>=3.7?"#2d7a4a":parseFloat(cumResult.gpa)>=2.7?"#31487A":"#c0392b"}
+                  color={parseFloat(cumResult.gpa)>=3.7?"var(--success)":parseFloat(cumResult.gpa)>=2.7?"var(--primary)":"var(--error)"}
                 />
                 <ResultBadge
                   value={cumResult.totalCredits}
                   label="Total Credits"
-                  color="#7B5EA7"
+                  color="var(--accent)"
                 />
               </div>
             )}
@@ -851,16 +851,16 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
           {/* Required Future GPA — planning panel auto-shown after result */}
           {cumResult && !cumError && (
-            <div style={{ marginTop:24, paddingTop:20, borderTop:"1px solid #F0EEF7" }}>
-              <div style={{ fontSize:12, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:4 }}>
+            <div style={{ marginTop:24, paddingTop:20, borderTop:"1px solid var(--divider)" }}>
+              <div style={{ fontSize:12, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:4 }}>
                 GPA Planning
               </div>
-              <p style={{ fontSize:13, color:"#A59AC9", marginTop:4, marginBottom:14 }}>
-                Based on your current CGPA of <strong style={{ color:"#31487A" }}>{cumResult.gpa}</strong> across <strong style={{ color:"#31487A" }}>{cumResult.totalCredits}</strong> credits — enter your goal to find what GPA you need going forward.
+              <p style={{ fontSize:13, color:"var(--text2)", marginTop:4, marginBottom:14 }}>
+                Based on your current CGPA of <strong style={{ color:"var(--primary)" }}>{cumResult.gpa}</strong> across <strong style={{ color:"var(--primary)" }}>{cumResult.totalCredits}</strong> credits — enter your goal to find what GPA you need going forward.
               </p>
               <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"flex-end" }}>
                 <div>
-                  <label style={{ display:"block", fontSize:12, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>Target CGPA</label>
+                  <label style={{ display:"block", fontSize:12, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>Target CGPA</label>
                   <input
                     className="gc-input"
                     value={futureTargetGPA}
@@ -872,7 +872,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                   />
                 </div>
                 <div>
-                  <label style={{ display:"block", fontSize:12, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>Remaining Credits</label>
+                  <label style={{ display:"block", fontSize:12, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>Remaining Credits</label>
                   <input
                     className="gc-input"
                     value={futureRemainingCreds}
@@ -894,14 +894,14 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                       <ResultBadge
                         value={futureResult.requiredGPA?.toFixed(2)}
                         label="Required GPA per Semester"
-                        color={futureResult.requiredGPA<=3.3?"#2d7a4a":futureResult.requiredGPA<=3.7?"#31487A":"#c0392b"}
+                        color={futureResult.requiredGPA<=3.3?"var(--success)":futureResult.requiredGPA<=3.7?"var(--primary)":"var(--error)"}
                       />
                     </div>
                   )}
                   <InfoBox
-                    color={futureResult.isAchievable?"#2d7a4a":"#c0392b"}
-                    bg={futureResult.isAchievable?"#eef7f0":"#fef0f0"}
-                    border={futureResult.isAchievable?"#2d7a4a":"#c0392b"}
+                    color={futureResult.isAchievable?"var(--success)":"var(--error)"}
+                    bg={futureResult.isAchievable?"var(--success-bg)":"var(--error-bg)"}
+                    border={futureResult.isAchievable?"var(--success)":"var(--error)"}
                   >
                     {futureResult.message}
                   </InfoBox>
@@ -916,7 +916,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       {activeTab==="course" && (
         <div style={gc.card}>
           <SectionTitle>Course Grade (So Far)</SectionTitle>
-          <p style={{ fontSize:13, color:"#A59AC9", marginTop:6, marginBottom:18 }}>
+          <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:18 }}>
             Enter each graded component, its weight, and your grade to see your current standing.
           </p>
           <div style={gc.headerRow}>
@@ -945,7 +945,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
               <input className="gc-input" value={c.grade}  onChange={e=>updateRow(setComponents,c.id,"grade",e.target.value)}  placeholder="e.g. 85 or A-" style={{ ...gc.input, maxWidth:110 }} />
               {confirmDelComp === c.id ? (
                 <span style={{ display:"flex", alignItems:"center", gap:2 }}>
-                  <button onClick={() => { setConfirmDelComp(null); removeRow(setComponents,c.id); }} style={{ ...gc.removeBtn, color:"#c0392b", fontWeight:700 }}>✓</button>
+                  <button onClick={() => { setConfirmDelComp(null); removeRow(setComponents,c.id); }} style={{ ...gc.removeBtn, color:"var(--error)", fontWeight:700 }}>✓</button>
                   <button onClick={() => setConfirmDelComp(null)} style={gc.removeBtn}>✗</button>
                 </span>
               ) : (
@@ -963,9 +963,9 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             </button>
             {confirmClearCourse ? (
               <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                <span style={{ fontSize:12, color:"#c0392b", fontWeight:600 }}>Clear all?</span>
+                <span style={{ fontSize:12, color:"var(--error)", fontWeight:600 }}>Clear all?</span>
                 <button onClick={() => { setConfirmClearCourse(false); setComponents([{ id:Date.now(), type:"", weight:"", grade:"", customType:"" }]); setCourseResult(null); setCourseError(null); }} style={{ ...gc.clearBtn, padding:"6px 10px", fontSize:12 }}>Yes</button>
-                <button onClick={() => setConfirmClearCourse(false)} style={{ ...gc.clearBtn, color:"#A59AC9", borderColor:"#D4D4DC", padding:"6px 10px", fontSize:12 }}>No</button>
+                <button onClick={() => setConfirmClearCourse(false)} style={{ ...gc.clearBtn, color:"var(--text2)", borderColor:"var(--border)", padding:"6px 10px", fontSize:12 }}>No</button>
               </span>
             ) : (
               <button onClick={() => setConfirmClearCourse(true)} style={gc.clearBtn}>Clear all</button>
@@ -975,12 +975,12 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                 <ResultBadge
                   value={`${courseResult.grade}%`}
                   label="Current Grade"
-                  color={parseFloat(courseResult.grade)>=90?"#2d7a4a":parseFloat(courseResult.grade)>=70?"#31487A":"#c0392b"}
+                  color={parseFloat(courseResult.grade)>=90?"var(--success)":parseFloat(courseResult.grade)>=70?"var(--primary)":"var(--error)"}
                 />
                 <ResultBadge
                   value={courseResult.letterGrade}
                   label="Letter Grade"
-                  color={parseFloat(courseResult.grade)>=90?"#2d7a4a":parseFloat(courseResult.grade)>=70?"#31487A":"#c0392b"}
+                  color={parseFloat(courseResult.grade)>=90?"var(--success)":parseFloat(courseResult.grade)>=70?"var(--primary)":"var(--error)"}
                 />
               </div>
             )}
@@ -993,7 +993,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       {activeTab==="target" && (
         <div style={gc.card}>
           <SectionTitle>Target Course Grade</SectionTitle>
-          <p style={{ fontSize:13, color:"#A59AC9", marginTop:6, marginBottom:18 }}>
+          <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:18 }}>
             Enter your graded components, your final exam weight, and your target — find out what you need.
           </p>
           <div style={gc.headerRow}>
@@ -1007,7 +1007,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
               <input className="gc-input" value={g.grade}  onChange={e=>updateRow(setGraded,g.id,"grade",e.target.value)}  placeholder="e.g. 78 or B+" style={gc.input} />
               {confirmDelGraded === g.id ? (
                 <span style={{ display:"flex", alignItems:"center", gap:2 }}>
-                  <button onClick={() => { setConfirmDelGraded(null); removeRow(setGraded,g.id); }} style={{ ...gc.removeBtn, color:"#c0392b", fontWeight:700 }}>✓</button>
+                  <button onClick={() => { setConfirmDelGraded(null); removeRow(setGraded,g.id); }} style={{ ...gc.removeBtn, color:"var(--error)", fontWeight:700 }}>✓</button>
                   <button onClick={() => setConfirmDelGraded(null)} style={gc.removeBtn}>✗</button>
                 </span>
               ) : (
@@ -1024,23 +1024,23 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
           {/* Final exam weight + target grade row */}
           <div style={{ display:"flex", gap:12, marginTop:12, alignItems:"center", flexWrap:"wrap" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10, background:"#F4F4F8", border:"1px solid #D4D4DC", borderRadius:10, padding:"8px 14px" }}>
-              <span style={{ fontSize:13, color:"#5A3B7B", fontWeight:600 }}>Final exam weight:</span>
-              <input className="gc-input" value={finalWeight} onChange={e=>{ setFinalWeight(e.target.value); }} placeholder="e.g. 40" type="number" style={{ border:"none", outline:"none", background:"transparent", fontSize:14, fontWeight:600, color:"#31487A", width:60 }} />
-              <span style={{ fontSize:13, color:"#A59AC9" }}>%</span>
+            <div style={{ display:"flex", alignItems:"center", gap:10, background:"var(--bg)", border:"1px solid var(--border)", borderRadius:10, padding:"8px 14px" }}>
+              <span style={{ fontSize:13, color:"var(--accent2)", fontWeight:600 }}>Final exam weight:</span>
+              <input className="gc-input" value={finalWeight} onChange={e=>{ setFinalWeight(e.target.value); }} placeholder="e.g. 40" type="number" style={{ border:"none", outline:"none", background:"transparent", fontSize:14, fontWeight:600, color:"var(--primary)", width:60 }} />
+              <span style={{ fontSize:13, color:"var(--text2)" }}>%</span>
             </div>
-            <div style={{ display:"flex", alignItems:"center", gap:10, background:"#F4F4F8", border:"1px solid #D4D4DC", borderRadius:10, padding:"8px 14px" }}>
-              <span style={{ fontSize:13, color:"#5A3B7B", fontWeight:600 }}>My target grade:</span>
-              <input className="gc-input" value={targetGoal} onChange={e=>setTargetGoal(e.target.value)} placeholder="e.g. 85 or B" style={{ border:"none", outline:"none", background:"transparent", fontSize:14, fontWeight:600, color:"#31487A", width:90 }} />
+            <div style={{ display:"flex", alignItems:"center", gap:10, background:"var(--bg)", border:"1px solid var(--border)", borderRadius:10, padding:"8px 14px" }}>
+              <span style={{ fontSize:13, color:"var(--accent2)", fontWeight:600 }}>My target grade:</span>
+              <input className="gc-input" value={targetGoal} onChange={e=>setTargetGoal(e.target.value)} placeholder="e.g. 85 or B" style={{ border:"none", outline:"none", background:"transparent", fontSize:14, fontWeight:600, color:"var(--primary)", width:90 }} />
             </div>
             <button className="gc-calcbtn" onClick={calcTarget} disabled={targetLoading} style={gc.calcBtn}>
               {targetLoading ? "Calculating…" : "Calculate"}
             </button>
             {confirmClearTarget ? (
               <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                <span style={{ fontSize:12, color:"#c0392b", fontWeight:600 }}>Clear all?</span>
+                <span style={{ fontSize:12, color:"var(--error)", fontWeight:600 }}>Clear all?</span>
                 <button onClick={() => { setConfirmClearTarget(false); setGraded([{ id:Date.now(), weight:"", grade:"" }]); setFinalWeight(""); setTargetGoal(""); setTargetResult(null); setTargetError(null); }} style={{ ...gc.clearBtn, padding:"6px 10px", fontSize:12 }}>Yes</button>
-                <button onClick={() => setConfirmClearTarget(false)} style={{ ...gc.clearBtn, color:"#A59AC9", borderColor:"#D4D4DC", padding:"6px 10px", fontSize:12 }}>No</button>
+                <button onClick={() => setConfirmClearTarget(false)} style={{ ...gc.clearBtn, color:"var(--text2)", borderColor:"var(--border)", padding:"6px 10px", fontSize:12 }}>No</button>
               </span>
             ) : (
               <button onClick={() => setConfirmClearTarget(true)} style={gc.clearBtn}>Clear all</button>
@@ -1056,19 +1056,19 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                   <ResultBadge
                     value={`${targetResult.requiredGrade.toFixed(1)}%`}
                     label="Needed on Final"
-                    color={targetResult.requiredGrade<=80?"#2d7a4a":targetResult.requiredGrade<=95?"#31487A":"#c0392b"}
+                    color={targetResult.requiredGrade<=80?"var(--success)":targetResult.requiredGrade<=95?"var(--primary)":"var(--error)"}
                   />
                   <ResultBadge
                     value={targetResult.targetLetter}
                     label="Target Letter Grade"
-                    color="#7B5EA7"
+                    color="var(--accent)"
                   />
                 </div>
               )}
               <InfoBox
-                color={targetResult.type==="good"?"#2d7a4a":targetResult.type==="bad"?"#c0392b":"#31487A"}
-                bg={targetResult.type==="good"?"#eef7f0":targetResult.type==="bad"?"#fef0f0":"#F0EEF7"}
-                border={targetResult.type==="good"?"#2d7a4a":targetResult.type==="bad"?"#c0392b":"#7B5EA7"}
+                color={targetResult.type==="good"?"var(--success)":targetResult.type==="bad"?"var(--error)":"var(--primary)"}
+                bg={targetResult.type==="good"?"var(--success-bg)":targetResult.type==="bad"?"var(--error-bg)":"var(--divider)"}
+                border={targetResult.type==="good"?"var(--success)":targetResult.type==="bad"?"var(--error)":"var(--accent)"}
               >
                 {targetResult.msg}
               </InfoBox>
@@ -1081,13 +1081,13 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       {activeTab==="simulator" && (
         <div style={gc.card}>
           <SectionTitle>Grade Simulator</SectionTitle>
-          <p style={{ fontSize:13, color:"#A59AC9", marginTop:6, marginBottom:18 }}>
+          <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:18 }}>
             Enter your grades so far, then simulate a future component to see how it impacts your final grade.
           </p>
 
           {/* Past components */}
           <div style={{ marginBottom:22 }}>
-            <div style={{ fontSize:12, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:10 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:10 }}>
               Grades So Far
             </div>
             <div style={gc.headerRow}>
@@ -1116,7 +1116,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                 <input className="gc-input" value={c.grade}  onChange={e=>updateRow(setSimPast,c.id,"grade",e.target.value)}  placeholder="e.g. 85 or A-" style={{ ...gc.input, maxWidth:110 }} />
                 {confirmDelSim === c.id ? (
                   <span style={{ display:"flex", alignItems:"center", gap:2 }}>
-                    <button onClick={() => { setConfirmDelSim(null); removeRow(setSimPast,c.id); }} style={{ ...gc.removeBtn, color:"#c0392b", fontWeight:700 }}>✓</button>
+                    <button onClick={() => { setConfirmDelSim(null); removeRow(setSimPast,c.id); }} style={{ ...gc.removeBtn, color:"var(--error)", fontWeight:700 }}>✓</button>
                     <button onClick={() => setConfirmDelSim(null)} style={gc.removeBtn}>✗</button>
                   </span>
                 ) : (
@@ -1128,13 +1128,13 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
           </div>
 
           {/* Future component */}
-          <div style={{ background:"#F7F5FB", border:"1px solid #D4D4DC", borderRadius:14, padding:"18px 20px", marginBottom:20 }}>
-            <div style={{ fontSize:12, fontWeight:700, color:"#7B5EA7", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:14 }}>
+          <div style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:14, padding:"18px 20px", marginBottom:20 }}>
+            <div style={{ fontSize:12, fontWeight:700, color:"var(--accent)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:14 }}>
               Future Component — "What if I get…"
             </div>
             <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"center" }}>
               <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                <label style={{ fontSize:11, fontWeight:600, color:"#A59AC9" }}>Grade</label>
+                <label style={{ fontSize:11, fontWeight:600, color:"var(--text2)" }}>Grade</label>
                 <input
                   className="gc-input"
                   value={simFutureGrade}
@@ -1144,7 +1144,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                 />
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                <label style={{ fontSize:11, fontWeight:600, color:"#A59AC9" }}>Weight %</label>
+                <label style={{ fontSize:11, fontWeight:600, color:"var(--text2)" }}>Weight %</label>
                 <input
                   className="gc-input"
                   value={simFutureWeight}
@@ -1167,9 +1167,9 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                   </button>
                   {confirmClearSim ? (
                     <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                      <span style={{ fontSize:12, color:"#c0392b", fontWeight:600 }}>Clear all?</span>
+                      <span style={{ fontSize:12, color:"var(--error)", fontWeight:600 }}>Clear all?</span>
                       <button onClick={() => { setConfirmClearSim(false); setSimPast([{ id:Date.now(), type:"", weight:"", grade:"", customType:"" }]); setSimFutureGrade(""); setSimFutureWeight(""); setSimResult(null); setSimError(null); }} style={{ ...gc.clearBtn, padding:"6px 10px", fontSize:12 }}>Yes</button>
-                      <button onClick={() => setConfirmClearSim(false)} style={{ ...gc.clearBtn, color:"#A59AC9", borderColor:"#D4D4DC", padding:"6px 10px", fontSize:12 }}>No</button>
+                      <button onClick={() => setConfirmClearSim(false)} style={{ ...gc.clearBtn, color:"var(--text2)", borderColor:"var(--border)", padding:"6px 10px", fontSize:12 }}>No</button>
                     </span>
                   ) : (
                     <button onClick={() => setConfirmClearSim(true)} style={gc.clearBtn}>Clear all</button>
@@ -1187,40 +1187,40 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
           {/* Simulation result */}
           {simResult && simResult.type === "ok" && !simError && (
-            <div style={{ background:"#eef2fb", borderRadius:14, border:"1px solid #D4D4DC", padding:"20px 24px" }}>
-              <div style={{ fontSize:12, fontWeight:700, color:"#8FB3E2", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:14 }}>
+            <div style={{ background:"var(--blue-light-bg)", borderRadius:14, border:"1px solid var(--border)", padding:"20px 24px" }}>
+              <div style={{ fontSize:12, fontWeight:700, color:"var(--border2)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:14 }}>
                 Simulation Result
               </div>
               <div style={{ display:"flex", gap:16, flexWrap:"wrap", alignItems:"stretch" }}>
                 <div style={{ background:"white", borderRadius:12, padding:"14px 20px", textAlign:"center", boxShadow:"0 2px 8px rgba(49,72,122,0.09)", flex:"1 1 120px" }}>
-                  <div style={{ fontFamily:"'Fraunces',serif", fontSize:36, fontWeight:700, color:parseFloat(simResult.projected)>=90?"#2d7a4a":parseFloat(simResult.projected)>=70?"#31487A":"#c0392b", lineHeight:1 }}>
+                  <div style={{ fontFamily:"'Fraunces',serif", fontSize:36, fontWeight:700, color:parseFloat(simResult.projected)>=90?"var(--success)":parseFloat(simResult.projected)>=70?"var(--primary)":"var(--error)", lineHeight:1 }}>
                     {simResult.projected}%
                   </div>
-                  <div style={{ fontSize:11, color:"#A59AC9", marginTop:6 }}>Projected Final Grade</div>
+                  <div style={{ fontSize:11, color:"var(--text2)", marginTop:6 }}>Projected Final Grade</div>
                 </div>
                 <div style={{ background:"white", borderRadius:12, padding:"14px 20px", textAlign:"center", boxShadow:"0 2px 8px rgba(49,72,122,0.09)", flex:"0 1 auto" }}>
-                  <div style={{ fontFamily:"'Fraunces',serif", fontSize:36, fontWeight:700, color:"#7B5EA7", lineHeight:1 }}>
+                  <div style={{ fontFamily:"'Fraunces',serif", fontSize:36, fontWeight:700, color:"var(--accent)", lineHeight:1 }}>
                     {simResult.letterGrade}
                   </div>
-                  <div style={{ fontSize:11, color:"#A59AC9", marginTop:6 }}>Letter Grade</div>
+                  <div style={{ fontSize:11, color:"var(--text2)", marginTop:6 }}>Letter Grade</div>
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", gap:8, flex:"1 1 200px", justifyContent:"center" }}>
-                  <div style={{ fontSize:13, color:"#5A3B7B" }}>
-                    <span style={{ fontWeight:600, color:"#31487A" }}>{simResult.totalWeight}%</span> of your grade will be counted
+                  <div style={{ fontSize:13, color:"var(--accent2)" }}>
+                    <span style={{ fontWeight:600, color:"var(--primary)" }}>{simResult.totalWeight}%</span> of your grade will be counted
                   </div>
                   {parseInt(simResult.remaining) > 0 && (
-                    <div style={{ fontSize:13, color:"#5A3B7B" }}>
-                      <span style={{ fontWeight:600, color:"#31487A" }}>{simResult.remaining}%</span> remains ungraded
+                    <div style={{ fontSize:13, color:"var(--accent2)" }}>
+                      <span style={{ fontWeight:600, color:"var(--primary)" }}>{simResult.remaining}%</span> remains ungraded
                     </div>
                   )}
-                  <div style={{ fontSize:13, color:"#5A3B7B" }}>
-                    If you score <span style={{ fontWeight:600, color:"#7B5EA7" }}>{simResult.grade}%</span> on this component, your grade will be <span style={{ fontWeight:600, color:"#31487A" }}>{simResult.projected}%</span>.
+                  <div style={{ fontSize:13, color:"var(--accent2)" }}>
+                    If you score <span style={{ fontWeight:600, color:"var(--accent)" }}>{simResult.grade}%</span> on this component, your grade will be <span style={{ fontWeight:600, color:"var(--primary)" }}>{simResult.projected}%</span>.
                   </div>
                 </div>
               </div>
               {/* mini grade bar */}
               <div style={{ marginTop:16 }}>
-                <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"#A59AC9", marginBottom:4 }}>
+                <div style={{ display:"flex", justifyContent:"space-between", fontSize:11, color:"var(--text2)", marginBottom:4 }}>
                   <span>0%</span><span>50%</span><span>100%</span>
                 </div>
                 <div style={{ height:8, background:"#D9E1F1", borderRadius:10, overflow:"hidden" }}>
@@ -1243,44 +1243,44 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       {/* Grade Scale Reference */}
       <div style={{ maxWidth:800, marginTop:28 }}>
         <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
-          <div style={{ width:3, height:18, background:"#7B5EA7", borderRadius:2 }} />
-          <h3 style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:"#31487A" }}>Grade Scale Reference</h3>
+          <div style={{ width:3, height:18, background:"var(--accent)", borderRadius:2 }} />
+          <h3 style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:"var(--primary)" }}>Grade Scale Reference</h3>
         </div>
-        <div style={{ background:"#ffffff", borderRadius:18, border:"1px solid #D4D4DC", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", overflow:"hidden" }}>
+        <div style={{ background:"var(--surface)", borderRadius:18, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", overflow:"hidden" }}>
           {/* Table header */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", background:"#F4F4F8", borderBottom:"1px solid #E8E8F0", padding:"10px 20px" }}>
-            <span style={{ fontSize:11, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em" }}>Score Range</span>
-            <span style={{ fontSize:11, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", textAlign:"center" }}>Letter Grade</span>
-            <span style={{ fontSize:11, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", textAlign:"right" }}>GPA Points</span>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", background:"var(--bg)", borderBottom:"1px solid var(--border)", padding:"10px 20px" }}>
+            <span style={{ fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em" }}>Score Range</span>
+            <span style={{ fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", textAlign:"center" }}>Letter Grade</span>
+            <span style={{ fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", textAlign:"right" }}>GPA Points</span>
           </div>
           {[
-            { range:"93 – 100", letter:"A+", gpa:"4.3 *", color:"#2d7a4a" },
-            { range:"87 – 92",  letter:"A",  gpa:"4.0", color:"#2d7a4a" },
-            { range:"83 – 86",  letter:"A−", gpa:"3.7", color:"#2d7a4a" },
-            { range:"79 – 82",  letter:"B+", gpa:"3.3", color:"#31487A" },
-            { range:"75 – 78",  letter:"B",  gpa:"3.0", color:"#31487A" },
-            { range:"72 – 74",  letter:"B−", gpa:"2.7", color:"#31487A" },
-            { range:"69 – 71",  letter:"C+", gpa:"2.3", color:"#7B5EA7" },
-            { range:"66 – 68",  letter:"C",  gpa:"2.0", color:"#7B5EA7" },
-            { range:"63 – 65",  letter:"C−", gpa:"1.7", color:"#7B5EA7" },
-            { range:"61 – 62",  letter:"D+", gpa:"1.3", color:"#c0392b" },
-            { range:"60",       letter:"D",  gpa:"1.0", color:"#c0392b" },
-            { range:"Below 60", letter:"F",  gpa:"0.0", color:"#c0392b" },
+            { range:"93 – 100", letter:"A+", gpa:"4.3 *", color:"var(--success)" },
+            { range:"87 – 92",  letter:"A",  gpa:"4.0", color:"var(--success)" },
+            { range:"83 – 86",  letter:"A−", gpa:"3.7", color:"var(--success)" },
+            { range:"79 – 82",  letter:"B+", gpa:"3.3", color:"var(--primary)" },
+            { range:"75 – 78",  letter:"B",  gpa:"3.0", color:"var(--primary)" },
+            { range:"72 – 74",  letter:"B−", gpa:"2.7", color:"var(--primary)" },
+            { range:"69 – 71",  letter:"C+", gpa:"2.3", color:"var(--accent)" },
+            { range:"66 – 68",  letter:"C",  gpa:"2.0", color:"var(--accent)" },
+            { range:"63 – 65",  letter:"C−", gpa:"1.7", color:"var(--accent)" },
+            { range:"61 – 62",  letter:"D+", gpa:"1.3", color:"var(--error)" },
+            { range:"60",       letter:"D",  gpa:"1.0", color:"var(--error)" },
+            { range:"Below 60", letter:"F",  gpa:"0.0", color:"var(--error)" },
           ].map((row, i) => (
             <div key={row.letter} style={{
               display:"grid", gridTemplateColumns:"1fr 1fr 1fr",
               padding:"9px 20px",
-              background: i % 2 === 0 ? "#ffffff" : "#FAFAFA",
-              borderBottom: i < 11 ? "1px solid #F4F4F8" : "none",
+              background: i % 2 === 0 ? "var(--surface)" : "var(--surface2)",
+              borderBottom: i < 11 ? "1px solid var(--border)" : "none",
               alignItems:"center",
             }}>
-              <span style={{ fontSize:13, color:"#5A3B7B", fontFamily:"'DM Sans',sans-serif" }}>{row.range}</span>
+              <span style={{ fontSize:13, color:"var(--accent2)", fontFamily:"'DM Sans',sans-serif" }}>{row.range}</span>
               <span style={{ fontSize:15, fontWeight:700, color:row.color, fontFamily:"'Fraunces',serif", textAlign:"center" }}>{row.letter}</span>
               <span style={{ fontSize:13, fontWeight:600, color:row.color, textAlign:"right", fontFamily:"'DM Sans',sans-serif" }}>{row.gpa}</span>
             </div>
           ))}
         </div>
-        <p style={{ fontSize:11, color:"#B8A9C9", marginTop:8, marginLeft:4 }}>
+        <p style={{ fontSize:11, color:"var(--text3)", marginTop:8, marginLeft:4 }}>
           * A+ carries 4.3 quality points, but AUB caps the cumulative GPA at 4.0.
         </p>
       </div>
@@ -1290,15 +1290,15 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
 // Styles
 const gc = {
-  tabBar:    { display:"flex", gap:4, background:"#ffffff", padding:5, borderRadius:14, border:"1px solid #D4D4DC", marginBottom:24, flexWrap:"wrap" },
+  tabBar:    { display:"flex", gap:4, background:"var(--surface)", padding:5, borderRadius:14, border:"1px solid var(--border)", marginBottom:24, flexWrap:"wrap" },
   tab:       { padding:"9px 16px", border:"none", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s, color .15s", display:"flex", alignItems:"center" },
-  card:      { background:"#ffffff", borderRadius:18, padding:"24px 26px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid #D4D4DC", maxWidth:800 },
-  headerRow: { display:"flex", gap:12, marginBottom:8, paddingBottom:8, borderBottom:"1px solid #F4F4F8" },
-  colHead:   { fontSize:11, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", flex:1 },
+  card:      { background:"var(--surface)", borderRadius:18, padding:"24px 26px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid var(--border)", maxWidth:800 },
+  headerRow: { display:"flex", gap:12, marginBottom:8, paddingBottom:8, borderBottom:"1px solid var(--border)" },
+  colHead:   { fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", flex:1 },
   row:       { display:"flex", gap:12, marginBottom:8, alignItems:"center" },
-  input:     { flex:1, padding:"9px 12px", border:"1px solid #D4D4DC", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"#2a2050", background:"#F7F5FB", outline:"none", transition:"border-color .15s" },
-  removeBtn: { width:28, height:28, border:"none", background:"none", color:"#B8A9C9", cursor:"pointer", fontSize:14, borderRadius:6, flexShrink:0 },
-  addRowBtn: { padding:"7px 14px", background:"#F0EEF7", color:"#7B5EA7", border:"1px solid #D4D4DC", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", marginTop:4, transition:"background .15s" },
-  calcBtn:   { padding:"10px 22px", background:"#31487A", color:"white", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s" },
-  clearBtn:  { padding:"9px 16px", background:"#F4F4F8", color:"#c0392b", border:"1px solid #f0c0c0", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s" },
+  input:     { flex:1, padding:"9px 12px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", outline:"none", transition:"border-color .15s" },
+  removeBtn: { width:28, height:28, border:"none", background:"none", color:"var(--text3)", cursor:"pointer", fontSize:14, borderRadius:6, flexShrink:0 },
+  addRowBtn: { padding:"7px 14px", background:"var(--divider)", color:"var(--accent)", border:"1px solid var(--border)", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", marginTop:4, transition:"background .15s" },
+  calcBtn:   { padding:"10px 22px", background:"var(--primary)", color:"white", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s" },
+  clearBtn:  { padding:"9px 16px", background:"var(--bg)", color:"var(--error)", border:"1px solid var(--error-border)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s" },
 };

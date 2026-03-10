@@ -36,9 +36,9 @@ export default function ForgotPassword({ onGoToLogin }) {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'DM Sans', sans-serif; }
-        .fp-btn:hover { background: #221866 !important; }
+        .fp-btn:hover { background: var(--primary2) !important; }
         .fp-btn { transition: background 0.15s; }
-        .fp-input:focus { border-color: #8FB3E2 !important; outline: none; }
+        .fp-input:focus { border-color: var(--border2) !important; outline: none; }
       `}</style>
 
       <div style={s.leftPanel}>
@@ -60,7 +60,7 @@ export default function ForgotPassword({ onGoToLogin }) {
                 </svg>
               </div>
               <h2 style={s.title}>Check your email</h2>
-              <p style={{ fontSize: 14, color: "#7a8fa8", lineHeight: 1.7, marginBottom: 28 }}>
+              <p style={{ fontSize: 14, color: "var(--text2)", lineHeight: 1.7, marginBottom: 28 }}>
                 A password reset link has been sent to <strong>{email}</strong>.<br />
                 It expires in 30 minutes.
               </p>
@@ -96,7 +96,7 @@ export default function ForgotPassword({ onGoToLogin }) {
               </button>
 
               <p style={s.backLink}>
-                <span onClick={onGoToLogin} style={{ color: "#31487A", fontWeight: 600, cursor: "pointer" }}>
+                <span onClick={onGoToLogin} style={{ color: "var(--primary)", fontWeight: 600, cursor: "pointer" }}>
                   ← Back to Login
                 </span>
               </p>
@@ -140,33 +140,33 @@ const s = {
   },
 
   rightPanel: {
-    flex: 1, background: "#F4F4F8",
+    flex: 1, background: "var(--bg)",
     display: "flex", alignItems: "center", justifyContent: "center", padding: 32,
   },
   card: {
-    background: "#ffffff", borderRadius: 20, padding: "40px 36px",
+    background: "var(--surface)", borderRadius: 20, padding: "40px 36px",
     boxShadow: "0 4px 24px rgba(30,58,110,0.1)", width: "100%", maxWidth: 400,
   },
   title: {
     fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 26,
-    color: "#31487A", marginBottom: 6,
+    color: "var(--primary)", marginBottom: 6,
   },
-  subtitle: { fontSize: 14, color: "#7a8fa8", marginBottom: 28 },
+  subtitle: { fontSize: 14, color: "var(--text2)", marginBottom: 28 },
   errorBox: {
-    background: "#fef0f0", border: "1px solid #f5c6c6", borderRadius: 10,
-    padding: "10px 14px", fontSize: 13, color: "#c0392b", marginBottom: 16,
+    background: "var(--error-bg)", border: "1px solid var(--error-border)", borderRadius: 10,
+    padding: "10px 14px", fontSize: 13, color: "var(--error)", marginBottom: 16,
   },
-  label: { display: "block", fontSize: 13, fontWeight: 600, color: "#2d3a4a", marginBottom: 6 },
+  label: { display: "block", fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 6 },
   input: {
-    width: "100%", padding: "11px 14px", border: "1px solid #D4D4DC",
+    width: "100%", padding: "11px 14px", border: "1px solid var(--border)",
     borderRadius: 10, fontSize: 14, fontFamily: "'DM Sans', sans-serif",
-    color: "#2d3a4a", background: "#F7F5FB", marginBottom: 18, display: "block",
+    color: "var(--text)", background: "var(--surface2)", marginBottom: 18, display: "block",
     transition: "border-color 0.15s",
   },
   btn: {
-    width: "100%", padding: "13px", background: "#31487A", color: "white",
+    width: "100%", padding: "13px", background: "var(--primary)", color: "white",
     border: "none", borderRadius: 10, fontSize: 15, fontWeight: 600,
     cursor: "pointer", fontFamily: "'DM Sans', sans-serif", marginTop: 4,
   },
-  backLink: { textAlign: "center", fontSize: 13, color: "#7a8fa8", marginTop: 20 },
+  backLink: { textAlign: "center", fontSize: 13, color: "var(--text2)", marginTop: 20 },
 };

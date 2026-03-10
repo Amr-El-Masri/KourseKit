@@ -1,7 +1,7 @@
 package com.koursekit.dto;
 
 public class AuthResponse {
-    private String message, token, email;
+    private String message, token, email, theme;
     private boolean success;
 
     public String getmessage() { return message; }
@@ -12,4 +12,6 @@ public class AuthResponse {
     public void setsuccess(boolean success) { this.success = success; }
     public String getemail() { return email; }
     public void setemail(String email) { this.email = email; }
+    public String gettheme() { return theme; }
+    public void settheme(String theme) { this.theme = theme; }
 }

@@ -161,13 +161,13 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
     zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center",
   };
   const box = {
-    background: "#fff", borderRadius: 16, padding: "28px 32px",
+    background: "var(--surface)", borderRadius: 16, padding: "28px 32px",
     width: "min(620px, 95vw)", maxHeight: "85vh", overflowY: "auto",
     boxShadow: "0 20px 60px rgba(49,72,122,0.18)",
     fontFamily: "'DM Sans', sans-serif",
   };
   const label = { fontSize: 12, fontWeight: 600, color: "#7B5EA7", marginBottom: 4, display: "block" };
-  const input = { width: "100%", padding: "8px 10px", border: "1px solid #D4D4DC", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none" };
+  const input = { width: "100%", padding: "8px 10px", border: "1px solid var(--border)", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none" };
   const btn = { padding: "10px 20px", borderRadius: 10, border: "none", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" };
 
   return (
@@ -175,25 +175,25 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
       <div style={box}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 20, color: "#31487A" }}>
+            <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 20, color: "var(--primary)" }}>
               Upload Syllabus
             </div>
             <div style={{ fontSize: 12, color: "#A59AC9", marginTop: 2 }}>{courseName}</div>
           </div>
-          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, color: "#B8A9C9", cursor: "pointer" }}>✕</button>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, color: "var(--text3)", cursor: "pointer" }}>✕</button>
         </div>
 
         {step === "upload" && (
           <>
-            <div style={{ border: "2px dashed #D4D4DC", borderRadius: 12, padding: "32px 20px", textAlign: "center", background: "#F7F5FB", marginBottom: 16 }}>
+            <div style={{ border: "2px dashed var(--border)", borderRadius: 12, padding: "32px 20px", textAlign: "center", background: "var(--surface2)", marginBottom: 16 }}>
               <div style={{ fontSize: 13, color: "#A59AC9", marginBottom: 12 }}>Upload your course syllabus (PDF or .txt)</div>
               <input ref={fileRef} type="file" accept=".pdf,.txt" onChange={e => { setFile(e.target.files[0] || null); setError(null); }}
                 style={{ fontSize: 13, color: "#5A3B7B" }} />
             </div>
-            {error && <div style={{ fontSize: 12, color: "#c0392b", marginBottom: 10 }}>{error}</div>}
+            {error && <div style={{ fontSize: 12, color: "var(--error)", marginBottom: 10 }}>{error}</div>}
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button onClick={onClose} style={{ ...btn, background: "#F4F4F8", color: "#A59AC9" }}>Cancel</button>
-              <button onClick={upload} disabled={loading || !file} style={{ ...btn, background: "#31487A", color: "#fff", opacity: file ? 1 : 0.5 }}>
+              <button onClick={onClose} style={{ ...btn, background: "var(--bg)", color: "#A59AC9" }}>Cancel</button>
+              <button onClick={upload} disabled={loading || !file} style={{ ...btn, background: "var(--primary)", color: "var(--surface)", opacity: file ? 1 : 0.5 }}>
                 {loading ? "Extracting…" : "Extract with AI"}
               </button>
             </div>
@@ -204,7 +204,7 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
           <>
             {/* Course Info */}
             <div style={{ marginBottom: 20 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: "#31487A", marginBottom: 12 }}>Course Info</div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: "var(--primary)", marginBottom: 12 }}>Course Info</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
                 {[["Course Code", "courseCode"], ["Credits", "credits"], ["Professor", "professor"], ["Final Exam Weight (%)", "finalExamWeight"]].map(([lbl, key]) => (
                   <div key={key}>
@@ -218,7 +218,7 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
             {/* Assessments */}
             {assessments.length > 0 && (
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: "#31487A", marginBottom: 12 }}>Assessments</div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: "var(--primary)", marginBottom: 12 }}>Assessments</div>
                 {assessments.map((a, i) => (
                   <div key={a.id} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "center" }}>
                     <input style={{ ...input, flex: 2 }} value={a.name} onChange={e => setAssessments(p => p.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} placeholder="Name" />
@@ -235,7 +235,7 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
             {deadlines.length > 0 && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "#31487A" }}>Tasks</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: "var(--primary)" }}>Tasks</div>
                   <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#A59AC9", cursor: "pointer" }}>
                     <input type="checkbox" checked={applyTasks} onChange={e => setApplyTasks(e.target.checked)} />
                     Auto-create in Task Manager
@@ -270,7 +270,7 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
             {/* Office Hours */}
             {officeHours.length > 0 && (
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: "#31487A", marginBottom: 8 }}>Office Hours</div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: "var(--primary)", marginBottom: 8 }}>Office Hours</div>
                 {officeHours.map((o, i) => (
                   <div key={i} style={{ fontSize: 12, color: "#5A3B7B", marginBottom: 4 }}>
                     {o.day} {o.time} {o.location && `— ${o.location}`}
@@ -288,8 +288,8 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
             {applyError && <div style={{ fontSize: 12, color: "#c0392b", marginBottom: 10 }}>{applyError}</div>}
 
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button onClick={() => setStep("upload")} style={{ ...btn, background: "#F4F4F8", color: "#A59AC9" }}>Back</button>
-              <button onClick={apply} disabled={applying} style={{ ...btn, background: "#31487A", color: "#fff" }}>
+              <button onClick={() => setStep("upload")} style={{ ...btn, background: "var(--bg)", color: "#A59AC9" }}>Back</button>
+              <button onClick={apply} disabled={applying} style={{ ...btn, background: "var(--primary)", color: "var(--surface)" }}>
                 {applying ? "Applying…" : "Apply"}
               </button>
             </div>
@@ -299,33 +299,33 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
         {step === "done" && (
           <div style={{ textAlign: "center", padding: "12px 0 4px" }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>✓</div>
-            <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 18, color: "#31487A", marginBottom: 16 }}>
+            <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 18, color: "var(--primary)", marginBottom: 16 }}>
               Syllabus applied!
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24, textAlign: "left" }}>
               {doneStats.tasks > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#eef7f0", borderRadius: 10, padding: "10px 14px", border: "1px solid #b7dfc5" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(success-bg)", borderRadius: 10, padding: "10px 14px", border: "1px solid #b7dfc5" }}>
                   <span style={{ fontSize: 16 }}>📋</span>
-                  <span style={{ fontSize: 13, color: "#2d7a4a", fontWeight: 600 }}>{doneStats.tasks} task{doneStats.tasks !== 1 ? "s" : ""} added to Task Manager</span>
+                  <span style={{ fontSize: 13, color: "var(--success)", fontWeight: 600 }}>{doneStats.tasks} task{doneStats.tasks !== 1 ? "s" : ""} added to Task Manager</span>
                 </div>
               )}
               {doneStats.hasCalc && (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#F0EEF7", borderRadius: 10, padding: "10px 14px", border: "1px solid #D4D4DC" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--surface3)", borderRadius: 10, padding: "10px 14px", border: "1px solid var(--border)" }}>
                   <span style={{ fontSize: 16 }}>🧮</span>
                   <span style={{ fontSize: 13, color: "#5A3B7B", fontWeight: 600 }}>Grade Calculator pre-filled — select this course in the calculator</span>
                 </div>
               )}
               {doneStats.hasOfficeHours && (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "#eef2fb", borderRadius: 10, padding: "10px 14px", border: "1px solid #c3d0ed" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--blue-light-bg)", borderRadius: 10, padding: "10px 14px", border: "1px solid var(--blue-border)" }}>
                   <span style={{ fontSize: 16 }}>🕐</span>
-                  <span style={{ fontSize: 13, color: "#31487A", fontWeight: 600 }}>Office hours saved to the course card</span>
+                  <span style={{ fontSize: 13, color: "var(--primary)", fontWeight: 600 }}>Office hours saved to the course card</span>
                 </div>
               )}
               {doneStats.tasks === 0 && !doneStats.hasCalc && !doneStats.hasOfficeHours && (
                 <div style={{ fontSize: 13, color: "#A59AC9", textAlign: "center" }}>Nothing was applied — no items were checked.</div>
               )}
             </div>
-            <button onClick={onClose} style={{ ...btn, background: "#31487A", color: "#fff" }}>Done</button>
+            <button onClick={onClose} style={{ ...btn, background: "var(--primary)", color: "var(--surface)" }}>Done</button>
           </div>
         )}
       </div>

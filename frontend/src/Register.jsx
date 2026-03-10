@@ -86,9 +86,9 @@ export default function Register({ onGoToLogin }) {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'DM Sans', sans-serif; }
-        .reg-btn:hover { background: #221866 !important; }
+        .reg-btn:hover { background: var(--primary2) !important; }
         .reg-btn { transition: background 0.15s; }
-        .reg-input:focus { border-color: #8FB3E2 !important; outline: none; }
+        .reg-input:focus { border-color: var(--border2) !important; outline: none; }
       `}</style>
 
       <div style={s.leftPanel}>
@@ -113,7 +113,7 @@ export default function Register({ onGoToLogin }) {
             <div style={{ textAlign: "center", padding: "20px 0" }}>
               <div style={{ marginBottom: 16 }}><PartyPopper size={52} color="#6C63FF" /></div>
               <h2 style={s.title}>You're all set!</h2>
-              <p style={{ fontSize: 14, color: "#7a8fa8", marginBottom: 24, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 14, color: "var(--text2)", marginBottom: 24, lineHeight: 1.6 }}>
                 Your account has been created. Check your AUB email to verify your account, then log in.
               </p>
               <button className="reg-btn" onClick={onGoToLogin} style={s.btn}>Go to Login</button>
@@ -121,7 +121,7 @@ export default function Register({ onGoToLogin }) {
           ) : semStep ? (
             <div>
               <h2 style={s.title}>One last step</h2>
-              <p style={{ fontSize: 13, color: "#7a8fa8", marginBottom: 20, lineHeight: 1.6 }}>
+              <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 20, lineHeight: 1.6 }}>
                 Tell us your current semester so we can set up your courses.
               </p>
 
@@ -130,12 +130,12 @@ export default function Register({ onGoToLogin }) {
               <label style={s.label}>Current Semester</label>
               <select value={semName} onChange={e => { setSemName(e.target.value); setSemError(""); }}
                 className="reg-input"
-                style={{ ...s.input, cursor:"pointer", color: semName ? "#2a2050" : "#A59AC9" }}>
+                style={{ ...s.input, cursor:"pointer", color: semName ? "var(--text)" : "var(--text2)" }}>
                 <option value="">Select your semester…</option>
                 {AUB_SEMESTERS.map(sem => <option key={sem} value={sem}>{sem}</option>)}
               </select>
 
-              <label style={s.label}>Your Courses <span style={{ fontWeight:400, color:"#B8A9C9" }}>(optional)</span></label>
+              <label style={s.label}>Your Courses <span style={{ fontWeight:400, color:"var(--text3)" }}>(optional)</span></label>
               <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:8 }}>
                 {semCourses.map(c => (
                   <div key={c.id} style={{ display:"flex", gap:8, alignItems:"center" }}>
@@ -145,20 +145,20 @@ export default function Register({ onGoToLogin }) {
                       style={{ ...s.input, marginBottom:0, flex:1 }} />
                     {semCourses.length > 1 && (
                       <button onClick={() => setSemCourses(p => p.filter(r => r.id !== c.id))}
-                        style={{ background:"none", border:"none", cursor:"pointer", color:"#c0392b", fontSize:20, lineHeight:1, padding:"0 4px" }}>×</button>
+                        style={{ background:"none", border:"none", cursor:"pointer", color:"var(--error)", fontSize:20, lineHeight:1, padding:"0 4px" }}>×</button>
                     )}
                   </div>
                 ))}
               </div>
               <button onClick={() => setSemCourses(p => [...p, { id:Date.now(), name:"" }])}
-                style={{ fontSize:13, color:"#7B5EA7", background:"none", border:"none", cursor:"pointer", fontWeight:600, marginBottom:20, padding:0 }}>+ Add Course</button>
+                style={{ fontSize:13, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", fontWeight:600, marginBottom:20, padding:0 }}>+ Add Course</button>
 
               <button className="reg-btn" onClick={handleSemesterSubmit} disabled={semSaving || !semName}
                 style={{ ...s.btn, opacity: semSaving || !semName ? 0.7 : 1, cursor: semSaving || !semName ? "not-allowed" : "pointer", marginBottom:10 }}>
                 {semSaving ? "Saving…" : "Get Started"}
               </button>
               <button onClick={() => setSuccess(true)}
-                style={{ width:"100%", background:"none", border:"none", color:"#A59AC9", fontSize:13, cursor:"pointer", padding:"6px 0" }}>
+                style={{ width:"100%", background:"none", border:"none", color:"var(--text2)", fontSize:13, cursor:"pointer", padding:"6px 0" }}>
                 Skip for now
               </button>
             </div>
@@ -193,7 +193,7 @@ export default function Register({ onGoToLogin }) {
                   onKeyDown={e => e.key === "Enter" && handle()}
                 />
                 <button type="button" onClick={() => setshowpass(v => !v)}
-                  style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"#A59AC9", padding:0, display:"flex", alignItems:"center" }}>
+                  style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"var(--text2)", padding:0, display:"flex", alignItems:"center" }}>
                   {showpass
                     ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                     : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -247,7 +247,7 @@ export default function Register({ onGoToLogin }) {
                 Already have an account?{" "}
                 <span
                   onClick={onGoToLogin}
-                  style={{ color: "#31487A", fontWeight: 600, cursor: "pointer" }}
+                  style={{ color: "var(--primary)", fontWeight: 600, cursor: "pointer" }}
                 >
                   Sign in
                 </span>
@@ -299,40 +299,40 @@ const s = {
   },
 
   rightPanel: {
-    flex: 1, background: "#F4F4F8",
+    flex: 1, background: "var(--bg)",
     display: "flex", alignItems: "center", justifyContent: "center", padding: 32,
   },
   card: {
-    background: "#ffffff", borderRadius: 20, padding: "40px 36px",
+    background: "var(--surface)", borderRadius: 20, padding: "40px 36px",
     boxShadow: "0 4px 24px rgba(49,72,122,0.1)", width: "100%", maxWidth: 420,
   },
   title: {
     fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 26,
-    color: "#31487A", marginBottom: 6,
+    color: "var(--primary)", marginBottom: 6,
   },
-  subtitle: { fontSize: 14, color: "#7a8fa8", marginBottom: 24 },
+  subtitle: { fontSize: 14, color: "var(--text2)", marginBottom: 24 },
   errorBox: {
-    background: "#fef0f0", border: "1px solid #f5c6c6", borderRadius: 10,
-    padding: "10px 14px", fontSize: 13, color: "#c0392b", marginBottom: 16,
+    background: "var(--error-bg)", border: "1px solid var(--error-border)", borderRadius: 10,
+    padding: "10px 14px", fontSize: 13, color: "var(--error)", marginBottom: 16,
   },
-  label: { display: "block", fontSize: 13, fontWeight: 600, color: "#2a2050", marginBottom: 6 },
+  label: { display: "block", fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 6 },
   input: {
-    width: "100%", padding: "11px 14px", border: "1px solid #D4D4DC",
+    width: "100%", padding: "11px 14px", border: "1px solid var(--border)",
     borderRadius: 10, fontSize: 14, fontFamily: "'DM Sans', sans-serif",
-    color: "#2a2050", background: "#F7F5FB", marginBottom: 16, display: "block",
+    color: "var(--text)", background: "var(--surface2)", marginBottom: 16, display: "block",
     transition: "border-color 0.15s",
   },
   reqBox: {
-    background: "#f7f5fb", border: "1px solid #e2ddf0", borderRadius: 10,
+    background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 10,
     padding: "10px 14px", marginBottom: 16, marginTop: -8,
   },
   reqRow: {
     fontSize: 12, fontWeight: 500, padding: "2px 0", display: "flex", alignItems: "center",
   },
   btn: {
-    width: "100%", padding: "13px", background: "#31487A", color: "white",
+    width: "100%", padding: "13px", background: "var(--primary)", color: "white",
     border: "none", borderRadius: 10, fontSize: 15, fontWeight: 600,
     cursor: "pointer", fontFamily: "'DM Sans', sans-serif", marginTop: 4,
   },
-  loginLink: { textAlign: "center", fontSize: 13, color: "#7a8fa8", marginTop: 20 },
+  loginLink: { textAlign: "center", fontSize: 13, color: "var(--text2)", marginTop: 20 },
 };

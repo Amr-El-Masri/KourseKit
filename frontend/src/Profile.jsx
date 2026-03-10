@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle } from "lucide-react";
 import AdminDashboard from "./AdminDashboard";
+import ThemeToggle from "./ThemeToggle";
+import { useTheme } from "./ThemeContext";
 
 function getTokenRole() {
   try {
@@ -130,11 +132,11 @@ async function profileFetch(path, options = {}) {
 
 const gpaColor = g => {
   const v = parseFloat(g);
-  if (isNaN(v)) return "#B8A9C9";
+  if (isNaN(v)) return "var(--text3)";
   if (v >= 3.7) return "#2d7a4a";
-  if (v >= 3.0) return "#31487A";
+  if (v >= 3.0) return "var(--primary)";
   if (v >= 2.0) return "#b7680a";
-  return "#c0392b";
+  return "var(--error)";
 };
 
 const statusObj = id => STUDENT_STATUSES.find(s => s.id === id) || STUDENT_STATUSES[0];
@@ -180,17 +182,17 @@ function CourseSearchInput({ value = "", onSelect }) {
   return (
     <div style={{ position:"relative" }}>
       <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search course (e.g. CMPS 200)"
-        style={{ width:"100%", padding:"10px 14px", border:"1px solid #D4D4DC", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"#2a2050", background:"#F7F5FB", outline:"none" }} />
+        style={{ width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", outline:"none" }} />
       {showDrop && dropPos && (
-        <div style={{ position:"fixed", top:dropPos.top, left:dropPos.left, width:dropPos.width, background:"#fff", border:"1px solid #D4D4DC", borderRadius:10, boxShadow:"0 4px 16px rgba(49,72,122,0.1)", zIndex:9999, maxHeight:180, overflowY:"auto" }}>
-          {loading && <div style={{ padding:"10px 14px", fontSize:12, color:"#A59AC9" }}>Searching…</div>}
+        <div style={{ position:"fixed", top:dropPos.top, left:dropPos.left, width:dropPos.width, background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10, boxShadow:"0 4px 16px rgba(49,72,122,0.1)", zIndex:9999, maxHeight:180, overflowY:"auto" }}>
+          {loading && <div style={{ padding:"10px 14px", fontSize:12, color:"var(--text2)" }}>Searching…</div>}
           {results.map(c => (
             <div key={c.id} onClick={() => { onSelect(c.courseCode); setQuery(c.courseCode); setResults([]); }}
-              style={{ padding:"9px 14px", fontSize:13, color:"#2a2050", cursor:"pointer", borderBottom:"1px solid #F4F4F8" }}
-              onMouseEnter={e => e.currentTarget.style.background="#F0EEF7"}
+              style={{ padding:"9px 14px", fontSize:13, color:"var(--text)", cursor:"pointer", borderBottom:"1px solid #F4F4F8" }}
+              onMouseEnter={e => e.currentTarget.style.background="var(--surface3)"}
               onMouseLeave={e => e.currentTarget.style.background="transparent"}>
               <span style={{ fontWeight:600 }}>{c.courseCode}</span>
-              {c.title && <span style={{ color:"#A59AC9", marginLeft:8 }}>{c.title}</span>}
+              {c.title && <span style={{ color:"var(--text2)", marginLeft:8 }}>{c.title}</span>}
             </div>
           ))}
         </div>
@@ -203,6 +205,7 @@ export default function Profile({ onProfileSave, onLogout }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const isAdmin = getTokenRole() === "ADMIN";
   const [section, setSection] = useState("profile");
+  const { theme, toggleTheme, isDark } = useTheme();
   const [syllabi, setSyllabi] = useState(() => { try { return JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"); } catch { return {}; } });
   const [confirmingRemove, setConfirmingRemove] = useState(null); // course name
   const [profile,    setProfile]    = useState({ ...DEFAULT_PROFILE, email });
@@ -392,17 +395,17 @@ const refetchSemesters = () =>
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; }
         .pf-input:focus { border-color:#8FB3E2 !important; outline:none; }
-        .pf-status:hover { border-color:#7B5EA7 !important; }
+        .pf-status:hover { border-color:var(--accent) !important; }
       `}</style>
 
       {isAdmin && (
-        <div style={{ display:"flex", gap:4, background:"#F4F4F8", padding:4, borderRadius:10, marginBottom:24, width:"fit-content" }}>
+        <div style={{ display:"flex", gap:4, background:"var(--bg)", padding:4, borderRadius:10, marginBottom:24, width:"fit-content" }}>
           {[{ id:"profile", label:"My Profile" }, { id:"admin", label:"Admin" }].map(t => (
             <button key={t.id} onClick={() => setSection(t.id)} style={{
               padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer",
               fontFamily:"'DM Sans',sans-serif",
-              background: section === t.id ? "#31487A" : "transparent",
-              color:      section === t.id ? "#fff"    : "#A59AC9",
+              background: section === t.id ? "var(--primary)" : "transparent",
+              color:      section === t.id ? "#fff"    : "var(--text2)",
             }}>{t.label}</button>
           ))}
         </div>
@@ -414,11 +417,11 @@ const refetchSemesters = () =>
 
       {section === "profile" && <>
       <div style={{ marginBottom:28 }}>
-        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"#31487A", marginBottom:4 }}>My Profile</div>
-        <div style={{ fontSize:13, color:"#A59AC9" }}>Your info shows up on the dashboard greeting and affects how KourseKit personalizes your experience.</div>
+        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:4 }}>My Profile</div>
+        <div style={{ fontSize:13, color:"var(--text2)" }}>Your info shows up on the dashboard greeting and affects how KourseKit personalizes your experience.</div>
       </div>
 
-      <div style={{ background:"#ffffff", borderRadius:20, border:"1px solid #D4D4DC", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", overflow:"hidden", marginBottom:20 }}>
+      <div style={{ background:"var(--surface)", borderRadius:20, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", overflow:"hidden", marginBottom:20 }}>
         <div style={{ padding:"24px 28px 24px" }}>
 
           <div style={{ display:"flex", alignItems:"flex-end", gap:16, marginBottom:20 }}>
@@ -438,13 +441,13 @@ const refetchSemesters = () =>
               {profilepic && (
                 <div style={{
                   position:"absolute", top:80, left:0, zIndex:100,
-                  background:"#ffffff", borderRadius:14, border:"1px solid #D4D4DC",
+                  background:"var(--surface)", borderRadius:14, border:"1px solid var(--border)",
                   boxShadow:"0 8px 32px rgba(49,72,122,0.15)", padding:10,
                   display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:8, width:196,
                 }}>
                   <div onClick={() => selectAvatar(null)} title="Default (initials)" style={{
                     width:36, height:36, borderRadius:10, cursor:"pointer",
-                    background: !profile.avatar ? "#7B5EA7" : "linear-gradient(135deg,#8FB3E2,#A59AC9)",
+                    background: !profile.avatar ? "var(--accent)" : "linear-gradient(135deg,#8FB3E2,#A59AC9)",
                     border: !profile.avatar ? "2px solid #31487A" : "2px solid transparent",
                     display:"flex", alignItems:"center", justifyContent:"center",
                     color:"white", fontWeight:700, fontSize:13, fontFamily:"'Fraunces',serif",
@@ -452,7 +455,7 @@ const refetchSemesters = () =>
                   {AVATAR_ICONS.map(({ id, icon: Icon }) => (
                     <div key={id} onClick={() => selectAvatar(id)} title={id} style={{
                       width:36, height:36, borderRadius:10, cursor:"pointer",
-                      background: profile.avatar === id ? "#7B5EA7" : "linear-gradient(135deg,#8FB3E2,#A59AC9)",
+                      background: profile.avatar === id ? "var(--accent)" : "linear-gradient(135deg,#8FB3E2,#A59AC9)",
                       border: profile.avatar === id ? "2px solid #31487A" : "2px solid transparent",
                       display:"flex", alignItems:"center", justifyContent:"center",
                       transition:"all .15s",
@@ -464,8 +467,8 @@ const refetchSemesters = () =>
               )}
             </div>
             <div style={{ paddingBottom:4 }}>
-              <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:22, color:"#31487A" }}>{displayName}</div>
-              <div style={{ fontSize:12, color:"#A59AC9" }}>{profile.email}</div>
+              <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:22, color:"var(--primary)" }}>{displayName}</div>
+              <div style={{ fontSize:12, color:"var(--text2)" }}>{profile.email}</div>
             </div>
             <div style={{ marginLeft:"auto", display:"flex", gap:10, paddingBottom:4 }}>
               {saved && (
@@ -484,13 +487,13 @@ const refetchSemesters = () =>
           </div>
 
           <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom: editing ? 24 : 0 }}>
-            <StatChip label="Status"         value={`${st.label} · ${st.desc}`} color="#7B5EA7" bg="#F0EEF7" />
-            <StatChip label="Major" value={profile.major || "—"} color="#31487A" bg="#eef2fb" />
-            {!!profile.minor && <StatChip label="Minor" value={profile.minorName} color="#2d7a4a" bg="#eef7f0" />}
-            {!!profile.doubleMajor && profile.secondMajor && <StatChip label="Second Major" value={profile.secondMajor} color="#5A3B7B" bg="#F0EEF7" />}
-            {!!profile.doubleMinor && profile.secondMinor && <StatChip label="Second Minor" value={profile.secondMinor} color="#1a7a6a" bg="#edfaf6" />}
-            <StatChip label="Cumulative GPA" value={profile.cumGPA || "—"} color={gpaColor(profile.cumGPA)} bg="#F4F4F8" />
-            {profile.totalCredits && <StatChip label="Credits" value={`${profile.totalCredits} cr`} color="#5A3B7B" bg="#F0EEF7" />}
+            <StatChip label="Status"         value={`${st.label} · ${st.desc}`} color="var(--accent)" bg="var(--surface3)" />
+            <StatChip label="Major" value={profile.major || "—"} color="var(--primary)" bg="var(--blue-light-bg)" />
+            {profile.minor && <StatChip label="Minor" value={profile.minor} color="var(--success)" bg="var(--success-bg)" />}
+            {profile.doubleMajor && profile.secondMajor && <StatChip label="Second Major" value={profile.secondMajor} color="var(--accent2)" bg="var(--surface3)" />}
+            {profile.secondMinor && <StatChip label="Second Minor" value={profile.secondMinor} color="var(--success)" bg="var(--success-bg)" />}
+            <StatChip label="Cumulative GPA" value={profile.cumGPA || "—"} color={gpaColor(profile.cumGPA)} bg="var(--bg)" />
+            {profile.totalCredits && <StatChip label="Credits" value={`${profile.totalCredits} cr`} color="var(--accent2)" bg="var(--surface3)" />}
           </div>
 
           {editing && (
@@ -534,10 +537,10 @@ const refetchSemesters = () =>
                     <button key={String(opt.val)} onClick={() => { set("minor", opt.val); set("minorFaculty", opt.val ? (draft.minorFaculty || "Arts & Sciences") : ""); set("minorName", ""); }} style={{
                       padding:"7px 18px", borderRadius:10, border:"1px solid", cursor:"pointer",
                       fontFamily:"'DM Sans',sans-serif", fontSize:13, transition:"all .15s",
-                      borderColor: !!draft.minor === opt.val ? "#7B5EA7" : "#D4D4DC",
-                      background:  !!draft.minor === opt.val ? "#7B5EA7" : "#F7F5FB",
-                      color:       !!draft.minor === opt.val ? "#fff"    : "#5A3B7B",
-                      fontWeight:  !!draft.minor === opt.val ? 600 : 400,
+                      borderColor: !!draft.minorFaculty === opt.val ? "var(--accent)" : "var(--border)",
+                      background:  !!draft.minorFaculty === opt.val ? "var(--accent)" : "var(--surface2)",
+                      color:       !!draft.minorFaculty === opt.val ? "#fff"    : "var(--accent2)",
+                      fontWeight:  !!draft.minorFaculty === opt.val ? 600 : 400,
                     }}>{opt.label}</button>
                   ))}
                 </div>
@@ -571,10 +574,10 @@ const refetchSemesters = () =>
                     <button key={String(opt.val)} onClick={() => { set("doubleMajor", opt.val); if (!opt.val) { set("secondMajor", ""); set("secondFaculty", "Arts & Sciences"); } else { set("secondFaculty", draft.secondFaculty || "Arts & Sciences"); } }} style={{
                       padding:"7px 18px", borderRadius:10, border:"1px solid", cursor:"pointer",
                       fontFamily:"'DM Sans',sans-serif", fontSize:13, transition:"all .15s",
-                      borderColor: !!draft.doubleMajor === opt.val ? "#7B5EA7" : "#D4D4DC",
-                      background:  !!draft.doubleMajor === opt.val ? "#7B5EA7" : "#F7F5FB",
-                      color:       !!draft.doubleMajor === opt.val ? "#fff"    : "#5A3B7B",
-                      fontWeight:  !!draft.doubleMajor === opt.val ? 600 : 400,
+                      borderColor: draft.doubleMajor === opt.val ? "var(--accent)" : "var(--border)",
+                      background:  draft.doubleMajor === opt.val ? "var(--accent)" : "var(--surface2)",
+                      color:       draft.doubleMajor === opt.val ? "#fff"    : "var(--accent2)",
+                      fontWeight:  draft.doubleMajor === opt.val ? 600 : 400,
                     }}>{opt.label}</button>
                   ))}
                 </div>
@@ -608,10 +611,10 @@ const refetchSemesters = () =>
                     <button key={String(opt.val)} onClick={() => { set("doubleMinor", opt.val); set("secondMinorFaculty", opt.val ? (draft.secondMinorFaculty || "Arts & Sciences") : ""); set("secondMinor", ""); }} style={{
                       padding:"7px 18px", borderRadius:10, border:"1px solid", cursor:"pointer",
                       fontFamily:"'DM Sans',sans-serif", fontSize:13, transition:"all .15s",
-                      borderColor: !!draft.doubleMinor === opt.val ? "#7B5EA7" : "#D4D4DC",
-                      background:  !!draft.doubleMinor === opt.val ? "#7B5EA7" : "#F7F5FB",
-                      color:       !!draft.doubleMinor === opt.val ? "#fff"    : "#5A3B7B",
-                      fontWeight:  !!draft.doubleMinor === opt.val ? 600 : 400,
+                      borderColor: !!draft.secondMinorFaculty === opt.val ? "var(--accent)" : "var(--border)",
+                      background:  !!draft.secondMinorFaculty === opt.val ? "var(--accent)" : "var(--surface2)",
+                      color:       !!draft.secondMinorFaculty === opt.val ? "#fff"    : "var(--accent2)",
+                      fontWeight:  !!draft.secondMinorFaculty === opt.val ? 600 : 400,
                     }}>{opt.label}</button>
                   ))}
                 </div>
@@ -644,9 +647,9 @@ const refetchSemesters = () =>
                   <button key={s.id} className="pf-status" onClick={() => set("status", s.id)} style={{
                     padding:"8px 14px", borderRadius:10, border:"1px solid",
                     cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
-                    borderColor: draft.status === s.id ? "#7B5EA7" : "#D4D4DC",
-                    background:  draft.status === s.id ? "#7B5EA7" : "#F7F5FB",
-                    color:       draft.status === s.id ? "#ffffff" : "#5A3B7B",
+                    borderColor: draft.status === s.id ? "var(--accent)" : "var(--border)",
+                    background:  draft.status === s.id ? "var(--accent)" : "var(--surface2)",
+                    color:       draft.status === s.id ? "#ffffff" : "var(--accent2)",
                     fontWeight:  draft.status === s.id ? 600 : 400,
                   }}>
                     <div style={{ fontSize:13 }}>{s.label}</div>
@@ -657,55 +660,74 @@ const refetchSemesters = () =>
 
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                 <div style={{ flex:1, minWidth:140 }}>
-                  <label style={pf.label}>Cumulative GPA <span style={{ color:"#B8A9C9", fontWeight:400 }}>(optional)</span></label>
+                  <label style={pf.label}>Cumulative GPA <span style={{ color:"var(--text3)", fontWeight:400 }}>(optional)</span></label>
                   <input className="pf-input" value={draft.cumGPA} onChange={e => set("cumGPA", e.target.value)}
                     placeholder="e.g. 3.45" type="number" step="0.01" min="0" max="4"
                     style={pf.input} />
                 </div>
                 <div style={{ flex:1, minWidth:140 }}>
-                  <label style={pf.label}>Total Credits <span style={{ color:"#B8A9C9", fontWeight:400 }}>(optional)</span></label>
+                  <label style={pf.label}>Total Credits <span style={{ color:"var(--text3)", fontWeight:400 }}>(optional)</span></label>
                   <input className="pf-input" value={draft.totalCredits} onChange={e => set("totalCredits", e.target.value)}
                     placeholder="e.g. 60" type="number"
                     style={pf.input} />
                 </div>
               </div>
 
-              <label style={pf.label}>Bio <span style={{ color:"#B8A9C9", fontWeight:400 }}>(optional)</span></label>
+              <label style={pf.label}>Bio <span style={{ color:"var(--text3)", fontWeight:400 }}>(optional)</span></label>
               <textarea className="pf-input" value={draft.bio} onChange={e => set("bio", e.target.value)}
                 placeholder="A short description about yourself..."
                 rows={3}
                 style={{ ...pf.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
               />
 
-              <div style={{ fontSize:11, color:"#B8A9C9", marginTop:-8, marginBottom:16 }}>
+              <div style={{ fontSize:11, color:"var(--text3)", marginTop:-8, marginBottom:16 }}>
                 GPA and credits here are self-reported — once backend is connected, this will sync with your actual academic record.
               </div>
             </div>
           )}
 
           {!editing && profile.bio && (
-            <div style={{ marginTop:16, fontSize:13, color:"#5A3B7B", lineHeight:1.7, borderTop:"1px solid #F4F4F8", paddingTop:16 }}>
+            <div style={{ marginTop:16, fontSize:13, color:"var(--accent2)", lineHeight:1.7, borderTop:"1px solid #F4F4F8", paddingTop:16 }}>
               {profile.bio}
             </div>
           )}
         </div>
       </div>
 
-      <div style={{ background:"#ffffff", borderRadius:16, border:"1px solid #D4D4DC", padding:"20px 24px" }}>
-        <div style={{ fontSize:12, fontWeight:700, color:"#A59AC9", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>Account</div>
+      <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", padding:"20px 24px" }}>
+        <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>Account</div>
 
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:13 }}>
-          <span style={{ color:"#5A3B7B" }}>AUB Email</span>
-          <span style={{ fontWeight:600, color:"#31487A" }}>{profile.email}</span>
+        <div style={{ 
+          display:"flex", 
+          justifyContent:"space-between", 
+          alignItems:"center", 
+          padding:"8px 0",
+          borderBottom:"1px solid #F4F4F8",
+          marginBottom:12
+          }}>
+            <div>
+              <div style={{ fontSize:13, fontWeight:500, color:"var(--accent2)" }}>
+                {theme === "light" ? "Light Mode" : "Dark Mode"}
+              </div>
+              <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>
+                Switch to {theme === "light" ? "dark" : "light"} mode
+              </div>
+            </div>
+          <ThemeToggle showLabel={false} />
         </div>
 
-        <div style={{ height:1, background:"#F4F4F8", margin:"12px 0" }} />
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:13 }}>
+          <span style={{ color:"var(--accent2)" }}>AUB Email</span>
+          <span style={{ fontWeight:600, color:"var(--primary)" }}>{profile.email}</span>
+        </div>
 
+        <div style={{ height:1, background:"var(--bg)", margin:"12px 0" }} />
+        
         <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", fontSize:13, gap:8 }}>
           {passsuccess && <span style={{ fontSize:12, color:"#2d7a4a", fontWeight:600 }}>✓ Updated</span>}
           <button
             onClick={() => { setchanging(!changing); setpasserror(""); }}
-            style={{ background:"none", border:"none", color:"#7B5EA7", fontSize:13, fontWeight:600, cursor:"pointer", padding:0 }}
+            style={{ background:"none", border:"none", color:"var(--accent)", fontSize:13, fontWeight:600, cursor:"pointer", padding:0 }}
           >
             {changing ? "Cancel" : "Change Password"}
           </button>
@@ -714,7 +736,7 @@ const refetchSemesters = () =>
         {changing && (
           <div style={{ marginTop:14, borderTop:"1px solid #F4F4F8", paddingTop:14 }}>
             {passerror && (
-              <div style={{ background:"#fef0f0", border:"1px solid #f5c6c6", borderRadius:8, padding:"8px 12px", fontSize:12, color:"#c0392b", marginBottom:12 }}>
+              <div style={{ background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:8, padding:"8px 12px", fontSize:12, color:"var(--error)", marginBottom:12 }}>
                 {passerror}
               </div>
             )}
@@ -729,7 +751,7 @@ const refetchSemesters = () =>
                 style={{ ...pf.input, marginBottom:0, paddingRight:40 }}
               />
               <button type="button" onClick={() => setshowCurrent(v => !v)}
-                style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"#A59AC9", padding:0, display:"flex", alignItems:"center" }}>
+                style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"var(--text2)", padding:0, display:"flex", alignItems:"center" }}>
                 {showCurrent
                   ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                   : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -748,7 +770,7 @@ const refetchSemesters = () =>
                 style={{ ...pf.input, marginBottom:0, paddingRight:40 }}
               />
               <button type="button" onClick={() => setshowNew(v => !v)}
-                style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"#A59AC9", padding:0, display:"flex", alignItems:"center" }}>
+                style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"var(--text2)", padding:0, display:"flex", alignItems:"center" }}>
                 {showNew
                   ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                   : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -761,7 +783,7 @@ const refetchSemesters = () =>
                 {passrequirements.map(r => {
                   const met = r.test(newpass);
                   return (
-                    <div key={r.label} style={{ fontSize:11, fontWeight:500, color: met ? "#2e7d32" : "#A59AC9", padding:"2px 0", display:"flex", alignItems:"center", gap:6 }}>
+                    <div key={r.label} style={{ fontSize:11, fontWeight:500, color: met ? "#2e7d32" : "var(--text2)", padding:"2px 0", display:"flex", alignItems:"center", gap:6 }}>
                       <span>{met ? "✓" : "○"}</span>{r.label}
                     </div>
                   );
@@ -776,7 +798,7 @@ const refetchSemesters = () =>
               onChange={e => { setconfirm(e.target.value); setpasserror(""); }}
               onKeyDown={e => e.key === "Enter" && handlechangepassword()}
               placeholder="Re-enter your new password"
-              style={{ ...pf.input, borderColor: confirmwrong ? "#e74c3c" : confirmmatch ? "#2e7d32" : "#D4D4DC" }}
+              style={{ ...pf.input, borderColor: confirmwrong ? "#e74c3c" : confirmmatch ? "#2e7d32" : "var(--border)" }}
             />
             {confirmwrong && <p style={{ fontSize:11, color:"#e74c3c", marginTop:-10, marginBottom:12 }}>Passwords don't match</p>}
             {confirmmatch && <p style={{ fontSize:11, color:"#2e7d32", marginTop:-10, marginBottom:12 }}>Passwords match ✓</p>}
@@ -789,11 +811,11 @@ const refetchSemesters = () =>
         )}
       </div>
       {/* My Semesters */}
-      <div style={{ background:"#ffffff", borderRadius:16, border:"1px solid #D4D4DC", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px", marginTop:20 }}>
+      <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px", marginTop:20 }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
-          <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"#31487A" }}>My Semesters</div>
+          <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)" }}>My Semesters</div>
           {!creating && (
-            <button onClick={() => { setCreating(true); setEditingId(null); }} style={{ background:"#31487A", color:"white", border:"none", borderRadius:10, padding:"8px 16px", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+            <button onClick={() => { setCreating(true); setEditingId(null); }} style={{ background:"var(--primary)", color:"white", border:"none", borderRadius:10, padding:"8px 16px", fontSize:13, fontWeight:600, cursor:"pointer" }}>
               + New Semester
             </button>
           )}
@@ -801,7 +823,7 @@ const refetchSemesters = () =>
 
         {/* Create form */}
         {creating && (
-          <div style={{ background:"#F7F5FB", border:"1px solid #D4D4DC", borderRadius:12, padding:"16px 18px", marginBottom:16 }}>
+          <div style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:12, padding:"16px 18px", marginBottom:16 }}>
             <select
               value={newSemName} onChange={e => setNewSemName(e.target.value)}
               style={{ ...pf.input, marginBottom:12, cursor:"pointer" }}
@@ -810,9 +832,9 @@ const refetchSemesters = () =>
               {AUB_SEMESTERS.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
-              <span style={{ fontSize:11, fontWeight:700, color:"#A59AC9", textTransform:"uppercase" }}>Course Name</span>
-              <span style={{ fontSize:11, fontWeight:700, color:"#A59AC9", textTransform:"uppercase" }}>Credits</span>
-              <span style={{ fontSize:11, fontWeight:700, color:"#A59AC9", textTransform:"uppercase" }}>Grade</span>
+              <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Course Name</span>
+              <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Credits</span>
+              <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Grade</span>
               <span />
             </div>
             {newSemCourses.map(c => (
@@ -822,10 +844,10 @@ const refetchSemesters = () =>
                 <select value={c.grade} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
                   {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}
                 </select>
-                <button onClick={() => setNewSemCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"#B8A9C9", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
+                <button onClick={() => setNewSemCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
               </div>
             ))}
-            <button onClick={() => setNewSemCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"" }])} style={{ fontSize:12, color:"#7B5EA7", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
+            <button onClick={() => setNewSemCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"" }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
             <div style={{ display:"flex", gap:8, marginTop:12 }}>
               <button onClick={createSemester} disabled={semSaveLoad || !newSemName.trim()} style={{ ...pf.saveBtn, fontSize:13, opacity: semSaveLoad || !newSemName.trim() ? 0.6 : 1 }}>{semSaveLoad ? "Saving…" : "Save Semester"}</button>
               <button onClick={() => { setCreating(false); setNewSemName(""); setNewSemCourses([{ id:1, code:"", credits:"", grade:"" }]); }} style={{ ...pf.cancelBtn }}>Cancel</button>
@@ -835,27 +857,27 @@ const refetchSemesters = () =>
 
         {/* Semester list */}
         {semesters.length === 0 && !creating && (
-          <div style={{ textAlign:"center", padding:"24px 0", color:"#B8A9C9", fontSize:13 }}>No semesters yet. Create one above.</div>
+          <div style={{ textAlign:"center", padding:"24px 0", color:"var(--text3)", fontSize:13 }}>No semesters yet. Create one above.</div>
         )}
         {semesters.map(sem => (
-          <div key={sem.id} style={{ border:"1px solid #D4D4DC", borderRadius:12, marginBottom:10 }}>
+          <div key={sem.id} style={{ border:"1px solid var(--border)", borderRadius:12, marginBottom:10 }}>
             {/* Card header */}
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", background:"#F7F5FB", borderRadius:"12px 12px 0 0" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", background:"var(--surface2)", borderRadius:"12px 12px 0 0" }}>
               <div>
-                <span style={{ fontWeight:700, fontSize:14, color:"#31487A" }}>{sem.semesterName}</span>
-                <span style={{ fontSize:11, color:"#B8A9C9", marginLeft:10 }}>{(sem.courses||[]).length} course{(sem.courses||[]).length !== 1 ? "s" : ""} · {fmtDateShort(sem.createdAt)}</span>
+                <span style={{ fontWeight:700, fontSize:14, color:"var(--primary)" }}>{sem.semesterName}</span>
+                <span style={{ fontSize:11, color:"var(--text3)", marginLeft:10 }}>{(sem.courses||[]).length} course{(sem.courses||[]).length !== 1 ? "s" : ""} · {fmtDateShort(sem.createdAt)}</span>
               </div>
               <div style={{ display:"flex", gap:6 }}>
-                <button onClick={() => editingId === sem.id ? setEditingId(null) : startEdit(sem)} style={{ fontSize:12, fontWeight:600, padding:"5px 12px", border:"1px solid #D4D4DC", borderRadius:8, background:"white", color:"#31487A", cursor:"pointer" }}>
+                <button onClick={() => editingId === sem.id ? setEditingId(null) : startEdit(sem)} style={{ fontSize:12, fontWeight:600, padding:"5px 12px", border:"1px solid var(--border)", borderRadius:8, background:"var(--surface)", color:"var(--primary)", cursor:"pointer" }}>
                   {editingId === sem.id ? "Close" : "Edit"}
                 </button>
                 {deleteConfirmId === sem.id ? (
                   <>
-                    <button onClick={() => deleteSemester(sem.id)} style={{ fontSize:12, fontWeight:600, padding:"5px 12px", border:"none", borderRadius:8, background:"#c0392b", color:"white", cursor:"pointer" }}>Confirm</button>
-                    <button onClick={() => setDeleteConfirmId(null)} style={{ fontSize:12, padding:"5px 10px", border:"1px solid #D4D4DC", borderRadius:8, background:"white", color:"#A59AC9", cursor:"pointer" }}>Cancel</button>
+                    <button onClick={() => deleteSemester(sem.id)} style={{ fontSize:12, fontWeight:600, padding:"5px 12px", border:"none", borderRadius:8, background:"var(--error)", color:"white", cursor:"pointer" }}>Confirm</button>
+                    <button onClick={() => setDeleteConfirmId(null)} style={{ fontSize:12, padding:"5px 10px", border:"1px solid var(--border)", borderRadius:8, background:"var(--surface)", color:"var(--text2)", cursor:"pointer" }}>Cancel</button>
                   </>
                 ) : (
-                  <button onClick={() => setDeleteConfirmId(sem.id)} style={{ fontSize:12, padding:"5px 10px", border:"1px solid #f5c6c6", borderRadius:8, background:"white", color:"#c0392b", cursor:"pointer" }}>Delete</button>
+                  <button onClick={() => setDeleteConfirmId(sem.id)} style={{ fontSize:12, padding:"5px 10px", border:"1px solid var(--error-border)", borderRadius:8, background:"var(--surface)", color:"var(--error)", cursor:"pointer" }}>Delete</button>
                 )}
               </div>
             </div>
@@ -864,10 +886,10 @@ const refetchSemesters = () =>
             {editingId !== sem.id && (sem.courses||[]).length > 0 && (
               <div style={{ padding:"10px 16px", display:"flex", flexDirection:"column", gap:4 }}>
                 {(sem.courses||[]).map((c,i) => (
-                  <div key={i} style={{ display:"flex", gap:12, fontSize:13, color:"#4a3a6a" }}>
+                  <div key={i} style={{ display:"flex", gap:12, fontSize:13, color:"var(--text-body)" }}>
                     <span style={{ fontWeight:600, minWidth:100 }}>{c.courseCode}</span>
-                    <span style={{ color:"#A59AC9" }}>{c.credits} cr</span>
-                    <span style={{ color:"#7B5EA7", fontWeight:600 }}>{c.grade}</span>
+                    <span style={{ color:"var(--text2)" }}>{c.credits} cr</span>
+                    <span style={{ color:"var(--accent)", fontWeight:600 }}>{c.grade}</span>
                   </div>
                 ))}
               </div>
@@ -881,9 +903,9 @@ const refetchSemesters = () =>
                   {AUB_SEMESTERS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
-                  <span style={{ fontSize:11, fontWeight:700, color:"#A59AC9", textTransform:"uppercase" }}>Course Name</span>
-                  <span style={{ fontSize:11, fontWeight:700, color:"#A59AC9", textTransform:"uppercase" }}>Credits</span>
-                  <span style={{ fontSize:11, fontWeight:700, color:"#A59AC9", textTransform:"uppercase" }}>Grade</span>
+                  <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Course Name</span>
+                  <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Credits</span>
+                  <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Grade</span>
                   <span />
                 </div>
                 {editCourses.map(c => (
@@ -893,10 +915,10 @@ const refetchSemesters = () =>
                     <select value={c.grade} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
                       {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}
                     </select>
-                    <button onClick={() => setEditCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"#B8A9C9", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
+                    <button onClick={() => setEditCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
                   </div>
                 ))}
-                <button onClick={() => setEditCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"" }])} style={{ fontSize:12, color:"#7B5EA7", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
+                <button onClick={() => setEditCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"" }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
                 <div style={{ display:"flex", gap:8, marginTop:12 }}>
                   <button onClick={saveEdit} disabled={semSaveLoad} style={{ ...pf.saveBtn, fontSize:13, opacity: semSaveLoad ? 0.6 : 1 }}>{semSaveLoad ? "Saving…" : "Save Changes"}</button>
                   <button onClick={() => setEditingId(null)} style={{ ...pf.cancelBtn }}>Cancel</button>
@@ -909,21 +931,21 @@ const refetchSemesters = () =>
 
       {/* Course Syllabi */}
       {Object.keys(syllabi).length > 0 && (
-        <div style={{ background:"#ffffff", borderRadius:16, border:"1px solid #D4D4DC", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px", marginTop:20 }}>
-          <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"#31487A", marginBottom:4 }}>Uploaded Syllabi</div>
-          <div style={{ fontSize:13, color:"#A59AC9", marginBottom:16 }}>Remove a syllabus to re-upload or clear its extracted data.</div>
+        <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px", marginTop:20 }}>
+          <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)", marginBottom:4 }}>Uploaded Syllabi</div>
+          <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16 }}>Remove a syllabus to re-upload or clear its extracted data.</div>
           <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
             {Object.keys(syllabi).map(course => (
-              <div key={course} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"#F7F5FB", borderRadius:10, padding:"10px 14px", border:"1px solid #E8E4F0" }}>
+              <div key={course} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface2)", borderRadius:10, padding:"10px 14px", border:"1px solid #E8E4F0" }}>
                 <div>
-                  <div style={{ fontSize:14, fontWeight:600, color:"#31487A" }}>{course}</div>
-                  <div style={{ fontSize:12, color:"#A59AC9", marginTop:2 }}>
+                  <div style={{ fontSize:14, fontWeight:600, color:"var(--primary)" }}>{course}</div>
+                  <div style={{ fontSize:12, color:"var(--text2)", marginTop:2 }}>
                     {syllabi[course]?.assessments?.length ? `${syllabi[course].assessments.length} assessment${syllabi[course].assessments.length !== 1 ? "s" : ""}` : "No assessments"}
                   </div>
                 </div>
                 {confirmingRemove === course ? (
                   <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                    <span style={{ fontSize:12, color:"#c0392b", fontWeight:600 }}>Remove?</span>
+                    <span style={{ fontSize:12, color:"var(--error)", fontWeight:600 }}>Remove?</span>
                     <button
                       onClick={async () => {
                         try {
@@ -954,17 +976,17 @@ const refetchSemesters = () =>
                         } catch {}
                         setConfirmingRemove(null);
                       }}
-                      style={{ background:"#c0392b", border:"none", borderRadius:8, padding:"4px 10px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}
+                      style={{ background:"var(--error)", border:"none", borderRadius:8, padding:"4px 10px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}
                     >Yes</button>
                     <button
                       onClick={() => setConfirmingRemove(null)}
-                      style={{ background:"#F4F4F8", border:"1px solid #D4D4DC", borderRadius:8, padding:"4px 10px", color:"#A59AC9", fontSize:12, cursor:"pointer" }}
+                      style={{ background:"var(--bg)", border:"1px solid var(--border)", borderRadius:8, padding:"4px 10px", color:"var(--text2)", fontSize:12, cursor:"pointer" }}
                     >Cancel</button>
                   </div>
                 ) : (
                   <button
                     onClick={() => setConfirmingRemove(course)}
-                    style={{ background:"#fff0f0", border:"1px solid #f5c6c6", borderRadius:8, padding:"5px 12px", color:"#c0392b", fontSize:12, fontWeight:600, cursor:"pointer" }}
+                    style={{ background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:8, padding:"5px 12px", color:"var(--error)", fontSize:12, fontWeight:600, cursor:"pointer" }}
                   >
                     Remove
                   </button>
@@ -976,7 +998,7 @@ const refetchSemesters = () =>
       )}
 
       <div style={{ marginTop:24 }}>
-        <button onClick={onLogout} style={{ display:"flex", alignItems:"center", gap:8, background:"#fff0f0", border:"1px solid #f5c6c6", borderRadius:10, padding:"10px 20px", color:"#c0392b", fontWeight:600, fontSize:14, cursor:"pointer" }}>
+        <button onClick={onLogout} style={{ display:"flex", alignItems:"center", gap:8, background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:10, padding:"10px 20px", color:"var(--error)", fontWeight:600, fontSize:14, cursor:"pointer" }}>
           Log out
         </button>
       </div>
@@ -987,17 +1009,17 @@ const refetchSemesters = () =>
 
 function StatChip({ label, value, color, bg }) {
   return (
-    <div style={{ background:bg, borderRadius:12, padding:"10px 16px", border:"1px solid #D4D4DC", minWidth:100 }}>
-      <div style={{ fontSize:10, fontWeight:700, color:"#B8A9C9", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:4 }}>{label}</div>
+    <div style={{ background:bg, borderRadius:12, padding:"10px 16px", border:"1px solid var(--border)", minWidth:100 }}>
+      <div style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:4 }}>{label}</div>
       <div style={{ fontSize:14, fontWeight:700, color, fontFamily:"'DM Sans',sans-serif" }}>{value}</div>
     </div>
   );
 }
 
 const pf = {
-  label:     { display:"block", fontSize:12, fontWeight:600, color:"#2a2050", marginBottom:6 },
-  input:     { width:"100%", padding:"10px 14px", border:"1px solid #D4D4DC", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"#2a2050", background:"#F7F5FB", marginBottom:14, display:"block", transition:"border-color .15s", outline:"none" },
-  editBtn:   { padding:"8px 18px", background:"#F4F4F8", color:"#31487A", border:"1px solid #D4D4DC", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
-  saveBtn:   { padding:"8px 20px", background:"#31487A", color:"white", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
-  cancelBtn: { padding:"8px 16px", background:"#F4F4F8", color:"#A59AC9", border:"1px solid #D4D4DC", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  label:     { display:"block", fontSize:12, fontWeight:600, color:"var(--text)", marginBottom:6 },
+  input:     { width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", marginBottom:14, display:"block", transition:"border-color .15s", outline:"none" },
+  editBtn:   { padding:"8px 18px", background:"var(--bg)", color:"var(--primary)", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  saveBtn:   { padding:"8px 20px", background:"var(--primary)", color:"white", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  cancelBtn: { padding:"8px 16px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
 };

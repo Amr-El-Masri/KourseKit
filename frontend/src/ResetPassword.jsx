@@ -56,9 +56,9 @@ export default function ResetPassword({ token, onGoToLogin }) {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'DM Sans', sans-serif; }
-        .rp-btn:hover { background: #221866 !important; }
+        .rp-btn:hover { background: var(--primary2) !important; }
         .rp-btn { transition: background 0.15s; }
-        .rp-input:focus { border-color: #8FB3E2 !important; outline: none; }
+        .rp-input:focus { border-color: var(--border2) !important; outline: none; }
       `}</style>
 
       <div style={s.leftPanel}>
@@ -80,7 +80,7 @@ export default function ResetPassword({ token, onGoToLogin }) {
                 </svg>
               </div>
               <h2 style={s.title}>Password Reset!</h2>
-              <p style={{ fontSize: 14, color: "#7a8fa8", lineHeight: 1.7, marginBottom: 28 }}>
+              <p style={{ fontSize: 14, color: "var(--text2)", lineHeight: 1.7, marginBottom: 28 }}>
                 Your password has been updated. You can now log in with your new password.
               </p>
               <button className="rp-btn" onClick={() => onGoToLogin(email)} style={s.btn}>
@@ -108,7 +108,7 @@ export default function ResetPassword({ token, onGoToLogin }) {
                   onKeyUp={e => setCapsLock(e.getModifierState("CapsLock"))}
                 />
                 <button type="button" onClick={() => setShowPw(v => !v)}
-                  style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"#A59AC9", padding:0, display:"flex", alignItems:"center" }}>
+                  style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"var(--text2)", padding:0, display:"flex", alignItems:"center" }}>
                   {showPassword
                     ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
                     : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -210,38 +210,38 @@ const s = {
   },
 
   rightPanel: {
-    flex: 1, background: "#F4F4F8",
+    flex: 1, background: "var(--bg)",
     display: "flex", alignItems: "center", justifyContent: "center", padding: 32,
   },
   card: {
-    background: "#ffffff", borderRadius: 20, padding: "40px 36px",
+    background: "var(--surface)", borderRadius: 20, padding: "40px 36px",
     boxShadow: "0 4px 24px rgba(30,58,110,0.1)", width: "100%", maxWidth: 420,
   },
   title: {
     fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 26,
-    color: "#31487A", marginBottom: 6,
+    color: "var(--primary)", marginBottom: 6,
   },
-  subtitle: { fontSize: 14, color: "#7a8fa8", marginBottom: 24 },
+  subtitle: { fontSize: 14, color: "var(--text2)", marginBottom: 24 },
   errorBox: {
-    background: "#fef0f0", border: "1px solid #f5c6c6", borderRadius: 10,
-    padding: "10px 14px", fontSize: 13, color: "#c0392b", marginBottom: 16,
+    background: "var(--error-bg)", border: "1px solid var(--error-border)", borderRadius: 10,
+    padding: "10px 14px", fontSize: 13, color: "var(--error)", marginBottom: 16,
   },
-  label: { display: "block", fontSize: 13, fontWeight: 600, color: "#2d3a4a", marginBottom: 6 },
+  label: { display: "block", fontSize: 13, fontWeight: 600, color: "var(--text)", marginBottom: 6 },
   input: {
-    width: "100%", padding: "11px 14px", border: "1px solid #D4D4DC",
+    width: "100%", padding: "11px 14px", border: "1px solid var(--border)",
     borderRadius: 10, fontSize: 14, fontFamily: "'DM Sans', sans-serif",
-    color: "#2d3a4a", background: "#F7F5FB", marginBottom: 16, display: "block",
+    color: "var(--text)", background: "var(--surface2)", marginBottom: 16, display: "block",
     transition: "border-color 0.15s",
   },
   reqBox: {
-    background: "#f7f5fb", border: "1px solid #e2ddf0", borderRadius: 10,
+    background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 10,
     padding: "10px 14px", marginBottom: 16, marginTop: -8,
   },
   reqRow: {
     fontSize: 12, fontWeight: 500, padding: "2px 0", display: "flex", alignItems: "center",
   },
   btn: {
-    width: "100%", padding: "13px", background: "#31487A", color: "white",
+    width: "100%", padding: "13px", background: "var(--primary)", color: "white",
     border: "none", borderRadius: 10, fontSize: 15, fontWeight: 600,
     cursor: "pointer", fontFamily: "'DM Sans', sans-serif", marginTop: 4,
   },
