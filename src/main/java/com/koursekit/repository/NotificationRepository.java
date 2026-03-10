@@ -10,12 +10,18 @@ import org.springframework.data.repository.query.Param;
 import java.time.LocalDateTime;
 import java.util.List;
 
+public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
-public interface NotificationRepository extends JpaRepository<Notification,Long> {
-    List<Notification> findByTask_User_Id(Long userId);
+    List<Notification> findByTask_User_IdOrderByTask_DeadlineAsc(Long userId);
 
-    boolean existsByTask_Id(Long taskId);
 
+    long countByTask_User_IdAndIsReadFalse(Long userId);
+
+    // Check if a notification was already created for this task recently (prevents duplicates)
+    boolean existsByTask_IdAndCreatedAtAfter(Long taskId, LocalDateTime after);
+
+    @Modifying
+    @Transactional
     void deleteByTask_Id(long taskId);
 
     @Modifying

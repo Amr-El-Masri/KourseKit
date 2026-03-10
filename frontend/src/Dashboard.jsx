@@ -39,10 +39,10 @@ const ALL_WIDGETS = [
 
 function SectionTitle({ children }) {
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
-      <div style={{ width:3, height:18, background:"#7B5EA7", borderRadius:2 }} />
-      <h3 style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:"#31487A", margin:0 }}>{children}</h3>
-    </div>
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:4 }}>
+        <div style={{ width:3, height:18, background:"#7B5EA7", borderRadius:2 }} />
+        <h3 style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:"#31487A", margin:0 }}>{children}</h3>
+      </div>
   );
 }
 
@@ -57,41 +57,41 @@ function SemesterSelect({ value, onChange, semesters }) {
   }, []);
 
   return (
-    <div ref={ref} style={{ position:"relative" }}>
-      <button onClick={() => setOpen(o => !o)} style={sd.trigger}>
-        <span style={{ fontSize:14 }}></span>
-        <span style={{ fontWeight:600, color:"#31487A", fontSize:13 }}>{value || "Select semester"}</span>
-        <span style={{ color:"#A59AC9", fontSize:11, transition:"transform .2s", display:"inline-block", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
-      </button>
-      {open && (
-        <div style={sd.dropdown}>
-          {semesters.map(sem => (
-            <div key={sem} onClick={() => { onChange(sem); setOpen(false); }}
-              style={{ ...sd.option, background: sem === value ? "#F0EEF7" : "transparent", color: sem === value ? "#31487A" : "#4a3a6a", fontWeight: sem === value ? 600 : 400 }}>
-              {sem === value && <span style={{ color:"#7B5EA7", marginRight:8, fontSize:12 }}>✓</span>}
-              {sem}
+      <div ref={ref} style={{ position:"relative" }}>
+        <button onClick={() => setOpen(o => !o)} style={sd.trigger}>
+          <span style={{ fontSize:14 }}></span>
+          <span style={{ fontWeight:600, color:"#31487A", fontSize:13 }}>{value || "Select semester"}</span>
+          <span style={{ color:"#A59AC9", fontSize:11, transition:"transform .2s", display:"inline-block", transform: open ? "rotate(180deg)" : "rotate(0deg)" }}>▼</span>
+        </button>
+        {open && (
+            <div style={sd.dropdown}>
+              {semesters.map(sem => (
+                  <div key={sem} onClick={() => { onChange(sem); setOpen(false); }}
+                       style={{ ...sd.option, background: sem === value ? "#F0EEF7" : "transparent", color: sem === value ? "#31487A" : "#4a3a6a", fontWeight: sem === value ? 600 : 400 }}>
+                    {sem === value && <span style={{ color:"#7B5EA7", marginRight:8, fontSize:12 }}>✓</span>}
+                    {sem}
+                  </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
-    </div>
+        )}
+      </div>
   );
 }
 
 function WidgetTogglePanel({ visible, onToggle }) {
   return (
-    <div style={sd.togglePanel}>
-      <div style={{ fontSize:12, fontWeight:700, color:"#A59AC9", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:10 }}>Widgets</div>
-      {ALL_WIDGETS.map(w => (
-        <div key={w.id} onClick={() => onToggle(w.id)}
-          style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 10px", borderRadius:8, marginBottom:4, cursor:"pointer", background: visible[w.id] ? "#F0EEF7" : "transparent", transition:"background .15s" }}>
-          <span style={{ fontSize:13, color: visible[w.id] ? "#31487A" : "#A59AC9" }}>{w.label}</span>
-          <div style={{ width:32, height:18, borderRadius:9, background: visible[w.id] ? "#7B5EA7" : "#D4D4DC", position:"relative", transition:"background .2s" }}>
-            <div style={{ position:"absolute", top:2, left: visible[w.id] ? 16 : 2, width:14, height:14, borderRadius:"50%", background:"white", transition:"left .2s", boxShadow:"0 1px 3px rgba(0,0,0,0.2)" }} />
-          </div>
-        </div>
-      ))}
-    </div>
+      <div style={sd.togglePanel}>
+        <div style={{ fontSize:12, fontWeight:700, color:"#A59AC9", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:10 }}>Widgets</div>
+        {ALL_WIDGETS.map(w => (
+            <div key={w.id} onClick={() => onToggle(w.id)}
+                 style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 10px", borderRadius:8, marginBottom:4, cursor:"pointer", background: visible[w.id] ? "#F0EEF7" : "transparent", transition:"background .15s" }}>
+              <span style={{ fontSize:13, color: visible[w.id] ? "#31487A" : "#A59AC9" }}>{w.label}</span>
+              <div style={{ width:32, height:18, borderRadius:9, background: visible[w.id] ? "#7B5EA7" : "#D4D4DC", position:"relative", transition:"background .2s" }}>
+                <div style={{ position:"absolute", top:2, left: visible[w.id] ? 16 : 2, width:14, height:14, borderRadius:"50%", background:"white", transition:"left .2s", boxShadow:"0 1px 3px rgba(0,0,0,0.2)" }} />
+              </div>
+            </div>
+        ))}
+      </div>
   );
 }
 
@@ -142,68 +142,72 @@ function PomodoroTimer() {
   const reset = () => { setRunning(false); setTimeLeft(mode.duration); };
 
   return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14,paddingTop:6}}>
-      <div style={{display:"flex",gap:4,background:"#F4F4F8",padding:4,borderRadius:12,width:"100%"}}>
-        {MODES.map((m,i) => (
-          <button key={m.label} onClick={() => switchMode(i)} style={{
-            flex:1, padding:"6px 0", border:"none", borderRadius:8, fontSize:11, fontWeight:600,
-            cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
-            background: modeIdx===i ? m.color : "transparent",
-            color: modeIdx===i ? "#fff" : "#A59AC9",
-          }}>{m.label}</button>
-        ))}
-      </div>
+      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14,paddingTop:6}}>
+        <div style={{display:"flex",gap:4,background:"#F4F4F8",padding:4,borderRadius:12,width:"100%"}}>
+          {MODES.map((m,i) => (
+              <button key={m.label} onClick={() => switchMode(i)} style={{
+                flex:1, padding:"6px 0", border:"none", borderRadius:8, fontSize:11, fontWeight:600,
+                cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
+                background: modeIdx===i ? m.color : "transparent",
+                color: modeIdx===i ? "#fff" : "#A59AC9",
+              }}>{m.label}</button>
+          ))}
+        </div>
 
-      <div style={{position:"relative",width:120,height:120}}>
-        <svg width="120" height="120" style={{transform:"rotate(-90deg)"}}>
-          <circle cx="60" cy="60" r={r} fill="none" stroke="#D9E1F1" strokeWidth="8"/>
-          <circle cx="60" cy="60" r={r} fill="none" stroke={mode.color} strokeWidth="8"
-            strokeDasharray={`${pct*circ} ${circ}`} strokeLinecap="round"
-            style={{transition:"stroke-dasharray 0.5s ease"}}/>
-        </svg>
-        <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-          <div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:mode.color,lineHeight:1}}>{mins}:{secs}</div>
-          <div style={{fontSize:10,color:"#A59AC9",marginTop:2}}>{mode.label}</div>
+        <div style={{position:"relative",width:120,height:120}}>
+          <svg width="120" height="120" style={{transform:"rotate(-90deg)"}}>
+            <circle cx="60" cy="60" r={r} fill="none" stroke="#D9E1F1" strokeWidth="8"/>
+            <circle cx="60" cy="60" r={r} fill="none" stroke={mode.color} strokeWidth="8"
+                    strokeDasharray={`${pct*circ} ${circ}`} strokeLinecap="round"
+                    style={{transition:"stroke-dasharray 0.5s ease"}}/>
+          </svg>
+          <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+            <div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:mode.color,lineHeight:1}}>{mins}:{secs}</div>
+            <div style={{fontSize:10,color:"#A59AC9",marginTop:2}}>{mode.label}</div>
+          </div>
+        </div>
+
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={reset} style={{padding:"7px 14px",background:"#F4F4F8",border:"1px solid #D4D4DC",borderRadius:9,fontSize:12,cursor:"pointer",color:"#A59AC9",fontFamily:"'DM Sans',sans-serif"}}>↺ Reset</button>
+          <button onClick={() => setRunning(r => !r)} style={{
+            padding:"7px 22px", background:running?"#e07070":mode.color, color:"white",
+            border:"none", borderRadius:9, fontSize:13, fontWeight:600, cursor:"pointer",
+            fontFamily:"'DM Sans',sans-serif", transition:"background .15s",
+          }}>{running ? <><Pause size={13} style={{verticalAlign:"middle",marginRight:4}}/>Pause</> : <><Play size={13} style={{verticalAlign:"middle",marginRight:4}}/>Start</>}</button>
+        </div>
+
+        <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"#A59AC9"}}>
+          <span></span>
+          <span style={{color:"#31487A",fontWeight:600}}>{sessions}</span>
+          <span>session{sessions!==1?"s":""} completed</span>
         </div>
       </div>
-
-      <div style={{display:"flex",gap:10}}>
-        <button onClick={reset} style={{padding:"7px 14px",background:"#F4F4F8",border:"1px solid #D4D4DC",borderRadius:9,fontSize:12,cursor:"pointer",color:"#A59AC9",fontFamily:"'DM Sans',sans-serif"}}>↺ Reset</button>
-        <button onClick={() => setRunning(r => !r)} style={{
-          padding:"7px 22px", background:running?"#e07070":mode.color, color:"white",
-          border:"none", borderRadius:9, fontSize:13, fontWeight:600, cursor:"pointer",
-          fontFamily:"'DM Sans',sans-serif", transition:"background .15s",
-        }}>{running ? <><Pause size={13} style={{verticalAlign:"middle",marginRight:4}}/>Pause</> : <><Play size={13} style={{verticalAlign:"middle",marginRight:4}}/>Start</>}</button>
-      </div>
-
-      <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"#A59AC9"}}>
-        <span></span>
-        <span style={{color:"#31487A",fontWeight:600}}>{sessions}</span>
-        <span>session{sessions!==1?"s":""} completed</span>
-      </div>
-    </div>
   );
 }
 
 
 export default function Dashboard({ onLogout }) {
   const NAV_ITEMS = [
-  { id:"dashboard", label:"Dashboard",        icon:<LayoutDashboard size={17}/> },
-  { id:"tasks",     label:"Task Manager",     icon:<CheckSquare size={17}/> },
-  { id:"planner",   label:"Study Planner",    icon:<BookOpen size={17}/> },
-  { id:"grades",    label:"Grade Calculator", icon:<Calculator size={17}/> },
-  { id:"reviews",   label:"Reviews",          icon:<Star size={17}/> },
-];
+    { id:"dashboard", label:"Dashboard",        icon:<LayoutDashboard size={17}/> },
+    { id:"tasks",     label:"Task Manager",     icon:<CheckSquare size={17}/> },
+    { id:"planner",   label:"Study Planner",    icon:<BookOpen size={17}/> },
+    { id:"grades",    label:"Grade Calculator", icon:<Calculator size={17}/> },
+    { id:"reviews",   label:"Reviews",          icon:<Star size={17}/> },
+  ];
 
   const [editingTask, setEditingTask] = useState(null);
   const [courseDetailsTarget, setCourseDetailsTarget] = useState(null);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifPanel, setShowNotifPanel] = useState(false);
+  const notifRef = useRef(null);
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
 
   const [profile, setProfile] = useState({});
   const displayName = profile.firstName || profile.lastName
-    ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim()
-    : "Student";
-  
+      ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim()
+      : "Student";
+
   const [activePage, setActivePage] = useState(() => localStorage.getItem("kk_activePage") || "dashboard");
   const [sidebarOpen,    setSidebarOpen]   = useState(true);
   useEffect(() => {
@@ -214,20 +218,20 @@ export default function Dashboard({ onLogout }) {
   const toggleRef = useRef(null);
 
   const [visible, setVisible] = useState(() => {
-  try {
-    const saved = localStorage.getItem("kk_widgets");
-    return saved ? JSON.parse(saved) : Object.fromEntries(ALL_WIDGETS.map(w => [w.id, true]));
-  } catch {
-    return Object.fromEntries(ALL_WIDGETS.map(w => [w.id, true]));}
-});
-
-const toggleWidget = id => {
-  setVisible(v => {
-    const next = { ...v, [id]: !v[id] };
-    localStorage.setItem("kk_widgets", JSON.stringify(next));
-    return next;
+    try {
+      const saved = localStorage.getItem("kk_widgets");
+      return saved ? JSON.parse(saved) : Object.fromEntries(ALL_WIDGETS.map(w => [w.id, true]));
+    } catch {
+      return Object.fromEntries(ALL_WIDGETS.map(w => [w.id, true]));}
   });
-};
+
+  const toggleWidget = id => {
+    setVisible(v => {
+      const next = { ...v, [id]: !v[id] };
+      localStorage.setItem("kk_widgets", JSON.stringify(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     const h = e => { if (toggleRef.current && !toggleRef.current.contains(e.target)) setShowToggle(false); };
@@ -236,11 +240,11 @@ const toggleWidget = id => {
   }, []);
 
   const [todos, setTodos] = useState(() => {
-  try {
-    const saved = localStorage.getItem("kk_todos");
-    return saved ? JSON.parse(saved) : [];
-  } catch { return []; }
-});
+    try {
+      const saved = localStorage.getItem("kk_todos");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
 
   const [todoInput, setTodoInput] = useState("");
   const [todoError, setTodoError] = useState(false);
@@ -257,121 +261,172 @@ const toggleWidget = id => {
 
   const selectedSem = apiSemesters.find(s => s.semesterName === semester) ?? { courses: [] };
   const semCourseList = (selectedSem.courses || []).map(c => ({ id: c.id, name: c.courseCode }));
-  
+
   const addTodo = () => {
-  if (!todoInput.trim()) { setTodoError(true); return; }
-  setTodoError(false);
-  const next = [...todos, { id:Date.now(), text:todoInput.trim(), done:false }];
-  setTodos(next);
-  localStorage.setItem("kk_todos", JSON.stringify(next));
-  setTodoInput("");
-};
+    if (!todoInput.trim()) { setTodoError(true); return; }
+    setTodoError(false);
+    const next = [...todos, { id:Date.now(), text:todoInput.trim(), done:false }];
+    setTodos(next);
+    localStorage.setItem("kk_todos", JSON.stringify(next));
+    setTodoInput("");
+  };
 
-const toggleTodo = id => {
-  const next = todos.map(t => t.id===id ? {...t,done:!t.done} : t);
-  setTodos(next);
-  localStorage.setItem("kk_todos", JSON.stringify(next));
-};
+  const toggleTodo = id => {
+    const next = todos.map(t => t.id===id ? {...t,done:!t.done} : t);
+    setTodos(next);
+    localStorage.setItem("kk_todos", JSON.stringify(next));
+  };
 
-const deleteTodo = id => {
-  const next = todos.filter(t => t.id!==id);
-  setTodos(next);
-  localStorage.setItem("kk_todos", JSON.stringify(next));
-};
+  const deleteTodo = id => {
+    const next = todos.filter(t => t.id!==id);
+    setTodos(next);
+    localStorage.setItem("kk_todos", JSON.stringify(next));
+  };
 
-const [tasks, setTasks] = useState([]);
-const [courseColors, setCourseColors] = useState(() => {
-  try {
-    const saved = localStorage.getItem("kk_course_colors");
-    return saved ? JSON.parse(saved) : {};
-  } catch { return {}; }
-});
+  const [tasks, setTasks] = useState([]);
+  const [courseColors, setCourseColors] = useState(() => {
+    try {
+      const saved = localStorage.getItem("kk_course_colors");
+      return saved ? JSON.parse(saved) : {};
+    } catch { return {}; }
+  });
 
-const saveCourseColor = (courseName, color) => {
-  const next = { ...courseColors, [courseName]: color };
-  setCourseColors(next);
-  localStorage.setItem("kk_course_colors", JSON.stringify(next));
-};
+  const saveCourseColor = (courseName, color) => {
+    const next = { ...courseColors, [courseName]: color };
+    setCourseColors(next);
+    localStorage.setItem("kk_course_colors", JSON.stringify(next));
+  };
 
-const loadTasksForCalendar = useCallback(() => {
-  const token = localStorage.getItem("kk_token");
-  const userId = token ? JSON.parse(atob(token.split(".")[1])).sub : null;
-  if (!userId) return;
-  fetch(`http://localhost:8080/api/tasks/${userId}/list-all`, {
-    headers: { "Authorization": `Bearer ${token}` }
-  })
-    .then(r => r.json())
-    .then(data => {
-      if (Array.isArray(data)) {
-        setTasks(data.map(t => ({ ...t, due: t.deadline, done: t.completed })));
-      }
+  const getAuthInfo = () => {
+    const token = localStorage.getItem("kk_token");
+    const userId = token ? JSON.parse(atob(token.split(".")[1])).sub : null;
+    return { token, userId };
+  };
+
+  const loadNotifications = useCallback(() => {
+    const { token, userId } = getAuthInfo();
+    if (!userId) return;
+    fetch("http://localhost:8080/api/" + userId + "/notifications", {
+      headers: { "Authorization": "Bearer " + token }
     })
-    .catch(() => {});
-}, []);
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setNotifications(data);
+            setUnreadCount(data.filter(n => !n.isRead).length);
+          }
+        })
+        .catch(() => {});
+  }, []);
 
-useEffect(() => {
-  if (activePage === "dashboard") loadTasksForCalendar();
-}, [activePage]);
+  const markAllAsRead = useCallback(() => {
+    const { token, userId } = getAuthInfo();
+    if (!userId) return;
+    fetch("http://localhost:8080/api/" + userId + "/notifications/read-all", {
+      method: "PATCH",
+      headers: { "Authorization": "Bearer " + token }
+    })
+        .then(() => {
+          setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+          setUnreadCount(0);
+        })
+        .catch(() => {});
+  }, []);
 
-const [studyBlocks, setStudyBlocks] = useState({});
-const [studySlots, setStudySlots] = useState({});
-const [studyEntries, setStudyEntries] = useState([]);
-const [schedColorMap, setSchedColorMap] = useState(() => {
-  try { const s = localStorage.getItem("kk_colorMap"); return s ? JSON.parse(s) : {}; } catch { return {}; }
-});
-const [schedWeekOffset, setSchedWeekOffset] = useState(0);
+  const loadTasksForCalendar = useCallback(() => {
+    const token = localStorage.getItem("kk_token");
+    const userId = token ? JSON.parse(atob(token.split(".")[1])).sub : null;
+    if (!userId) return;
+    fetch(`http://localhost:8080/api/tasks/${userId}/list-all`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    })
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setTasks(data.map(t => ({ ...t, due: t.deadline, done: t.completed })));
+          }
+        })
+        .catch(() => {});
+  }, []);
 
-const getWeekStartForOffset = (offset) => {
-  const d = new Date();
-  const diff = d.getDay() === 0 ? -6 : 1 - d.getDay();
-  d.setDate(d.getDate() + diff + offset * 7);
-  return d.toISOString().split("T")[0];
-};
+  useEffect(() => {
+    if (activePage === "dashboard") loadTasksForCalendar();
+  }, [activePage]);
 
-const loadStudyBlocks = useCallback((offset = 0) => {
-  const token = localStorage.getItem("kk_token");
-  const userId = token ? JSON.parse(atob(token.split(".")[1])).sub : null;
-  if (!userId) return;
-  const weekStart = getWeekStartForOffset(offset);
-  try { const s = localStorage.getItem("kk_colorMap"); if (s) setSchedColorMap(JSON.parse(s)); } catch {}
-  fetch(`http://localhost:8080/api/study-plan/${userId}/weekly?weekStart=${weekStart}`, {
-    headers: { "Authorization": `Bearer ${token}` }
-  }).then(r => r.json()).then(data => { if (data) setStudyBlocks(data); }).catch(() => {});
-  fetch(`http://localhost:8080/api/study-plan/${userId}/slots?weekStart=${weekStart}`, {
-    headers: { "Authorization": `Bearer ${token}` }
-  }).then(r => r.json()).then(data => {
-    if (Array.isArray(data)) {
-      const map = {};
-      data.forEach(s => { if (!map[s.dayKey]) map[s.dayKey] = []; map[s.dayKey].push(s); });
-      setStudySlots(map);
+  useEffect(() => {
+    loadNotifications();
+    const interval = setInterval(loadNotifications, 5000);
+    return () => clearInterval(interval);
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (notifRef.current && !notifRef.current.contains(e.target))
+        setShowNotifPanel(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const [studyBlocks, setStudyBlocks] = useState({});
+  const [studySlots, setStudySlots] = useState({});
+  const [studyEntries, setStudyEntries] = useState([]);
+  const [schedColorMap, setSchedColorMap] = useState(() => {
+    try { const s = localStorage.getItem("kk_colorMap"); return s ? JSON.parse(s) : {}; } catch { return {}; }
+  });
+  const [schedWeekOffset, setSchedWeekOffset] = useState(0);
+
+  const getWeekStartForOffset = (offset) => {
+    const d = new Date();
+    const diff = d.getDay() === 0 ? -6 : 1 - d.getDay();
+    d.setDate(d.getDate() + diff + offset * 7);
+    return d.toISOString().split("T")[0];
+  };
+
+  const loadStudyBlocks = useCallback((offset = 0) => {
+    const token = localStorage.getItem("kk_token");
+    const userId = token ? JSON.parse(atob(token.split(".")[1])).sub : null;
+    if (!userId) return;
+    const weekStart = getWeekStartForOffset(offset);
+    try { const s = localStorage.getItem("kk_colorMap"); if (s) setSchedColorMap(JSON.parse(s)); } catch {}
+    fetch(`http://localhost:8080/api/study-plan/${userId}/weekly?weekStart=${weekStart}`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    }).then(r => r.json()).then(data => { if (data) setStudyBlocks(data); }).catch(() => {});
+    fetch(`http://localhost:8080/api/study-plan/${userId}/slots?weekStart=${weekStart}`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    }).then(r => r.json()).then(data => {
+      if (Array.isArray(data)) {
+        const map = {};
+        data.forEach(s => { if (!map[s.dayKey]) map[s.dayKey] = []; map[s.dayKey].push(s); });
+        setStudySlots(map);
+      }
+    }).catch(() => {});
+    fetch(`http://localhost:8080/api/study-plan/${userId}/entries?weekStart=${weekStart}`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    }).then(r => r.json()).then(data => {
+      if (Array.isArray(data)) setStudyEntries(data);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (activePage === "dashboard") {
+      loadTasksForCalendar();
+      loadStudyBlocks(schedWeekOffset);
     }
-  }).catch(() => {});
-  fetch(`http://localhost:8080/api/study-plan/${userId}/entries?weekStart=${weekStart}`, {
-    headers: { "Authorization": `Bearer ${token}` }
-  }).then(r => r.json()).then(data => {
-    if (Array.isArray(data)) setStudyEntries(data);
-  }).catch(() => {});
-}, []);
+  }, [activePage]);
 
-useEffect(() => {
-  if (activePage === "dashboard") {
-    loadTasksForCalendar();
-    loadStudyBlocks(schedWeekOffset);
-  }
-}, [activePage]);
+  useEffect(() => {
+    if (activePage === "dashboard") loadStudyBlocks(schedWeekOffset);
+  }, [schedWeekOffset]);
 
-useEffect(() => {
-  if (activePage === "dashboard") loadStudyBlocks(schedWeekOffset);
-}, [schedWeekOffset]);
+  const saveTasks = (next) => {
+    setTasks(next);
+    localStorage.setItem("kk_tasks", JSON.stringify(next));
+  };
 
-const saveTasks = (next) => {
-  setTasks(next);
-  localStorage.setItem("kk_tasks", JSON.stringify(next));
-};
-
-const toggleTask = id  => saveTasks(tasks.map(t => t.id===id ? {...t, done:!t.done} : t));
-const deleteTask = id  => saveTasks(tasks.filter(t => t.id!==id));
-const upsertTask = task => saveTasks(tasks.some(t=>t.id===task.id) ? tasks.map(t=>t.id===task.id?task:t) : [task,...tasks]);
+  const toggleTask = id  => saveTasks(tasks.map(t => t.id===id ? {...t, done:!t.done} : t));
+  const deleteTask = id  => saveTasks(tasks.filter(t => t.id!==id));
+  const upsertTask = task => saveTasks(tasks.some(t=>t.id===task.id) ? tasks.map(t=>t.id===task.id?task:t) : [task,...tasks]);
 
   const addEvent   = () => { if (!newEvent.label.trim()) return; setScheduleEvents(p => [...p,{...newEvent,id:Date.now()}]); setNewEvent({day:"Mon",label:"",time:"",type:"Class"}); setShowAddEvent(false); };
   const deleteEvent= id => setScheduleEvents(p => p.filter(e => e.id!==id));
@@ -385,16 +440,16 @@ const upsertTask = task => saveTasks(tasks.some(t=>t.id===task.id) ? tasks.map(t
   const nextMonth   = () => calMonth===11 ? (setCalMonth(0), setCalYear(y=>y+1)) : setCalMonth(m=>m+1);
 
   const tasksByDate = tasks.reduce((acc, t) => {
-  if (!t.due) return acc;
-  const key = t.due.slice(0, 10);
-  acc[key] = acc[key] ? [...acc[key], t] : [t];
-  return acc;},
-  {});
+        if (!t.due) return acc;
+        const key = t.due.slice(0, 10);
+        acc[key] = acc[key] ? [...acc[key], t] : [t];
+        return acc;},
+      {});
 
-const calKey = (d) => {
-  const mm = String(calMonth + 1).padStart(2, "0");
-  const dd = String(d).padStart(2, "0");
-  return `${calYear}-${mm}-${dd}`;};
+  const calKey = (d) => {
+    const mm = String(calMonth + 1).padStart(2, "0");
+    const dd = String(d).padStart(2, "0");
+    return `${calYear}-${mm}-${dd}`;};
 
   const handleLogout = () => { Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); onLogout(); };
 
@@ -403,35 +458,35 @@ const calKey = (d) => {
     return fetch("http://localhost:8080/api/grades/saved", {
       headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
     })
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          const sorted = sortSemesters(data);
-          setApiSemesters(sorted);
-          setSemester(s => s || (sorted[sorted.length - 1]?.semesterName ?? ""));
-          return sorted;
-        }
-        return []; })
-      .catch(() => []);
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            const sorted = sortSemesters(data);
+            setApiSemesters(sorted);
+            setSemester(s => s || (sorted[sorted.length - 1]?.semesterName ?? ""));
+            return sorted;
+          }
+          return []; })
+        .catch(() => []);
   };
 
-const SEMESTER_ORDER = { "fall": 0, "spring": 1, "summer": 2 };
-const sortSemesters = (list) => {
-  return [...list].sort((a, b) => {
-    const parse = name => {
-      if (!name) return { year: 0, term: 0 };
-      const lower = name.toLowerCase();
-      const yearMatch = name.match(/(\d{2,4})/g);
-      const year = yearMatch ? parseInt(yearMatch[0]) : 0;
-      const term = Object.entries(SEMESTER_ORDER).find(([k]) => lower.includes(k))?.[1] ?? 99;
-      return { year, term };
-    };
-    const pa = parse(a.semesterName);
-    const pb = parse(b.semesterName);
-    if (pa.year !== pb.year) return pa.year - pb.year;
-    return pa.term - pb.term;
-  });
-};
+  const SEMESTER_ORDER = { "fall": 0, "spring": 1, "summer": 2 };
+  const sortSemesters = (list) => {
+    return [...list].sort((a, b) => {
+      const parse = name => {
+        if (!name) return { year: 0, term: 0 };
+        const lower = name.toLowerCase();
+        const yearMatch = name.match(/(\d{2,4})/g);
+        const year = yearMatch ? parseInt(yearMatch[0]) : 0;
+        const term = Object.entries(SEMESTER_ORDER).find(([k]) => lower.includes(k))?.[1] ?? 99;
+        return { year, term };
+      };
+      const pa = parse(a.semesterName);
+      const pb = parse(b.semesterName);
+      if (pa.year !== pb.year) return pa.year - pb.year;
+      return pa.term - pb.term;
+    });
+  };
 
   useEffect(() => { fetchSemesters(); }, []);
 
@@ -445,14 +500,14 @@ const sortSemesters = (list) => {
 
   // Courses from all saved semesters (deduplicated) for Grade Calculator dropdown
   const dashboardCourses = [...new Map(
-    apiSemesters.flatMap(s => (s.courses || []).map(c => ({ id: c.id, name: c.courseCode })))
-      .filter(c => c.name)
-      .map(c => [c.name, c])
+      apiSemesters.flatMap(s => (s.courses || []).map(c => ({ id: c.id, name: c.courseCode })))
+          .filter(c => c.name)
+          .map(c => [c.name, c])
   ).values()];
 
   return (
-    <div style={s.root}>
-      <style>{`
+      <div style={s.root}>
+        <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; margin:0; padding:0; }
         body { font-family:'DM Sans',sans-serif; background:#F4F4F8; }
@@ -477,465 +532,562 @@ const sortSemesters = (list) => {
         label:has(input[type="color"]):hover { transform: scale(1.2); box-shadow: 0 3px 10px rgba(0,0,0,0.2) !important; }
       `}</style>
 
-      <aside style={{ ...s.sidebar, width:sidebarOpen ? 224 : 66 }}>
-        <div style={s.sidebarTop}>
-          {sidebarOpen && <span style={s.logoLabel}>KourseKit</span>}
-        </div>
-        <nav style={{flex:1,paddingTop:10}}>
-          {NAV_ITEMS.map(item => (
-            <div key={item.id} className="nav-btn" onClick={() => setActivePage(item.id)} style={{
-              display:"flex", alignItems:"center", padding:"10px 16px", margin:"2px 8px", borderRadius:10,
-              justifyContent:sidebarOpen?"flex-start":"center",
-              background:activePage===item.id?"rgba(255,255,255,0.15)":"transparent",
-              color:activePage===item.id?"#ffffff":"#B8A9C9",
-              fontWeight:activePage===item.id?600:400, userSelect:"none", position:"relative",
-            }}>
-              <span style={{fontSize:17,minWidth:22,textAlign:"center"}}>{item.icon}</span>
-              {sidebarOpen && <span style={{marginLeft:10,fontSize:14}}>{item.label}</span>}
-              {sidebarOpen && activePage===item.id && <span style={{position:"absolute",right:14,width:6,height:6,borderRadius:"50%",background:"#7B5EA7"}} />}
-            </div>
-          ))}
-        </nav>
-        <button onClick={() => setSidebarOpen(o=>!o)} style={s.collapseBtn}>{sidebarOpen?"◀":"▶"}</button>
-        <div className="nav-btn" onClick={() => setActivePage("profile")} style={{display:"flex",alignItems:"center",padding:"10px 16px",margin:"2px 8px 4px",borderRadius:10,justifyContent:sidebarOpen?"flex-start":"center",cursor:"pointer",userSelect:"none",background:activePage==="profile"?"rgba(255,255,255,0.15)":"transparent"}}>
-          <div style={{width:28,height:28,borderRadius:"50%",background:"#31487A",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,border:activePage==="profile"?"2px solid #7B5EA7":"2px solid transparent",transition:"border-color .15s"}}>
-            {profile.avatar
-              ? (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={13} color="white" /> : <span style={{fontWeight:700,fontSize:11,color:"white"}}>{email[0].toUpperCase()}</span>; })()
-              : <span style={{fontWeight:700,fontSize:11,color:"white"}}>{email[0].toUpperCase()}</span>}
+        <aside style={{ ...s.sidebar, width:sidebarOpen ? 224 : 66 }}>
+          <div style={s.sidebarTop}>
+            {sidebarOpen && <span style={s.logoLabel}>KourseKit</span>}
           </div>
-          {sidebarOpen && (
-            <div style={{marginLeft:10,display:"flex",flexDirection:"column",lineHeight:1.3,overflow:"hidden"}}>
-              <span style={{fontSize:13,fontWeight:600,color:activePage==="profile"?"#ffffff":"#D9E1F1"}}>Student Profile</span>
-              <span style={{fontSize:11,color:"#B8A9C9",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{email}</span>
+          <nav style={{flex:1,paddingTop:10}}>
+            {NAV_ITEMS.map(item => (
+                <div key={item.id} className="nav-btn" onClick={() => setActivePage(item.id)} style={{
+                  display:"flex", alignItems:"center", padding:"10px 16px", margin:"2px 8px", borderRadius:10,
+                  justifyContent:sidebarOpen?"flex-start":"center",
+                  background:activePage===item.id?"rgba(255,255,255,0.15)":"transparent",
+                  color:activePage===item.id?"#ffffff":"#B8A9C9",
+                  fontWeight:activePage===item.id?600:400, userSelect:"none", position:"relative",
+                }}>
+                  <span style={{fontSize:17,minWidth:22,textAlign:"center"}}>{item.icon}</span>
+                  {sidebarOpen && <span style={{marginLeft:10,fontSize:14}}>{item.label}</span>}
+                  {sidebarOpen && activePage===item.id && <span style={{position:"absolute",right:14,width:6,height:6,borderRadius:"50%",background:"#7B5EA7"}} />}
+                </div>
+            ))}
+          </nav>
+          <button onClick={() => setSidebarOpen(o=>!o)} style={s.collapseBtn}>{sidebarOpen?"◀":"▶"}</button>
+          <div className="nav-btn" onClick={() => setActivePage("profile")} style={{display:"flex",alignItems:"center",padding:"10px 16px",margin:"2px 8px 4px",borderRadius:10,justifyContent:sidebarOpen?"flex-start":"center",cursor:"pointer",userSelect:"none",background:activePage==="profile"?"rgba(255,255,255,0.15)":"transparent"}}>
+            <div style={{width:28,height:28,borderRadius:"50%",background:"#31487A",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,border:activePage==="profile"?"2px solid #7B5EA7":"2px solid transparent",transition:"border-color .15s"}}>
+              {profile.avatar
+                  ? (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={13} color="white" /> : <span style={{fontWeight:700,fontSize:11,color:"white"}}>{email[0].toUpperCase()}</span>; })()
+                  : <span style={{fontWeight:700,fontSize:11,color:"white"}}>{email[0].toUpperCase()}</span>}
             </div>
-          )}
-        </div>
-      </aside>
-
-      <main style={s.main}>
-        <header style={s.topbar}>
-          <div>
-            <div style={s.greeting}>Hello, <span style={{fontFamily:"'Fraunces',serif",fontStyle:"italic",color:"#31487A"}}>{displayName}!</span></div>
-            <div style={{fontSize:13,color:"#5A3B7B",marginTop:2}}>{today.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</div>
+            {sidebarOpen && (
+                <div style={{marginLeft:10,display:"flex",flexDirection:"column",lineHeight:1.3,overflow:"hidden"}}>
+                  <span style={{fontSize:13,fontWeight:600,color:activePage==="profile"?"#ffffff":"#D9E1F1"}}>Student Profile</span>
+                  <span style={{fontSize:11,color:"#B8A9C9",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{email}</span>
+                </div>
+            )}
           </div>
+        </aside>
 
-          {activePage === "dashboard" && (
-            <SemesterSelect value={semester} onChange={setSemester} semesters={apiSemesters.map(s => s.semesterName)} />
-          )}
+        <main style={s.main}>
+          <header style={s.topbar}>
+            <div>
+              <div style={s.greeting}>Hello, <span style={{fontFamily:"'Fraunces',serif",fontStyle:"italic",color:"#31487A"}}>{displayName}!</span></div>
+              <div style={{fontSize:13,color:"#5A3B7B",marginTop:2}}>{today.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</div>
+            </div>
 
-          {/* widget toggle */}
-          {activePage === "dashboard" && (
-            <div ref={toggleRef} style={{position:"relative"}}>
-              <button onClick={() => setShowToggle(o=>!o)} style={sd.toggleBtn} title="Customize widgets">
-                 <span style={{fontSize:12,fontWeight:600,color:"#31487A",marginLeft:4}}>Widgets</span>
+            {activePage === "dashboard" && (
+                <SemesterSelect value={semester} onChange={setSemester} semesters={apiSemesters.map(s => s.semesterName)} />
+            )}
+
+            {/* widget toggle */}
+            {activePage === "dashboard" && (
+                <div ref={toggleRef} style={{position:"relative"}}>
+                  <button onClick={() => setShowToggle(o=>!o)} style={sd.toggleBtn} title="Customize widgets">
+                    <span style={{fontSize:12,fontWeight:600,color:"#31487A",marginLeft:4}}>Widgets</span>
+                  </button>
+                  {showToggle && <WidgetTogglePanel visible={visible} onToggle={toggleWidget} />}
+                </div>
+            )}
+
+            <div style={{display:"flex", alignItems:"center", gap:8}}>
+              <button
+                  onClick={() => window.location.reload()}
+                  title="Refresh"
+                  style={{...s.bell, fontSize:16, cursor:"pointer", border:"1px solid #D4D4DC", background:"#ffffff"}}
+              >
+                ↺
               </button>
-              {showToggle && <WidgetTogglePanel visible={visible} onToggle={toggleWidget} />}
-            </div>
-          )}
-
-          <div style={{display:"flex", alignItems:"center", gap:8}}>
-          <button
-            onClick={() => window.location.reload()}
-            title="Refresh"
-            style={{...s.bell, fontSize:16, cursor:"pointer", border:"1px solid #D4D4DC", background:"#ffffff"}}
-          >
-            ↺
-          </button>
-          <div style={s.bell}><Bell size={18} color="#8FB3E2" /></div>
-        </div>
-
-          
-        </header>
-
-        {activePage === "dashboard" && (
-          <div style={s.grid}>
-
-            {visible.courses && (
-            <section className="card-anim" style={{...s.card, gridColumn:"span 2"}}>
-              <SectionTitle>My Courses — {semester}</SectionTitle>
-              {semCourseList.length === 0
-                ? <div style={{fontSize:13,color:"#B8A9C9",marginTop:16,textAlign:"center",padding:"20px 0"}}>No courses registered for this semester yet.</div>
-                : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
-                    {semCourseList.map(c => (
-                      <div key={c.id} className="course-card"
-                        onClick={() => setCourseDetailsTarget(c)}
-                        style={{...s.courseCard, border: `2px solid ${courseColors[c.name] || "#A59AC9"}`}}>
-                        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
-                          <div style={{fontWeight:700, fontSize:15, color:"#31487A"}}>{c.name}</div>
-                          <label style={{
-                            width:20, height:20, borderRadius:"50%",
-                            background: courseColors[c.name] || "#A59AC9",
-                            cursor:"pointer", flexShrink:0,
-                            boxShadow:"0 1px 4px rgba(0,0,0,0.15)",
-                            border:"2px solid white",
-                            display:"inline-block",
-                            transition:"transform .15s, box-shadow .15s ease",
-                          }}>
-                            <input
-                              type="color"
-                              value={courseColors[c.name] || "#A59AC9"}
-                              onChange={e => { e.stopPropagation(); saveCourseColor(c.name, e.target.value); }}
-                              style={{ opacity:0, width:0, height:0, position:"absolute" }}
-                            />
-                          </label>
-                        </div>
+              <div ref={notifRef} style={{position:"relative"}}>
+                <button
+                    onClick={() => { setShowNotifPanel(p => !p); if (unreadCount > 0) markAllAsRead(); }}
+                    style={{...s.bell, position:"relative", border:"none", cursor:"pointer"}}
+                    title="Notifications"
+                >
+                  <Bell size={18} color="#8FB3E2" />
+                  {unreadCount > 0 && (
+                      <span style={{
+                        position:"absolute", top:4, right:4,
+                        background:"#e74c3c", color:"#fff", borderRadius:"50%",
+                        width:14, height:14, fontSize:9, fontWeight:700,
+                        display:"flex", alignItems:"center", justifyContent:"center"
+                      }}>{unreadCount > 9 ? "9+" : unreadCount}</span>
+                  )}
+                </button>
+                {showNotifPanel && (
+                    <div style={{
+                      position:"absolute", top:46, right:0, width:320,
+                      background:"#fff", borderRadius:12,
+                      boxShadow:"0 8px 32px rgba(49,72,122,0.13)",
+                      border:"1px solid #E8E8F0", zIndex:9999, overflow:"hidden"
+                    }}>
+                      <div style={{padding:"12px 16px", borderBottom:"1px solid #F0F0F5", display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+                        <span style={{fontWeight:700, fontSize:13, color:"#31487A"}}>Notifications</span>
+                        {notifications.length > 0 && <span style={{fontSize:11, color:"#B8A9C9"}}>{notifications.length} total</span>}
                       </div>
-                    ))}
-                  </div>
-              }
-            </section>
-          )}
-
-            {visible.gpa && (
-              <section className="card-anim" style={s.card}>
-                <SectionTitle>GPA — {semester}</SectionTitle>
-                {(() => {
-                  const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
-                  const validCourses = courses => (courses||[]).filter(c => c.grade && gradePoints[c.grade?.trim().toUpperCase()] !== undefined && Number(c.credits) > 0);
-                  const calcGPA = courses => {
-                    const v = validCourses(courses);
-                    if (!v.length) return null;
-                    const pts = v.reduce((sum, c) => sum + gradePoints[c.grade.trim().toUpperCase()] * Number(c.credits), 0);
-                    const creds = v.reduce((sum, c) => sum + Number(c.credits), 0);
-                    return { gpa: (pts / creds).toFixed(2), creds, count: v.length };
-                  };
-                  const gpaColor = g => parseFloat(g) >= 3.7 ? "#27ae60" : parseFloat(g) >= 3.0 ? "#2980b9" : parseFloat(g) >= 2.0 ? "#e67e22" : "#c0392b";
-
-                  const currentSem = apiSemesters.find(s => s.semesterName === semester);
-                  const semResult = calcGPA(currentSem?.courses);
-
-                  if (semResult) return (
-                    <div style={{textAlign:"center", padding:"20px 0"}}>
-                      <div style={{fontFamily:"'Fraunces',serif", fontSize:48, fontWeight:700, color:gpaColor(semResult.gpa), lineHeight:1}}>{semResult.gpa}</div>
-                      <div style={{fontSize:12, color:"#A59AC9", marginTop:6}}>{semResult.creds} credits · {semResult.count} courses</div>
+                      <div style={{maxHeight:380, overflowY:"auto"}}>
+                        {notifications.length === 0 ? (
+                            <div style={{padding:"24px 16px", textAlign:"center", color:"#B8A9C9", fontSize:13}}>No notifications</div>
+                        ) : (
+                            <>
+                              {/* Due Today */}
+                              {notifications.filter(n => n.urgency === "today").length > 0 && (
+                                  <div>
+                                    <div style={{padding:"7px 16px 5px", fontSize:10, fontWeight:700, color:"#D95F4B", letterSpacing:"0.07em", textTransform:"uppercase"}}>
+                                      Due Today
+                                    </div>
+                                    {notifications.filter(n => n.urgency === "today").map((n, i, arr) => (
+                                        <div key={i} style={{
+                                          padding:"9px 16px 10px",
+                                          background:"#FDF7F6",
+                                          borderBottom: i < arr.length - 1 ? "1px solid #F5F0EF" : "1px solid #F0EDF7"
+                                        }}>
+                                          <div style={{fontSize:12, color:"#31487A", lineHeight:1.5}}>{n.message}</div>
+                                          <div style={{fontSize:10, color:"#C4BAD8", marginTop:3}}>
+                                            {new Date(n.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"})}
+                                          </div>
+                                        </div>
+                                    ))}
+                                  </div>
+                              )}
+                              {/* Due Tomorrow */}
+                              {notifications.filter(n => n.urgency === "tomorrow").length > 0 && (
+                                  <div>
+                                    <div style={{padding:"7px 16px 5px", fontSize:10, fontWeight:700, color:"#C07830", letterSpacing:"0.07em", textTransform:"uppercase"}}>
+                                      Due Tomorrow
+                                    </div>
+                                    {notifications.filter(n => n.urgency === "tomorrow").map((n, i, arr) => (
+                                        <div key={i} style={{
+                                          padding:"9px 16px 10px",
+                                          background:"#FDFAF6",
+                                          borderBottom: i < arr.length - 1 ? "1px solid #F5F0E8" : "1px solid #F0EDF7"
+                                        }}>
+                                          <div style={{fontSize:12, color:"#31487A", lineHeight:1.5}}>{n.message}</div>
+                                          <div style={{fontSize:10, color:"#C4BAD8", marginTop:3}}>
+                                            {new Date(n.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"})}
+                                          </div>
+                                        </div>
+                                    ))}
+                                  </div>
+                              )}
+                              {/* Due in 3 Days */}
+                              {notifications.filter(n => n.urgency === "3day").length > 0 && (
+                                  <div>
+                                    <div style={{padding:"7px 16px 5px", fontSize:10, fontWeight:700, color:"#7B5EA7", letterSpacing:"0.07em", textTransform:"uppercase"}}>
+                                      Due in 3 Days
+                                    </div>
+                                    {notifications.filter(n => n.urgency === "3day").map((n, i, arr) => (
+                                        <div key={i} style={{
+                                          padding:"9px 16px 10px",
+                                          background:"#FAF8FF",
+                                          borderBottom: i < arr.length - 1 ? "1px solid #F0EDF7" : "none"
+                                        }}>
+                                          <div style={{fontSize:12, color:"#31487A", lineHeight:1.5}}>{n.message}</div>
+                                          <div style={{fontSize:10, color:"#C4BAD8", marginTop:3}}>
+                                            {new Date(n.createdAt).toLocaleString("en-US", {month:"short", day:"numeric", hour:"2-digit", minute:"2-digit"})}
+                                          </div>
+                                        </div>
+                                    ))}
+                                  </div>
+                              )}
+                            </>
+                        )}
+                      </div>
                     </div>
-                  );
+                )}
+              </div>
+            </div>
 
-                  const allCourses = apiSemesters.flatMap(s => s.courses || []);
-                  const cumResult = calcGPA(allCourses);
 
-                  if (cumResult) return (
-                    <div style={{textAlign:"center", padding:"20px 0"}}>
-                      <div style={{fontFamily:"'Fraunces',serif", fontSize:48, fontWeight:700, color:gpaColor(cumResult.gpa), lineHeight:1}}>{cumResult.gpa}</div>
-                      <div style={{fontSize:12, color:"#A59AC9", marginTop:6}}>Cumulative GPA · {cumResult.creds} credits</div>
-                    </div>
-                  );
+          </header>
 
-                  if (profile.cumGPA) return (
-                    <div style={{textAlign:"center", padding:"20px 0"}}>
-                      <div style={{fontFamily:"'Fraunces',serif", fontSize:48, fontWeight:700, color:gpaColor(profile.cumGPA), lineHeight:1}}>{parseFloat(profile.cumGPA).toFixed(2)}</div>
-                      <div style={{fontSize:12, color:"#A59AC9", marginTop:6}}>Cumulative GPA (from profile)</div>
-                      <div style={{fontSize:11, color:"#D4C9E8", marginTop:4}}>No semester data yet</div>
-                    </div>
-                  );
+          {activePage === "dashboard" && (
+              <div style={s.grid}>
 
-                  return (
-                    <div style={{fontSize:13, color:"#B8A9C9", textAlign:"center", padding:"24px 0"}}>
-                      No grades recorded yet.
-                    </div>
-                  );
-                })()}
-              </section>
-            )}
+                {visible.courses && (
+                    <section className="card-anim" style={{...s.card, gridColumn:"span 2"}}>
+                      <SectionTitle>My Courses — {semester}</SectionTitle>
+                      {semCourseList.length === 0
+                          ? <div style={{fontSize:13,color:"#B8A9C9",marginTop:16,textAlign:"center",padding:"20px 0"}}>No courses registered for this semester yet.</div>
+                          : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
+                            {semCourseList.map(c => (
+                                <div key={c.id} className="course-card"
+                                     onClick={() => setCourseDetailsTarget(c)}
+                                     style={{...s.courseCard, border: `2px solid ${courseColors[c.name] || "#A59AC9"}`}}>
+                                  <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+                                    <div style={{fontWeight:700, fontSize:15, color:"#31487A"}}>{c.name}</div>
+                                    <label style={{
+                                      width:20, height:20, borderRadius:"50%",
+                                      background: courseColors[c.name] || "#A59AC9",
+                                      cursor:"pointer", flexShrink:0,
+                                      boxShadow:"0 1px 4px rgba(0,0,0,0.15)",
+                                      border:"2px solid white",
+                                      display:"inline-block",
+                                      transition:"transform .15s, box-shadow .15s ease",
+                                    }}>
+                                      <input
+                                          type="color"
+                                          value={courseColors[c.name] || "#A59AC9"}
+                                          onChange={e => { e.stopPropagation(); saveCourseColor(c.name, e.target.value); }}
+                                          style={{ opacity:0, width:0, height:0, position:"absolute" }}
+                                      />
+                                    </label>
+                                  </div>
+                                </div>
+                            ))}
+                          </div>
+                      }
+                    </section>
+                )}
 
-            {visible.progress && (
-              <section className="card-anim" style={s.card}>
-                <SectionTitle>Semester Progress</SectionTitle>
-                <div style={{marginTop:18,display:"flex",gap:10}}>
-                  {[{label:"Courses",val:semCourseList.length||"—"},{label:"To-Do",val:todos.filter(t=>!t.done).length},{label:"Due Today", val: tasks.filter(t => !t.done && t.due?.slice(0,10) === new Date().toISOString().slice(0,10)).length}].map(chip=>(
-                    <div key={chip.label} style={s.chip}>
-                      <div style={{fontSize:11,color:"#A59AC9"}}>{chip.label}</div>
-                      <div style={{fontWeight:600,fontSize:13,color:"#31487A"}}>{chip.val}</div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
+                {visible.gpa && (
+                    <section className="card-anim" style={s.card}>
+                      <SectionTitle>GPA — {semester}</SectionTitle>
+                      {(() => {
+                        const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
+                        const validCourses = courses => (courses||[]).filter(c => c.grade && gradePoints[c.grade?.trim().toUpperCase()] !== undefined && Number(c.credits) > 0);
+                        const calcGPA = courses => {
+                          const v = validCourses(courses);
+                          if (!v.length) return null;
+                          const pts = v.reduce((sum, c) => sum + gradePoints[c.grade.trim().toUpperCase()] * Number(c.credits), 0);
+                          const creds = v.reduce((sum, c) => sum + Number(c.credits), 0);
+                          return { gpa: (pts / creds).toFixed(2), creds, count: v.length };
+                        };
+                        const gpaColor = g => parseFloat(g) >= 3.7 ? "#27ae60" : parseFloat(g) >= 3.0 ? "#2980b9" : parseFloat(g) >= 2.0 ? "#e67e22" : "#c0392b";
 
-            {visible.todo && (
-              <section className="card-anim" style={s.card}>
-                <SectionTitle>To-Do List</SectionTitle>
-                <div style={{display:"flex",gap:8,marginTop:14}}>
-                  <input value={todoInput} onChange={e=>{setTodoInput(e.target.value);setTodoError(false);}} onKeyDown={e=>e.key==="Enter"&&addTodo()} placeholder="Add a task…" style={{...s.todoInput, borderColor: todoError ? "#c0392b" : "#D4D4DC"}}/>
-                  <button className="add-btn" onClick={addTodo} style={s.addBtn}>+</button>
-                </div>
-                {todoError && <div style={{fontSize:12,color:"#c0392b",marginTop:4}}>Please type a task first, then add.</div>}
-                <div style={{marginTop:10,maxHeight:160,overflowY:"auto",display:"flex",flexDirection:"column",gap:5}}>
-                  {todos.length===0 && <div style={{fontSize:13,color:"#B8A9C9",textAlign:"center",padding:"16px 0"}}>No tasks yet!</div>}
-                  {todos.map(t=>(
-                    <div key={t.id} className="todo-row" style={s.todoRow}>
+                        const currentSem = apiSemesters.find(s => s.semesterName === semester);
+                        const semResult = calcGPA(currentSem?.courses);
+
+                        if (semResult) return (
+                            <div style={{textAlign:"center", padding:"20px 0"}}>
+                              <div style={{fontFamily:"'Fraunces',serif", fontSize:48, fontWeight:700, color:gpaColor(semResult.gpa), lineHeight:1}}>{semResult.gpa}</div>
+                              <div style={{fontSize:12, color:"#A59AC9", marginTop:6}}>{semResult.creds} credits · {semResult.count} courses</div>
+                            </div>
+                        );
+
+                        const allCourses = apiSemesters.flatMap(s => s.courses || []);
+                        const cumResult = calcGPA(allCourses);
+
+                        if (cumResult) return (
+                            <div style={{textAlign:"center", padding:"20px 0"}}>
+                              <div style={{fontFamily:"'Fraunces',serif", fontSize:48, fontWeight:700, color:gpaColor(cumResult.gpa), lineHeight:1}}>{cumResult.gpa}</div>
+                              <div style={{fontSize:12, color:"#A59AC9", marginTop:6}}>Cumulative GPA · {cumResult.creds} credits</div>
+                            </div>
+                        );
+
+                        if (profile.cumGPA) return (
+                            <div style={{textAlign:"center", padding:"20px 0"}}>
+                              <div style={{fontFamily:"'Fraunces',serif", fontSize:48, fontWeight:700, color:gpaColor(profile.cumGPA), lineHeight:1}}>{parseFloat(profile.cumGPA).toFixed(2)}</div>
+                              <div style={{fontSize:12, color:"#A59AC9", marginTop:6}}>Cumulative GPA (from profile)</div>
+                              <div style={{fontSize:11, color:"#D4C9E8", marginTop:4}}>No semester data yet</div>
+                            </div>
+                        );
+
+                        return (
+                            <div style={{fontSize:13, color:"#B8A9C9", textAlign:"center", padding:"24px 0"}}>
+                              No grades recorded yet.
+                            </div>
+                        );
+                      })()}
+                    </section>
+                )}
+
+                {visible.progress && (
+                    <section className="card-anim" style={s.card}>
+                      <SectionTitle>Semester Progress</SectionTitle>
+                      <div style={{marginTop:18,display:"flex",gap:10}}>
+                        {[{label:"Courses",val:semCourseList.length||"—"},{label:"To-Do",val:todos.filter(t=>!t.done).length},{label:"Due Today", val: tasks.filter(t => !t.done && t.due?.slice(0,10) === new Date().toISOString().slice(0,10)).length}].map(chip=>(
+                            <div key={chip.label} style={s.chip}>
+                              <div style={{fontSize:11,color:"#A59AC9"}}>{chip.label}</div>
+                              <div style={{fontWeight:600,fontSize:13,color:"#31487A"}}>{chip.val}</div>
+                            </div>
+                        ))}
+                      </div>
+                    </section>
+                )}
+
+                {visible.todo && (
+                    <section className="card-anim" style={s.card}>
+                      <SectionTitle>To-Do List</SectionTitle>
+                      <div style={{display:"flex",gap:8,marginTop:14}}>
+                        <input value={todoInput} onChange={e=>{setTodoInput(e.target.value);setTodoError(false);}} onKeyDown={e=>e.key==="Enter"&&addTodo()} placeholder="Add a task…" style={{...s.todoInput, borderColor: todoError ? "#c0392b" : "#D4D4DC"}}/>
+                        <button className="add-btn" onClick={addTodo} style={s.addBtn}>+</button>
+                      </div>
+                      {todoError && <div style={{fontSize:12,color:"#c0392b",marginTop:4}}>Please type a task first, then add.</div>}
+                      <div style={{marginTop:10,maxHeight:160,overflowY:"auto",display:"flex",flexDirection:"column",gap:5}}>
+                        {todos.length===0 && <div style={{fontSize:13,color:"#B8A9C9",textAlign:"center",padding:"16px 0"}}>No tasks yet!</div>}
+                        {todos.map(t=>(
+                            <div key={t.id} className="todo-row" style={s.todoRow}>
                       <span onClick={()=>toggleTodo(t.id)} style={{fontSize:13,flex:1,cursor:"pointer",textDecoration:t.done?"line-through":"none",color:t.done?"#B8A9C9":"#2a2050"}}>
                         {t.done?"":<LayoutList size={13} style={{verticalAlign:"middle",marginRight:4}}/>}{t.text}
                       </span>
-                      <button onClick={()=>deleteTodo(t.id)} style={{background:"none",border:"none",color:"#B8A9C9",cursor:"pointer",fontSize:12}}>✕</button>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
+                              <button onClick={()=>deleteTodo(t.id)} style={{background:"none",border:"none",color:"#B8A9C9",cursor:"pointer",fontSize:12}}>✕</button>
+                            </div>
+                        ))}
+                      </div>
+                    </section>
+                )}
 
-            {visible.pomodoro && (
-              <section className="card-anim" style={s.card}>
-                <SectionTitle>Pomodoro Timer</SectionTitle>
-                <PomodoroTimer />
-              </section>
-            )}
+                {visible.pomodoro && (
+                    <section className="card-anim" style={s.card}>
+                      <SectionTitle>Pomodoro Timer</SectionTitle>
+                      <PomodoroTimer />
+                    </section>
+                )}
 
-{visible.calendar && (
-  <section className="card-anim" style={{...s.card, position:"relative"}}>
-    <SectionTitle>Calendar</SectionTitle>
-    <div style={{marginTop:14}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-        <button onClick={prevMonth} style={s.calNavBtn}>‹</button>
-        <span style={{fontWeight:600,fontSize:14,color:"#31487A"}}>{monthName} {calYear}</span>
-        <button onClick={nextMonth} style={s.calNavBtn}>›</button>
-      </div>
+                {visible.calendar && (
+                    <section className="card-anim" style={{...s.card, position:"relative"}}>
+                      <SectionTitle>Calendar</SectionTitle>
+                      <div style={{marginTop:14}}>
+                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                          <button onClick={prevMonth} style={s.calNavBtn}>‹</button>
+                          <span style={{fontWeight:600,fontSize:14,color:"#31487A"}}>{monthName} {calYear}</span>
+                          <button onClick={nextMonth} style={s.calNavBtn}>›</button>
+                        </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
-        {["Mo","Tu","We","Th","Fr","Sa","Su"].map(d=>(
-          <div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"#B8A9C9",padding:"2px 0"}}>{d}</div>
-        ))}
-      </div>
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
+                          {["Mo","Tu","We","Th","Fr","Sa","Su"].map(d=>(
+                              <div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"#B8A9C9",padding:"2px 0"}}>{d}</div>
+                          ))}
+                        </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
-        {calCells.map((d,i) => {
-          const dayTasks = d ? (tasksByDate[calKey(d)] || []) : [];
-          return (
-            <div key={i} className={d?"cal-day":""} style={{
-              display:"flex", flexDirection:"column", alignItems:"center",
-              borderRadius:6, cursor:d?"pointer":"default",
-              background:isToday(d)?"#31487A":"transparent",
-              paddingBottom: dayTasks.length ? 3 : 0,
-            }}>
-              {/* day number */}
-              <div style={{
-                minHeight:28, display:"flex", alignItems:"center", justifyContent:"center",
-                fontSize:12, width:"100%",
-                color:isToday(d)?"#fff":d?"#2a2050":"transparent",
-                fontWeight:isToday(d)?700:400,
-              }}>
-                {d||""}
-              </div>
+                        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+                          {calCells.map((d,i) => {
+                            const dayTasks = d ? (tasksByDate[calKey(d)] || []) : [];
+                            return (
+                                <div key={i} className={d?"cal-day":""} style={{
+                                  display:"flex", flexDirection:"column", alignItems:"center",
+                                  borderRadius:6, cursor:d?"pointer":"default",
+                                  background:isToday(d)?"#31487A":"transparent",
+                                  paddingBottom: dayTasks.length ? 3 : 0,
+                                }}>
+                                  {/* day number */}
+                                  <div style={{
+                                    minHeight:28, display:"flex", alignItems:"center", justifyContent:"center",
+                                    fontSize:12, width:"100%",
+                                    color:isToday(d)?"#fff":d?"#2a2050":"transparent",
+                                    fontWeight:isToday(d)?700:400,
+                                  }}>
+                                    {d||""}
+                                  </div>
 
-              {/* colored task lines */}
-              {dayTasks.map((t, ti) => {
-                const color = t.done ? "#27ae60": new Date(t.due) < new Date() ? "#c0392b": courseColors[t.course] || "#A59AC9";
-                return (
-                  <div
-                    key={ti}
-                    onMouseEnter={e => {
-                      const rect = e.target.getBoundingClientRect();
-                      const cardRect = e.target.closest("section").getBoundingClientRect();
-                      setHoveredTask({
-                        task: t,
-                        x: rect.left - cardRect.left,
-                        y: rect.bottom - cardRect.top + 4,
-                      });
-                    }}
-                    onMouseLeave={() => setHoveredTask(null)}
-                    onClick={() => { setEditingTask(t); setActivePage("tasks"); }}
-                    style={{
-                      width:"90%", height:3, borderRadius:2,
-                      background: color, marginBottom:1,
-                      cursor:"pointer", transition:"height .1s",
-                    }}
-                    className="cal-task-line"
-                  />
-                );
-              })}
-            </div>
-          );
-        })}
-      </div>
+                                  {/* colored task lines */}
+                                  {dayTasks.map((t, ti) => {
+                                    const color = t.done ? "#27ae60": new Date(t.due) < new Date() ? "#c0392b": courseColors[t.course] || "#A59AC9";
+                                    return (
+                                        <div
+                                            key={ti}
+                                            onMouseEnter={e => {
+                                              const rect = e.target.getBoundingClientRect();
+                                              const cardRect = e.target.closest("section").getBoundingClientRect();
+                                              setHoveredTask({
+                                                task: t,
+                                                x: rect.left - cardRect.left,
+                                                y: rect.bottom - cardRect.top + 4,
+                                              });
+                                            }}
+                                            onMouseLeave={() => setHoveredTask(null)}
+                                            onClick={() => { setEditingTask(t); setActivePage("tasks"); }}
+                                            style={{
+                                              width:"90%", height:3, borderRadius:2,
+                                              background: color, marginBottom:1,
+                                              cursor:"pointer", transition:"height .1s",
+                                            }}
+                                            className="cal-task-line"
+                                        />
+                                    );
+                                  })}
+                                </div>
+                            );
+                          })}
+                        </div>
 
-      <div style={{marginTop:10,fontSize:11,color:"#B8A9C9",textAlign:"center"}}>
-        Today is {today.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
-      </div>
-    </div>
+                        <div style={{marginTop:10,fontSize:11,color:"#B8A9C9",textAlign:"center"}}>
+                          Today is {today.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+                        </div>
+                      </div>
 
-    {/* Hover tooltip */}
-    {hoveredTask && (
-      <div style={{
-        position:"absolute",
-        left: Math.min(hoveredTask.x, 220),
-        top: hoveredTask.y,
-        background:"#ffffff",
-        border:"1px solid #D4D4DC",
-        borderRadius:10,
-        padding:"9px 13px",
-        boxShadow:"0 6px 24px rgba(49,72,122,0.13)",
-        zIndex:300,
-        minWidth:170,
-        maxWidth:220,
-        pointerEvents:"none",
-      }}>
-        <div style={{fontSize:11,fontWeight:700,color:"#A59AC9",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>
-          {hoveredTask.task.type} · {hoveredTask.task.course}
-        </div>
-        <div style={{fontSize:13,fontWeight:600,color:"#2a2050",marginBottom:4,lineHeight:1.3}}>
-          {hoveredTask.task.title}
-        </div>
-        <div style={{fontSize:11,color:"#B8A9C9"}}>
-          {hoveredTask.task.due
-            ? new Date(hoveredTask.task.due).toLocaleDateString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false})
-            : "No due date"}
-        </div>
-        {hoveredTask.task.done && (
-          <div style={{fontSize:11,color:"#27ae60",fontWeight:600,marginTop:4}}>✓ Completed</div>
-        )}
-        {!hoveredTask.task.done && new Date(hoveredTask.task.due) < new Date() && (
-          <div style={{fontSize:11,color:"#c0392b",fontWeight:600,marginTop:4}}>Overdue</div>
-        )}
-      </div>
-    )}
-  </section>
-)}
+                      {/* Hover tooltip */}
+                      {hoveredTask && (
+                          <div style={{
+                            position:"absolute",
+                            left: Math.min(hoveredTask.x, 220),
+                            top: hoveredTask.y,
+                            background:"#ffffff",
+                            border:"1px solid #D4D4DC",
+                            borderRadius:10,
+                            padding:"9px 13px",
+                            boxShadow:"0 6px 24px rgba(49,72,122,0.13)",
+                            zIndex:300,
+                            minWidth:170,
+                            maxWidth:220,
+                            pointerEvents:"none",
+                          }}>
+                            <div style={{fontSize:11,fontWeight:700,color:"#A59AC9",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>
+                              {hoveredTask.task.type} · {hoveredTask.task.course}
+                            </div>
+                            <div style={{fontSize:13,fontWeight:600,color:"#2a2050",marginBottom:4,lineHeight:1.3}}>
+                              {hoveredTask.task.title}
+                            </div>
+                            <div style={{fontSize:11,color:"#B8A9C9"}}>
+                              {hoveredTask.task.due
+                                  ? new Date(hoveredTask.task.due).toLocaleDateString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false})
+                                  : "No due date"}
+                            </div>
+                            {hoveredTask.task.done && (
+                                <div style={{fontSize:11,color:"#27ae60",fontWeight:600,marginTop:4}}>✓ Completed</div>
+                            )}
+                            {!hoveredTask.task.done && new Date(hoveredTask.task.due) < new Date() && (
+                                <div style={{fontSize:11,color:"#c0392b",fontWeight:600,marginTop:4}}>Overdue</div>
+                            )}
+                          </div>
+                      )}
+                    </section>
+                )}
 
-{visible.schedule && (
-  <section className="card-anim" style={s.card}>
-    <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10}}>
-      <SectionTitle>Weekly Schedule</SectionTitle>
-      <button onClick={() => setActivePage("planner")} style={sd.smallAddBtn}>
-        Open Planner →
-      </button>
-    </div>
+                {visible.schedule && (
+                    <section className="card-anim" style={s.card}>
+                      <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10}}>
+                        <SectionTitle>Weekly Schedule</SectionTitle>
+                        <button onClick={() => setActivePage("planner")} style={sd.smallAddBtn}>
+                          Open Planner →
+                        </button>
+                      </div>
 
-    {(() => {
-      const weekStartDate = (() => {
-        const d = new Date();
-        const diff = d.getDay() === 0 ? -6 : 1 - d.getDay();
-        d.setDate(d.getDate() + diff + schedWeekOffset * 7);
-        return d;
-      })();
+                      {(() => {
+                        const weekStartDate = (() => {
+                          const d = new Date();
+                          const diff = d.getDay() === 0 ? -6 : 1 - d.getDay();
+                          d.setDate(d.getDate() + diff + schedWeekOffset * 7);
+                          return d;
+                        })();
 
-      const weekEndDate = new Date(weekStartDate);
-      weekEndDate.setDate(weekStartDate.getDate() + 6);
-      const fmtDate = d => d.toLocaleDateString("en-US", { month:"short", day:"numeric" });
-      return (
-        <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, background:"#F7F5FB", borderRadius:10, padding:"6px 10px"}}>
-          <button onClick={() => setSchedWeekOffset(o => o - 1)} style={{background:"none", border:"1px solid #D4D4DC", borderRadius:7, width:26, height:26, cursor:"pointer", fontSize:14, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center"}}>‹</button>
-          <span style={{fontSize:12, fontWeight:600, color:"#31487A"}}>
+                        const weekEndDate = new Date(weekStartDate);
+                        weekEndDate.setDate(weekStartDate.getDate() + 6);
+                        const fmtDate = d => d.toLocaleDateString("en-US", { month:"short", day:"numeric" });
+                        return (
+                            <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, background:"#F7F5FB", borderRadius:10, padding:"6px 10px"}}>
+                              <button onClick={() => setSchedWeekOffset(o => o - 1)} style={{background:"none", border:"1px solid #D4D4DC", borderRadius:7, width:26, height:26, cursor:"pointer", fontSize:14, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center"}}>‹</button>
+                              <span style={{fontSize:12, fontWeight:600, color:"#31487A"}}>
             {schedWeekOffset === 0 ? "This Week" : schedWeekOffset === 1 ? "Next Week" : schedWeekOffset === -1 ? "Last Week" : `${fmtDate(weekStartDate)} – ${fmtDate(weekEndDate)}`}
-            <span style={{fontWeight:400, color:"#A59AC9", marginLeft:6}}>{fmtDate(weekStartDate)} – {fmtDate(weekEndDate)}</span>
+                                <span style={{fontWeight:400, color:"#A59AC9", marginLeft:6}}>{fmtDate(weekStartDate)} – {fmtDate(weekEndDate)}</span>
           </span>
-          <button onClick={() => setSchedWeekOffset(o => o + 1)} style={{background:"none", border:"1px solid #D4D4DC", borderRadius:7, width:26, height:26, cursor:"pointer", fontSize:14, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center"}}>›</button>
-        </div>
-      );
-    })()}
+                              <button onClick={() => setSchedWeekOffset(o => o + 1)} style={{background:"none", border:"1px solid #D4D4DC", borderRadius:7, width:26, height:26, cursor:"pointer", fontSize:14, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center"}}>›</button>
+                            </div>
+                        );
+                      })()}
 
-    <div style={{display:"flex", flexDirection:"column", gap:6, maxHeight:220, overflowY:"auto"}}>
-      {(() => {
-        const DAY_KEYS   = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"];
-        const DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-        const hasBlocks  = DAY_KEYS.some(k => (studyBlocks[k]||[]).length > 0);
-        const hasSlots   = DAY_KEYS.some(k => (studySlots[k]||[]).length > 0);
+                      <div style={{display:"flex", flexDirection:"column", gap:6, maxHeight:220, overflowY:"auto"}}>
+                        {(() => {
+                          const DAY_KEYS   = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"];
+                          const DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+                          const hasBlocks  = DAY_KEYS.some(k => (studyBlocks[k]||[]).length > 0);
+                          const hasSlots   = DAY_KEYS.some(k => (studySlots[k]||[]).length > 0);
 
-        if (!hasBlocks && !hasSlots) return (
-          <div style={{fontSize:13, color:"#B8A9C9", textAlign:"center", padding:"20px 0"}}>
-            No schedule for this week — open the planner to generate one!
-          </div> );
+                          if (!hasBlocks && !hasSlots) return (
+                              <div style={{fontSize:13, color:"#B8A9C9", textAlign:"center", padding:"20px 0"}}>
+                                No schedule for this week — open the planner to generate one!
+                              </div> );
 
-        const fmt = timeStr => {
-          if (!timeStr) return "";
-          const parts = Array.isArray(timeStr) ? timeStr : timeStr.split(":");
-          return `${String(parts[0]).padStart(2,"0")}:${String(parts[1]||0).padStart(2,"0")}`;
-        };
+                          const fmt = timeStr => {
+                            if (!timeStr) return "";
+                            const parts = Array.isArray(timeStr) ? timeStr : timeStr.split(":");
+                            return `${String(parts[0]).padStart(2,"0")}:${String(parts[1]||0).padStart(2,"0")}`;
+                          };
 
-        const fmtH = h => `${String(Math.floor(h)).padStart(2,"0")}:${String(Math.round((h%1)*60)).padStart(2,"0")}`;
-        const PALETTE = ["#5A3B7B","#31487A","#2d7a4a","#7a4a2d","#7a2d5a","#2d5a7a","#6b2d7a"];
-        const entryLookup = {};
-        studyEntries.forEach((e, idx) => {
-          const entryIdStr = String(e.id);
-          const course = e.task?.course || "";
-          const title  = e.task?.title  || "Study";
-          const label  = course ? `${course} — ${title}` : title;
-          const color  = schedColorMap[entryIdStr] || courseColors[course] || PALETTE[idx % PALETTE.length];
-          entryLookup[entryIdStr] = { label, color };
-        });
+                          const fmtH = h => `${String(Math.floor(h)).padStart(2,"0")}:${String(Math.round((h%1)*60)).padStart(2,"0")}`;
+                          const PALETTE = ["#5A3B7B","#31487A","#2d7a4a","#7a4a2d","#7a2d5a","#2d5a7a","#6b2d7a"];
+                          const entryLookup = {};
+                          studyEntries.forEach((e, idx) => {
+                            const entryIdStr = String(e.id);
+                            const course = e.task?.course || "";
+                            const title  = e.task?.title  || "Study";
+                            const label  = course ? `${course} — ${title}` : title;
+                            const color  = schedColorMap[entryIdStr] || courseColors[course] || PALETTE[idx % PALETTE.length];
+                            entryLookup[entryIdStr] = { label, color };
+                          });
 
-        return DAY_KEYS.map((key, i) => {
-          const blocks = (studyBlocks[key] || []).slice().sort((a,b) => fmt(a.startTime).localeCompare(fmt(b.startTime)));
-          const slots  = studySlots[key] || [];
-          if (!blocks.length && !slots.length) return null;
+                          return DAY_KEYS.map((key, i) => {
+                            const blocks = (studyBlocks[key] || []).slice().sort((a,b) => fmt(a.startTime).localeCompare(fmt(b.startTime)));
+                            const slots  = studySlots[key] || [];
+                            if (!blocks.length && !slots.length) return null;
 
-          return (
-            <div key={key} style={{marginBottom:2}}>
-              <div style={{fontSize:11, fontWeight:700, color:"#8FB3E2", marginBottom:4, textTransform:"uppercase", letterSpacing:"0.06em"}}>
-                {DAY_LABELS[i]}
-              </div>
+                            return (
+                                <div key={key} style={{marginBottom:2}}>
+                                  <div style={{fontSize:11, fontWeight:700, color:"#8FB3E2", marginBottom:4, textTransform:"uppercase", letterSpacing:"0.06em"}}>
+                                    {DAY_LABELS[i]}
+                                  </div>
 
-              {blocks.map((b, bi) => {
-                const startH = Array.isArray(b.startTime)
-                  ? b.startTime[0] + b.startTime[1]/60
-                  : parseFloat(b.startTime?.split(":")[0]||0) + parseFloat(b.startTime?.split(":")[1]||0)/60;
-                const endH = startH + (b.duration || 1);
-                const info  = entryLookup[String(b.studyPlanEntryId)] || {};
-                const color = info.color || "#7B5EA7";
-                const label = info.label || "Study Block";
-                return (
-                  <div key={bi} style={{
-                    display:"flex", alignItems:"center", justifyContent:"space-between",
-                    padding:"6px 10px", borderRadius:8, marginBottom:4,
-                    background: b.completed ? "#f5f5f5" : color + "18",
-                    borderLeft: `3px solid ${b.completed ? "#ccc" : color}`,
-                    opacity: b.completed ? 0.65 : 1,
-                  }}>
-                    <div style={{minWidth:0}}>
+                                  {blocks.map((b, bi) => {
+                                    const startH = Array.isArray(b.startTime)
+                                        ? b.startTime[0] + b.startTime[1]/60
+                                        : parseFloat(b.startTime?.split(":")[0]||0) + parseFloat(b.startTime?.split(":")[1]||0)/60;
+                                    const endH = startH + (b.duration || 1);
+                                    const info  = entryLookup[String(b.studyPlanEntryId)] || {};
+                                    const color = info.color || "#7B5EA7";
+                                    const label = info.label || "Study Block";
+                                    return (
+                                        <div key={bi} style={{
+                                          display:"flex", alignItems:"center", justifyContent:"space-between",
+                                          padding:"6px 10px", borderRadius:8, marginBottom:4,
+                                          background: b.completed ? "#f5f5f5" : color + "18",
+                                          borderLeft: `3px solid ${b.completed ? "#ccc" : color}`,
+                                          opacity: b.completed ? 0.65 : 1,
+                                        }}>
+                                          <div style={{minWidth:0}}>
                       <span style={{fontSize:12, fontWeight:700, color: b.completed ? "#aaa" : color, display:"block", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>
                         {label}
                       </span>
-                      <span style={{fontSize:11, color:"#B8A9C9"}}>
+                                            <span style={{fontSize:11, color:"#B8A9C9"}}>
                         {fmtH(startH)} – {fmtH(endH)} · {b.duration}h
                       </span>
-                    </div>
-                    {b.completed
-                      ? <span style={{fontSize:10, background:"#eef7f0", color:"#2d7a4a", padding:"2px 6px", borderRadius:4, fontWeight:600, flexShrink:0}}>✓ Done</span>
-                      : <span style={{fontSize:10, background:color+"22", color, padding:"2px 6px", borderRadius:4, fontWeight:600, flexShrink:0}}>{b.duration}h</span>
-                    }
-                  </div>
-                );
-              })}
+                                          </div>
+                                          {b.completed
+                                              ? <span style={{fontSize:10, background:"#eef7f0", color:"#2d7a4a", padding:"2px 6px", borderRadius:4, fontWeight:600, flexShrink:0}}>✓ Done</span>
+                                              : <span style={{fontSize:10, background:color+"22", color, padding:"2px 6px", borderRadius:4, fontWeight:600, flexShrink:0}}>{b.duration}h</span>
+                                          }
+                                        </div>
+                                    );
+                                  })}
 
-              {!blocks.length && slots.map((slot, si) => (
-                <div key={si} style={{
-                  display:"flex", alignItems:"center", justifyContent:"space-between",
-                  padding:"6px 10px", borderRadius:8, marginBottom:4,
-                  background:"#eef2fb", borderLeft:"3px solid #8FB3E2",
-                }}>    <div>
-                        <span style={{fontSize:12, fontWeight:600, color:"#31487A"}}>{fmt(slot.startTime)} – {fmt(slot.endTime)}</span>
-                        <div style={{fontSize:11, color:"#A59AC9", marginTop:1}}>Available slot</div>
+                                  {!blocks.length && slots.map((slot, si) => (
+                                      <div key={si} style={{
+                                        display:"flex", alignItems:"center", justifyContent:"space-between",
+                                        padding:"6px 10px", borderRadius:8, marginBottom:4,
+                                        background:"#eef2fb", borderLeft:"3px solid #8FB3E2",
+                                      }}>    <div>
+                                        <span style={{fontSize:12, fontWeight:600, color:"#31487A"}}>{fmt(slot.startTime)} – {fmt(slot.endTime)}</span>
+                                        <div style={{fontSize:11, color:"#A59AC9", marginTop:1}}>Available slot</div>
+                                      </div>
+                                        <span style={{fontSize:10, background:"#D9E1F1", color:"#31487A", padding:"2px 6px", borderRadius:4, flexShrink:0}}>Free</span>
+                                      </div>
+                                  ))}
+                                </div>
+                            );
+                          });
+                        })()}
                       </div>
-                      <span style={{fontSize:10, background:"#D9E1F1", color:"#31487A", padding:"2px 6px", borderRadius:4, flexShrink:0}}>Free</span>
-                    </div>
-                  ))}
-                </div>
-              );
-            });
-          })()}
-        </div>
-      </section>
-    )}
-  </div>
-)}
-        {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} />}
-        {activePage === "tasks" && (
-          <TaskManager
-            tasks={tasks}
-            onToggle={toggleTask}
-            onDelete={deleteTask}
-            onSave={upsertTask}
-            initialEditTask={editingTask}
-            key={editingTask?.id || "tasks"}
-          />
-        )}
-        {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
-        {activePage === "planner" && <StudyPlanner />}
-        {activePage === "profile" && (
-          <Profile onProfileSave={p => setProfile(p)} onLogout={handleLogout} />
-        )}
+                    </section>
+                )}
+              </div>
+          )}
+          {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} />}
+          {activePage === "tasks" && (
+              <TaskManager
+                  tasks={tasks}
+                  onToggle={toggleTask}
+                  onDelete={deleteTask}
+                  onSave={upsertTask}
+                  initialEditTask={editingTask}
+                  key={editingTask?.id || "tasks"}
+              />
+          )}
+          {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
+          {activePage === "planner" && <StudyPlanner />}
+          {activePage === "profile" && (
+              <Profile onProfileSave={p => setProfile(p)} onLogout={handleLogout} />
+          )}
 
-      </main>
-    </div>
+        </main>
+      </div>
   );
 }
 
