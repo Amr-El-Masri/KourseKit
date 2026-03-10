@@ -148,7 +148,7 @@ function inferType(name) {
 }
 
 // Grade Calculator page
-export default function GradeCalculator({ dashboardCourses = [], savedSemesters = [] }) {
+export default function GradeCalculator({ dashboardCourses = [], savedSemesters = [], selectedSemester = "" }) {
   const [activeTab, setActiveTab] = useState("semester");
 
   // Row helpers (UI only)
@@ -443,6 +443,9 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
   // Selected course (shared across course/target/simulator tabs)
   const [selectedCourse, setSelectedCourse] = useState("");
+  const semesterCourses = selectedSemester
+    ? (savedSemesters.find(s => s.semesterName === selectedSemester)?.courses || []).filter(c => c.courseCode).map(c => ({ name: c.courseCode }))
+    : dashboardCourses;
 
   // Switch course — loads saved state or falls back to syllabus extract
   const switchCourse = (courseName) => {
@@ -590,11 +593,11 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
 
       {/* Course picker — shown on course/target/simulator tabs */}
-      {["course","target","simulator"].includes(activeTab) && dashboardCourses.length > 0 && (
+      {["course","target","simulator"].includes(activeTab) && semesterCourses.length > 0 && (
         <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16, flexWrap:"wrap" }}>
           <span style={{ fontSize:13, fontWeight:600, color:"#5A3B7B" }}>Course:</span>
           <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-            {dashboardCourses.map(c => (
+            {semesterCourses.map(c => (
               <button key={c.name} onClick={() => switchCourse(selectedCourse === c.name ? "" : c.name)} style={{
                 fontSize:12, fontWeight:600, padding:"5px 14px", borderRadius:20,
                 border: selectedCourse === c.name ? "none" : "1px solid #D4D4DC",

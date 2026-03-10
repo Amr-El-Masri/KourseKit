@@ -564,7 +564,7 @@ const saveCourseColor = (courseName, color) => {
       `}</style>
 
         <aside style={{ ...s.sidebar, width:sidebarOpen ? 224 : 66 }}>
-          <div style={{ ...s.sidebarTop, justifyContent: sidebarOpen ? "space-between" : "center" }}>
+          <div style={{ ...s.sidebarTop, flexDirection: sidebarOpen ? "row" : "column", justifyContent: sidebarOpen ? "space-between" : "center", gap: sidebarOpen ? 10 : 8 }}>
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
               <img src="/KourseKit.jpeg" alt="KourseKit" style={{ width:34, height:34, borderRadius:10, objectFit:"cover", flexShrink:0 }} />
               {sidebarOpen && <span style={s.logoLabel}>KourseKit</span>}
@@ -586,7 +586,7 @@ const saveCourseColor = (courseName, color) => {
                 </div>
             ))}
           </nav>
-          <div className="nav-btn" onClick={() => setActivePage("profile")} style={{display:"flex",alignItems:"center",padding:"10px 16px",margin:"2px 8px 4px",borderRadius:10,justifyContent:sidebarOpen?"flex-start":"center",cursor:"pointer",userSelect:"none",background:activePage==="profile"?"rgba(255,255,255,0.15)":"transparent"}}>
+          <div className="nav-btn" onClick={() => setActivePage("profile")} style={{display:"flex",alignItems:"center",padding:"10px 16px",margin:"2px 8px 12px",borderRadius:10,justifyContent:sidebarOpen?"flex-start":"center",cursor:"pointer",userSelect:"none",background:"rgba(255,255,255,0.18)",border:"1px solid rgba(255,255,255,0.25)"}}>
             <div style={{width:28,height:28,borderRadius:"50%",background:"#31487A",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,border:activePage==="profile"?"2px solid #7B5EA7":"2px solid transparent",transition:"border-color .15s"}}>
               {profile.avatar
                   ? (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={13} color="white" /> : <span style={{fontWeight:700,fontSize:11,color:"white"}}>{email[0].toUpperCase()}</span>; })()
@@ -1134,7 +1134,7 @@ const saveCourseColor = (courseName, color) => {
                 )}
               </div>
           )}
-          {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} />}
+          {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} selectedSemester={semester} />}
           {activePage === "tasks" && (
               <TaskManager
                   tasks={tasks}

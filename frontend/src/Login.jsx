@@ -46,6 +46,7 @@ export default function Login({ onLogin, onGoToRegister, onGoToForgotPassword, p
       `}</style>
 
       <div style={s.leftPanel}>
+        <img src="/KourseKit.jpeg" alt="KourseKit" style={{ width:90, height:90, borderRadius:18, objectFit:"cover", marginBottom:20, zIndex:1 }} />
         <div style={s.brandName}>KourseKit</div>
         <div style={s.brandTagline}>Your AUB academic life,<br />organized.</div>
         <div style={s.decorCircle1} />
