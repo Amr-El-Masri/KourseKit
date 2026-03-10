@@ -17,17 +17,23 @@ public class NotificationMapper {
 
         long hoursUntilDeadline = ChronoUnit.HOURS.between(now, task.getDeadline());
 
-        String urgency = hoursUntilDeadline <= 6 ? "today"
+        String urgency = hoursUntilDeadline < 0 ? "overdue"
+                : hoursUntilDeadline <= 6 ? "today"
                 : hoursUntilDeadline <= 30 ? "tomorrow"
                 : "3day";
 
-        // Build message fresh from current task data so edits are reflected
-        String message = switch (urgency) {
-            case "today" -> task.getCourse() + " — " + task.getTitle()
-                    + " due in " + Duration.between(now, task.getDeadline()).toHours() + "h";
-            case "tomorrow" -> task.getCourse() + " — " + task.getTitle() + " due tomorrow";
-            default -> task.getCourse() + " — " + task.getTitle() + " due in 3 days";
+        Duration timeLeft = Duration.between(now, task.getDeadline());
+
+        String timeLeftStr = switch (urgency) {
+            case "overdue"  -> null;
+            case "today"    -> timeLeft.toHours() < 1 ? "very soon" : timeLeft.toHours() + "h";
+            case "tomorrow" -> "tomorrow";
+            default         -> "in 3 days";
         };
+
+        String message = task.getCourse() + " — " + task.getTitle() + (
+                urgency.equals("overdue") ? " is overdue" : " due " + timeLeftStr
+        );
 
         return new NotificationDTO(
                 message,
