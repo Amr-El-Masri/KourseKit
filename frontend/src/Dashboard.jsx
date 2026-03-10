@@ -286,19 +286,19 @@ export default function Dashboard({ onLogout }) {
     localStorage.setItem("kk_todos", JSON.stringify(next));
   };
 
-  const [tasks, setTasks] = useState([]);
-  const [courseColors, setCourseColors] = useState(() => {
-    try {
-      const saved = localStorage.getItem("kk_course_colors");
-      return saved ? JSON.parse(saved) : {};
-    } catch { return {}; }
-  });
+const [tasks, setTasks] = useState([]);
+const [courseColors, setCourseColors] = useState({});
 
-  const saveCourseColor = (courseName, color) => {
-    const next = { ...courseColors, [courseName]: color };
-    setCourseColors(next);
-    localStorage.setItem("kk_course_colors", JSON.stringify(next));
-  };
+const saveCourseColor = (courseName, color) => {
+  const next = { ...courseColors, [courseName]: color };
+  setCourseColors(next);
+  const t = localStorage.getItem("kk_token");
+  if (t) fetch("http://localhost:8080/api/profile/colors", {
+    method: "PUT",
+    headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
+    body: JSON.stringify(next),
+  }).catch(() => {});
+};
 
   const [courseOfficeHours, setCourseOfficeHours] = useState(() => {
     try {
@@ -524,6 +524,9 @@ export default function Dashboard({ onLogout }) {
     fetch("http://localhost:8080/api/profile", {
       headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
     }).then(r => r.ok ? r.json() : null).then(data => { if (data) setProfile(data); }).catch(() => {});
+    fetch("http://localhost:8080/api/profile/colors", {
+      headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
+    }).then(r => r.ok ? r.json() : null).then(data => { if (data) setCourseColors(data); }).catch(() => {});
   }, []);
 
   // Courses from all saved semesters (deduplicated) for Grade Calculator dropdown

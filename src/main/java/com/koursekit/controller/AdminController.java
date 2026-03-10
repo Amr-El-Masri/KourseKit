@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.koursekit.config.EmailConfig;
 import com.koursekit.dto.Admins;
 import com.koursekit.model.ProfessorReview;
 import com.koursekit.model.Review;
@@ -30,6 +31,8 @@ import com.koursekit.repository.UserRepo;
 public class AdminController {
     @Autowired
     private UserRepo userrepo;
+    @Autowired
+    private EmailConfig emailconfig;
     @Autowired
     private ReviewRepository reviewrepo;
     @Autowired
@@ -51,6 +54,7 @@ public class AdminController {
             .orElseThrow(() -> new RuntimeException("User not found."));
         user.setActive(false);
         userrepo.save(user);
+        try { emailconfig.deactivationmail(user.getEmail()); } catch (Exception e) { System.err.println("Deactivation email failed: " + e.getMessage()); }
         return ResponseEntity.ok("Account deactivated.");
     }
 
@@ -60,6 +64,7 @@ public class AdminController {
             .orElseThrow(() -> new RuntimeException("User not found."));
         user.setActive(true);
         userrepo.save(user);
+        try { emailconfig.activationmail(user.getEmail()); } catch (Exception e) { System.err.println("Activation email failed: " + e.getMessage()); }
         return ResponseEntity.ok("Account activated.");
     }
 

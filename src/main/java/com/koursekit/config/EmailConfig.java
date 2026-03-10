@@ -44,13 +44,31 @@ public class EmailConfig {
         javaMailSender().send(message);
     }
 
+    public void deactivationmail(String email) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject("KourseKit - Your Account Has Been Deactivated");
+        message.setText("Your KourseKit account has been deactivated by an administrator for going against our policy.");
+        // add later the ability to contact an admin if they think its a mistake and add request to be admin or smth and an email that someone is admin now after they get made admin
+        javaMailSender().send(message);
+    }
+
+    public void activationmail(String email) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject("KourseKit - Your Account Has Been Reactivated");
+        message.setText("Your KourseKit account has been reactivated by an administrator.\n\n"
+            + "You can now log in.");
+        javaMailSender().send(message);
+    }
+
     public void resetpasswordmail(String email, String token) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
         message.setSubject("KourseKit - Reset Your Password");
         String resetLink = "http://localhost:3000?reset_token=" + token;
         message.setText("Please click the link below to reset your password. \n\n"
-            + resetLink + "\n\nThe link will expire in 30 minutes. \nIf you didn't send this request, you can ignore this email.");
+            + resetLink + "\n\nThe link will expire in 30 minutes. \nIf you didn't send this request, you can ignore this email."); 
         javaMailSender().send(message);
     }
 }

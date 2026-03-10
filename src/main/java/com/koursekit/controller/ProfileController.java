@@ -1,23 +1,31 @@
 package com.koursekit.controller;
 
-import com.koursekit.model.User;
-import com.koursekit.repository.UserRepo;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.HashMap;
 import java.util.Map;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.koursekit.model.User;
+import com.koursekit.repository.UserRepo;
 
 @RestController
 @RequestMapping("/api/profile")
 public class ProfileController {
-
     private final UserRepo userRepo;
+    @Autowired
+    private ObjectMapper objectMapper;
 
-    public ProfileController(UserRepo userRepo) {
-        this.userRepo = userRepo;
-    }
+    public ProfileController(UserRepo userRepo) { this.userRepo = userRepo; }
 
     @GetMapping
     public ResponseEntity<Map<String, Object>> getProfile() {
@@ -48,6 +56,27 @@ public class ProfileController {
         return ResponseEntity.ok(toMap(user));
     }
 
+    @GetMapping("/colors")
+    public ResponseEntity<Map<String, Object>> getColors() {
+        User user = getAuthenticatedUser();
+        try {
+            String json = user.getCourseColorsJson();
+            if (json != null && !json.isBlank())
+                return ResponseEntity.ok(objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {}));
+        } catch (Exception ignored) {}
+        return ResponseEntity.ok(new HashMap<>());
+    }
+
+    @PutMapping("/colors")
+    public ResponseEntity<Map<String, Object>> updateColors(@RequestBody Map<String, Object> colors) {
+        User user = getAuthenticatedUser();
+        try {
+            user.setCourseColorsJson(objectMapper.writeValueAsString(colors));
+            userRepo.save(user);
+        } catch (Exception ignored) {}
+        return ResponseEntity.ok(colors);
+    }
+
     private Map<String, Object> toMap(User user) {
         Map<String, Object> m = new HashMap<>();
         m.put("email",         user.getEmail());
@@ -68,7 +97,5 @@ public class ProfileController {
         return m;
     }
 
-    private User getAuthenticatedUser() {
-        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-    }
+    private User getAuthenticatedUser() { return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal(); }
 }

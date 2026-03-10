@@ -59,6 +59,8 @@ public class User {
     private boolean minor = false;
     @Column(name = "minor_name")
     private String minorName;
+    @Column(name = "course_colors", columnDefinition = "TEXT")
+    private String courseColorsJson;
 
     public User() {}
     public User(String email, String pass) {
@@ -134,6 +136,9 @@ public class User {
 
     public String getMinorName() { return minorName; }
     public void setMinorName(String minorName) { this.minorName = minorName; }
+
+    public String getCourseColorsJson() { return courseColorsJson; }
+    public void setCourseColorsJson(String courseColorsJson) { this.courseColorsJson = courseColorsJson; }
 
     // integrate microsoft login?
 }
