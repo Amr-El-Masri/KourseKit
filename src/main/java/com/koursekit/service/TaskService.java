@@ -70,9 +70,24 @@ public class TaskService {
         if (dto.deadline() != null) task.setDeadline(dto.deadline());
         if (dto.type() != null) task.setType(dto.type());
         if (dto.notes() != null) task.setNotes(dto.notes());
-        task.setCompleted(dto.completed());
+        boolean wasCompleted = task.isCompleted();
+        boolean nowCompleted = dto.completed();
+        task.setCompleted(nowCompleted);
         task.setPriority(Task.calculatePriority(task.getDeadline()));
         Task saved = taskRepository.save(task);
+
+        if (!wasCompleted && nowCompleted) {
+            notificationRepository.deleteByTask_Id(saved.getId());
+        } else if (wasCompleted && !nowCompleted) {
+            long hoursUntil = java.time.temporal.ChronoUnit.HOURS.between(
+                    LocalDateTime.now(), saved.getDeadline());
+            if (hoursUntil > 0 && hoursUntil <= 78) {
+                notificationRepository.save(
+                        new com.koursekit.model.Notification(saved, "", LocalDateTime.now())
+                );
+            }
+        }
+
         return taskMapper.toDto(saved);
     }
 
@@ -91,18 +106,8 @@ public class TaskService {
                 .stream().map(taskMapper::toDto).toList();
     }
 
-    public List<Task> findByDeadlineBetween() {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime oneDay = now.plusHours(24);
-        return taskRepository.findByDeadlineBetween(now, oneDay);
+    public List<Task> findByDeadlineBetween(LocalDateTime from, LocalDateTime to) {
+        return taskRepository.findByDeadlineBetween(from, to);
     }
 
-    public void deleteOverdueTasks(Long userId) {
-        taskRepository.deleteTasksPastDeadline(LocalDateTime.now(), userId);
-    }
-
-    public List<TaskResponseDTO> getTasksByUser(Long userId) {
-        return taskRepository.findByUserId(userId)
-                .stream().map(taskMapper::toDto).toList();
-    }
 }
