@@ -20,13 +20,14 @@ public class ProfessorReviewService {
             throw new RuntimeException("You have already submitted a review for this professor.");
         }
 
-        String filteredComment = contentFilterService.filter(comment);
+        ContentFilterService.FilterResult filtered = contentFilterService.filter(comment);
 
         ProfessorReview review = new ProfessorReview();
         review.setProfessorName(professorName);
-        review.setComment(filteredComment);
+        review.setComment(filtered.comment);
         review.setRating(rating);
         review.setUserId(userId);
+        review.setStatus(ReviewStatus.valueOf(filtered.status));
 
         return professorReviewRepo.save(review);
     }

@@ -1,121 +1,139 @@
 package com.koursekit.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import java.util.List;
-import java.util.regex.Pattern;
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
 @Service
 public class ContentFilterService {
-    private static final List<String> bannedWords = List.of(
-            // English offensive words
-            "2g1c", "4r5e", "5h1t", "5hit", "a55",
-            "anal", "anus", "apeshit", "arse", "arsehole",
-            "ass", "ass-fucker", "assbag", "assbandit", "assbanger",
-            "assbite", "assclown", "asscock", "asscracker", "assface",
-            "assfucker", "assgoblin", "asshat", "asshead", "asshole",
-            "assholes", "assjacker", "asslick", "asslicker", "assmonkey",
-            "assmunch", "asspirate", "assshole", "asssucker", "asswad",
-            "asswhole", "asswipe",
-            "b!tch", "b1tch", "bastard", "bitch", "bitcher",
-            "bitches", "bitchin", "bitching", "bollocks", "boner",
-            "bullshit", "bunghole",
-            "c0ck", "c0cksucker", "cawk", "clusterfuck", "cnut",
-            "cock", "cock-sucker", "cockbite", "cockburger", "cockface",
-            "cockhead", "cockjockey", "cockmaster", "cockmonkey", "cockmunch",
-            "cocknose", "cocks", "cocksucker", "cocksucking", "cok",
-            "cokmuncher", "coksucka", "crap", "cum", "cumbubble",
-            "cumdumpster", "cumguzzler", "cummer", "cumming", "cumshot",
-            "cumslut", "cunt", "cuntface", "cunthole", "cuntlicker",
-            "cuntrag", "cunts",
-            "d1ck", "dammit", "dick", "dickbag", "dickface",
-            "dickhead", "dickhole", "dicksucker", "dickwad", "dickweed",
-            "dildo", "dipshit", "douche", "douchebag", "dumbshit",
-            "dyke",
-            "ejaculate", "ejaculation",
-            "f u c k", "f_u_c_k", "fag", "fagbag", "fagg",
-            "faggit", "faggot", "fags", "fagtard", "fart",
-            "fatass", "fcuk", "fcuking", "feck", "felching",
-            "fellatio", "fingerfuck", "fistfuck", "fisting", "fook",
-            "fuck", "fucked", "fucker", "fuckers", "fuckhead",
-            "fuckin", "fucking", "fuckme", "fucks", "fucktards",
-            "fuckwit", "fuk", "fuker", "fukker", "fukkin",
-            "gangbang", "gangbanged", "goddamn", "goddamned",
-            "handjob", "hardcore", "homo", "hooker", "horny",
-            "humping",
-            "jackass", "jackoff", "jerk", "jizz",
-            "knob", "knobhead", "kock", "kum", "kummer",
-            "kumming", "kunt",
-            "masterbate", "masturbate", "milf", "mofo", "mothafuck",
-            "mothafucker", "motherfuck", "motherfucker", "motherfuckers", "motherfucking",
-            "muff",
-            "nude", "nudity", "nutsack",
-            "orgasm", "orgy",
-            "pecker", "pedophile", "penis", "phuck", "phuk",
-            "piece of shit", "piss", "pissed", "pisser", "pissing",
-            "pissoff", "porn", "porno", "pornography", "prick",
-            "pricks", "pussy", "pussylicking",
-            "rape", "raping", "rapist", "retard",
-            "sadist", "scrotum", "semen", "sex", "shag",
-            "shagging", "shemale", "shit", "shit-ass", "shit-bag",
-            "shit-brain", "shit-face", "shit-head", "shit-hole", "shitass",
-            "shitbag", "shitbrain", "shitface", "shitfaced", "shitfuck",
-            "shithead", "shithole", "shitload", "shits", "shitted",
-            "shitter", "shitting", "shitty", "skank", "slut",
-            "slutbag", "sluts", "smut", "sodomize", "sodomy",
-            "son-of-a-bitch", "spunk",
-            "titfuck", "tits", "titties", "titty", "tittyfuck",
-            "tosser", "twat", "twathead", "twatlips",
-            "vagina", "vibrator", "vulva",
-            "wank", "wanker", "whore",
-            "xrated", "xxx",
-            // Lebanese (Arabizi/watsapp lang - common offensive words)
-            // Lebanese Arabizi - sexual/body
-            "kuss", "ku55", "k3s", "k3ss", "kos", "kuss ummak", "kuss ukhtak",
-            "ayre", "3yre", "aire", "ayri", "3ayri", "airi",
-            "zibbi", "zibbi", "zibik", "zibek",
-            "teez", "tiz",
-            "sharmouta", "sharmou6a", "sharmuta", "char mouta",
-            "sharamit",
 
-            // Lebanese Arabizi - insults
-            "manyek", "manyak", "manyok", "man1ak",
-            "ahbal", "a7bal", "hmar", "7mar",
-            "kalb", "kelb", "klb",
-            "ibn el sharmouta", "ibn sharmouta", "ibn el sharamit",
-            "ibn el metnak", "ibn el 3ars",
-            "metnak", "met2anek",
-            "3ars", "ars",
-            "dayyous", "dayoos", "dayus",
-            "khawal", "5awal",
-            "lute", "loote",
-            "fasiq",
+    @Value("${openai.api.key}")
+    private String apiKey;
 
-            // Lebanese Arabizi - general insults
-            "zbele", "zibele",
-            "ta2 tizak", "ta2 tizzak",
-            "bala tarbiye",
-            "la2im", "la2een",
-            "wiskh", "wasikh",
-            "3abi", "3abeh",
-            "ghanam", "3anzi",
-            "flaneh", "flen"
-    );
+    private static final String OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+    private static final ObjectMapper mapper = new ObjectMapper();
 
-    public String filter(String comment){
-        if (comment ==null)return null;
-        //to detect when ppl are using special characters like "SH!t"
-        String normalized = comment
-            .replace("@", "a")
-            .replace("$", "s")
-            .replace("+", "t")
-            .replace("!", "i");
-        String filteredReview= comment;
-            for (String word: bannedWords){
-                String masked ="*".repeat(word.length());
-                filteredReview=Pattern.compile(Pattern.quote(word), Pattern.CASE_INSENSITIVE).matcher(filteredReview).replaceAll(masked);
+    // Result object returned to the calling service
+    public static class FilterResult {
+        public final String status;   // "APPROVED", "PENDING", or "FLAGGED"
+        public final String reason;   // populated for PENDING and FLAGGED
+        public final String comment;  // original comment, unchanged
 
-            }
-            return filteredReview;
+        public FilterResult(String status, String reason, String comment) {
+            this.status  = status;
+            this.reason  = reason;
+            this.comment = comment;
+        }
+    }
+
+    public FilterResult filter(String comment) {
+        if (comment == null || comment.trim().isEmpty()) {
+            return new FilterResult("APPROVED", null, comment);
         }
 
+        try {
+            String prompt = buildPrompt(comment);
+
+            // Build the JSON request body
+            String requestBody = mapper.writeValueAsString(java.util.Map.of(
+                    "model", "gpt-4o-mini",
+                    "temperature", 0,
+                    "messages", java.util.List.of(
+                            java.util.Map.of(
+                                    "role", "system",
+                                    "content", "You are a strict but fair content moderation assistant for a university course review platform. You must respond ONLY with valid JSON, no explanation, no markdown."
+                            ),
+                            java.util.Map.of(
+                                    "role", "user",
+                                    "content", prompt
+                            )
+                    )
+            ));
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(OPENAI_URL))
+                    .header("Content-Type", "application/json")
+                    .header("Authorization", "Bearer " + apiKey)
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+
+            HttpResponse<String> response = HttpClient.newHttpClient()
+                    .send(request, HttpResponse.BodyHandlers.ofString());
+
+            return parseResponse(response.body(), comment);
+
+        } catch (Exception e) {
+            // If the API call fails for any reason, fall back to PENDING
+            // so a human reviews it rather than bad content slipping through
+            System.err.println("ContentFilterService error: " + e.getMessage());
+            return new FilterResult("PENDING", "AI filter unavailable — manual review required.", comment);
+        }
+    }
+
+    private String buildPrompt(String comment) {
+        return """
+            You are moderating reviews for a university course review platform used by students at AUB (American University of Beirut).
+            Reviews may be written in English, Lebanese Arabizi (Arabic written in Latin letters and numbers, e.g. "3", "7", "2"), French, Arabic script, or a mix of these languages.
+
+            Analyze the following review and classify it into exactly one of three categories:
+
+            1. APPROVED — The review is a legitimate student experience, even if negative or critical. Criticism of a professor or course is allowed. Mild informal language is acceptable.
+
+            2. PENDING — The review is borderline. This includes:
+               - Possibly misleading or exaggerated claims with no basis
+               - Mildly inappropriate tone but not clearly abusive
+               - Suspicious content that may be a troll review or spam
+               - Content that warrants a human moderator's judgment
+
+            3. FLAGGED — The review clearly contains one or more of the following:
+               - Hate speech, racism, sectarianism, or discrimination
+               - Severe personal attacks or threats against a professor or student
+               - Explicit sexual content
+               - Heavily offensive language in any language including Lebanese Arabizi
+                 (examples: kuss, ayre, sharmouta, manyek, and their common variations)
+               - Content that is obviously not a course review (complete nonsense, unrelated content)
+
+            Review to analyze:
+            \"\"\"
+            %s
+            \"\"\"
+
+            Respond with ONLY this JSON format, nothing else:
+            {
+              "verdict": "APPROVED" | "PENDING" | "FLAGGED",
+              "reason": "brief reason — required if PENDING or FLAGGED, null if APPROVED"
+            }
+            """.formatted(comment);
+    }
+
+    private FilterResult parseResponse(String responseBody, String originalComment) {
+        try {
+            JsonNode root    = mapper.readTree(responseBody);
+            String   content = root.path("choices").get(0).path("message").path("content").asText();
+
+            // Strip markdown code fences if the model wraps in ```json ... ```
+            content = content.replaceAll("(?s)```json\\s*", "").replaceAll("(?s)```", "").trim();
+
+            JsonNode result  = mapper.readTree(content);
+            String   verdict = result.path("verdict").asText("PENDING").toUpperCase();
+            String   reason  = result.path("reason").isNull() ? null : result.path("reason").asText();
+
+            // Sanitize verdict to only accepted values
+            if (!verdict.equals("APPROVED") && !verdict.equals("FLAGGED")) {
+                verdict = "PENDING";
+            }
+
+            return new FilterResult(verdict, reason, originalComment);
+
+        } catch (Exception e) {
+            System.err.println("ContentFilterService parse error: " + e.getMessage());
+            return new FilterResult("PENDING", "Could not parse AI response — manual review required.", originalComment);
+        }
+    }
 }

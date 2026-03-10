@@ -33,12 +33,14 @@ public class ReviewService {
             throw new RuntimeException("You have already submitted a review for this course.");
         }
 
-        String filteredComment= contentFilterService.filter(comment);
+        ContentFilterService.FilterResult filtered = contentFilterService.filter(comment);
+
         Review review = new Review();
         review.setSection(section);
-        review.setComment(filteredComment);
+        review.setComment(filtered.comment);
         review.setRating(rating);
         review.setUserId(userId);
+        review.setStatus(ReviewStatus.valueOf(filtered.status));
 
         return reviewRepo.save(review);
     }

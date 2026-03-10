@@ -255,8 +255,10 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
         }
       );
       if (res.ok) {
-        setSuccess(true);
-        setTimeout(() => { setSuccess(false); onDone(); }, 2000);
+        const data = await res.json().catch(() => null);
+        const status = data?.status || "APPROVED";
+        setSuccess(status);
+        setTimeout(() => { setSuccess(false); onDone(); }, 3000);
       } else {
         const msg = await res.text();
         setErr(msg || "Failed to submit review.");
@@ -267,8 +269,18 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
 
   if (success) return (
     <div style={{ ...rv.composeCard, textAlign:"center", padding:40 }}>
-      <div style={{ marginBottom:12 }}><CheckCircle size={40} color="#2d7a4a" /></div>
-      <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Review submitted!</div>
+      {success === "PENDING" ? (
+        <>
+          <div style={{ marginBottom:12 }}>⏳</div>
+          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Review submitted for moderation</div>
+          <div style={{ fontSize:13, color:"#A59AC9", marginTop:8 }}>Your review will be visible once approved by a moderator.</div>
+        </>
+      ) : (
+        <>
+          <div style={{ marginBottom:12 }}><CheckCircle size={40} color="#2d7a4a" /></div>
+          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Review submitted!</div>
+        </>
+      )}
     </div>
   );
 
@@ -547,7 +559,12 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
         `${API}/api/professor-reviews/submit?professorName=${encodeURIComponent(professorName)}&comment=${encodeURIComponent(comment)}&rating=${rating}&userId=${encodeURIComponent(userEmail)}`,
         { method:"POST", headers:{ "Authorization": `Bearer ${token}` } }
       );
-      if (res.ok) { setSuccess(true); setTimeout(() => { setSuccess(false); onDone(); }, 2000); }
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        const status = data?.status || "APPROVED";
+        setSuccess(status);
+        setTimeout(() => { setSuccess(false); onDone(); }, 3000);
+      }
       else { const msg = await res.text(); setErr(msg || "Failed to submit."); }
     } catch { setErr("Network error. Please try again."); }
     finally { setSubmitting(false); }
@@ -555,8 +572,18 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
 
   if (success) return (
     <div style={{ ...rv.composeCard, textAlign:"center", padding:40 }}>
-      <CheckCircle size={32} color="#7B5EA7" style={{ marginBottom:12 }} />
-      <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Review submitted!</div>
+      {success === "PENDING" ? (
+        <>
+          <div style={{ marginBottom:12 }}>⏳</div>
+          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Review submitted for moderation</div>
+          <div style={{ fontSize:13, color:"#A59AC9", marginTop:8 }}>Your review will be visible once approved by a moderator.</div>
+        </>
+      ) : (
+        <>
+          <div style={{ marginBottom:12 }}><CheckCircle size={40} color="#2d7a4a" /></div>
+          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"#31487A" }}>Review submitted!</div>
+        </>
+      )}
     </div>
   );
 
