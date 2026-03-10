@@ -32,7 +32,7 @@ const PRIORITIES = [
   { id:"medium", label:"Medium", color:"#b7680a", bg:"#fef9ee", dot:"#f39c12" },
   { id:"low",    label:"Low",    color:"#2d7a4a", bg:"#eef7f0", dot:"#27ae60" },
 ];
-const TYPES   = ["Assignment","Project","Quiz","Midterm Exam","Final Exam","Lab","Reading","Presentation","Other"];
+const TYPES   = ["Midterm Exam","Final Exam","Assignment","Project","Quiz","Lab","Attendance","Participation","Other"];
 const FILTERS = ["All","Pending","Done","Overdue"];
 
 const priority  = id => PRIORITIES.find(p => p.id === id) || PRIORITIES[1];
@@ -50,7 +50,7 @@ const daysLeft  = iso => {
   return Math.round((due - today) / 86400000);
 };
 
-const EMPTY = { course:"", type:"Assignment", customType:"", title:"", due:"", notes:"" };
+const EMPTY = { course:"", type:"", customType:"", title:"", due:"", notes:"" };
 
 function PriorityDot({ id }) {
   const p = priority(id);
@@ -175,7 +175,8 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
           <div style={{ flex:1, minWidth:140 }}>
             <label style={tm.label}>Type</label>
             <select value={form.type} onChange={e=>set("type",e.target.value)} style={{ ...tm.input, cursor:"pointer" }}>
-              {TYPES.map(t => <option key={t}>{t}</option>)}
+              <option value="">Select type…</option>
+              {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
             {form.type === "Other" && (
               <input value={form.customType||""} onChange={e=>set("customType",e.target.value)}
