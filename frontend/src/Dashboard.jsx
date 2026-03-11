@@ -101,8 +101,8 @@ function WidgetTogglePanel({ visible, onToggle }) {
 
 function PomodoroTimer() {
   const MODES = [
-    { label:"Focus",      duration:25*60, color:"#31487A", bg:"#eef2fb" },
-    { label:"Short Break",duration:5*60,  color:"#2d7a4a", bg:"#eef7f0" },
+    { label:"Focus",      duration:25*60, color:"var(--primary)", bg:"#eef2fb" },
+    { label:"Short Break",duration:5*60,  color:"var(--accent)", bg:"#eef7f0" },
     { label:"Long Break", duration:15*60, color:"var(--accent2)", bg:"#F0EEF7" },
   ];
   const [modeIdx,   setModeIdx]   = useState(0);
