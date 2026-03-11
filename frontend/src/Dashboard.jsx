@@ -36,6 +36,8 @@ const ALL_WIDGETS = [
   { id:"pomodoro",  label:"Pomodoro Timer",    span:1 },
   { id:"calendar",  label:"Calendar",          span:1 },
   { id:"schedule",  label:"Weekly Schedule",   span:1 },
+  { id:"courseGrades", label: "Course Grades", span: 1},
+  { id: "gpasummary", label: "GPA Summary", span:1},
 ];
 
 
@@ -187,6 +189,287 @@ function PomodoroTimer() {
   );
 }
 
+function CourseGradeSummaryWidget({ apiSemesters, selectedSemester }) {
+  const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
+
+  const semObj = apiSemesters.find(s => s.semesterName === selectedSemester);
+  const courses = (semObj?.courses || []).filter(c => c.courseCode);
+
+  const [selectedCourse, setSelectedCourse] = useState("");
+
+  useEffect(() => {
+    setSelectedCourse(courses[0]?.courseCode || "");
+  }, [selectedSemester]);
+
+  const courseObj = courses.find(c => c.courseCode === selectedCourse);
+
+  // Pull assessments from kk_course_data (saved by GradeCalculator) since the API doesn't store them
+  const getAssessments = (courseCode) => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("kk_course_data") || "{}")[courseCode];
+      if (saved?.components?.length) {
+        return saved.components
+          .filter(c => c.type || c.customType)
+          .map(c => ({
+            name: c.type === "Other" ? (c.customType?.trim() || "Other") : c.type,
+            weight: parseFloat(c.weight) || 0,
+            grade: c.grade || null,
+          }));
+      }
+    } catch {}
+    return [];
+  };
+
+  const assessments = courseObj?.assessments?.length
+    ? courseObj.assessments
+    : getAssessments(selectedCourse);
+
+  const gpaColor = g => {
+    const v = parseFloat(g);
+    if (isNaN(v)) return "var(--text2)";
+    return v >= 3.7 ? "#27ae60" : v >= 3.0 ? "#2980b9" : v >= 2.0 ? "#e67e22" : "#c0392b";
+  };
+
+  const gradeColor = g => {
+    const gp = gradePoints[g?.trim()?.toUpperCase()];
+    return gp !== undefined ? gpaColor(gp) : "var(--text2)";
+  };
+
+  const letterToNumeric = g => {
+    const map = {"A+":97,"A":93,"A-":90,"B+":87,"B":83,"B-":80,"C+":77,"C":73,"C-":70,"D+":67,"D":63,"F":50};
+    const s = String(g || "").trim().toUpperCase();
+    if (map[s] !== undefined) return map[s];
+    const n = parseFloat(s);
+    return isNaN(n) ? null : n;
+  };
+
+  const totalWeight = assessments.reduce((sum, a) => sum + (parseFloat(a.weight) || 0), 0);
+  const coveredWeight = assessments.reduce((sum, a) => {
+    const score = letterToNumeric(a.grade);
+    return score !== null ? sum + (parseFloat(a.weight) || 0) : sum;
+  }, 0);
+  const weightedScore = assessments.reduce((sum, a) => {
+    const score = letterToNumeric(a.grade);
+    const w = parseFloat(a.weight) || 0;
+    return score !== null ? sum + (score * w / 100) : sum;
+  }, 0);
+  const projectedPct = coveredWeight > 0 ? (weightedScore / coveredWeight * 100).toFixed(1) : null;
+
+  return (
+    <section className="card-anim" style={{ background:"var(--surface)", borderRadius:18, padding:"20px 22px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid var(--border)" }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <div style={{ width:3, height:18, background:"var(--accent)", borderRadius:2 }} />
+          <h3 style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:"var(--primary)", margin:0 }}>Course Grade Breakdown</h3>
+        </div>
+        {selectedSemester && (
+          <span style={{ fontSize:12, fontWeight:600, color:"var(--accent)", background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:8, padding:"3px 10px" }}>
+            {selectedSemester}
+          </span>
+        )}
+      </div>
+
+      {courses.length === 0 ? (
+        <div style={{ fontSize:13, color:"var(--text3)", textAlign:"center", padding:"24px 0" }}>No courses found for this semester.</div>
+      ) : (
+        <>
+          {/* Course picker — only courses from the selected semester */}
+          <div style={{ display:"flex", gap:6, marginBottom:12, flexWrap:"wrap" }}>
+            {courses.map(c => (
+              <button
+                key={c.courseCode}
+                onClick={() => setSelectedCourse(c.courseCode)}
+                style={{
+                  padding:"5px 12px", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
+                  fontFamily:"'DM Sans',sans-serif", border:"1px solid var(--border)",
+                  background: selectedCourse === c.courseCode ? "var(--primary)" : "var(--surface2)",
+                  color: selectedCourse === c.courseCode ? "white" : "var(--text)",
+                  transition:"all .15s",
+                }}
+              >
+                {c.courseCode}
+              </button>
+            ))}
+          </div>
+
+          {!courseObj ? (
+            <div style={{ fontSize:13, color:"var(--text3)", textAlign:"center", padding:"16px 0" }}>Select a course.</div>
+          ) : (
+            <>
+              {/* Course header — code, credits, final grade */}
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface2)", borderRadius:10, padding:"10px 14px", marginBottom:10 }}>
+                <div>
+                  <div style={{ fontSize:13, fontWeight:700, color:"var(--primary)" }}>{courseObj.courseCode}</div>
+                  <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>{courseObj.credits} credits · {selectedSemester}</div>
+                </div>
+                <div style={{ textAlign:"right" }}>
+                  <div style={{ fontSize:26, fontWeight:700, fontFamily:"'Fraunces',serif", color: gradeColor(courseObj.grade) }}>
+                    {courseObj.grade || "—"}
+                  </div>
+                  {gradePoints[courseObj.grade?.trim()?.toUpperCase()] !== undefined && (
+                    <div style={{ fontSize:11, color:"var(--text2)" }}>{gradePoints[courseObj.grade.trim().toUpperCase()].toFixed(1)} GPA pts</div>
+                  )}
+                </div>
+              </div>
+
+              {assessments.length === 0 ? (
+                <div style={{ fontSize:12, color:"var(--text3)", textAlign:"center", padding:"12px 0" }}>
+                  No assessment breakdown saved for this course in the Grade Calculator.
+                </div>
+              ) : (
+                <>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 52px 52px 64px", gap:4, padding:"4px 6px", marginBottom:4 }}>
+                    <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.05em" }}>Component</span>
+                    <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"center", textTransform:"uppercase", letterSpacing:"0.05em" }}>Weight</span>
+                    <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"center", textTransform:"uppercase", letterSpacing:"0.05em" }}>Grade</span>
+                    <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"right", textTransform:"uppercase", letterSpacing:"0.05em" }}>Contrib.</span>
+                  </div>
+
+                  <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                    {assessments.map((a, i) => {
+                      const score = letterToNumeric(a.grade);
+                      const w = parseFloat(a.weight) || 0;
+                      const contrib = score !== null ? ((score * w) / 100).toFixed(1) : "—";
+                      return (
+                        <div key={i} style={{ display:"grid", gridTemplateColumns:"1fr 52px 52px 64px", gap:4, padding:"7px 8px", background: i % 2 === 0 ? "var(--surface2)" : "transparent", borderRadius:8, alignItems:"center" }}>
+                          <span style={{ fontSize:12, color:"var(--text)", fontWeight:500 }}>{a.name || `Component ${i+1}`}</span>
+                          <span style={{ fontSize:12, color:"var(--text2)", textAlign:"center" }}>{w}%</span>
+                          <span style={{ fontSize:13, fontWeight:700, color: a.grade ? gradeColor(a.grade) : "var(--text3)", textAlign:"center", fontFamily:"'Fraunces',serif" }}>{a.grade || "—"}</span>
+                          <span style={{ fontSize:12, color:"var(--accent2)", fontWeight:600, textAlign:"right" }}>{contrib}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ marginTop:10, padding:"8px 12px", background:"var(--surface3,#eef2fb)", borderRadius:9, border:"1px solid var(--border)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    <span style={{ fontSize:12, color:"var(--text2)" }}>
+                      {coveredWeight < totalWeight
+                        ? <>{coveredWeight}% graded · {(totalWeight - coveredWeight).toFixed(0)}% pending</>
+                        : <>{totalWeight}% total weight</>
+                      }
+                    </span>
+                    {projectedPct && (
+                      <span style={{ fontSize:13, fontWeight:700, color:"var(--primary)" }}>
+                        Projected: {projectedPct}%
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </section>
+  );
+}
+
+function GPASummaryWidget({ apiSemesters, selectedSemester, onNavigate }) {
+  const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
+
+  const gpaColor = g => {
+    const v = parseFloat(g);
+    if (isNaN(v)) return "var(--text2)";
+    return v >= 3.7 ? "#27ae60" : v >= 3.0 ? "#2980b9" : v >= 2.0 ? "#e67e22" : "#c0392b";
+  };
+
+  const semObj = apiSemesters.find(s => s.semesterName === selectedSemester);
+  const courses = (semObj?.courses || []).filter(c => c.courseCode);
+  const gradedCourses = courses.filter(c => c.grade && gradePoints[c.grade?.trim()?.toUpperCase()] !== undefined && Number(c.credits) > 0);
+  const allGraded = courses.length > 0 && gradedCourses.length === courses.length;
+
+  const semGPA = allGraded ? (() => {
+    const pts = gradedCourses.reduce((sum, c) => sum + gradePoints[c.grade.trim().toUpperCase()] * Number(c.credits), 0);
+    const creds = gradedCourses.reduce((sum, c) => sum + Number(c.credits), 0);
+    return { gpa: (pts / creds).toFixed(2), pts, creds };
+  })() : null;
+
+  return (
+    <section className="card-anim" style={{ background:"var(--surface)", borderRadius:18, padding:"20px 22px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid var(--border)" }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+          <div style={{ width:3, height:18, background:"var(--accent)", borderRadius:2 }} />
+          <h3 style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:"var(--primary)", margin:0 }}>GPA Summary</h3>
+        </div>
+        {selectedSemester && (
+          <span style={{ fontSize:12, fontWeight:600, color:"var(--accent)", background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:8, padding:"3px 10px" }}>
+            {selectedSemester}
+          </span>
+        )}
+      </div>
+
+      {!selectedSemester || courses.length === 0 ? (
+        <div style={{ fontSize:13, color:"var(--text3)", textAlign:"center", padding:"24px 0" }}>
+          No courses found for this semester.
+        </div>
+      ) : !allGraded ? (
+        <>
+          <div style={{ fontSize:12, color:"var(--warn1,#c97d00)", background:"var(--warn-bg,#fff8ec)", border:"1px solid #f5dfa0", borderRadius:9, padding:"8px 12px", marginBottom:12 }}>
+            Final grades not yet available for all courses this semester.
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+            {courses.map((c, ci) => {
+              const gp = gradePoints[c.grade?.trim()?.toUpperCase()];
+              const hasGrade = gp !== undefined;
+              return (
+                <div key={ci} style={{ display:"grid", gridTemplateColumns:"1fr 44px 60px", gap:4, padding:"7px 10px", background: ci % 2 === 0 ? "var(--surface2)" : "transparent", borderRadius:8, alignItems:"center" }}>
+                  <span style={{ fontSize:12, fontWeight:600, color:"var(--primary)" }}>{c.courseCode}</span>
+                  <span style={{ fontSize:12, color:"var(--text2)", textAlign:"center" }}>{c.credits} cr</span>
+                  <span style={{ fontSize:13, fontWeight:700, fontFamily:"'Fraunces',serif", textAlign:"right", color: hasGrade ? gpaColor(gp) : "var(--text3)" }}>
+                    {c.grade || "—"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface3,#eef2fb)", borderRadius:12, padding:"12px 16px", marginBottom:14, border:"1px solid var(--border)" }}>
+            <div>
+              <div style={{ fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em" }}>Semester GPA</div>
+              <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>{semGPA.creds} cr · {gradedCourses.length} courses</div>
+            </div>
+            <div style={{ fontFamily:"'Fraunces',serif", fontSize:34, fontWeight:700, color: gpaColor(semGPA.gpa), lineHeight:1 }}>{semGPA.gpa}</div>
+          </div>
+
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 44px 52px 60px", gap:4, padding:"4px 6px", marginBottom:6 }}>
+            <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.05em" }}>Course</span>
+            <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"center", textTransform:"uppercase", letterSpacing:"0.05em" }}>Cr</span>
+            <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"center", textTransform:"uppercase", letterSpacing:"0.05em" }}>Grade</span>
+            <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"right", textTransform:"uppercase", letterSpacing:"0.05em" }}>Pts×Cr</span>
+          </div>
+
+          <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+            {gradedCourses.map((c, ci) => {
+              const gp = gradePoints[c.grade.trim().toUpperCase()];
+              const contribution = (gp * Number(c.credits)).toFixed(1);
+              return (
+                <div key={ci} style={{ display:"grid", gridTemplateColumns:"1fr 44px 52px 60px", gap:4, padding:"7px 8px", background: ci % 2 === 0 ? "var(--surface2)" : "transparent", borderRadius:8, alignItems:"center" }}>
+                  <span style={{ fontSize:12, fontWeight:600, color:"var(--primary)" }}>{c.courseCode}</span>
+                  <span style={{ fontSize:12, color:"var(--text2)", textAlign:"center" }}>{c.credits}</span>
+                  <span style={{ fontSize:13, color: gpaColor(gp), fontWeight:700, textAlign:"center", fontFamily:"'Fraunces',serif" }}>{c.grade}</span>
+                  <span style={{ fontSize:12, color:"var(--accent2)", fontWeight:600, textAlign:"right" }}>{contribution}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ marginTop:10, padding:"8px 12px", background:"var(--surface3,#eef2fb)", borderRadius:9, border:"1px solid var(--border)", fontSize:12, color:"var(--primary)", fontWeight:600 }}>
+            GPA = {semGPA.pts.toFixed(1)} ÷ {semGPA.creds} cr = <span style={{ color: gpaColor(semGPA.gpa), fontSize:14 }}>{semGPA.gpa}</span>
+          </div>
+        </>
+      )}
+
+      <button
+        onClick={() => onNavigate("grades")}
+        style={{ marginTop:14, width:"100%", padding:"9px 0", background:"none", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontWeight:600, color:"var(--accent)", fontFamily:"'DM Sans',sans-serif", cursor:"pointer" }}
+      >
+        Open GPA Calculator →
+      </button>
+    </section>
+  );
+}
 
 export default function Dashboard({ onLogout }) {
   const NAV_ITEMS = [
@@ -765,7 +1048,21 @@ const saveCourseColor = (courseName, color) => {
                           : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
                             {semCourseList.map(c => (
                                 <div key={c.id} className="course-card"
-                                     onClick={() => setCourseDetailsTarget(c)}
+                                     onClick={() => {
+                                      const token = localStorage.getItem("kk_token");
+                                      fetch(`http://localhost:8080/api/courses/search?query=${encodeURIComponent(c.name)}`, {
+                                        headers: { "Authorization": "Bearer " + token }
+                                      })
+                                        .then(r => r.json())
+                                        .then(results => {
+                                          const match = results.find(r => r.courseCode === c.name);
+                                          if (match) {
+                                            setCourseDetailsTarget({ id: match.id, courseCode: match.courseCode, title: match.title });
+                                            setActivePage("courseDetails");
+                                          }
+                                        })
+                                        .catch(() => {});
+                                    }}
                                      style={{...s.courseCard, border: `2px solid ${courseColors[c.name] || "var(--text2)"}`}}>
                                   <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
                                     <div style={{fontWeight:700, fontSize:15, color:"var(--primary)"}}>{c.name}</div>
@@ -1053,12 +1350,11 @@ const saveCourseColor = (courseName, color) => {
                             <div style={{display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, background:"var(--surface2)", borderRadius:10, padding:"6px 10px"}}>
                               <button onClick={() => setSchedWeekOffset(o => o - 1)} style={{background:"none", border:"1px solid var(--border)", borderRadius:7, width:26, height:26, cursor:"pointer", fontSize:14, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center"}}>‹</button>
                               <span style={{fontSize:12, fontWeight:600, color:"var(--primary)"}}>
-            {schedWeekOffset === 0 ? "This Week" : schedWeekOffset === 1 ? "Next Week" : schedWeekOffset === -1 ? "Last Week" : `${fmtDate(weekStartDate)} – ${fmtDate(weekEndDate)}`}
+                              {schedWeekOffset === 0 ? "This Week" : schedWeekOffset === 1 ? "Next Week" : schedWeekOffset === -1 ? "Last Week" : `${fmtDate(weekStartDate)} – ${fmtDate(weekEndDate)}`}
                                 <span style={{fontWeight:400, color:"var(--text2)", marginLeft:6}}>{fmtDate(weekStartDate)} – {fmtDate(weekEndDate)}</span>
-          </span>
+                              </span>
                               <button onClick={() => setSchedWeekOffset(o => o + 1)} style={{background:"none", border:"1px solid var(--border)", borderRadius:7, width:26, height:26, cursor:"pointer", fontSize:14, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center"}}>›</button>
-                            </div>
-                        );
+                            </div> );
                       })()}
 
                       <div style={{display:"flex", flexDirection:"column", gap:6, maxHeight:220, overflowY:"auto"}}>
@@ -1119,12 +1415,11 @@ const saveCourseColor = (courseName, color) => {
                                           opacity: b.completed ? 0.65 : 1,
                                         }}>
                                           <div style={{minWidth:0}}>
-                      <span style={{fontSize:12, fontWeight:700, color: b.completed ? "#aaa" : color, display:"block", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}>
-                        {label}
-                      </span>
-                                            <span style={{fontSize:11, color:"var(--text3)"}}>
-                        {fmtH(startH)} – {fmtH(endH)} · {b.duration}h
-                      </span>
+                                          <span style={{fontSize:12, fontWeight:700, color: b.completed ? "#aaa" : color, display:"block", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}> {label}
+                                          </span>
+                                          <span style={{fontSize:11, color:"var(--text3)"}}>
+                                          {fmtH(startH)} – {fmtH(endH)} · {b.duration}h
+                                        </span>
                                           </div>
                                           {b.completed
                                               ? <span style={{fontSize:10, background:"#eef7f0", color:"#2d7a4a", padding:"2px 6px", borderRadius:4, fontWeight:600, flexShrink:0}}>✓ Done</span>
@@ -1153,8 +1448,18 @@ const saveCourseColor = (courseName, color) => {
                       </div>
                     </section>
                 )}
+
+                {visible.courseGrades && (
+                  <CourseGradeSummaryWidget apiSemesters={apiSemesters} selectedSemester={semester}/>
+                )}
+
+                {visible.gpasummary && (
+                  <GPASummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} onNavigate={setActivePage} />
+                )}
+
               </div>
           )}
+
           {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} selectedSemester={semester} />}
           {activePage === "tasks" && (
               <TaskManager
@@ -1171,6 +1476,13 @@ const saveCourseColor = (courseName, color) => {
           {activePage === "planner" && <StudyPlanner />}
           {activePage === "profile" && (
               <Profile onProfileSave={p => setProfile(p)} onLogout={handleLogout} />
+          )}
+
+          {activePage === "courseDetails" && courseDetailsTarget && (
+            <CourseDetails
+              course={courseDetailsTarget}
+              onBack={() => setActivePage("dashboard")}
+            />
           )}
 
         </main>
