@@ -205,7 +205,7 @@ export default function AdminDashboard({ token }) {
                   )}
                 </div>
                 {expanded && (
-                  <div style={{ padding:"12px 20px 16px", background: i % 2 === 0 ? "var(--surface2)" : "var(--surface3)", borderTop:"1px solid var(--border)" }}>
+                  <div style={{ padding:"12px 20px 16px", background: i % 2 === 0 ? "var(--surface)" : "var(--surface2)", borderTop:"1px solid var(--border)" }}>
                     {r.courseCode && (
                       <div style={{ fontSize:12, fontWeight:600, color:"var(--primary)", marginBottom:6 }}>{r.courseCode} — {r.courseTitle}</div>
                     )}
@@ -334,7 +334,7 @@ export default function AdminDashboard({ token }) {
               </div>
               {displayed.map((u, i) => (
                 <div key={u.id} style={{ borderBottom: i < displayed.length - 1 ? "1px solid var(--divider)" : "none" }}>
-                  <div onClick={() => openUser(u)} style={{ ...ad.row, gridTemplateColumns:"1fr 90px 110px 120px 150px 140px", background: selectedUser?.id === u.id ? "var(--surface2)" : i % 2 === 0 ? "var(--surface)" : "var(--surface2)", cursor:"pointer" }}>
+                  <div onClick={() => openUser(u)} style={{ ...ad.row, gridTemplateColumns:"1fr 90px 110px 120px 150px 140px", background: i % 2 === 0 ? "var(--surface)" : "var(--surface2)", cursor:"pointer" }}>
                   <span style={{ fontSize:13, color:"var(--primary)", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:12 }}>{u.email}</span>
                   <span style={{ fontSize:12, background: u.role === "ADMIN" ? "var(--divider)" : "var(--blue-light-bg)", color: u.role === "ADMIN" ? "var(--accent)" : "var(--primary)", padding:"3px 6px", borderRadius:6, fontWeight:600, display:"inline-block", whiteSpace:"nowrap", justifySelf:"start" }}>{u.role}</span>
                   <span style={{ fontSize:12, fontWeight:600, color: u.active ? "var(--success)" : "var(--error)" }}>{u.active ? "Active" : "Deactivated"}</span>
@@ -382,7 +382,7 @@ export default function AdminDashboard({ token }) {
                   </div>
 
                   {selectedUser?.id === u.id && (
-                    <div style={{ padding:"16px 20px", background:"var(--surface2)", borderTop:"1px solid var(--border)" }}>
+                    <div style={{ padding:"16px 20px", background: i % 2 === 0 ? "var(--surface)" : "var(--surface2)", borderTop:"1px solid var(--border)" }}>
                       <div style={{ fontSize:11, fontWeight:600, color:"var(--text2)", marginBottom:10, textTransform:"uppercase", letterSpacing:.5 }}>Reviews by {u.email}</div>
                       {userRevLoading && <div style={{ fontSize:13, color:"var(--text3)" }}>Loading…</div>}
                       {!userRevLoading && userReviews.length === 0 && userProfReviews.length === 0 && (

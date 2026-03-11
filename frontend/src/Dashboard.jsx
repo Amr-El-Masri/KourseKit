@@ -21,11 +21,11 @@ const AVATAR_ICONS = [
 
 const DAYS_OF_WEEK = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const EVENT_TYPES  = [
-  { label:"Class",   color:"#31487A", bg:"#eef2fb" },
-  { label:"Gym",     color:"#2d7a4a", bg:"#eef7f0" },
-  { label:"Study",   color:"var(--accent2)", bg:"#F0EEF7" },
-  { label:"Meeting", color:"#6b2d7a", bg:"#f5eefb" },
-  { label:"Other",   color:"#555",    bg:"#f5f5f5" },
+  { label:"Class",   color:"var(--primary)",  bg:"var(--blue-light-bg)" },
+  { label:"Gym",     color:"var(--success)",  bg:"var(--success-bg)" },
+  { label:"Study",   color:"var(--accent2)",  bg:"var(--surface3)" },
+  { label:"Meeting", color:"var(--accent)",   bg:"var(--surface2)" },
+  { label:"Other",   color:"var(--text2)",    bg:"var(--bg)" },
 ];
 
 const ALL_WIDGETS = [
