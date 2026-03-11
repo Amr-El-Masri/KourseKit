@@ -108,9 +108,9 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
 
           <div style={{ display:"flex", gap:6, flexShrink:0 }}>
             <button onClick={() => setExpanded(e=>!e)} style={tm.iconBtn} title="Notes">
-              {task.notes ? <NotebookPen size={15} /> : <Notebook size={15} />}
+              {task.notes ? <NotebookPen size={15} color="var(--text)" /> : <Notebook size={15} color="var(--text)" />}
             </button>
-            <button onClick={() => onEdit(task)} style={tm.iconBtn} title="Edit"><Pencil size={15} /></button>
+            <button onClick={() => onEdit(task)} style={tm.iconBtn} title="Edit"><Pencil size={15} color="var(--text)" /></button>
             {confirming ? (
               <span style={{ display:"flex", alignItems:"center", gap:4 }}>
                 <span style={{ fontSize:11, color:"var(--error)", fontWeight:600, whiteSpace:"nowrap" }}>Delete?</span>
@@ -400,7 +400,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
         </div>
 
         {/* Study planner tip */}
-        <div style={{ background:"var(--divider)", border:"1px solid var(--border)", borderRadius:12, padding:"12px 16px", marginBottom:20, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+        <div style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"12px 16px", marginBottom:20, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
           <div style={{ fontSize:13, color:"var(--accent2)", lineHeight:1.5 }}>
             <span style={{ fontWeight:600 }}>Want a personalized study plan?</span>
             {" "}Set your weekly availability in the Study Planner and KourseKit will auto-generate study blocks around your deadlines.
