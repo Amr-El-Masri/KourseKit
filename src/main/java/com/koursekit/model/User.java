@@ -59,6 +59,14 @@ public class User {
     private boolean minor = false;
     @Column(name = "minor_name")
     private String minorName;
+    @Column(name = "double_minor", columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean doubleMinor = false;
+    @Column(name = "second_minor")
+    private String secondMinor;
+    @Column(name = "triple_minor", columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean tripleMinor = false;
+    @Column(name = "third_minor")
+    private String thirdMinor;
     @Column(name = "course_colors", columnDefinition = "TEXT")
     private String courseColorsJson;
     @Column(name = "theme", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'light'")
@@ -138,6 +146,18 @@ public class User {
 
     public String getMinorName() { return minorName; }
     public void setMinorName(String minorName) { this.minorName = minorName; }
+
+    public boolean isDoubleMinor() { return doubleMinor; }
+    public void setDoubleMinor(boolean doubleMinor) { this.doubleMinor = doubleMinor; }
+
+    public String getSecondMinor() { return secondMinor; }
+    public void setSecondMinor(String secondMinor) { this.secondMinor = secondMinor; }
+
+    public boolean isTripleMinor() { return tripleMinor; }
+    public void setTripleMinor(boolean tripleMinor) { this.tripleMinor = tripleMinor; }
+
+    public String getThirdMinor() { return thirdMinor; }
+    public void setThirdMinor(String thirdMinor) { this.thirdMinor = thirdMinor; }
 
     public String getCourseColorsJson() { return courseColorsJson; }
     public void setCourseColorsJson(String courseColorsJson) { this.courseColorsJson = courseColorsJson; }

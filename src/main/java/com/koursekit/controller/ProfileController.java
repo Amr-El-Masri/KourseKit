@@ -51,6 +51,10 @@ public class ProfileController {
         if (body.containsKey("doubleMajor"))   user.setDoubleMajor(Boolean.TRUE.equals(body.get("doubleMajor")));
         if (body.containsKey("minor"))         user.setMinor(Boolean.TRUE.equals(body.get("minor")));
         if (body.containsKey("minorName"))     user.setMinorName((String) body.get("minorName"));
+        if (body.containsKey("doubleMinor"))   user.setDoubleMinor(Boolean.TRUE.equals(body.get("doubleMinor")));
+        if (body.containsKey("secondMinor"))   user.setSecondMinor((String) body.get("secondMinor"));
+        if (body.containsKey("tripleMinor"))   user.setTripleMinor(Boolean.TRUE.equals(body.get("tripleMinor")));
+        if (body.containsKey("thirdMinor"))    user.setThirdMinor((String) body.get("thirdMinor"));
 
         userRepo.save(user);
         return ResponseEntity.ok(toMap(user));
@@ -105,6 +109,10 @@ public class ProfileController {
         m.put("doubleMajor",   user.isDoubleMajor());
         m.put("minor",         user.isMinor());
         m.put("minorName",     user.getMinorName()     != null ? user.getMinorName()     : "");
+        m.put("doubleMinor",   user.isDoubleMinor());
+        m.put("secondMinor",   user.getSecondMinor()   != null ? user.getSecondMinor()   : "");
+        m.put("tripleMinor",   user.isTripleMinor());
+        m.put("thirdMinor",    user.getThirdMinor()    != null ? user.getThirdMinor()    : "");
         m.put("theme",         user.getTheme()         != null ? user.getTheme()         : "light");
         return m;
     }
