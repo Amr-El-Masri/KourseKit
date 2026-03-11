@@ -627,7 +627,7 @@ const saveCourseColor = (courseName, color) => {
               <button
                   onClick={() => window.location.reload()}
                   title="Refresh"
-                  style={{...s.bell, fontSize:16, cursor:"pointer", border:"1px solid var(--border)", background:"var(--surface)", color:"var(--border2)"}}
+                  style={{...s.bell, fontSize:16, cursor:"pointer", border:"1px solid var(--border)", background:"var(--surface)", color:"var(--primary)"}}
               >
                 ↺
               </button>
@@ -637,7 +637,7 @@ const saveCourseColor = (courseName, color) => {
                     style={{...s.bell, position:"relative", border:"1px solid var(--border)", cursor:"pointer"}}
                     title="Notifications"
                 >
-                  <Bell size={18} color="var(--border2)" />
+                  <Bell size={18} color="var(--primary)" />
                   {unreadCount > 0 && (
                       <span style={{
                         position:"absolute", top:4, right:4,

@@ -441,15 +441,22 @@ export default function Reviews() {
                 </button>
               </div>
             <div style={{ display:"flex", gap:8 }}>
-              <div style={{ display:"flex", gap:4, background:"var(--bg)", padding:4, borderRadius:10 }}>
+              <div style={{ 
+                display:"flex", 
+                gap:4, 
+                background:"var(--surface)", 
+                border:"1px solid var(--border)",
+                padding:4, 
+                borderRadius:10 
+              }}>
                 {[{id:"top",label:"Top"},{id:"new",label:"New"}].map(s => (
                   <button key={s.id} onClick={() => setSort(s.id)} style={{
                     padding:"6px 14px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
                     background: sort===s.id ? "var(--primary)" : "transparent",
                     color:      sort===s.id ? "#ffffff" : "var(--text2)",
-                  }}>{s.label}</button>
-                ))}
-              </div>
+                }}>{s.label}</button>
+              ))}
+            </div>
               {token && (
                 <button onClick={() => setComposing(c => !c)} style={{
                   padding:"9px 20px 9px 12px", background:"var(--accent)", color:"white",

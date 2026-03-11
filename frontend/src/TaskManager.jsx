@@ -447,6 +447,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
               fontSize:13, 
               fontWeight:600, 
               cursor:"pointer", 
+              fontFamily:"'DM Sans',sans-serif",
               transition:"all .15s",
               background: filter === c.filter ? "var(--primary)" : "transparent",
               color: filter === c.filter ? "#ffffff" : c.warn ? "var(--error)" : "var(--text2)",
@@ -489,7 +490,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
               <div style={{ marginBottom:20 }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
                   <div style={{ width:3, height:16, background:"var(--accent)", borderRadius:2 }} />
-                  <span style={{ fontSize:13, fontWeight:700, color:"var(--accent)", fontFamily:"'DM Sans',sans-serif" }}>From Syllabus</span>
+                  <span style={{ fontSize:13, fontWeight:700, color:"var(--primary)", fontFamily:"'DM Sans',sans-serif" }}>From Syllabus</span>
                   <span style={{ fontSize:12, color:"var(--text3)" }}>— imported automatically</span>
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
@@ -507,7 +508,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
               <div>
                 {syllabusDisplayed.length > 0 && (
                   <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-                    <div style={{ width:3, height:16, background:"var(--primary)", borderRadius:2 }} />
+                    <div style={{ width:3, height:16, background:"var(--accent)", borderRadius:2 }} />
                     <span style={{ fontSize:13, fontWeight:700, color:"var(--primary)", fontFamily:"'DM Sans',sans-serif" }}>My Tasks</span>
                   </div>
                 )}

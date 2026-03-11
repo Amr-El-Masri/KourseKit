@@ -618,13 +618,27 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       )}
 
       {/* Tab bar */}
-      <div style={gc.tabBar}>
+      <div style={{ 
+        display:"flex", 
+        background:"var(--surface)", 
+        border:"1px solid var(--border)", 
+        borderRadius:14, 
+        padding:5, 
+        width:"fit-content", 
+        gap:4 
+      }}>
         {TABS.map(t => (
-          <button key={t.id} className="gc-tab-hover" onClick={() => setActiveTab(t.id)} style={{
-            ...gc.tab,
-            background: activeTab===t.id ? "var(--primary)" : "transparent",
-            color:       activeTab===t.id ? "#ffffff" : "var(--text2)",
-            fontWeight:  activeTab===t.id ? 600 : 400,
+          <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
+            padding:"9px 16px", 
+            border:"none", 
+            borderRadius:10, 
+            fontSize:13, 
+            fontWeight:600,
+            cursor:"pointer", 
+            fontFamily:"'DM Sans',sans-serif", 
+            transition:"all .15s",
+            background: activeTab === t.id ? "var(--primary)" : "transparent",
+            color: activeTab === t.id ? "#ffffff" : "var(--text2)",
           }}>
             {t.label}
           </button>
