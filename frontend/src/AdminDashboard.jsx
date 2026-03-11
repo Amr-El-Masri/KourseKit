@@ -14,7 +14,7 @@ export default function AdminDashboard({ token }) {
   const [loading, setLoading] = useState(false);
   const [search,  setSearch]  = useState("");
   const [filter,  setFilter]  = useState("all");
-  // reviews tab state
+  // reviews
   const [reviewStatus, setReviewStatus] = useState("all");    // "all" | "flagged"
   const [reviewType,   setReviewType]   = useState("course"); // "course" | "professor"
   const [courseReviews,        setCourseReviews]        = useState([]);
@@ -29,12 +29,11 @@ export default function AdminDashboard({ token }) {
   const [deleteConfirmId,      setDeleteConfirmId]      = useState(null);
   const [confirmActiveId,      setConfirmActiveId]      = useState(null);
   const [confirmAdminId,       setConfirmAdminId]       = useState(null);
+  const [selectedUser,         setSelectedUser]         = useState(null);
+  const [userReviews,          setUserReviews]          = useState([]);
+  const [userProfReviews,      setUserProfReviews]      = useState([]);
+  const [userRevLoading,       setUserRevLoading]       = useState(false);
   const [err, setErr] = useState("");
-  // user profile panel
-  const [selectedUser,    setSelectedUser]    = useState(null);
-  const [userReviews,     setUserReviews]     = useState([]);
-  const [userProfReviews, setUserProfReviews] = useState([]);
-  const [userRevLoading,  setUserRevLoading]  = useState(false);
 
   const loadUsers = useCallback(async (q = "") => {
     setLoading(true);
@@ -61,8 +60,7 @@ export default function AdminDashboard({ token }) {
     const action = role === "ADMIN" ? "promote" : "demote";
     try {
       await fetch(`${API}/api/admin/users/${userId}/${action}`, {
-        method: "PUT",
-        headers: { Authorization: `Bearer ${token}` },
+        method: "PUT", headers: { Authorization: `Bearer ${token}` },
       });
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
     } catch { setErr("Action failed. Try again."); }
@@ -85,8 +83,8 @@ export default function AdminDashboard({ token }) {
     setUserRevLoading(true);
     try {
       const [courseRes, profRes] = await Promise.all([
-        fetch(`${API}/api/admin/users/${u.id}/reviews`,            { headers: { Authorization: `Bearer ${token}` } }),
-        fetch(`${API}/api/admin/users/${u.id}/professor-reviews`,  { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API}/api/admin/users/${u.id}/reviews`,           { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API}/api/admin/users/${u.id}/professor-reviews`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
       setUserReviews(courseRes.ok ? await courseRes.json() : []);
       setUserProfReviews(profRes.ok ? await profRes.json() : []);
@@ -99,7 +97,6 @@ export default function AdminDashboard({ token }) {
     filter === "deactivated" ? !u.active : true
   );
 
-  // ── Reviews ────────────────────────────────────────────
   const loadCourseReviews = useCallback(async () => {
     setCourseLoading(true);
     try {
@@ -166,15 +163,15 @@ export default function AdminDashboard({ token }) {
 
   const stars = n => "★".repeat(n) + "☆".repeat(5 - n);
 
-  const reviewTable = (list, loading, emptyMsg, onDelete, expandKey) => (
+  const reviewTable = (list, isLoading, emptyMsg, onDelete, expandKey) => (
     <>
-      {loading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
-      {!loading && list.length === 0 && (
+      {isLoading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
+      {!isLoading && list.length === 0 && (
         <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
           <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>{emptyMsg}</div>
         </div>
       )}
-      {!loading && list.length > 0 && (
+      {!isLoading && list.length > 0 && (
         <div style={ad.table}>
           <div style={{ ...ad.tableHeader, gridTemplateColumns:"1fr 1fr 80px 120px 100px" }}>
             <span>Comment</span>
@@ -231,7 +228,7 @@ export default function AdminDashboard({ token }) {
   );
 
   return (
-    <div style={{ fontFamily:"'DM Sans',sans-serif", minHeight:"100vh", background:"var(--bg)", paddingBottom:32 }}>
+    <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; }
@@ -244,38 +241,48 @@ export default function AdminDashboard({ token }) {
         <div style={{ fontSize:13, color:"var(--text2)" }}>Manage users and moderate reviews.</div>
       </div>
 
-      <div style={{ background:"var(--surface)", borderRadius:20, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px" }}>
+      {/* tab bar */}
+      <div style={{ 
+        display:"flex", 
+        gap:4, 
+        background:"var(--surface)",  
+        padding:5,                   
+        borderRadius:14,             
+        marginBottom:24, 
+        width:"fit-content", 
+        alignItems:"center",
+        border:"1px solid var(--border)" 
+      }}>
+        <button onClick={() => { setErr(""); setTab("users"); setReviewDropdownOpen(false); }} style={{
+          padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer",
+          background: tab === "users" ? "var(--primary)" : "transparent",
+          color:      tab === "users" ? "#fff"           : "var(--text2)",
+        }}>Users</button>
 
-        <div style={{ display:"flex", gap:4, background:"var(--bg)", padding:4, borderRadius:10, marginBottom:24, width:"fit-content", alignItems:"center" }}>
-          <button onClick={() => { setErr(""); setTab("users"); setReviewDropdownOpen(false); }} style={{
-            padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer",
-            background: tab === "users" ? "var(--primary)" : "transparent",
-            color:      tab === "users" ? "#fff"    : "var(--text2)",
-          }}>Users</button>
-
-          <div style={{ position:"relative" }}>
-            <button onClick={() => { setErr(""); setReviewDropdownOpen(o => !o); if (tab !== "reviews") setTab("reviews"); }} style={{
-              padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6,
-              background: tab === "reviews" ? "var(--primary)" : "transparent",
-              color:      tab === "reviews" ? "#fff"    : "var(--text2)",
-            }}>
-              Reviews
-              <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
-            </button>
-            {reviewDropdownOpen && (
-              <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:140 }}>
-                {[{id:"course",label:"Course"},{id:"professor",label:"Professor"}].map(opt => (
-                  <div key={opt.id} onClick={() => { setReviewType(opt.id); setReviewDropdownOpen(false); setExpandedId(null); }}
-                    style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
-                      background: reviewType === opt.id ? "var(--divider)" : "transparent",
-                      color:      reviewType === opt.id ? "var(--accent)" : "var(--primary)" }}>
-                    {opt.label}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+        <div style={{ position:"relative" }}>
+          <button onClick={() => { setErr(""); setReviewDropdownOpen(o => !o); if (tab !== "reviews") setTab("reviews"); }} style={{
+            padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6,
+            background: tab === "reviews" ? "var(--primary)" : "transparent",
+            color:      tab === "reviews" ? "#fff"           : "var(--text2)",
+          }}>
+            Reviews
+            <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+          </button>
+          {reviewDropdownOpen && (
+            <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:140 }}>
+              {[{id:"course",label:"Course"},{id:"professor",label:"Professor"}].map(opt => (
+                <div key={opt.id} onClick={() => { setReviewType(opt.id); setReviewDropdownOpen(false); setExpandedId(null); }}
+                  style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                    background: reviewType === opt.id ? "var(--divider)" : "transparent",
+                    color:      reviewType === opt.id ? "var(--accent)"  : "var(--primary)" }}>
+                  {opt.label}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+      </div>
+
 
       {err && (
         <div style={{ background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:10, padding:"9px 14px", fontSize:13, color:"var(--error)", marginBottom:16 }}>
@@ -283,6 +290,7 @@ export default function AdminDashboard({ token }) {
         </div>
       )}
 
+      {/* users tab */}
       {tab === "users" && (
         <>
           <div style={{ display:"flex", gap:12, marginBottom:20, flexWrap:"wrap", alignItems:"center" }}>
@@ -300,7 +308,7 @@ export default function AdminDashboard({ token }) {
                 <button key={f.id} onClick={() => setFilter(f.id)} style={{
                   padding:"6px 14px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
                   background: filter === f.id ? "var(--primary)" : "transparent",
-                  color:      filter === f.id ? "#fff"    : "var(--text2)",
+                  color:      filter === f.id ? "#fff"           : "var(--text2)",
                 }}>{f.label}</button>
               ))}
             </div>
@@ -316,7 +324,7 @@ export default function AdminDashboard({ token }) {
 
           {!loading && displayed.length > 0 && (
             <div style={ad.table}>
-              <div style={{ ...ad.tableHeader, gridTemplateColumns:"1fr 100px 120px 120px 120px 120px" }}>
+              <div style={{ ...ad.tableHeader, gridTemplateColumns:"1fr 90px 110px 120px 150px 140px" }}>
                 <span>Email</span>
                 <span>Role</span>
                 <span>Status</span>
@@ -326,74 +334,56 @@ export default function AdminDashboard({ token }) {
               </div>
               {displayed.map((u, i) => (
                 <div key={u.id} style={{ borderBottom: i < displayed.length - 1 ? "1px solid var(--divider)" : "none" }}>
-                  <div
-                    onClick={() => openUser(u)}
-                    style={{ ...ad.row, gridTemplateColumns:"1fr 100px 120px 120px 120px 120px", background: selectedUser?.id === u.id ? "var(--surface2)" : i % 2 === 0 ? "var(--surface)" : "var(--surface2)", cursor:"pointer" }}>
-                    <span style={{ fontSize:13, color:"var(--primary)", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:12 }}>{u.email}</span>
-                    <span style={{ fontSize:12, background: u.role === "ADMIN" ? "var(--divider)" : "var(--blue-light-bg)", color: u.role === "ADMIN" ? "var(--accent)" : "var(--primary)", padding:"3px 6px", borderRadius:6, fontWeight:600, display:"inline-block", whiteSpace:"nowrap", justifySelf:"start" }}>{u.role}</span>
-                    <span style={{ fontSize:12, fontWeight:600, color: u.active ? "var(--success)" : "var(--error)" }}>{u.active ? "Active" : "Deactivated"}</span>
-                    <span style={{ fontSize:12, color:"var(--text2)" }}>{formatDate(u.createdat)}</span>
-                    {(!u.active && u.role !== "ADMIN") ? (
-                      <button disabled style={{ padding:"6px 12px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, whiteSpace:"nowrap", width:"fit-content", cursor:"not-allowed", opacity:0.4, background:"var(--border)", color:"var(--text2)" }}>
-                        Not Permitted
-                      </button>
-                    ) : confirmAdminId === u.id ? (
-                      <div onClick={e => e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:6 }}>
-                        <span style={{ fontSize:11, color:"var(--accent)", fontWeight:600 }}>Sure?</span>
-                        <button onClick={e => { e.stopPropagation(); setRole(u.id, u.role === "ADMIN" ? "STUDENT" : "ADMIN"); setConfirmAdminId(null); }} style={{ padding:"4px 10px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background:"var(--accent)", color:"#fff", cursor:"pointer" }}>Yes</button>
-                        <button onClick={e => { e.stopPropagation(); setConfirmAdminId(null); }} style={{ padding:"4px 10px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background:"var(--surface2)", color:"var(--accent)", cursor:"pointer" }}>No</button>
-                      </div>
-                    ) : (
-                      <button className="action-btn" onClick={e => { e.stopPropagation(); setConfirmAdminId(u.id); }}
-                        disabled={String(u.id) === myId && u.role === "ADMIN"}
-                        style={{
-                          padding:"6px 12px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, whiteSpace:"nowrap", width:"fit-content",
-                          cursor:     String(u.id) === myId && u.role === "ADMIN" ? "not-allowed" : "pointer",
-                          opacity:    String(u.id) === myId && u.role === "ADMIN" ? 0.4 : 1,
-                          background: u.role === "ADMIN" ? "var(--divider)" : "var(--blue-light-bg)",
-                          color:      u.role === "ADMIN" ? "var(--accent)" : "var(--primary)",
-                      }}>
-                        {u.role === "ADMIN" ? "Remove Admin" : "Make Admin"}
-                      </button>
-                    )}
+                  <div onClick={() => openUser(u)} style={{ ...ad.row, gridTemplateColumns:"1fr 90px 110px 120px 150px 140px", background: selectedUser?.id === u.id ? "var(--surface2)" : i % 2 === 0 ? "var(--surface)" : "var(--surface2)", cursor:"pointer" }}>
+                  <span style={{ fontSize:13, color:"var(--primary)", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:12 }}>{u.email}</span>
+                  <span style={{ fontSize:12, background: u.role === "ADMIN" ? "var(--divider)" : "var(--blue-light-bg)", color: u.role === "ADMIN" ? "var(--accent)" : "var(--primary)", padding:"3px 6px", borderRadius:6, fontWeight:600, display:"inline-block", whiteSpace:"nowrap", justifySelf:"start" }}>{u.role}</span>
+                  <span style={{ fontSize:12, fontWeight:600, color: u.active ? "var(--success)" : "var(--error)" }}>{u.active ? "Active" : "Deactivated"}</span>
+                  <span style={{ fontSize:12, color:"var(--text2)" }}>{formatDate(u.createdat)}</span>
 
-                    {confirmActiveId === u.id ? (
-                      <div onClick={e => e.stopPropagation()} style={{ display:"flex", alignItems:"center", gap:6 }}>
-                        <span style={{ fontSize:11, color: u.active ? "var(--error)" : "var(--success)", fontWeight:600 }}>Sure?</span>
-                        <button 
-                          onClick={e => { e.stopPropagation(); setActive(u.id, !u.active); setConfirmActiveId(null); }} 
-                        style={{ 
-                          padding:"4px 10px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, 
-                          background: u.active ? "var(--error)" : "var(--success)", 
-                          color:"#fff", cursor:"pointer" 
-                        }}
-                          >Yes</button>
-                        <button 
-                          onClick={e => { e.stopPropagation(); setConfirmActiveId(null); }} 
-                        style={{ 
-                          padding:"4px 10px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, 
-                          background:"var(--surface2)", color:"var(--text2)", cursor:"pointer" 
-                        }}
-                          >No</button>
-                        </div>
-                      ) : (
-                        <button 
-                          className="action-btn" 
-                            onClick={e => { e.stopPropagation(); setConfirmActiveId(u.id); }} 
-                          style={{
-                            padding:"6px 12px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, 
-                            whiteSpace:"nowrap", width:"fit-content", cursor:"pointer",
-                            background: u.active ? "var(--error-bg)" : "var(--success-bg)",
-                            color:      u.active ? "var(--error)" : "var(--success)",
-                          }}
-                        >
-                      {u.active ? "Deactivate" : "Activate"}
+                  {/* Make/Remove Admin */}
+                  {(!u.active && u.role !== "ADMIN") ? (
+                    <button disabled style={{ padding:"4px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:600, width:"fit-content", cursor:"not-allowed", opacity:0.4, background:"var(--border)", color:"var(--text2)" }}>Not Permitted</button>
+                  ) : confirmAdminId === u.id ? (
+                    <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                      <span style={{ fontSize:11, color:"var(--accent)", fontWeight:600 }}>Sure?</span>
+                      <button onClick={() => { setRole(u.id, u.role === "ADMIN" ? "STUDENT" : "ADMIN"); setConfirmAdminId(null); }} style={{ padding:"3px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background:"var(--accent)", color:"#fff", cursor:"pointer" }}>Yes</button>
+                      <button onClick={() => setConfirmAdminId(null)} style={{ padding:"3px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background:"var(--surface2)", color:"var(--text2)", cursor:"pointer" }}>No</button>
+                    </div>
+                  ) : (
+                    <button className="action-btn" onClick={() => setConfirmAdminId(u.id)}
+                      disabled={String(u.id) === myId && u.role === "ADMIN"}
+                      style={{
+                        padding:"4px 10px", border:"none", borderRadius:6, fontSize:11, fontWeight:600, width:"fit-content",
+                        cursor: String(u.id) === myId && u.role === "ADMIN" ? "not-allowed" : "pointer",
+                        opacity: String(u.id) === myId && u.role === "ADMIN" ? 0.4 : 1,
+                        background: u.role === "ADMIN" ? "var(--accent)" : "var(--primary)",
+                        color: "#fff",
+                      }}>
+                      {u.role === "ADMIN" ? "Remove Admin" : "Make Admin"}
                     </button>
                   )}
 
+                  {/* Activate/Deactivate */}
+                  {confirmActiveId === u.id ? (
+                    <div style={{ display:"flex", alignItems:"center", gap:4 }} onClick={e => e.stopPropagation()}>
+                      <span style={{ fontSize:11, color: u.active ? "var(--error)" : "var(--success)", fontWeight:600 }}>Sure?</span>
+                      <button onClick={() => { setActive(u.id, !u.active); setConfirmActiveId(null); }} style={{ padding:"3px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background: u.active ? "var(--error)" : "var(--success)", color:"#fff", cursor:"pointer" }}>Yes</button>
+                      <button onClick={() => setConfirmActiveId(null)} style={{ padding:"3px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background:"var(--surface2)", color:"var(--text2)", cursor:"pointer" }}>No</button>
+                    </div>
+                  ) : (
+                    <button className="action-btn" onClick={e => { e.stopPropagation(); setConfirmActiveId(u.id); }} style={{
+                      padding:"4px 10px", border:"none", borderRadius:6, fontSize:11, fontWeight:600, width:"fit-content", cursor:"pointer",
+                      background: u.active ? "var(--error)" : "var(--success)",
+                      color: "#fff",
+                    }}>
+                      {u.active ? "Deactivate" : "Activate"}
+                    </button>
+                  )}
+                  </div>
+
                   {selectedUser?.id === u.id && (
                     <div style={{ padding:"16px 20px", background:"var(--surface2)", borderTop:"1px solid var(--border)" }}>
-                      <div style={{ fontSize:11, fontWeight:600, color:"var(--text2)", marginBottom:10 }}>Reviews by {u.email}</div>
+                      <div style={{ fontSize:11, fontWeight:600, color:"var(--text2)", marginBottom:10, textTransform:"uppercase", letterSpacing:.5 }}>Reviews by {u.email}</div>
                       {userRevLoading && <div style={{ fontSize:13, color:"var(--text3)" }}>Loading…</div>}
                       {!userRevLoading && userReviews.length === 0 && userProfReviews.length === 0 && (
                         <div style={{ fontSize:13, color:"var(--text3)" }}>No reviews yet.</div>
@@ -404,7 +394,7 @@ export default function AdminDashboard({ token }) {
                             <span style={{ fontSize:12, fontWeight:600, color:"var(--primary)" }}>{r.courseCode ? `${r.courseCode} — ${r.courseTitle}` : "—"}</span>
                             <span style={{ fontSize:11, color:"var(--text2)" }}>{formatDate(r.createdAt)}</span>
                           </div>
-                          <div style={{ marginBottom:4 }}><span style={{ fontSize:13, color:"var(--star)" }}>{stars(r.rating)}</span></div>
+                          <div style={{ marginBottom:4, color:"var(--star)", fontSize:13 }}>{stars(r.rating)}</div>
                           <div style={{ fontSize:13, color:"var(--primary)", lineHeight:1.6 }}>{r.comment || "—"}</div>
                         </div>
                       ))}
@@ -414,7 +404,7 @@ export default function AdminDashboard({ token }) {
                             <span style={{ fontSize:12, fontWeight:600, color:"var(--primary)" }}>{r.professorName || "—"}</span>
                             <span style={{ fontSize:11, color:"var(--text2)" }}>{formatDate(r.createdAt)}</span>
                           </div>
-                          <div style={{ marginBottom:4 }}><span style={{ fontSize:13, color:"var(--star)" }}>{stars(r.rating)}</span></div>
+                          <div style={{ marginBottom:4, color:"var(--star)", fontSize:13 }}>{stars(r.rating)}</div>
                           <div style={{ fontSize:13, color:"var(--primary)", lineHeight:1.6 }}>{r.comment || "—"}</div>
                         </div>
                       ))}
@@ -431,34 +421,42 @@ export default function AdminDashboard({ token }) {
         </>
       )}
 
+      {/* reviews tab */}
       {tab === "reviews" && (
         <>
-          {/* All | Flagged */}
-          <div style={{ display:"flex", gap:4, background:"var(--bg)", padding:4, borderRadius:10, marginBottom:20, width:"fit-content" }}>
+          {/* all and flagged tabs */}
+          <div style={{ 
+            display:"flex", 
+            gap:4, 
+            background:"var(--surface)",  
+            padding:5,                  
+            borderRadius:14,           
+            marginBottom:20, 
+            width:"fit-content",
+            border:"1px solid var(--border)" 
+          }}>
             {[{id:"all",label:"All"},{id:"flagged",label:"Flagged"}].map(t => (
               <button key={t.id} onClick={() => { setReviewStatus(t.id); setExpandedId(null); }} style={{
                 padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer",
                 background: reviewStatus === t.id ? "var(--primary)" : "transparent",
-                color:      reviewStatus === t.id ? "#fff"    : "var(--text2)",
+                color:      reviewStatus === t.id ? "#fff"           : "var(--text2)",
               }}>{t.label}</button>
             ))}
           </div>
 
-          {reviewStatus === "all" && reviewType === "course"     && reviewTable(courseReviews,  courseLoading,        "No course reviews yet",          deleteCourseReview, "ac")}
-          {reviewStatus === "all" && reviewType === "professor"  && reviewTable(profReviews,    profLoading,          "No professor reviews yet",        deleteProfReview,   "ap")}
-          {reviewStatus === "flagged" && reviewType === "course"    && reviewTable(flaggedCourse, flaggedCourseLoading, "No flagged course reviews",       deleteCourseReview, "fc")}
-          {reviewStatus === "flagged" && reviewType === "professor" && reviewTable(flaggedProf,   flaggedProfLoading,   "No flagged professor reviews",    deleteProfReview,   "fp")}
+          {reviewStatus === "all"     && reviewType === "course"    && reviewTable(courseReviews,  courseLoading,        "No course reviews yet",       deleteCourseReview, "ac")}
+          {reviewStatus === "all"     && reviewType === "professor" && reviewTable(profReviews,    profLoading,          "No professor reviews yet",    deleteProfReview,   "ap")}
+          {reviewStatus === "flagged" && reviewType === "course"    && reviewTable(flaggedCourse,  flaggedCourseLoading, "No flagged course reviews",   deleteCourseReview, "fc")}
+          {reviewStatus === "flagged" && reviewType === "professor" && reviewTable(flaggedProf,    flaggedProfLoading,   "No flagged professor reviews", deleteProfReview,  "fp")}
         </>
       )}
-      
-      </div> {/* white card */}
-    </div>   {/* container */}
-  );         
+    </div>
+  );
 }
 
 const ad = {
   table: {
-    background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)",
+    background:"var(--surface)", borderRadius:20, border:"1px solid var(--border)",
     overflow:"hidden", boxShadow:"0 2px 14px rgba(49,72,122,0.07)",
   },
   tableHeader: {

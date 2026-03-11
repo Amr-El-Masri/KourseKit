@@ -634,14 +634,14 @@ const saveCourseColor = (courseName, color) => {
               <div ref={notifRef} style={{position:"relative"}}>
                 <button
                     onClick={() => { setShowNotifPanel(p => !p); if (unreadCount > 0) markAllAsRead(); }}
-                    style={{...s.bell, position:"relative", border:"none", cursor:"pointer"}}
+                    style={{...s.bell, position:"relative", border:"1px solid var(--border)", cursor:"pointer"}}
                     title="Notifications"
                 >
-                  <Bell size={18} color="#8FB3E2" />
+                  <Bell size={18} color="var(--border2)" />
                   {unreadCount > 0 && (
                       <span style={{
                         position:"absolute", top:4, right:4,
-                        background:"#e74c3c", color:"#fff", borderRadius:"50%",
+                        background:"var(--primary)", color:"var(--surface)", borderRadius:"50%",
                         width:14, height:14, fontSize:9, fontWeight:700,
                         display:"flex", alignItems:"center", justifyContent:"center"
                       }}>{unreadCount > 9 ? "9+" : unreadCount}</span>
@@ -650,11 +650,11 @@ const saveCourseColor = (courseName, color) => {
                 {showNotifPanel && (
                     <div style={{
                       position:"absolute", top:46, right:0, width:320,
-                      background:"#fff", borderRadius:12,
+                      background:"var(--surface)", borderRadius:12,
                       boxShadow:"0 8px 32px rgba(49,72,122,0.13)",
-                      border:"1px solid #E8E8F0", zIndex:9999, overflow:"hidden"
+                      border:"1px solid var(--border)", zIndex:9999, overflow:"hidden"
                     }}>
-                      <div style={{padding:"12px 16px", borderBottom:"1px solid #F0F0F5", display:"flex", alignItems:"center", justifyContent:"space-between"}}>
+                      <div style={{padding:"12px 16px", borderBottom:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"space-between"}}>
                         <span style={{fontWeight:700, fontSize:13, color:"var(--primary)"}}>Notifications</span>
                         {notifications.length > 0 && <span style={{fontSize:11, color:"var(--text3)"}}>{notifications.length} total</span>}
                       </div>
@@ -672,11 +672,11 @@ const saveCourseColor = (courseName, color) => {
                                     {notifications.filter(n => n.urgency === "overdue").map((n, i, arr) => (
                                         <div key={i} style={{
                                           padding:"9px 16px 10px",
-                                          background:"#FFF2F0",
-                                          borderBottom: i < arr.length - 1 ? "1px solid #FCDDD8" : "1px solid #F0EDF7"
+                                          background:"var(--error-fg)",
+                                          borderBottom: i < arr.length - 1 ? "1px solid var(--error-border)" : "1px solid var(--border)"
                                         }}>
-                                          <div style={{fontSize:12, color:"#B0270A", lineHeight:1.5}}>{n.message}</div>
-                                          <div style={{fontSize:10, color:"#C4BAD8", marginTop:3}}>
+                                          <div style={{fontSize:12, color:"var(--primary)", lineHeight:1.5}}>{n.message}</div>
+                                          <div style={{fontSize:10, color:"var(--text3)", marginTop:3}}>
                                             {n.createdAt}
                                           </div>
                                         </div>
@@ -692,11 +692,11 @@ const saveCourseColor = (courseName, color) => {
                                     {notifications.filter(n => n.urgency === "today").map((n, i, arr) => (
                                         <div key={i} style={{
                                           padding:"9px 16px 10px",
-                                          background:"#FDF7F6",
-                                          borderBottom: i < arr.length - 1 ? "1px solid #F5F0EF" : "1px solid #F0EDF7"
+                                          background:"var(--surface)",
+                                          borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "1px solid var(--border)"
                                         }}>
                                           <div style={{fontSize:12, color:"var(--primary)", lineHeight:1.5}}>{n.message}</div>
-                                          <div style={{fontSize:10, color:"#C4BAD8", marginTop:3}}>
+                                          <div style={{fontSize:10, color:"var(--text3)", marginTop:3}}>
                                             {n.createdAt}
                                           </div>
                                         </div>
@@ -712,11 +712,11 @@ const saveCourseColor = (courseName, color) => {
                                     {notifications.filter(n => n.urgency === "tomorrow").map((n, i, arr) => (
                                         <div key={i} style={{
                                           padding:"9px 16px 10px",
-                                          background:"#FDFAF6",
-                                          borderBottom: i < arr.length - 1 ? "1px solid #F5F0E8" : "1px solid #F0EDF7"
+                                          background:"var(--surface)",
+                                          borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "1px solid var(--border)"
                                         }}>
                                           <div style={{fontSize:12, color:"var(--primary)", lineHeight:1.5}}>{n.message}</div>
-                                          <div style={{fontSize:10, color:"#C4BAD8", marginTop:3}}>
+                                          <div style={{fontSize:10, color:"var(--text3)", marginTop:3}}>
                                             {n.createdAt}
                                           </div>
                                         </div>
@@ -732,11 +732,11 @@ const saveCourseColor = (courseName, color) => {
                                     {notifications.filter(n => n.urgency === "3day").map((n, i, arr) => (
                                         <div key={i} style={{
                                           padding:"9px 16px 10px",
-                                          background:"#FAF8FF",
-                                          borderBottom: i < arr.length - 1 ? "1px solid #F0EDF7" : "none"
+                                          background:"var(--surface)",
+                                          borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "none"
                                         }}>
                                           <div style={{fontSize:12, color:"var(--primary)", lineHeight:1.5}}>{n.message}</div>
-                                          <div style={{fontSize:10, color:"#C4BAD8", marginTop:3}}>
+                                          <div style={{fontSize:10, color:"var(--text3)", marginTop:3}}>
                                             {n.createdAt}
                                           </div>
                                         </div>
@@ -787,7 +787,7 @@ const saveCourseColor = (courseName, color) => {
                                     </label>
                                   </div>
                                   {courseSyllabi[c.name] ? (
-                                      <div style={{ marginTop:8, fontSize:11, color:"#2d7a4a", background:"#eef7f0", border:"1px solid #b7dfc5", borderRadius:6, padding:"3px 8px", display:"flex", alignItems:"center", gap:4 }}>
+                                      <div style={{ marginTop:8, fontSize:11, color:"var(--success-bg)", background:"var(--success)", border:"1px solid #b7dfc5", borderRadius:6, padding:"3px 8px", display:"flex", alignItems:"center", gap:4 }}>
                                         <span>✓</span> Syllabus uploaded
                                       </div>
                                   ) : (

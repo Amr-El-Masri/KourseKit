@@ -399,17 +399,31 @@ const refetchSemesters = () =>
       `}</style>
 
       {isAdmin && (
-        <div style={{ display:"flex", gap:4, background:"var(--bg)", padding:4, borderRadius:10, marginBottom:24, width:"fit-content" }}>
+        <div style={{ 
+          display:"flex", 
+          gap:4, 
+          background:"var(--surface)",  
+          padding:5,                     
+          borderRadius:14,              
+          marginBottom:24, 
+          width:"fit-content",
+          border:"1px solid var(--border)" 
+        }}>
           {[{ id:"profile", label:"My Profile" }, { id:"admin", label:"Admin" }].map(t => (
             <button key={t.id} onClick={() => setSection(t.id)} style={{
-              padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer",
+              padding:"6px 20px", 
+              border:"none", 
+              borderRadius:8, 
+              fontSize:13, 
+              fontWeight:600,  
+              cursor:"pointer",
               fontFamily:"'DM Sans',sans-serif",
               background: section === t.id ? "var(--primary)" : "transparent",
               color:      section === t.id ? "#fff"    : "var(--text2)",
             }}>{t.label}</button>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
       {isAdmin && section === "admin" && (
         <AdminDashboard token={localStorage.getItem("kk_token")} />
@@ -427,7 +441,7 @@ const refetchSemesters = () =>
           <div style={{ display:"flex", alignItems:"flex-end", gap:16, marginBottom:20 }}>
             <div style={{ position:"relative", flexShrink:0 }}>
               <div onClick={() => setProfilepic(o => !o)} style={{
-                width:72, height:72, borderRadius:20, border:"3px solid #ffffff",
+                width:72, height:72, borderRadius:20, border:"3px solid var(--border)",
                 background:"linear-gradient(135deg,#8FB3E2,#7B5EA7)",
                 color:"white", fontWeight:700, fontSize:26,
                 display:"flex", alignItems:"center", justifyContent:"center",

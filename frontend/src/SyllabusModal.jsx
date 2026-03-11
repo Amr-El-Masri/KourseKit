@@ -166,8 +166,8 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
     boxShadow: "0 20px 60px rgba(49,72,122,0.18)",
     fontFamily: "'DM Sans', sans-serif",
   };
-  const label = { fontSize: 12, fontWeight: 600, color: "#7B5EA7", marginBottom: 4, display: "block" };
-  const input = { width: "100%", padding: "8px 10px", border: "1px solid var(--border)", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none" };
+  const label = { fontSize: 12, fontWeight: 600, color: "var(--accent)", marginBottom: 4, display: "block" };
+  const input = { width: "100%", padding: "8px 10px", border: "1px solid var(--border)", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none", background: "var(--surface2)", color: "var(--text)" };
   const btn = { padding: "10px 20px", borderRadius: 10, border: "none", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" };
 
   return (
@@ -178,7 +178,7 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
             <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 20, color: "var(--primary)" }}>
               Upload Syllabus
             </div>
-            <div style={{ fontSize: 12, color: "#A59AC9", marginTop: 2 }}>{courseName}</div>
+            <div style={{ fontSize: 12, color: "var(--text2)", marginTop: 2 }}>{courseName}</div>
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, color: "var(--text3)", cursor: "pointer" }}>✕</button>
         </div>
@@ -186,13 +186,13 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
         {step === "upload" && (
           <>
             <div style={{ border: "2px dashed var(--border)", borderRadius: 12, padding: "32px 20px", textAlign: "center", background: "var(--surface2)", marginBottom: 16 }}>
-              <div style={{ fontSize: 13, color: "#A59AC9", marginBottom: 12 }}>Upload your course syllabus (PDF or .txt)</div>
+              <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 12 }}>Upload your course syllabus (PDF or .txt)</div>
               <input ref={fileRef} type="file" accept=".pdf,.txt" onChange={e => { setFile(e.target.files[0] || null); setError(null); }}
-                style={{ fontSize: 13, color: "#5A3B7B" }} />
+                style={{ fontSize: 13, color: "var(--accent2)" }} />
             </div>
             {error && <div style={{ fontSize: 12, color: "var(--error)", marginBottom: 10 }}>{error}</div>}
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button onClick={onClose} style={{ ...btn, background: "var(--bg)", color: "#A59AC9" }}>Cancel</button>
+              <button onClick={onClose} style={{ ...btn, background: "var(--bg)", color: "var(--text2)" }}>Cancel</button>
               <button onClick={upload} disabled={loading || !file} style={{ ...btn, background: "var(--primary)", color: "var(--surface)", opacity: file ? 1 : 0.5 }}>
                 {loading ? "Extracting…" : "Extract with AI"}
               </button>
@@ -223,11 +223,11 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
                   <div key={a.id} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "center" }}>
                     <input style={{ ...input, flex: 2 }} value={a.name} onChange={e => setAssessments(p => p.map((x, j) => j === i ? { ...x, name: e.target.value } : x))} placeholder="Name" />
                     <input style={{ ...input, flex: 1, maxWidth: 80 }} value={a.weight} onChange={e => setAssessments(p => p.map((x, j) => j === i ? { ...x, weight: e.target.value } : x))} placeholder="%" type="number" />
-                    <span style={{ fontSize: 12, color: "#A59AC9" }}>%</span>
-                    <button onClick={() => setAssessments(p => p.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "#c0392b", cursor: "pointer", fontSize: 14 }}>✕</button>
+                    <span style={{ fontSize: 12, color: "var(--text2)" }}>%</span>
+                    <button onClick={() => setAssessments(p => p.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", fontSize: 14 }}>✕</button>
                   </div>
                 ))}
-                <button onClick={() => setAssessments(p => [...p, { id: Date.now(), name: "", weight: "" }])} style={{ fontSize: 12, color: "#7B5EA7", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}>+ Add assessment</button>
+                <button onClick={() => setAssessments(p => [...p, { id: Date.now(), name: "", weight: "" }])} style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}>+ Add assessment</button>
               </div>
             )}
 
@@ -236,12 +236,12 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
               <div style={{ marginBottom: 20 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: "var(--primary)" }}>Tasks</div>
-                  <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#A59AC9", cursor: "pointer" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--text2)", cursor: "pointer" }}>
                     <input type="checkbox" checked={applyTasks} onChange={e => setApplyTasks(e.target.checked)} />
                     Auto-create in Task Manager
                   </label>
                 </div>
-                <div style={{ fontSize: 12, color: "#A59AC9", marginBottom: 10 }}>
+                <div style={{ fontSize: 12, color: "var(--text2)", marginBottom: 10 }}>
                   Check items and set a date to create them as tasks. Items without a date are skipped.
                 </div>
                 {deadlines.map((d, i) => (
@@ -263,7 +263,7 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
                     </select>
                   </div>
                 ))}
-                <button onClick={() => setDeadlines(p => [...p, { id: Date.now(), title: "", date: "", type: "Assignment", include: false }])} style={{ fontSize: 12, color: "#7B5EA7", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}>+ Add task</button>
+                <button onClick={() => setDeadlines(p => [...p, { id: Date.now(), title: "", date: "", type: "Assignment", include: false }])} style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}>+ Add task</button>
               </div>
             )}
 
@@ -272,7 +272,7 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontWeight: 700, fontSize: 14, color: "var(--primary)", marginBottom: 8 }}>Office Hours</div>
                 {officeHours.map((o, i) => (
-                  <div key={i} style={{ fontSize: 12, color: "#5A3B7B", marginBottom: 4 }}>
+                  <div key={i} style={{ fontSize: 12, color: "var(--accent2)", marginBottom: 4 }}>
                     {o.day} {o.time} {o.location && `— ${o.location}`}
                   </div>
                 ))}
@@ -280,15 +280,15 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
             )}
 
             {/* Apply to Calculator checkbox */}
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#5A3B7B", marginBottom: 20, cursor: "pointer" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--accent2)", marginBottom: 20, cursor: "pointer" }}>
               <input type="checkbox" checked={applyCalc} onChange={e => setApplyCalc(e.target.checked)} />
               Auto-fill KourseKit tools with extracted data
             </label>
 
-            {applyError && <div style={{ fontSize: 12, color: "#c0392b", marginBottom: 10 }}>{applyError}</div>}
+            {applyError && <div style={{ fontSize: 12, color: "var(--error)", marginBottom: 10 }}>{applyError}</div>}
 
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button onClick={() => setStep("upload")} style={{ ...btn, background: "var(--bg)", color: "#A59AC9" }}>Back</button>
+              <button onClick={() => setStep("upload")} style={{ ...btn, background: "var(--bg)", color: "var(--text2)" }}>Back</button>
               <button onClick={apply} disabled={applying} style={{ ...btn, background: "var(--primary)", color: "var(--surface)" }}>
                 {applying ? "Applying…" : "Apply"}
               </button>
@@ -304,7 +304,7 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24, textAlign: "left" }}>
               {doneStats.tasks > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(success-bg)", borderRadius: 10, padding: "10px 14px", border: "1px solid #b7dfc5" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--success-bg)", borderRadius: 10, padding: "10px 14px", border: "1px solid var(--success)" }}>
                   <span style={{ fontSize: 16 }}>📋</span>
                   <span style={{ fontSize: 13, color: "var(--success)", fontWeight: 600 }}>{doneStats.tasks} task{doneStats.tasks !== 1 ? "s" : ""} added to Task Manager</span>
                 </div>
@@ -312,7 +312,7 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
               {doneStats.hasCalc && (
                 <div style={{ display: "flex", alignItems: "center", gap: 10, background: "var(--surface3)", borderRadius: 10, padding: "10px 14px", border: "1px solid var(--border)" }}>
                   <span style={{ fontSize: 16 }}>🧮</span>
-                  <span style={{ fontSize: 13, color: "#5A3B7B", fontWeight: 600 }}>Grade Calculator pre-filled — select this course in the calculator</span>
+                  <span style={{ fontSize: 13, color: "var(--accent2)", fontWeight: 600 }}>Grade Calculator pre-filled — select this course in the calculator</span>
                 </div>
               )}
               {doneStats.hasOfficeHours && (
@@ -322,7 +322,7 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
                 </div>
               )}
               {doneStats.tasks === 0 && !doneStats.hasCalc && !doneStats.hasOfficeHours && (
-                <div style={{ fontSize: 13, color: "#A59AC9", textAlign: "center" }}>Nothing was applied — no items were checked.</div>
+                <div style={{ fontSize: 13, color: "var(--text2)", textAlign: "center" }}>Nothing was applied — no items were checked.</div>
               )}
             </div>
             <button onClick={onClose} style={{ ...btn, background: "var(--primary)", color: "var(--surface)" }}>Done</button>

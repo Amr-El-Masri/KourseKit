@@ -49,4 +49,3 @@ build/
 application-local.properties
 #ignore the environment
 .env
-

@@ -19,10 +19,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.koursekit.config.EmailConfig;
 import com.koursekit.dto.Admins;
 import com.koursekit.model.ProfessorReview;
+import com.koursekit.model.Report;
 import com.koursekit.model.Review;
 import com.koursekit.model.ReviewStatus;
 import com.koursekit.model.User;
 import com.koursekit.repository.ProfessorReviewRepository;
+import com.koursekit.repository.ReportRepository;
 import com.koursekit.repository.ReviewRepository;
 import com.koursekit.repository.UserRepo;
 
@@ -37,6 +39,8 @@ public class AdminController {
     private ReviewRepository reviewrepo;
     @Autowired
     private ProfessorReviewRepository profReviewRepo;
+    @Autowired
+    private ReportRepository reportRepo;
 
     @GetMapping("/users")
     public List<Admins> getUsers(@RequestParam(required = false) String search) {
@@ -158,5 +162,27 @@ public class AdminController {
         if (!profReviewRepo.existsById(reviewid)) { return ResponseEntity.notFound().build(); }
         profReviewRepo.deleteById(reviewid);
         return ResponseEntity.ok("Review deleted.");
+    }
+
+    @GetMapping("/reports")
+    public List<Map<String, Object>> getAllReports() {
+        return reportRepo.findAll().stream().map(r -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id",                r.getId());
+            m.put("userId",            r.getUserId());
+            m.put("reviewId",          r.getReviewId());
+            m.put("professorReviewId", r.getProfessorReviewId());
+            m.put("reason",            r.getReason());
+            m.put("createdAt",         r.getCreatedAt());
+            m.put("type",              r.getReviewId() != null ? "course" : "professor");
+            return m;
+        }).collect(Collectors.toList());
+    }
+
+    @DeleteMapping("/reports/{reportid}")
+    public ResponseEntity<?> deleteReport(@PathVariable Long reportid) {
+        if (!reportRepo.existsById(reportid)) { return ResponseEntity.notFound().build(); }
+        reportRepo.deleteById(reportid);
+        return ResponseEntity.ok("Report deleted.");
     }
 }

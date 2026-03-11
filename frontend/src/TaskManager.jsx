@@ -86,7 +86,7 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           <button onClick={() => onToggle(task.id)} style={{
             width:20, height:20, borderRadius:6, border:`2px solid ${task.done?"var(--success)":"var(--border)"}`,
-            background: task.done?"var(--success)":"white", cursor:"pointer", flexShrink:0,
+            background: task.done?"var(--success)":"var(--surface)", cursor:"pointer", flexShrink:0,
             display:"flex", alignItems:"center", justifyContent:"center", transition:"all .15s",
           }}>
             {task.done && <span style={{ color:"white", fontSize:11, lineHeight:1 }}>✓</span>}
@@ -424,22 +424,35 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
         />
       )}
 
-        <div style={{ display:"flex", gap:10, marginBottom:20, flexWrap:"wrap" }}>
+        <div style={{ 
+          display:"flex", 
+          gap:4, 
+          background:"var(--surface)", 
+          padding:5, 
+          borderRadius:14, 
+          marginBottom:20, 
+          width:"fit-content",
+          border:"1px solid var(--border)" 
+        }}>
           {[
             { label:"All",     val:counts.all,     filter:"All"     },
             { label:"Pending", val:counts.pending, filter:"Pending" },
             { label:"Done",    val:counts.done,    filter:"Done"    },
             { label:"Overdue", val:counts.overdue, filter:"Overdue", warn:counts.overdue>0 },
           ].map(c => (
-              <button key={c.filter} onClick={() => setFilter(c.filter)} style={{
-                padding:"7px 16px", borderRadius:10, border:"1px solid",
-                fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:600, cursor:"pointer", transition:"all .15s",
-                borderColor: filter===c.filter ? "var(--primary)" : "var(--border)",
-                background:  filter===c.filter ? "var(--primary)" : "var(--surface)",
-                color:       filter===c.filter ? "#ffffff" : c.warn?"var(--error)":"var(--text2)",
-              }}>
-                {c.label} <span style={{ opacity:.7 }}>{c.val}</span>
-              </button>
+            <button key={c.filter} onClick={() => setFilter(c.filter)} style={{
+              padding:"7px 16px", 
+              border:"none", 
+              borderRadius:8, 
+              fontSize:13, 
+              fontWeight:600, 
+              cursor:"pointer", 
+              transition:"all .15s",
+              background: filter === c.filter ? "var(--primary)" : "transparent",
+              color: filter === c.filter ? "#ffffff" : c.warn ? "var(--error)" : "var(--text2)",
+            }}>
+              {c.label} <span style={{ opacity:.7 }}>{c.val}</span>
+            </button>
           ))}
         </div>
 

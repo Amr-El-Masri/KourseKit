@@ -43,7 +43,7 @@ export default function VerifyEmail({ token, onVerified, onGoToLogin }) {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'DM Sans', sans-serif; }
-        .ve-btn:hover { background: var(--primary-hover) !important; }
+        .ve-btn:hover { background: var(--primary2) !important; }
         .ve-btn { transition: background 0.15s; }
       `}</style>
 

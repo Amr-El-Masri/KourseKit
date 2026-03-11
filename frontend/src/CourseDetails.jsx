@@ -44,11 +44,11 @@ const EnrollmentBar = ({ seats, enrolled }) => {
   const color = pct >= 90 ? "#c0392b" : pct >= 70 ? "#b7680a" : "#2d7a4a";
   return (
     <div style={{ marginTop: 6 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#A59AC9", marginBottom: 4 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text2)", marginBottom: 4 }}>
         <span>{enrolled} enrolled</span>
         <span>{seats} seats left</span>
       </div>
-      <div style={{ height: 5, background: "#E8E8F0", borderRadius: 4, overflow: "hidden" }}>
+      <div style={{ height: 5, background: "var(--border)", borderRadius: 4, overflow: "hidden" }}>
         <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 4, transition: "width 0.6s ease" }} />
       </div>
     </div>
@@ -62,23 +62,23 @@ function SlotBlock({ beginTime, endTime, building, room, days, label }) {
   if (!t1 && !d) return null;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      {label && <div style={{ fontSize: 10, fontWeight: 700, color: "#A59AC9", textTransform: "uppercase", letterSpacing: "0.07em" }}>{label}</div>}
+      {label && <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{label}</div>}
       {d && (
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Calendar size={12} color="#8FB3E2" />
-          <span style={{ fontSize: 13, color: "#2a2050", fontWeight: 600 }}>{d}</span>
+          <Calendar size={12} color="var(--border2)" />
+          <span style={{ fontSize: 13, color: "var(--text)", fontWeight: 600 }}>{d}</span>
         </div>
       )}
       {t1 && (
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Clock size={12} color="#8FB3E2" />
-          <span style={{ fontSize: 13, color: "#2a2050" }}>{t1} — {t2}</span>
+          <Clock size={12} color="var(--border2)" />
+          <span style={{ fontSize: 13, color: "var(--text)" }}>{t1} — {t2}</span>
         </div>
       )}
       {(building || room) && (
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <MapPin size={12} color="#8FB3E2" />
-          <span style={{ fontSize: 13, color: "#2a2050" }}>
+          <MapPin size={12} color="var(--border2)" />
+          <span style={{ fontSize: 13, color: "var(--text)" }}>
             {[building, room].filter(Boolean).join(", ")}
           </span>
         </div>
@@ -100,8 +100,8 @@ function SectionCard({ section, index }) {
   return (
     <div
       style={{
-        background: "#fff",
-        border: "1px solid #E0E0EC",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
         borderRadius: 14,
         overflow: "hidden",
         boxShadow: "0 2px 10px rgba(49,72,122,0.06)",
@@ -116,8 +116,8 @@ function SectionCard({ section, index }) {
         style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "16px 20px", cursor: "pointer",
-          background: expanded ? "#FAFAFE" : "#fff",
-          borderBottom: expanded ? "1px solid #E8E8F4" : "none",
+          background: expanded ? "var(--surface2)" : "var(--surface)",
+          borderBottom: expanded ? "1px solid var(--border)" : "none",
           transition: "background 0.15s",
           gap: 12,
         }}
@@ -137,27 +137,27 @@ function SectionCard({ section, index }) {
 
           {/* Professor + CRN */}
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 14, color: "#31487A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: "var(--primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {section.professorName || "Staff"}
             </div>
-            <div style={{ fontSize: 11, color: "#A59AC9", marginTop: 2 }}>CRN {section.crn}</div>
+            <div style={{ fontSize: 11, color: "var(--text2)", marginTop: 2 }}>CRN {section.crn}</div>
           </div>
         </div>
 
         {/* Quick info chips */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           {section.creditHours > 0 && (
-            <span style={{ fontSize: 11, fontWeight: 600, background: "#F0EEF7", color: "#5A3B7B", padding: "3px 9px", borderRadius: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, background: "var(--surface3)", color: "var(--accent2)", padding: "3px 9px", borderRadius: 6 }}>
               {section.creditHours} cr
             </span>
           )}
           {section.days1 && (
-            <span style={{ fontSize: 11, fontWeight: 600, background: "#eef2fb", color: "#31487A", padding: "3px 9px", borderRadius: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, background: "var(--blue-light-bg)", color: "var(--primary)", padding: "3px 9px", borderRadius: 6 }}>
               {formatDays(section.days1)}
             </span>
           )}
           <span style={{
-            fontSize: 12, color: "#A59AC9", transition: "transform 0.2s",
+            fontSize: 12, color: "var(--text2)", transition: "transform 0.2s",
             display: "inline-block", transform: expanded ? "rotate(180deg)" : "rotate(0deg)"
           }}>▾</span>
         </div>
@@ -185,26 +185,26 @@ function SectionCard({ section, index }) {
           </div>
 
           {/* Divider */}
-          <div style={{ height: 1, background: "#F0EEF7" }} />
+          <div style={{ height: 1, background: "var(--divider)" }} />
 
           {/* Meta row */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: 18 }}>
             {section.college && (
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Building2 size={13} color="#8FB3E2" />
-                <span style={{ fontSize: 12, color: "#4a3a6a" }}>{section.college}</span>
+                <Building2 size={13} color="var(--border2)" />
+                <span style={{ fontSize: 12, color: "var(--text-body)" }}>{section.college}</span>
               </div>
             )}
             {section.creditHours > 0 && (
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <BookOpen size={13} color="#8FB3E2" />
-                <span style={{ fontSize: 12, color: "#4a3a6a" }}>{section.creditHours} credit hours</span>
+                <BookOpen size={13} color="var(--border2)" />
+                <span style={{ fontSize: 12, color: "var(--text-body)" }}>{section.creditHours} credit hours</span>
               </div>
             )}
             {(section.seatsAvailable != null || section.actualEnrolment != null) && (
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <Users size={13} color="#8FB3E2" />
-                <span style={{ fontSize: 12, color: "#4a3a6a" }}>
+                <Users size={13} color="var(--border2)" />
+                <span style={{ fontSize: 12, color: "var(--text-body)" }}>
                   {section.actualEnrolment ?? "?"} enrolled · {section.seatsAvailable ?? "?"} seats left
                 </span>
               </div>
@@ -246,7 +246,7 @@ export default function CourseDetails({ course, onBack }) {
         @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
         .section-card { animation: fadeUp 0.35s ease both; }
         .section-card:hover { box-shadow: 0 6px 24px rgba(49,72,122,0.13) !important; }
-        .back-btn:hover { background: #E8EEF8 !important; }
+        .back-btn:hover { background: var(--surface3) !important; }
       `}</style>
 
       {/* Back button */}
@@ -255,9 +255,9 @@ export default function CourseDetails({ course, onBack }) {
         onClick={onBack}
         style={{
           display: "flex", alignItems: "center", gap: 8,
-          background: "#F4F4F8", border: "1px solid #D4D4DC",
+          background: "var(--bg)", border: "1px solid var(--border)",
           borderRadius: 10, padding: "8px 16px", cursor: "pointer",
-          fontSize: 13, fontWeight: 600, color: "#31487A",
+          fontSize: 13, fontWeight: 600, color: "var(--primary)",
           fontFamily: "'DM Sans', sans-serif", marginBottom: 24,
           transition: "background 0.15s",
         }}
@@ -267,14 +267,14 @@ export default function CourseDetails({ course, onBack }) {
 
       {/* Course header */}
       <div style={{
-        background: "#fff", borderRadius: 18, padding: "24px 28px",
-        border: "1px solid #D4D4DC", boxShadow: "0 2px 14px rgba(49,72,122,0.07)",
+        background: "var(--surface)", borderRadius: 18, padding: "24px 28px",
+        border: "1px solid var(--border)", boxShadow: "0 2px 14px rgba(49,72,122,0.07)",
         marginBottom: 24,
       }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 28, color: "#31487A", marginBottom: 4 }}>
+        <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 28, color: "var(--primary)", marginBottom: 4 }}>
           {data?.courseCode || course.courseCode}
         </div>
-        <div style={{ fontSize: 16, color: "#5A3B7B", marginBottom: 20 }}>
+        <div style={{ fontSize: 16, color: "var(--accent2)", marginBottom: 20 }}>
           {data?.title || course.title}
         </div>
 
@@ -282,15 +282,15 @@ export default function CourseDetails({ course, onBack }) {
         {!loading && (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
             {creditHours > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 7, background: "#F0EEF7", borderRadius: 10, padding: "8px 14px" }}>
-                <BookOpen size={14} color="#5A3B7B" />
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#5A3B7B" }}>{creditHours} Credit Hours</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, background: "var(--surface3)", borderRadius: 10, padding: "8px 14px" }}>
+                <BookOpen size={14} color="var(--accent2)" />
+                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--accent2)" }}>{creditHours} Credit Hours</span>
               </div>
             )}
             {college && (
-              <div style={{ display: "flex", alignItems: "center", gap: 7, background: "#eef2fb", borderRadius: 10, padding: "8px 14px" }}>
-                <Building2 size={14} color="#31487A" />
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#31487A" }}>{college}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, background: "var(--blue-light-bg)", borderRadius: 10, padding: "8px 14px" }}>
+                <Building2 size={14} color="var(--primary)" />
+                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>{college}</span>
               </div>
             )}
             <div style={{ display: "flex", alignItems: "center", gap: 7, background: "#eef7f0", borderRadius: 10, padding: "8px 14px" }}>
@@ -309,15 +309,15 @@ export default function CourseDetails({ course, onBack }) {
 
       {/* Sections */}
       {loading && (
-        <div style={{ textAlign: "center", padding: 60, color: "#B8A9C9", fontSize: 14 }}>Loading sections…</div>
+        <div style={{ textAlign: "center", padding: 60, color: "var(--text3)", fontSize: 14 }}>Loading sections…</div>
       )}
       {error && (
-        <div style={{ textAlign: "center", padding: 40, color: "#c0392b", fontSize: 14 }}>{error}</div>
+        <div style={{ textAlign: "center", padding: 40, color: "var(--error)", fontSize: 14 }}>{error}</div>
       )}
 
       {!loading && !error && (
         <>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#A59AC9", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>
             Sections — click to expand
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

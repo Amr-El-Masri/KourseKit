@@ -22,9 +22,9 @@
   --divider:       #F0EEF7;
 
   /* misc */
-  --success:       #2d7a4a;
+  --success:       #439f66;
   --success-bg:    #eef7f0;
-  --error:         #c0392b;
+  --error:         #c34c3f;
   --error-bg:      #fef0f0;
   --error-border:  #f5c6c6;
   --warn:          #b7680a;
@@ -35,10 +35,10 @@
   --blue-border:   #c5d4ef;
 }
 
-body[data-theme="dark"] {
+[data-theme="dark"] {
   --bg:            #2d3030;
   --surface:       #1c1c1f;
-  --surface2:      #393949;
+  --surface2:      #3a3a45;
   --surface3:      #2a2535;
 
   --text:          #cbd1d8;
@@ -46,18 +46,18 @@ body[data-theme="dark"] {
   --text2:         #c3bfcf;
   --text3:         #B8A9C9;
 
-  --primary:       #93a4cc;
+  --primary:       #a4b1d0;
   --primary2:      #8aa5e0;
-  --accent:        #a07fd4;
-  --accent2:       #b8accb;
+  --accent:        #a791ca;
+  --accent2:       #bcb8c3;
 
-  --border:        #3c3c54;
-  --border2:       #6b8cce;
-  --divider:       #252030;
+  --border:        #46465d;
+  --border2:       #e3e6ed;
+  --divider:       #bcb8c3;
 
-  --success:       #4abe7a;
+  --success:       #699e7f;
   --success-bg:    #122a1e;
-  --error:         #e06060;
+  --error:         #a85353;
   --error-bg:      #2a1616;
   --error-border:  #5a2e2e;
   --warn:          #e09a3a;
