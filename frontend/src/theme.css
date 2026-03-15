@@ -22,9 +22,9 @@
   --divider:       #F0EEF7;
 
   /* misc */
-  --success:       #438a60;
+  --success:       #60a07b;
   --success-bg:    #eef7f0;
-  --error:         #c34c3f;
+  --error:         #b05b52;
   --error-bg:      #fef0f0;
   --error-border:  #f5c6c6;
   --warn:          #b7680a;
@@ -33,6 +33,11 @@
   --star:          #f5a623;
   --blue-light-bg: #eef2fb;
   --blue-border:   #c5d4ef;
+
+  /* study planner */
+  --sp-bg1:   #FDFBFF;
+  --sp-bg2:   rgba(255,255,255,0.85);
+  --button:   #253a63;
 }
 
 [data-theme="dark"] {
@@ -66,4 +71,8 @@
   --star:          #f5a623;
   --blue-light-bg: #283042;
   --blue-border:   #696c72;
+
+  --sp-bg1:   #242432;
+  --sp-bg2:   rgba(40,40,55,0.85);
+  --button:   #7b96c8;
 }

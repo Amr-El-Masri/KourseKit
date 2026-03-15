@@ -168,13 +168,13 @@ function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUnco
                 top: top + 2, height,
                 left: `calc(${leftPct}% + 4px)`,
                 right: `calc(${100 - leftPct - colWidth}% + 4px)`,
-                background: block.completed ? "rgba(49,72,122,0.05)" : color + "22",
-                borderLeft: `3px solid ${block.completed ? "#ccc" : color}`,
+                background: block.completed ? "var(--surface2)" : color + "22",
+                borderLeft: `3px solid ${block.completed ? "var(--border)" : color}`,
             }}
             onMouseDown={e => e.stopPropagation()}
             onClick={e => { e.stopPropagation(); setShowMenu(v => !v); }}
         >
-            <div className="sp-block-title" style={{ color: block.completed ? "#aaa" : color }}>
+            <div className="sp-block-title" style={{ color: block.completed ? "var(--text3)" : color }}>
                 {block.completed && <span>✓ </span>}
                 {entryName}
             </div>
@@ -222,8 +222,8 @@ function EditBlockModal({ block, entries, dayBlocks, onClose, onSave }) {
     const [entryId, setEntryId]       = useState(String(block.studyPlanEntryId));
     const [error, setError]           = useState("");
 
-    const inputStyle = { width: "100%", padding: "9px 12px", border: "1px solid #E0E0E8", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: "#2a2050", outline: "none" };
-    const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: "#2a2050", marginBottom: 6 };
+    const inputStyle = { width: "100%", padding: "9px 12px", border: "1px solid var(--border)", borderRadius: 8, fontSize: 13, fontFamily: "'DM Sans', sans-serif", color: "var(--text)", outline: "none", background: "var(--surface)" };
+    const labelStyle = { display: "block", fontSize: 12, fontWeight: 600, color: "var(--text)", marginBottom: 6 };
 
     const handleSave = () => {
         setError("");
@@ -255,7 +255,7 @@ function EditBlockModal({ block, entries, dayBlocks, onClose, onSave }) {
                 <h2>Edit Block</h2>
                 <div style={{ marginBottom: 14 }}>
                     <label style={labelStyle}>Entry</label>
-                    <select value={entryId} onChange={e => setEntryId(e.target.value)} style={{ ...inputStyle, background: "#fff" }}>
+                    <select value={entryId} onChange={e => setEntryId(e.target.value)} style={{ ...inputStyle }}>
                         {entries.map(e => (
                             <option key={e.id} value={String(e.id)}>[{e.course}] {e.name}</option>
                         ))}
@@ -269,7 +269,7 @@ function EditBlockModal({ block, entries, dayBlocks, onClose, onSave }) {
                     <label style={labelStyle}>Duration (hours)</label>
                     <input type="number" value={duration} min="0.5" max="12" step="0.5" onChange={e => setDuration(e.target.value)} style={inputStyle} />
                 </div>
-                {error && <div style={{ marginBottom: 14, fontSize: 12, color: "#c0392b", background: "#fef0f0", borderRadius: 6, padding: "8px 12px" }}>{error}</div>}
+                {error && <div style={{ marginBottom: 14, fontSize: 12, color: "var(--error)", background: "var(--error-bg)", borderRadius: 6, padding: "8px 12px" }}>{error}</div>}
                 <div className="sp-modal-actions">
                     <button className="sp-btn sp-btn-ghost" onClick={onClose}>Cancel</button>
                     <button className="sp-btn sp-btn-primary" onClick={handleSave}>Save</button>
@@ -428,7 +428,7 @@ function DayColumn({
                         <StudyBlockEvent
                             key={block.id}
                             block={block}
-                            color={colorMap[String(block.studyPlanEntryId)] || "#31487A"}
+                            color={colorMap[String(block.studyPlanEntryId)] || "var(--primary)"}
                             entryName={(() => { const e = entries.find(en => String(en.id) === String(block.studyPlanEntryId)); return e ? (e.name || e.course || "Study") : (block.taskTitle || block.course || "Study"); })()}
                             onComplete={onCompleteBlock}
                             onDelete={onDeleteBlock}
@@ -556,12 +556,12 @@ function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId 
                                 <div style={{ position:"relative" }}>
                                     <div
                                         onClick={e => { e.stopPropagation(); const el = e.currentTarget.nextSibling; el.style.display = el.style.display === "grid" ? "none" : "grid"; }}
-                                        style={{ width:20, height:20, borderRadius:6, background: colorMap[String(entry.id)] || entry.color, cursor:"pointer", border:"2px solid #E0E0E8" }}
+                                        style={{ width:20, height:20, borderRadius:6, background: colorMap[String(entry.id)] || entry.color, cursor:"pointer", border:"2px solid var(--border)" }}
                                     />
-                                    <div style={{ display:"none", position:"absolute", left:24, top:0, zIndex:50, background:"#fff", border:"1px solid #E0E0E8", borderRadius:10, padding:8, gridTemplateColumns:"repeat(7,1fr)", gap:4, width:180, boxShadow:"0 4px 16px rgba(49,72,122,0.12)" }}>
+                                    <div style={{ display:"none", position:"absolute", left:24, top:0, zIndex:50, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:10, padding:8, gridTemplateColumns:"repeat(7,1fr)", gap:4, width:180, boxShadow:"0 4px 16px rgba(49,72,122,0.12)" }}>
                                         {PALETTE.map(c => (
                                             <button key={c} onClick={() => onColorChange(entry.id, c)}
-                                                    style={{ width:20, height:20, borderRadius:"50%", background:c, border: (colorMap[String(entry.id)]||entry.color)===c?"2px solid #2a2050":"2px solid transparent", cursor:"pointer", padding:0 }}
+                                                    style={{ width:20, height:20, borderRadius:"50%", background:c, border: (colorMap[String(entry.id)]||entry.color)===c?"2px solid var(--text)":"2px solid transparent", cursor:"pointer", padding:0 }}
                                             />
                                         ))}
                                     </div>
@@ -569,7 +569,7 @@ function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId 
                             </div>
                             <div className="sp-entry-info">
                                 <div className="sp-entry-name">{entry.name}</div>
-                                {entry.course && <div style={{ fontSize:10, color:"#A59AC9", marginTop:1, marginBottom:2 }}>{entry.course}</div>}
+                                {entry.course && <div style={{ fontSize:10, color:"var(--text2)", marginTop:1, marginBottom:2 }}>{entry.course}</div>}
                                 <div className="sp-entry-meta">
                                     <span className="sp-hours-badge">{entry.hoursPerWeek}h/wk</span>
                                 </div>
@@ -612,7 +612,7 @@ function SlotPanel({ availability, onDeleteSlot, onClearAll }) {
                     <div className="sp-slot-time-text">{formatTime(slot.startHour)} – {formatTime(slot.endHour)}</div>
                     <button
                         onClick={() => onDeleteSlot(slot.dayKey, slot.id)}
-                        style={{ background:"rgba(192,57,43,0.1)", border:"none", color:"#c0392b", borderRadius:4, width:20, height:20, cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}
+                        style={{ background:"var(--error-bg)", border:"none", color:"var(--error)", borderRadius:4, width:20, height:20, cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}
                     >×</button>
                 </div>
             ))}
@@ -1007,7 +1007,7 @@ export default function StudyPlanner() {
           flex-direction: column;
           height: 100vh;
           overflow: hidden;
-          background: #F4F4F8;
+          background: var(--bg);
           font-family: 'DM Sans', sans-serif;
         }
 
@@ -1018,8 +1018,8 @@ export default function StudyPlanner() {
           align-items: center;
           justify-content: space-between;
           padding: 8px 16px;
-          border-bottom: 1px solid #E0E0E8;
-          background: #fff;
+          border-bottom: 1px solid var(--border);
+          background: var(--surface);
           flex-shrink: 0;
           gap: 10px;
           flex-wrap: wrap;
@@ -1031,7 +1031,7 @@ export default function StudyPlanner() {
           font-family: 'Fraunces', serif;
           font-weight: 700;
           font-size: 18px;
-          color: #31487A;
+          color: var(--primary);
           letter-spacing: -0.3px;
           white-space: nowrap;
         }
@@ -1039,9 +1039,9 @@ export default function StudyPlanner() {
         .sp-week-nav { display: flex; align-items: center; gap: 4px; }
 
         .sp-nav-btn {
-          background: #F4F4F8;
-          border: 1px solid #E0E0E8;
-          color: #31487A;
+          background: var(--bg);
+          border: 1px solid var(--border);
+          color: var(--primary);
           width: 28px; height: 28px;
           border-radius: 8px;
           cursor: pointer;
@@ -1050,12 +1050,12 @@ export default function StudyPlanner() {
           transition: all 0.15s;
           flex-shrink: 0;
         }
-        .sp-nav-btn:hover { background: #E8EDF5; }
+        .sp-nav-btn:hover { background: var(--surface3); }
 
         .sp-week-label {
           font-size: 11px;
           font-weight: 600;
-          color: #7B8DB0;
+          color: var(--text2);
           min-width: 110px;
           text-align: center;
           white-space: nowrap;
@@ -1070,20 +1070,20 @@ export default function StudyPlanner() {
           padding: 6px 10px;
           border-radius: 8px;
           cursor: pointer;
-          border: 1px solid #E0E0E8;
+          border: 1px solid var(--border);
           transition: all 0.15s;
           white-space: nowrap;
         }
-        .sp-btn-ghost { background: transparent; color: #7B8DB0; }
-        .sp-btn-ghost:hover { background: #F4F4F8; color: #31487A; }
-        .sp-btn-outline { background: #fff; color: #31487A; }
-        .sp-btn-outline:hover { background: #F4F4F8; }
-        .sp-btn-primary { background: #31487A; color: #fff; border-color: #31487A; }
-        .sp-btn-primary:hover { background: #253a63; }
-        .sp-btn-active { background: #EEF2FB; color: #31487A; border-color: #31487A; }
+        .sp-btn-ghost { background: transparent; color: var(--text2); }
+        .sp-btn-ghost:hover { background: var(--bg); color: var(--primary); }
+        .sp-btn-outline { background: var(--surface); color: var(--primary); }
+        .sp-btn-outline:hover { background: var(--bg); }
+        .sp-btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .sp-btn-primary:hover { background: var(--button); }
+        .sp-btn-active { background: var(--blue-light-bg); color: var(--primary); border-color: var(--primary); }
 
         .sp-slot-badge {
-          background: #31487A;
+          background: var(--primary);
           color: #fff;
           font-size: 10px;
           padding: 1px 6px;
@@ -1103,8 +1103,8 @@ export default function StudyPlanner() {
           width: 240px;
           min-width: 180px;
           flex-shrink: 1;
-          background: #fff;
-          border-right: 1px solid #E0E0E8;
+          background: var(--surface);
+          border-right: 1px solid var(--border);
           display: flex;
           flex-direction: column;
           overflow: hidden;
@@ -1112,7 +1112,7 @@ export default function StudyPlanner() {
 
         .sp-sidebar-tabs {
           display: flex;
-          border-bottom: 1px solid #E0E0E8;
+          border-bottom: 1px solid var(--border);
           flex-shrink: 0;
         }
 
@@ -1123,7 +1123,7 @@ export default function StudyPlanner() {
           font-weight: 600;
           text-align: center;
           cursor: pointer;
-          color: #A59AC9;
+          color: var(--text2);
           border-bottom: 2px solid transparent;
           transition: all 0.15s;
           background: none;
@@ -1132,8 +1132,8 @@ export default function StudyPlanner() {
           border-right: none;
           font-family: 'DM Sans', sans-serif;
         }
-        .sp-sidebar-tab.active { color: #31487A; border-bottom-color: #31487A; }
-        .sp-sidebar-tab:hover:not(.active) { color: #31487A; background: #F8F8FB; }
+        .sp-sidebar-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .sp-sidebar-tab:hover:not(.active) { color: var(--primary); background: var(--surface2); }
 
         .sp-sidebar-content { flex: 1; overflow-y: auto; padding: 16px; }
 
@@ -1142,13 +1142,13 @@ export default function StudyPlanner() {
           font-family: 'Fraunces', serif;
           font-weight: 700;
           font-size: 14px;
-          color: #31487A;
+          color: var(--primary);
           margin-bottom: 12px;
         }
 
         .sp-empty-hint {
           font-size: 12px;
-          color: #B8A9C9;
+          color: var(--text3);
           text-align: center;
           padding: 20px 0;
           line-height: 1.6;
@@ -1156,8 +1156,8 @@ export default function StudyPlanner() {
 
         /* ── Entry Form ── */
         .sp-entry-form {
-          background: #F8F8FB;
-          border: 1px solid #E0E0E8;
+          background: var(--surface2);
+          border: 1px solid var(--border);
           border-radius: 12px;
           padding: 12px;
           margin-bottom: 14px;
@@ -1166,17 +1166,17 @@ export default function StudyPlanner() {
         .sp-input {
           width: 100%;
           padding: 8px 10px;
-          border: 1px solid #E0E0E8;
+          border: 1px solid var(--border);
           border-radius: 8px;
           font-size: 12px;
           font-family: 'DM Sans', sans-serif;
-          color: #2a2050;
-          background: #fff;
+          color: var(--text);
+          background: var(--surface);
           margin-bottom: 8px;
           outline: none;
           transition: border-color 0.15s;
         }
-        .sp-input:focus { border-color: #8FB3E2; }
+        .sp-input:focus { border-color: var(--border2); }
 
         .sp-form-row { display: flex; gap: 6px; }
         .sp-form-row .sp-input { flex: 1; margin-bottom: 8px; }
@@ -1187,8 +1187,8 @@ export default function StudyPlanner() {
           grid-template-columns: repeat(7, 1fr);
           gap: 5px;
           margin-bottom: 10px;
-          background: #F8F8FB;
-          border: 1px solid #E0E0E8;
+          background: var(--surface2);
+          border: 1px solid var(--border);
           border-radius: 10px;
           padding: 8px;
         }
@@ -1202,12 +1202,12 @@ export default function StudyPlanner() {
           padding: 0;
         }
         .sp-color-dot:hover { transform: scale(1.2); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
-        .sp-color-dot.selected { border-color: #fff; box-shadow: 0 0 0 2px #2a2050; transform: scale(1.1); }
+        .sp-color-dot.selected { border-color: var(--surface); box-shadow: 0 0 0 2px var(--text); transform: scale(1.1); }
 
         .sp-add-btn {
           width: 100%;
           padding: 8px;
-          background: #31487A;
+          background: var(--primary);
           color: #fff;
           border: none;
           border-radius: 8px;
@@ -1217,13 +1217,13 @@ export default function StudyPlanner() {
           cursor: pointer;
           transition: background 0.15s;
         }
-        .sp-add-btn:hover:not(:disabled) { background: #253a63; }
+        .sp-add-btn:hover:not(:disabled) { background: var(--button); }
         .sp-add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
         /* ── Task preview card ── */
         .sp-task-preview {
-          background: #fff;
-          border: 1px solid #D4D4DC;
+          background: var(--surface);
+          border: 1px solid var(--border);
           border-radius: 8px;
           padding: 10px 12px;
           margin-bottom: 8px;
@@ -1237,18 +1237,18 @@ export default function StudyPlanner() {
         .sp-task-course {
           font-size: 11px;
           font-weight: 700;
-          color: #31487A;
+          color: var(--primary);
           letter-spacing: 0.3px;
         }
         .sp-task-title {
           font-size: 12px;
-          color: #2a2050;
+          color: var(--text);
           font-weight: 500;
           margin-bottom: 4px;
         }
         .sp-task-deadline {
           font-size: 10px;
-          color: #B8A9C9;
+          color: var(--text3);
         }
 
         /* ── Entry List ── */
@@ -1258,8 +1258,8 @@ export default function StudyPlanner() {
           display: flex;
           align-items: center;
           gap: 10px;
-          background: #F8F8FB;
-          border: 1px solid #E0E0E8;
+          background: var(--surface2);
+          border: 1px solid var(--border);
           border-radius: 10px;
           padding: 10px;
         }
@@ -1281,8 +1281,8 @@ export default function StudyPlanner() {
           position: absolute;
           left: 28px;
           top: 0;
-          background: #fff;
-          border: 1px solid #E0E0E8;
+          background: var(--surface);
+          border: 1px solid var(--border);
           border-radius: 10px;
           padding: 8px;
           z-index: 50;
@@ -1295,7 +1295,7 @@ export default function StudyPlanner() {
         .sp-entry-name {
           font-size: 12px;
           font-weight: 600;
-          color: #2a2050;
+          color: var(--text);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -1310,22 +1310,22 @@ export default function StudyPlanner() {
           border-radius: 4px;
           text-transform: capitalize;
         }
-        .sp-workload-badge.light { background: #eef7f0; color: #2d7a4a; }
-        .sp-workload-badge.medium { background: #EEF2FB; color: #31487A; }
-        .sp-workload-badge.heavy { background: #fef0f0; color: #c0392b; }
+        .sp-workload-badge.light { background: var(--success-bg); color: var(--success); }
+        .sp-workload-badge.medium { background: var(--blue-light-bg); color: var(--primary); }
+        .sp-workload-badge.heavy { background: var(--error-bg); color: var(--error); }
 
         .sp-hours-badge {
           font-size: 10px;
-          color: #A59AC9;
+          color: var(--text2);
           padding: 2px 6px;
-          background: #F0EEF7;
+          background: var(--surface3);
           border-radius: 4px;
         }
 
         .sp-entry-delete {
           background: none;
           border: none;
-          color: #C8C0D8;
+          color: var(--text3);
           font-size: 16px;
           cursor: pointer;
           padding: 0 2px;
@@ -1333,14 +1333,14 @@ export default function StudyPlanner() {
           transition: color 0.15s;
           flex-shrink: 0;
         }
-        .sp-entry-delete:hover { color: #c0392b; }
+        .sp-entry-delete:hover { color: var(--error); }
 
         /* ── Slot Panel ── */
         .sp-slot-panel { }
 
         .sp-clear-btn {
           font-size: 11px;
-          color: #c0392b;
+          color: var(--error);
           background: none;
           border: none;
           cursor: pointer;
@@ -1354,8 +1354,8 @@ export default function StudyPlanner() {
           align-items: center;
           gap: 8px;
           padding: 8px 10px;
-          background: #F8F8FB;
-          border: 1px solid #E0E0E8;
+          background: var(--surface2);
+          border: 1px solid var(--border);
           border-radius: 8px;
           margin-bottom: 6px;
         }
@@ -1363,8 +1363,8 @@ export default function StudyPlanner() {
         .sp-slot-day {
           font-size: 10px;
           font-weight: 700;
-          color: #31487A;
-          background: #EEF2FB;
+          color: var(--primary);
+          background: var(--blue-light-bg);
           border-radius: 4px;
           padding: 2px 6px;
           text-transform: uppercase;
@@ -1374,7 +1374,7 @@ export default function StudyPlanner() {
 
         .sp-slot-time-text {
           font-size: 12px;
-          color: #5A3B7B;
+          color: var(--accent2);
           flex: 1;
         }
 
@@ -1408,8 +1408,8 @@ export default function StudyPlanner() {
         .sp-day-header-row {
           display: flex;
           flex-shrink: 0;
-          border-bottom: 1px solid #E0E0E8;
-          background: #fff;
+          border-bottom: 1px solid var(--border);
+          background: var(--surface);
           scrollbar-gutter: stable;
           min-width: 560px;
         }
@@ -1417,7 +1417,7 @@ export default function StudyPlanner() {
         .sp-gutter-spacer {
           width: 56px;
           flex-shrink: 0;
-          border-right: 1px solid #E0E0E8;
+          border-right: 1px solid var(--border);
         }
 
         .sp-day-header {
@@ -1425,7 +1425,7 @@ export default function StudyPlanner() {
           min-width: 70px;
           padding: 10px 6px;
           text-align: center;
-          border-right: 1px solid #E0E0E8;
+          border-right: 1px solid var(--border);
         }
         .sp-day-header:last-child { border-right: none; }
 
@@ -1433,7 +1433,7 @@ export default function StudyPlanner() {
           font-size: 10px;
           font-weight: 700;
           letter-spacing: 1.5px;
-          color: #A59AC9;
+          color: var(--text2);
           text-transform: uppercase;
         }
 
@@ -1441,12 +1441,12 @@ export default function StudyPlanner() {
           font-family: 'Fraunces', serif;
           font-size: 20px;
           font-weight: 700;
-          color: #31487A;
+          color: var(--primary);
           margin-top: 2px;
         }
 
-        .sp-day-header.today .sp-day-number { color: #7B5EA7; }
-        .sp-day-header.today .sp-day-name { color: #7B5EA7; }
+        .sp-day-header.today .sp-day-number { color: var(--accent); }
+        .sp-day-header.today .sp-day-name { color: var(--accent); }
 
         /* ── Calendar body ── */
         .sp-cal-body {
@@ -1469,8 +1469,8 @@ export default function StudyPlanner() {
           flex-shrink: 0;
           position: relative;
           height: ${TOTAL_HOURS * HOUR_HEIGHT}px;
-          border-right: 1px solid #E0E0E8;
-          background: #fff;
+          border-right: 1px solid var(--border);
+          background: var(--surface);
         }
 
         .sp-time-label {
@@ -1478,7 +1478,7 @@ export default function StudyPlanner() {
           right: 8px;
           transform: translateY(-50%);
           font-size: 10px;
-          color: #B8A9C9;
+          color: var(--text3);
           white-space: nowrap;
           user-select: none;
         }
@@ -1491,20 +1491,20 @@ export default function StudyPlanner() {
           min-width: 70px;
           position: relative;
           height: ${TOTAL_HOURS * HOUR_HEIGHT}px;
-          border-right: 1px solid #E0E0E8;
+          border-right: 1px solid var(--border);
           cursor: default;
           user-select: none;
-          background: #fff;
+          background: var(--surface);
         }
         .sp-day-column:last-child { border-right: none; }
         .sp-day-column.avail-mode { cursor: crosshair; }
-        .sp-day-column.today { background: #FDFBFF; }
+        .sp-day-column.today { background: var(--sp-bg1); }
 
         .sp-hour-line {
           position: absolute;
           left: 0; right: 0;
           height: 1px;
-          background: #F0EEF7;
+          background: var(--divider);
           pointer-events: none;
         }
 
@@ -1531,7 +1531,7 @@ export default function StudyPlanner() {
 
         .sp-block-time {
           font-size: 10px;
-          color: #7B8DB0;
+          color: var(--text2);
           margin-top: 2px;
         }
 
@@ -1546,7 +1546,7 @@ export default function StudyPlanner() {
         }
 
         .sp-block-action-btn {
-          background: rgba(255,255,255,0.85);
+          background: var(--sp-bg2);
           border: 1px solid rgba(0,0,0,0.08);
           border-radius: 4px;
           width: 18px;
@@ -1556,21 +1556,21 @@ export default function StudyPlanner() {
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #31487A;
+          color: var(--primary);
           padding: 0;
           line-height: 1;
           transition: background 0.1s;
         }
-        .sp-block-action-btn:hover { background: #EEF2FB; }
-        .sp-block-action-btn.danger { color: #c0392b; }
-        .sp-block-action-btn.danger:hover { background: #fef0f0; }
+        .sp-block-action-btn:hover { background: var(--blue-light-bg); }
+        .sp-block-action-btn.danger { color: var(--error); }
+        .sp-block-action-btn.danger:hover { background: var(--error-bg); }
 
         .sp-block-menu {
           position: absolute;
           top: calc(100% + 4px);
           left: 0;
-          background: #fff;
-          border: 1px solid #E0E0E8;
+          background: var(--surface);
+          border: 1px solid var(--border);
           border-radius: 8px;
           overflow: hidden;
           z-index: 100;
@@ -1584,16 +1584,16 @@ export default function StudyPlanner() {
           padding: 9px 14px;
           background: none;
           border: none;
-          color: #2a2050;
+          color: var(--text);
           font-family: 'DM Sans', sans-serif;
           font-size: 12px;
           text-align: left;
           cursor: pointer;
           transition: background 0.1s;
         }
-        .sp-block-menu button:hover { background: #F4F4F8; }
-        .sp-block-menu button.danger { color: #c0392b; }
-        .sp-block-menu button.danger:hover { background: #fef0f0; }
+        .sp-block-menu button:hover { background: var(--bg); }
+        .sp-block-menu button.danger { color: var(--error); }
+        .sp-block-menu button.danger:hover { background: var(--error-bg); }
 
         /* ── Availability slot ── */
         .sp-avail-slot {
@@ -1609,11 +1609,11 @@ export default function StudyPlanner() {
           padding: 4px 6px;
         }
 
-        .sp-slot-time { font-size: 9px; color: #7B5EA7; }
+        .sp-slot-time { font-size: 9px; color: var(--accent); }
         .sp-slot-delete {
-          background: rgba(192,57,43,0.1);
+          background: var(--error-bg);
           border: none;
-          color: #c0392b;
+          color: var(--error);
           width: 16px; height: 16px;
           border-radius: 4px;
           cursor: pointer;
@@ -1630,12 +1630,12 @@ export default function StudyPlanner() {
           position: absolute;
           left: 4px; right: 4px;
           background: rgba(123,94,167,0.12);
-          border: 1px dashed #7B5EA7;
+          border: 1px dashed var(--accent);
           border-radius: 6px;
           z-index: 10;
           display: flex; align-items: center; justify-content: center;
           font-size: 10px;
-          color: #7B5EA7;
+          color: var(--accent);
           pointer-events: none;
         }
 
@@ -1645,9 +1645,9 @@ export default function StudyPlanner() {
           bottom: 24px;
           left: 50%;
           transform: translateX(-50%);
-          background: #fff;
-          border: 1px solid #E0E0E8;
-          color: #2a2050;
+          background: var(--surface);
+          border: 1px solid var(--border);
+          color: var(--text);
           padding: 10px 20px;
           border-radius: 10px;
           font-size: 12px;
@@ -1655,8 +1655,8 @@ export default function StudyPlanner() {
           box-shadow: 0 4px 24px rgba(49,72,122,0.12);
           animation: spFadeUp 0.2s ease;
         }
-        .sp-toast.success { border-color: #2d7a4a; color: #2d7a4a; }
-        .sp-toast.error   { border-color: #c0392b; color: #c0392b; }
+        .sp-toast.success { border-color: var(--success); color: var(--success); }
+        .sp-toast.error   { border-color: var(--error); color: var(--error); }
 
         @keyframes spFadeUp {
           from { opacity: 0; transform: translateX(-50%) translateY(8px); }
@@ -1668,7 +1668,7 @@ export default function StudyPlanner() {
           position: fixed;
           top: 0; left: 0;
           height: 2px;
-          background: #31487A;
+          background: var(--primary);
           animation: spLoading 1s ease infinite alternate;
           z-index: 999;
         }
@@ -1684,8 +1684,8 @@ export default function StudyPlanner() {
         }
 
         .sp-modal {
-          background: #fff;
-          border: 1px solid #E0E0E8;
+          background: var(--surface);
+          border: 1px solid var(--border);
           border-radius: 16px;
           padding: 28px;
           width: 360px;
@@ -1696,13 +1696,13 @@ export default function StudyPlanner() {
           font-family: 'Fraunces', serif;
           font-weight: 700;
           font-size: 18px;
-          color: #31487A;
+          color: var(--primary);
           margin-bottom: 8px;
         }
 
         .sp-modal p {
           font-size: 13px;
-          color: #7B8DB0;
+          color: var(--text2);
           line-height: 1.6;
           margin-bottom: 24px;
         }
@@ -1717,17 +1717,17 @@ export default function StudyPlanner() {
         .sp-avail-tip {
           position: fixed;
           bottom: 24px; right: 24px;
-          background: #fff;
-          border: 1px solid #E0E0E8;
+          background: var(--surface);
+          border: 1px solid var(--border);
           border-radius: 10px;
           padding: 12px 16px;
           font-size: 11px;
-          color: #7B8DB0;
+          color: var(--text2);
           max-width: 200px;
           line-height: 1.5;
           box-shadow: 0 4px 16px rgba(49,72,122,0.08);
         }
-        .sp-avail-tip strong { color: #31487A; display: block; margin-bottom: 4px; }
+        .sp-avail-tip strong { color: var(--primary); display: block; margin-bottom: 4px; }
       `}</style>
 
             <div className="sp-root">
@@ -1775,7 +1775,7 @@ export default function StudyPlanner() {
                                     <button className="sp-btn sp-btn-outline" onClick={handleMarkPastDone} title="Mark all blocks that have already started as complete" style={{color:"#2d7a4a",borderColor:"#b7dfc4"}}>✓ Mark past done</button>
                                 )}
                                 {hasGenerated && (
-                                    <button className="sp-btn sp-btn-ghost" onClick={handleClearPlan} style={{color:"#c0392b",borderColor:"#f5c6c6"}}>✕ Clear Plan</button>
+                                    <button className="sp-btn sp-btn-ghost" onClick={handleClearPlan} style={{color:"var(--error)",borderColor:"var(--error-border)"}}>✕ Clear Plan</button>
                                 )}
                                 {!hasGenerated && (
                                     <button className="sp-btn sp-btn-primary" onClick={() => setShowGenerateModal(true)}><Zap size={13} style={{verticalAlign:"middle",marginRight:4}}/>Generate</button>
@@ -1878,7 +1878,7 @@ export default function StudyPlanner() {
                             <p>This will delete all study blocks and availability slots for this week. This cannot be undone.</p>
                             <div className="sp-modal-actions">
                                 <button className="sp-btn sp-btn-ghost" onClick={() => setShowClearModal(false)}>Cancel</button>
-                                <button className="sp-btn sp-btn-primary" style={{background:"#c0392b",borderColor:"#c0392b"}} onClick={handleClearPlanConfirmed}>Clear Plan</button>
+                                <button className="sp-btn sp-btn-primary" style={{background:"var(--error)",borderColor:"var(--error)"}} onClick={handleClearPlanConfirmed}>Clear Plan</button>
                             </div>
                         </div>
                     </div>

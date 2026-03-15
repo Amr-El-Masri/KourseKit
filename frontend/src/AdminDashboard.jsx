@@ -340,17 +340,17 @@ export default function AdminDashboard({ token }) {
                   <span style={{ fontSize:12, fontWeight:600, color: u.active ? "var(--success)" : "var(--error)" }}>{u.active ? "Active" : "Deactivated"}</span>
                   <span style={{ fontSize:12, color:"var(--text2)" }}>{formatDate(u.createdat)}</span>
 
-                  {/* Make/Remove Admin */}
+                  {/* makeor remove admin */}
                   {(!u.active && u.role !== "ADMIN") ? (
                     <button disabled style={{ padding:"4px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:600, width:"fit-content", cursor:"not-allowed", opacity:0.4, background:"var(--border)", color:"var(--text2)" }}>Not Permitted</button>
                   ) : confirmAdminId === u.id ? (
                     <div style={{ display:"flex", alignItems:"center", gap:4 }}>
                       <span style={{ fontSize:11, color:"var(--accent)", fontWeight:600 }}>Sure?</span>
-                      <button onClick={() => { setRole(u.id, u.role === "ADMIN" ? "STUDENT" : "ADMIN"); setConfirmAdminId(null); }} style={{ padding:"3px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background:"var(--accent)", color:"#fff", cursor:"pointer" }}>Yes</button>
-                      <button onClick={() => setConfirmAdminId(null)} style={{ padding:"3px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background:"var(--surface2)", color:"var(--text2)", cursor:"pointer" }}>No</button>
+                      <button onClick={e => { setRole(u.id, u.role === "ADMIN" ? "STUDENT" : "ADMIN"); e.stopPropagation(); setConfirmAdminId(null); }} style={{ padding:"3px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background:"var(--accent)", color:"#fff", cursor:"pointer" }}>Yes</button>
+                      <button onClick={e => {e.stopPropagation(); setConfirmAdminId(null)}} style={{ padding:"3px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background:"var(--surface2)", color:"var(--text2)", cursor:"pointer" }}>No</button>
                     </div>
                   ) : (
-                    <button className="action-btn" onClick={() => setConfirmAdminId(u.id)}
+                    <button className="action-btn" onClick={e => {e.stopPropagation(); setConfirmAdminId(u.id) }}
                       disabled={String(u.id) === myId && u.role === "ADMIN"}
                       style={{
                         padding:"4px 10px", border:"none", borderRadius:6, fontSize:11, fontWeight:600, width:"fit-content",
@@ -363,7 +363,7 @@ export default function AdminDashboard({ token }) {
                     </button>
                   )}
 
-                  {/* Activate/Deactivate */}
+                  {/* activate/deactivate */}
                   {confirmActiveId === u.id ? (
                     <div style={{ display:"flex", alignItems:"center", gap:4 }} onClick={e => e.stopPropagation()}>
                       <span style={{ fontSize:11, color: u.active ? "var(--error)" : "var(--success)", fontWeight:600 }}>Sure?</span>
