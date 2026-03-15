@@ -209,20 +209,20 @@ function CourseGradeSummaryWidget({ apiSemesters, selectedSemester }) {
       const saved = JSON.parse(localStorage.getItem("kk_course_data") || "{}")[courseCode];
       if (saved?.components?.length) {
         return saved.components
-          .filter(c => c.type || c.customType)
-          .map(c => ({
-            name: c.type === "Other" ? (c.customType?.trim() || "Other") : c.type,
-            weight: parseFloat(c.weight) || 0,
-            grade: c.grade || null,
-          }));
+            .filter(c => c.type || c.customType)
+            .map(c => ({
+              name: c.type === "Other" ? (c.customType?.trim() || "Other") : c.type,
+              weight: parseFloat(c.weight) || 0,
+              grade: c.grade || null,
+            }));
       }
     } catch {}
     return [];
   };
 
   const assessments = courseObj?.assessments?.length
-    ? courseObj.assessments
-    : getAssessments(selectedCourse);
+      ? courseObj.assessments
+      : getAssessments(selectedCourse);
 
   const gpaColor = g => {
     const v = parseFloat(g);
@@ -256,111 +256,111 @@ function CourseGradeSummaryWidget({ apiSemesters, selectedSemester }) {
   const projectedPct = coveredWeight > 0 ? (weightedScore / coveredWeight * 100).toFixed(1) : null;
 
   return (
-    <section className="card-anim" style={{ background:"var(--surface)", borderRadius:18, padding:"20px 22px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid var(--border)" }}>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:3, height:18, background:"var(--accent)", borderRadius:2 }} />
-          <h3 style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:"var(--primary)", margin:0 }}>Course Grade Breakdown</h3>
-        </div>
-        {selectedSemester && (
-          <span style={{ fontSize:12, fontWeight:600, color:"var(--accent)", background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:8, padding:"3px 10px" }}>
+      <section className="card-anim" style={{ background:"var(--surface)", borderRadius:18, padding:"20px 22px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid var(--border)" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <div style={{ width:3, height:18, background:"var(--accent)", borderRadius:2 }} />
+            <h3 style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:"var(--primary)", margin:0 }}>Course Grade Breakdown</h3>
+          </div>
+          {selectedSemester && (
+              <span style={{ fontSize:12, fontWeight:600, color:"var(--accent)", background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:8, padding:"3px 10px" }}>
             {selectedSemester}
           </span>
-        )}
-      </div>
+          )}
+        </div>
 
-      {courses.length === 0 ? (
-        <div style={{ fontSize:13, color:"var(--text3)", textAlign:"center", padding:"24px 0" }}>No courses found for this semester.</div>
-      ) : (
-        <>
-          {/* Course picker — only courses from the selected semester */}
-          <div style={{ display:"flex", gap:6, marginBottom:12, flexWrap:"wrap" }}>
-            {courses.map(c => (
-              <button
-                key={c.courseCode}
-                onClick={() => setSelectedCourse(c.courseCode)}
-                style={{
-                  padding:"5px 12px", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
-                  fontFamily:"'DM Sans',sans-serif", border:"1px solid var(--border)",
-                  background: selectedCourse === c.courseCode ? "var(--primary)" : "var(--surface2)",
-                  color: selectedCourse === c.courseCode ? "white" : "var(--text)",
-                  transition:"all .15s",
-                }}
-              >
-                {c.courseCode}
-              </button>
-            ))}
-          </div>
-
-          {!courseObj ? (
-            <div style={{ fontSize:13, color:"var(--text3)", textAlign:"center", padding:"16px 0" }}>Select a course.</div>
-          ) : (
+        {courses.length === 0 ? (
+            <div style={{ fontSize:13, color:"var(--text3)", textAlign:"center", padding:"24px 0" }}>No courses found for this semester.</div>
+        ) : (
             <>
-              {/* Course header — code, credits, final grade */}
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface2)", borderRadius:10, padding:"10px 14px", marginBottom:10 }}>
-                <div>
-                  <div style={{ fontSize:13, fontWeight:700, color:"var(--primary)" }}>{courseObj.courseCode}</div>
-                  <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>{courseObj.credits} credits · {selectedSemester}</div>
-                </div>
-                <div style={{ textAlign:"right" }}>
-                  <div style={{ fontSize:26, fontWeight:700, fontFamily:"'Fraunces',serif", color: gradeColor(courseObj.grade) }}>
-                    {courseObj.grade || "—"}
-                  </div>
-                  {gradePoints[courseObj.grade?.trim()?.toUpperCase()] !== undefined && (
-                    <div style={{ fontSize:11, color:"var(--text2)" }}>{gradePoints[courseObj.grade.trim().toUpperCase()].toFixed(1)} GPA pts</div>
-                  )}
-                </div>
+              {/* Course picker — only courses from the selected semester */}
+              <div style={{ display:"flex", gap:6, marginBottom:12, flexWrap:"wrap" }}>
+                {courses.map(c => (
+                    <button
+                        key={c.courseCode}
+                        onClick={() => setSelectedCourse(c.courseCode)}
+                        style={{
+                          padding:"5px 12px", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
+                          fontFamily:"'DM Sans',sans-serif", border:"1px solid var(--border)",
+                          background: selectedCourse === c.courseCode ? "var(--primary)" : "var(--surface2)",
+                          color: selectedCourse === c.courseCode ? "white" : "var(--text)",
+                          transition:"all .15s",
+                        }}
+                    >
+                      {c.courseCode}
+                    </button>
+                ))}
               </div>
 
-              {assessments.length === 0 ? (
-                <div style={{ fontSize:12, color:"var(--text3)", textAlign:"center", padding:"12px 0" }}>
-                  No assessment breakdown saved for this course in the Grade Calculator.
-                </div>
+              {!courseObj ? (
+                  <div style={{ fontSize:13, color:"var(--text3)", textAlign:"center", padding:"16px 0" }}>Select a course.</div>
               ) : (
-                <>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 52px 52px 64px", gap:4, padding:"4px 6px", marginBottom:4 }}>
-                    <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.05em" }}>Component</span>
-                    <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"center", textTransform:"uppercase", letterSpacing:"0.05em" }}>Weight</span>
-                    <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"center", textTransform:"uppercase", letterSpacing:"0.05em" }}>Grade</span>
-                    <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"right", textTransform:"uppercase", letterSpacing:"0.05em" }}>Contrib.</span>
-                  </div>
-
-                  <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-                    {assessments.map((a, i) => {
-                      const score = letterToNumeric(a.grade);
-                      const w = parseFloat(a.weight) || 0;
-                      const contrib = score !== null ? ((score * w) / 100).toFixed(1) : "—";
-                      return (
-                        <div key={i} style={{ display:"grid", gridTemplateColumns:"1fr 52px 52px 64px", gap:4, padding:"7px 8px", background: i % 2 === 0 ? "var(--surface2)" : "transparent", borderRadius:8, alignItems:"center" }}>
-                          <span style={{ fontSize:12, color:"var(--text)", fontWeight:500 }}>{a.name || `Component ${i+1}`}</span>
-                          <span style={{ fontSize:12, color:"var(--text2)", textAlign:"center" }}>{w}%</span>
-                          <span style={{ fontSize:13, fontWeight:700, color: a.grade ? gradeColor(a.grade) : "var(--text3)", textAlign:"center", fontFamily:"'Fraunces',serif" }}>{a.grade || "—"}</span>
-                          <span style={{ fontSize:12, color:"var(--accent2)", fontWeight:600, textAlign:"right" }}>{contrib}</span>
+                  <>
+                    {/* Course header — code, credits, final grade */}
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface2)", borderRadius:10, padding:"10px 14px", marginBottom:10 }}>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:700, color:"var(--primary)" }}>{courseObj.courseCode}</div>
+                        <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>{courseObj.credits} credits · {selectedSemester}</div>
+                      </div>
+                      <div style={{ textAlign:"right" }}>
+                        <div style={{ fontSize:26, fontWeight:700, fontFamily:"'Fraunces',serif", color: gradeColor(courseObj.grade) }}>
+                          {courseObj.grade || "—"}
                         </div>
-                      );
-                    })}
-                  </div>
+                        {gradePoints[courseObj.grade?.trim()?.toUpperCase()] !== undefined && (
+                            <div style={{ fontSize:11, color:"var(--text2)" }}>{gradePoints[courseObj.grade.trim().toUpperCase()].toFixed(1)} GPA pts</div>
+                        )}
+                      </div>
+                    </div>
 
-                  <div style={{ marginTop:10, padding:"8px 12px", background:"var(--surface3,#eef2fb)", borderRadius:9, border:"1px solid var(--border)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                    {assessments.length === 0 ? (
+                        <div style={{ fontSize:12, color:"var(--text3)", textAlign:"center", padding:"12px 0" }}>
+                          No assessment breakdown saved for this course in the Grade Calculator.
+                        </div>
+                    ) : (
+                        <>
+                          <div style={{ display:"grid", gridTemplateColumns:"1fr 52px 52px 64px", gap:4, padding:"4px 6px", marginBottom:4 }}>
+                            <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.05em" }}>Component</span>
+                            <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"center", textTransform:"uppercase", letterSpacing:"0.05em" }}>Weight</span>
+                            <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"center", textTransform:"uppercase", letterSpacing:"0.05em" }}>Grade</span>
+                            <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"right", textTransform:"uppercase", letterSpacing:"0.05em" }}>Contrib.</span>
+                          </div>
+
+                          <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                            {assessments.map((a, i) => {
+                              const score = letterToNumeric(a.grade);
+                              const w = parseFloat(a.weight) || 0;
+                              const contrib = score !== null ? ((score * w) / 100).toFixed(1) : "—";
+                              return (
+                                  <div key={i} style={{ display:"grid", gridTemplateColumns:"1fr 52px 52px 64px", gap:4, padding:"7px 8px", background: i % 2 === 0 ? "var(--surface2)" : "transparent", borderRadius:8, alignItems:"center" }}>
+                                    <span style={{ fontSize:12, color:"var(--text)", fontWeight:500 }}>{a.name || `Component ${i+1}`}</span>
+                                    <span style={{ fontSize:12, color:"var(--text2)", textAlign:"center" }}>{w}%</span>
+                                    <span style={{ fontSize:13, fontWeight:700, color: a.grade ? gradeColor(a.grade) : "var(--text3)", textAlign:"center", fontFamily:"'Fraunces',serif" }}>{a.grade || "—"}</span>
+                                    <span style={{ fontSize:12, color:"var(--accent2)", fontWeight:600, textAlign:"right" }}>{contrib}</span>
+                                  </div>
+                              );
+                            })}
+                          </div>
+
+                          <div style={{ marginTop:10, padding:"8px 12px", background:"var(--surface3,#eef2fb)", borderRadius:9, border:"1px solid var(--border)", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                     <span style={{ fontSize:12, color:"var(--text2)" }}>
                       {coveredWeight < totalWeight
-                        ? <>{coveredWeight}% graded · {(totalWeight - coveredWeight).toFixed(0)}% pending</>
-                        : <>{totalWeight}% total weight</>
+                          ? <>{coveredWeight}% graded · {(totalWeight - coveredWeight).toFixed(0)}% pending</>
+                          : <>{totalWeight}% total weight</>
                       }
                     </span>
-                    {projectedPct && (
-                      <span style={{ fontSize:13, fontWeight:700, color:"var(--primary)" }}>
+                            {projectedPct && (
+                                <span style={{ fontSize:13, fontWeight:700, color:"var(--primary)" }}>
                         Projected: {projectedPct}%
                       </span>
+                            )}
+                          </div>
+                        </>
                     )}
-                  </div>
-                </>
+                  </>
               )}
             </>
-          )}
-        </>
-      )}
-    </section>
+        )}
+      </section>
   );
 }
 
@@ -385,89 +385,89 @@ function GPASummaryWidget({ apiSemesters, selectedSemester, onNavigate }) {
   })() : null;
 
   return (
-    <section className="card-anim" style={{ background:"var(--surface)", borderRadius:18, padding:"20px 22px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid var(--border)" }}>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:3, height:18, background:"var(--accent)", borderRadius:2 }} />
-          <h3 style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:"var(--primary)", margin:0 }}>GPA Summary</h3>
-        </div>
-        {selectedSemester && (
-          <span style={{ fontSize:12, fontWeight:600, color:"var(--accent)", background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:8, padding:"3px 10px" }}>
+      <section className="card-anim" style={{ background:"var(--surface)", borderRadius:18, padding:"20px 22px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid var(--border)" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <div style={{ width:3, height:18, background:"var(--accent)", borderRadius:2 }} />
+            <h3 style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:"var(--primary)", margin:0 }}>GPA Summary</h3>
+          </div>
+          {selectedSemester && (
+              <span style={{ fontSize:12, fontWeight:600, color:"var(--accent)", background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:8, padding:"3px 10px" }}>
             {selectedSemester}
           </span>
-        )}
-      </div>
-
-      {!selectedSemester || courses.length === 0 ? (
-        <div style={{ fontSize:13, color:"var(--text3)", textAlign:"center", padding:"24px 0" }}>
-          No courses found for this semester.
+          )}
         </div>
-      ) : !allGraded ? (
-        <>
-          <div style={{ fontSize:12, color:"var(--warn1,#c97d00)", background:"var(--warn-bg,#fff8ec)", border:"1px solid #f5dfa0", borderRadius:9, padding:"8px 12px", marginBottom:12 }}>
-            Final grades not yet available for all courses this semester.
-          </div>
-          <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
-            {courses.map((c, ci) => {
-              const gp = gradePoints[c.grade?.trim()?.toUpperCase()];
-              const hasGrade = gp !== undefined;
-              return (
-                <div key={ci} style={{ display:"grid", gridTemplateColumns:"1fr 44px 60px", gap:4, padding:"7px 10px", background: ci % 2 === 0 ? "var(--surface2)" : "transparent", borderRadius:8, alignItems:"center" }}>
-                  <span style={{ fontSize:12, fontWeight:600, color:"var(--primary)" }}>{c.courseCode}</span>
-                  <span style={{ fontSize:12, color:"var(--text2)", textAlign:"center" }}>{c.credits} cr</span>
-                  <span style={{ fontSize:13, fontWeight:700, fontFamily:"'Fraunces',serif", textAlign:"right", color: hasGrade ? gpaColor(gp) : "var(--text3)" }}>
+
+        {!selectedSemester || courses.length === 0 ? (
+            <div style={{ fontSize:13, color:"var(--text3)", textAlign:"center", padding:"24px 0" }}>
+              No courses found for this semester.
+            </div>
+        ) : !allGraded ? (
+            <>
+              <div style={{ fontSize:12, color:"var(--warn1,#c97d00)", background:"var(--warn-bg,#fff8ec)", border:"1px solid #f5dfa0", borderRadius:9, padding:"8px 12px", marginBottom:12 }}>
+                Final grades not yet available for all courses this semester.
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                {courses.map((c, ci) => {
+                  const gp = gradePoints[c.grade?.trim()?.toUpperCase()];
+                  const hasGrade = gp !== undefined;
+                  return (
+                      <div key={ci} style={{ display:"grid", gridTemplateColumns:"1fr 44px 60px", gap:4, padding:"7px 10px", background: ci % 2 === 0 ? "var(--surface2)" : "transparent", borderRadius:8, alignItems:"center" }}>
+                        <span style={{ fontSize:12, fontWeight:600, color:"var(--primary)" }}>{c.courseCode}</span>
+                        <span style={{ fontSize:12, color:"var(--text2)", textAlign:"center" }}>{c.credits} cr</span>
+                        <span style={{ fontSize:13, fontWeight:700, fontFamily:"'Fraunces',serif", textAlign:"right", color: hasGrade ? gpaColor(gp) : "var(--text3)" }}>
                     {c.grade || "—"}
                   </span>
+                      </div>
+                  );
+                })}
+              </div>
+            </>
+        ) : (
+            <>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface3,#eef2fb)", borderRadius:12, padding:"12px 16px", marginBottom:14, border:"1px solid var(--border)" }}>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em" }}>Semester GPA</div>
+                  <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>{semGPA.creds} cr · {gradedCourses.length} courses</div>
                 </div>
-              );
-            })}
-          </div>
-        </>
-      ) : (
-        <>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface3,#eef2fb)", borderRadius:12, padding:"12px 16px", marginBottom:14, border:"1px solid var(--border)" }}>
-            <div>
-              <div style={{ fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em" }}>Semester GPA</div>
-              <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>{semGPA.creds} cr · {gradedCourses.length} courses</div>
-            </div>
-            <div style={{ fontFamily:"'Fraunces',serif", fontSize:34, fontWeight:700, color: gpaColor(semGPA.gpa), lineHeight:1 }}>{semGPA.gpa}</div>
-          </div>
+                <div style={{ fontFamily:"'Fraunces',serif", fontSize:34, fontWeight:700, color: gpaColor(semGPA.gpa), lineHeight:1 }}>{semGPA.gpa}</div>
+              </div>
 
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 44px 52px 60px", gap:4, padding:"4px 6px", marginBottom:6 }}>
-            <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.05em" }}>Course</span>
-            <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"center", textTransform:"uppercase", letterSpacing:"0.05em" }}>Cr</span>
-            <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"center", textTransform:"uppercase", letterSpacing:"0.05em" }}>Grade</span>
-            <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"right", textTransform:"uppercase", letterSpacing:"0.05em" }}>Pts×Cr</span>
-          </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 44px 52px 60px", gap:4, padding:"4px 6px", marginBottom:6 }}>
+                <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.05em" }}>Course</span>
+                <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"center", textTransform:"uppercase", letterSpacing:"0.05em" }}>Cr</span>
+                <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"center", textTransform:"uppercase", letterSpacing:"0.05em" }}>Grade</span>
+                <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textAlign:"right", textTransform:"uppercase", letterSpacing:"0.05em" }}>Pts×Cr</span>
+              </div>
 
-          <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-            {gradedCourses.map((c, ci) => {
-              const gp = gradePoints[c.grade.trim().toUpperCase()];
-              const contribution = (gp * Number(c.credits)).toFixed(1);
-              return (
-                <div key={ci} style={{ display:"grid", gridTemplateColumns:"1fr 44px 52px 60px", gap:4, padding:"7px 8px", background: ci % 2 === 0 ? "var(--surface2)" : "transparent", borderRadius:8, alignItems:"center" }}>
-                  <span style={{ fontSize:12, fontWeight:600, color:"var(--primary)" }}>{c.courseCode}</span>
-                  <span style={{ fontSize:12, color:"var(--text2)", textAlign:"center" }}>{c.credits}</span>
-                  <span style={{ fontSize:13, color: gpaColor(gp), fontWeight:700, textAlign:"center", fontFamily:"'Fraunces',serif" }}>{c.grade}</span>
-                  <span style={{ fontSize:12, color:"var(--accent2)", fontWeight:600, textAlign:"right" }}>{contribution}</span>
-                </div>
-              );
-            })}
-          </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                {gradedCourses.map((c, ci) => {
+                  const gp = gradePoints[c.grade.trim().toUpperCase()];
+                  const contribution = (gp * Number(c.credits)).toFixed(1);
+                  return (
+                      <div key={ci} style={{ display:"grid", gridTemplateColumns:"1fr 44px 52px 60px", gap:4, padding:"7px 8px", background: ci % 2 === 0 ? "var(--surface2)" : "transparent", borderRadius:8, alignItems:"center" }}>
+                        <span style={{ fontSize:12, fontWeight:600, color:"var(--primary)" }}>{c.courseCode}</span>
+                        <span style={{ fontSize:12, color:"var(--text2)", textAlign:"center" }}>{c.credits}</span>
+                        <span style={{ fontSize:13, color: gpaColor(gp), fontWeight:700, textAlign:"center", fontFamily:"'Fraunces',serif" }}>{c.grade}</span>
+                        <span style={{ fontSize:12, color:"var(--accent2)", fontWeight:600, textAlign:"right" }}>{contribution}</span>
+                      </div>
+                  );
+                })}
+              </div>
 
-          <div style={{ marginTop:10, padding:"8px 12px", background:"var(--surface3,#eef2fb)", borderRadius:9, border:"1px solid var(--border)", fontSize:12, color:"var(--primary)", fontWeight:600 }}>
-            GPA = {semGPA.pts.toFixed(1)} ÷ {semGPA.creds} cr = <span style={{ color: gpaColor(semGPA.gpa), fontSize:14 }}>{semGPA.gpa}</span>
-          </div>
-        </>
-      )}
+              <div style={{ marginTop:10, padding:"8px 12px", background:"var(--surface3,#eef2fb)", borderRadius:9, border:"1px solid var(--border)", fontSize:12, color:"var(--primary)", fontWeight:600 }}>
+                GPA = {semGPA.pts.toFixed(1)} ÷ {semGPA.creds} cr = <span style={{ color: gpaColor(semGPA.gpa), fontSize:14 }}>{semGPA.gpa}</span>
+              </div>
+            </>
+        )}
 
-      <button
-        onClick={() => onNavigate("grades")}
-        style={{ marginTop:14, width:"100%", padding:"9px 0", background:"none", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontWeight:600, color:"var(--accent)", fontFamily:"'DM Sans',sans-serif", cursor:"pointer" }}
-      >
-        Open GPA Calculator →
-      </button>
-    </section>
+        <button
+            onClick={() => onNavigate("grades")}
+            style={{ marginTop:14, width:"100%", padding:"9px 0", background:"none", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontWeight:600, color:"var(--accent)", fontFamily:"'DM Sans',sans-serif", cursor:"pointer" }}
+        >
+          Open GPA Calculator →
+        </button>
+      </section>
   );
 }
 
@@ -570,19 +570,19 @@ export default function Dashboard({ onLogout }) {
     localStorage.setItem("kk_todos", JSON.stringify(next));
   };
 
-const [tasks, setTasks] = useState([]);
-const [courseColors, setCourseColors] = useState({});
+  const [tasks, setTasks] = useState([]);
+  const [courseColors, setCourseColors] = useState({});
 
-const saveCourseColor = (courseName, color) => {
-  const next = { ...courseColors, [courseName]: color };
-  setCourseColors(next);
-  const t = localStorage.getItem("kk_token");
-  if (t) fetch("http://localhost:8080/api/profile/colors", {
-    method: "PUT",
-    headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
-    body: JSON.stringify(next),
-  }).catch(() => {});
-};
+  const saveCourseColor = (courseName, color) => {
+    const next = { ...courseColors, [courseName]: color };
+    setCourseColors(next);
+    const t = localStorage.getItem("kk_token");
+    if (t) fetch("http://localhost:8080/api/profile/colors", {
+      method: "PUT",
+      headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
+      body: JSON.stringify(next),
+    }).catch(() => {});
+  };
 
   const [courseOfficeHours, setCourseOfficeHours] = useState(() => {
     try {
@@ -618,7 +618,7 @@ const saveCourseColor = (courseName, color) => {
   const loadNotifications = useCallback(() => {
     const { token, userId } = getAuthInfo();
     if (!userId) return;
-    fetch("http://localhost:8080/api/" + userId + "/notifications", {
+    fetch("http://localhost:8080/api/notifications", {
       headers: { "Authorization": "Bearer " + token }
     })
         .then(r => r.json())
@@ -634,7 +634,7 @@ const saveCourseColor = (courseName, color) => {
   const markAllAsRead = useCallback(() => {
     const { token, userId } = getAuthInfo();
     if (!userId) return;
-    fetch("http://localhost:8080/api/" + userId + "/notifications/read-all", {
+    fetch("http://localhost:8080/api/notifications/read-all", {
       method: "PATCH",
       headers: { "Authorization": "Bearer " + token }
     })
@@ -649,7 +649,7 @@ const saveCourseColor = (courseName, color) => {
     const token = localStorage.getItem("kk_token");
     const userId = token ? JSON.parse(atob(token.split(".")[1])).sub : null;
     if (!userId) return;
-    fetch(`http://localhost:8080/api/tasks/${userId}/list-all`, {
+    fetch(`http://localhost:8080/api/tasks/list-all`, {
       headers: { "Authorization": `Bearer ${token}` }
     })
         .then(r => r.json())
@@ -701,10 +701,10 @@ const saveCourseColor = (courseName, color) => {
     if (!userId) return;
     const weekStart = getWeekStartForOffset(offset);
     try { const s = localStorage.getItem("kk_colorMap"); if (s) setSchedColorMap(JSON.parse(s)); } catch {}
-    fetch(`http://localhost:8080/api/study-plan/${userId}/weekly?weekStart=${weekStart}`, {
+    fetch(`http://localhost:8080/api/study-plan/weekly?weekStart=${weekStart}`, {
       headers: { "Authorization": `Bearer ${token}` }
     }).then(r => r.json()).then(data => { if (data) setStudyBlocks(data); }).catch(() => {});
-    fetch(`http://localhost:8080/api/study-plan/${userId}/slots?weekStart=${weekStart}`, {
+    fetch(`http://localhost:8080/api/study-plan/slots?weekStart=${weekStart}`, {
       headers: { "Authorization": `Bearer ${token}` }
     }).then(r => r.json()).then(data => {
       if (Array.isArray(data)) {
@@ -713,7 +713,7 @@ const saveCourseColor = (courseName, color) => {
         setStudySlots(map);
       }
     }).catch(() => {});
-    fetch(`http://localhost:8080/api/study-plan/${userId}/entries?weekStart=${weekStart}`, {
+    fetch(`http://localhost:8080/api/study-plan/entries?weekStart=${weekStart}`, {
       headers: { "Authorization": `Bearer ${token}` }
     }).then(r => r.json()).then(data => {
       if (Array.isArray(data)) setStudyEntries(data);
@@ -1049,20 +1049,20 @@ const saveCourseColor = (courseName, color) => {
                             {semCourseList.map(c => (
                                 <div key={c.id} className="course-card"
                                      onClick={() => {
-                                      const token = localStorage.getItem("kk_token");
-                                      fetch(`http://localhost:8080/api/courses/search?query=${encodeURIComponent(c.name)}`, {
-                                        headers: { "Authorization": "Bearer " + token }
-                                      })
-                                        .then(r => r.json())
-                                        .then(results => {
-                                          const match = results.find(r => r.courseCode === c.name);
-                                          if (match) {
-                                            setCourseDetailsTarget({ id: match.id, courseCode: match.courseCode, title: match.title });
-                                            setActivePage("courseDetails");
-                                          }
-                                        })
-                                        .catch(() => {});
-                                    }}
+                                       const token = localStorage.getItem("kk_token");
+                                       fetch(`http://localhost:8080/api/courses/search?query=${encodeURIComponent(c.name)}`, {
+                                         headers: { "Authorization": "Bearer " + token }
+                                       })
+                                           .then(r => r.json())
+                                           .then(results => {
+                                             const match = results.find(r => r.courseCode === c.name);
+                                             if (match) {
+                                               setCourseDetailsTarget({ id: match.id, courseCode: match.courseCode, title: match.title });
+                                               setActivePage("courseDetails");
+                                             }
+                                           })
+                                           .catch(() => {});
+                                     }}
                                      style={{...s.courseCard, border: `2px solid ${courseColors[c.name] || "var(--text2)"}`}}>
                                   <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
                                     <div style={{fontWeight:700, fontSize:15, color:"var(--primary)"}}>{c.name}</div>
@@ -1417,7 +1417,7 @@ const saveCourseColor = (courseName, color) => {
                                           <div style={{minWidth:0}}>
                                           <span style={{fontSize:12, fontWeight:700, color: b.completed ? "#aaa" : color, display:"block", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis"}}> {label}
                                           </span>
-                                          <span style={{fontSize:11, color:"var(--text3)"}}>
+                                            <span style={{fontSize:11, color:"var(--text3)"}}>
                                           {fmtH(startH)} – {fmtH(endH)} · {b.duration}h
                                         </span>
                                           </div>
@@ -1450,11 +1450,11 @@ const saveCourseColor = (courseName, color) => {
                 )}
 
                 {visible.courseGrades && (
-                  <CourseGradeSummaryWidget apiSemesters={apiSemesters} selectedSemester={semester}/>
+                    <CourseGradeSummaryWidget apiSemesters={apiSemesters} selectedSemester={semester}/>
                 )}
 
                 {visible.gpasummary && (
-                  <GPASummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} onNavigate={setActivePage} />
+                    <GPASummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} onNavigate={setActivePage} />
                 )}
 
               </div>
@@ -1479,10 +1479,10 @@ const saveCourseColor = (courseName, color) => {
           )}
 
           {activePage === "courseDetails" && courseDetailsTarget && (
-            <CourseDetails
-              course={courseDetailsTarget}
-              onBack={() => setActivePage("dashboard")}
-            />
+              <CourseDetails
+                  course={courseDetailsTarget}
+                  onBack={() => setActivePage("dashboard")}
+              />
           )}
 
         </main>

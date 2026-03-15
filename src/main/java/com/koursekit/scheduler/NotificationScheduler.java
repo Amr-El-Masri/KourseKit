@@ -72,7 +72,7 @@ public class NotificationScheduler {
 
     @Scheduled(fixedRate = 600000)
     public void removeStaleNotifications() {
-        // Keep notifications for 96 hours so 3-day ones don't get deleted prematurely
-        notificationRepository.deleteOlderThan(LocalDateTime.now().minusHours(96));
+        // Non-overdue notifications expire after 24h. Overdue ones persist until the task is completed.
+        notificationRepository.deleteOlderThanAndNotOverdue(LocalDateTime.now().minusHours(24));
     }
 }

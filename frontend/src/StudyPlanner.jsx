@@ -207,7 +207,7 @@ function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUnco
                         ? <>
                             <button className="danger" onClick={() => { onDelete(block.id); setShowMenu(false); }}>✓ Confirm Delete</button>
                             <button onClick={() => { setConfirmingDelete(false); setShowMenu(false); }}>✗ Cancel</button>
-                          </>
+                        </>
                         : <button className="danger" onClick={() => { setConfirmingDelete(true); }}>✕ Delete</button>
                     }
                 </div>
@@ -407,7 +407,18 @@ function DayColumn({
                 </div>
             )}
             {(() => {
-                const blockList = blocks || [];
+                // Hide completed blocks; also hide blocks whose date has already passed
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const dateOnly = new Date(date);
+                dateOnly.setHours(0, 0, 0, 0);
+                const isPastDay = dateOnly < today;
+
+                const blockList = (blocks || []).filter(b => {
+                    if (b.completed) return false;  // never show completed blocks
+                    if (isPastDay) return false;     // hide all blocks on past days
+                    return true;
+                });
                 // Group overlapping blocks into columns
                 const columns = [];
                 blockList.forEach(block => {
@@ -444,22 +455,32 @@ function DayColumn({
     );
 }
 
-function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId }) {
+function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId, weekStart }) {
     const [tasks, setTasks] = useState([]);
     const [selectedTaskId, setSelectedTaskId] = useState("");
     const [hoursPerWeek, setHoursPerWeek] = useState("");
     const [color, setColor] = useState(PALETTE[0]);
-    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
     useEffect(() => {
-        apiFetch(`/api/tasks/${userId}/list-all`).then(data => {
+        apiFetch(`/api/tasks/list-all`).then(data => {
             if (data) setTasks(data);
         });
     }, [userId]);
 
     const selectedTask = tasks.find(t => String(t.id) === String(selectedTaskId));
     const addedTaskIds = new Set(entries.map(e => String(e.taskId)));
-    const availableTasks = tasks.filter(t => !addedTaskIds.has(String(t.id)));
+
+    // Filter out tasks already added AND tasks whose deadline has passed before this week
+    const weekStartDate = weekStart ? new Date(weekStart) : null;
+    const availableTasks = tasks.filter(t => {
+        if (addedTaskIds.has(String(t.id))) return false;
+        if (t.completed) return false;
+        if (weekStartDate && t.deadline) {
+            const deadline = new Date(t.deadline);
+            if (deadline < weekStartDate) return false;
+        }
+        return true;
+    });
 
     const handleAdd = () => {
         if (!selectedTask) return;
@@ -574,14 +595,7 @@ function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId 
                                     <span className="sp-hours-badge">{entry.hoursPerWeek}h/wk</span>
                                 </div>
                             </div>
-                            {confirmDeleteId === entry.id ? (
-                                <span style={{ display:"flex", alignItems:"center", gap:3 }}>
-                                    <button className="sp-entry-delete" onClick={() => { setConfirmDeleteId(null); onDelete(entry.id); }} style={{ opacity:1, fontSize:11, padding:"2px 5px" }} title="Confirm">✓</button>
-                                    <button className="sp-entry-delete" onClick={() => setConfirmDeleteId(null)} style={{ opacity:1, fontSize:11, padding:"2px 5px" }} title="Cancel">✗</button>
-                                </span>
-                            ) : (
-                                <button className="sp-entry-delete" onClick={() => setConfirmDeleteId(entry.id)}>×</button>
-                            )}
+                            <button className="sp-entry-delete" onClick={() => onDelete(entry.id)}>×</button>
                         </div>
                     );
                 })}
@@ -636,6 +650,19 @@ export default function StudyPlanner() {
     const [hasGenerated, setHasGenerated] = useState(false);
     const [showSlotOverlay, setShowSlotOverlay] = useState(true);
 
+    const calBodyRef = useRef(null);
+    const [sbWidth, setSbWidth] = useState(0);
+
+    useEffect(() => {
+        const el = calBodyRef.current;
+        if (!el) return;
+        const update = () => setSbWidth(el.offsetWidth - el.clientWidth);
+        update();
+        const ro = new ResizeObserver(update);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
+
     const weekDates = getWeekDates(currentDate);
     const weekStart = toLocalDateString(weekDates[0]);
 
@@ -652,7 +679,7 @@ export default function StudyPlanner() {
     }, [colorMap]);
 
     const loadEntries = useCallback(async (preserveColors = false) => {
-        const data = await apiFetch(`/api/study-plan/${getUserId()}/entries?weekStart=${weekStart}`);
+        const data = await apiFetch(`/api/study-plan/entries?weekStart=${weekStart}`);
         const list = Array.isArray(data) ? data : [];
         const mapped = list.map((entry, i) => ({
             id: entry.id,
@@ -679,7 +706,7 @@ export default function StudyPlanner() {
 
     const loadWeeklyView = useCallback(async () => {
         setLoading(true);
-        const data = await apiFetch(`/api/study-plan/${getUserId()}/weekly?weekStart=${weekStart}`);
+        const data = await apiFetch(`/api/study-plan/weekly?weekStart=${weekStart}`);
         if (data) {
             const normalized = normalizeWeeklyData(data);
             setWeekBlocks(normalized);
@@ -694,7 +721,7 @@ export default function StudyPlanner() {
     }, [weekStart]);
 
     const loadSlots = useCallback(async () => {
-        const data = await apiFetch(`/api/study-plan/${getUserId()}/slots?weekStart=${weekStart}`);
+        const data = await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`);
         if (data) {
             const map = {};
             data.forEach(s => {
@@ -730,7 +757,7 @@ export default function StudyPlanner() {
             daySlots.forEach(s => slots.push({ dayKey, startTime: toTime(s.startHour), endTime: toTime(s.endHour) }));
         });
         try {
-            await apiFetch(`/api/study-plan/${userId}/slots?weekStart=${weekStart}`, {
+            await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`, {
                 method: "POST",
                 body: JSON.stringify(slots),
             });
@@ -837,8 +864,8 @@ export default function StudyPlanner() {
 
     const handleClearAllSlots = useCallback(async () => {
         const userId = getUserId();
-        await apiFetch(`/api/study-plan/${userId}/slots?weekStart=${weekStart}`, { method: "DELETE" });
-        await apiFetch(`/api/study-plan/${userId}/blocks?weekStart=${weekStart}`, { method: "DELETE" });
+        await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`, { method: "DELETE" });
+        await apiFetch(`/api/study-plan/blocks?weekStart=${weekStart}`, { method: "DELETE" });
         setAvailability({});
         setWeekBlocks({});
         setHasGenerated(false);
@@ -859,7 +886,7 @@ export default function StudyPlanner() {
         if (!entry.taskId) { showToast("No task selected", "error"); return; }
         try {
             await apiFetch(
-                `/api/study-plan/${getUserId()}/entries/add?taskId=${entry.taskId}&estimatedWorkload=${entry.hoursPerWeek}&weekStart=${weekStart}`,
+                `/api/study-plan/entries/add?taskId=${entry.taskId}&estimatedWorkload=${entry.hoursPerWeek}&weekStart=${weekStart}`,
                 { method: "POST" }
             );
             await loadEntries(true);
@@ -904,7 +931,7 @@ export default function StudyPlanner() {
         setShowGenerateModal(false);
         try {
             const payload = buildSettingsPayload();
-            const data = await apiFetch(`/api/study-plan/${getUserId()}/generate?weekStart=${weekStart}`, {
+            const data = await apiFetch(`/api/study-plan/generate?weekStart=${weekStart}`, {
                 method: "POST",
                 body: JSON.stringify(payload),
             });
@@ -929,7 +956,7 @@ export default function StudyPlanner() {
     const handleMarkPastDone = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await apiFetch(`/api/study-plan/${getUserId()}/blocks/complete-past`, { method: "POST" });
+            const res = await apiFetch(`/api/study-plan/blocks/complete-past`, { method: "POST" });
             const count = res?.marked ?? 0;
             if (count === 0) {
                 showToast("No past blocks to mark done", "info");
@@ -954,8 +981,8 @@ export default function StudyPlanner() {
         setShowClearModal(false);
         setLoading(true);
         try {
-            await apiFetch(`/api/study-plan/${userId}/blocks?weekStart=${weekStart}`, { method: "DELETE" });
-            await apiFetch(`/api/study-plan/${userId}/slots?weekStart=${weekStart}`, { method: "DELETE" });
+            await apiFetch(`/api/study-plan/blocks?weekStart=${weekStart}`, { method: "DELETE" });
+            await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`, { method: "DELETE" });
             setWeekBlocks({});
             setAvailability({});
             setHasGenerated(false);
@@ -973,7 +1000,7 @@ export default function StudyPlanner() {
         try {
             const payload = buildSettingsPayload();
             console.log("REBALANCE PAYLOAD:", JSON.stringify(payload, null, 2));
-            const data = await apiFetch(`/api/study-plan/${getUserId()}/rebalance?weekStart=${weekStart}`, {
+            const data = await apiFetch(`/api/study-plan/rebalance?weekStart=${weekStart}`, {
                 method: "POST",
                 body: JSON.stringify(payload),
             });
@@ -1410,8 +1437,6 @@ export default function StudyPlanner() {
           flex-shrink: 0;
           border-bottom: 1px solid var(--border);
           background: var(--surface);
-          scrollbar-gutter: stable;
-          min-width: 560px;
         }
 
         .sp-gutter-spacer {
@@ -1456,13 +1481,6 @@ export default function StudyPlanner() {
           overflow-x: hidden;
           min-height: 0;
         }
-        /* Gutter spacer in header must match time-gutter + scrollbar width */
-        .sp-day-header-row {
-          overflow-y: scroll;
-          scrollbar-gutter: stable;
-        }
-        .sp-day-header-row::-webkit-scrollbar { display: none; }
-        .sp-day-header-row { scrollbar-width: none; }
 
         .sp-time-gutter {
           width: 56px;
@@ -1813,6 +1831,7 @@ export default function StudyPlanner() {
                                     colorMap={colorMap}
                                     onColorChange={handleColorChange}
                                     userId={getUserId()}
+                                    weekStart={weekStart}
                                 />
                             )}
                             {activePanel === "slots" && (
@@ -1836,9 +1855,9 @@ export default function StudyPlanner() {
                                             <div className="sp-day-number">{date.getDate()}</div>
                                         </div>
                                     ))}
+                                    {sbWidth > 0 && <div style={{ width: sbWidth, flexShrink: 0 }} />}
                                 </div>
-
-                                <div className="sp-cal-body">
+                                <div className="sp-cal-body" ref={calBodyRef}>
                                     <TimeGutter />
                                     <div className="sp-days-grid">
                                         {weekDates.map((date, i) => {

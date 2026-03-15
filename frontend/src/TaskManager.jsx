@@ -112,13 +112,13 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
             </button>
             <button onClick={() => onEdit(task)} style={tm.iconBtn} title="Edit"><Pencil size={15} color="var(--text)" /></button>
             {confirming ? (
-              <span style={{ display:"flex", alignItems:"center", gap:4 }}>
+                <span style={{ display:"flex", alignItems:"center", gap:4 }}>
                 <span style={{ fontSize:11, color:"var(--error)", fontWeight:600, whiteSpace:"nowrap" }}>Delete?</span>
                 <button onClick={() => { setConfirming(false); onDelete(task.id); }} style={{ ...tm.iconBtn, color:"var(--error)", fontSize:11, fontWeight:700, padding:"2px 6px" }}>Yes</button>
                 <button onClick={() => setConfirming(false)} style={{ ...tm.iconBtn, fontSize:11, padding:"2px 6px" }}>No</button>
               </span>
             ) : (
-              <button onClick={() => setConfirming(true)} style={{ ...tm.iconBtn, color:"var(--error)" }} title="Delete">✕</button>
+                <button onClick={() => setConfirming(true)} style={{ ...tm.iconBtn, color:"var(--error)" }} title="Delete">✕</button>
             )}
           </div>
         </div>
@@ -162,14 +162,14 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
           <div style={{ flex:1, minWidth:140 }}>
             <label style={tm.label}>Course</label>
             {courses.length > 0 ? (
-              <select value={form.course} onChange={e=>set("course",e.target.value)} style={{ ...tm.input, cursor:"pointer" }}>
-                <option value="">Select course…</option>
-                {courses.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+                <select value={form.course} onChange={e=>set("course",e.target.value)} style={{ ...tm.input, cursor:"pointer" }}>
+                  <option value="">Select course…</option>
+                  {courses.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
             ) : (
-              <input value={form.course} onChange={e=>set("course",e.target.value)}
-                     placeholder="e.g. CMPS 271"
-                     style={tm.input} className="tm-input" />
+                <input value={form.course} onChange={e=>set("course",e.target.value)}
+                       placeholder="e.g. CMPS 271"
+                       style={tm.input} className="tm-input" />
             )}
           </div>
           <div style={{ flex:1, minWidth:140 }}>
@@ -179,8 +179,8 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
               {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
             </select>
             {form.type === "Other" && (
-              <input value={form.customType||""} onChange={e=>set("customType",e.target.value)}
-                placeholder="Specify (optional)" style={{ ...tm.input, marginTop:6, fontSize:12 }} className="tm-input" />
+                <input value={form.customType||""} onChange={e=>set("customType",e.target.value)}
+                       placeholder="Specify (optional)" style={{ ...tm.input, marginTop:6, fontSize:12 }} className="tm-input" />
             )}
           </div>
         </div>
@@ -229,19 +229,19 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
     fetch(`${API_BASE}/api/grades/saved`, {
       headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
     })
-      .then(r => r.json())
-      .then(data => {
-        if (Array.isArray(data) && data.length > 0) {
-          const current = data[data.length - 1];
-          const names = (current.courses || []).map(c => c.courseCode).filter(Boolean).sort();
-          setSavedCourses(names);
-        }
-      })
-      .catch(() => {});
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            const current = data[data.length - 1];
+            const names = (current.courses || []).map(c => c.courseCode).filter(Boolean).sort();
+            setSavedCourses(names);
+          }
+        })
+        .catch(() => {});
   }, []);
 
   const loadTasks = useCallback(async () => {
-    const data = await apiFetch(`/api/tasks/${USER_ID}/list-all`);
+    const data = await apiFetch(`/api/tasks/list-all`);
     if (data) {
       const mapped = data.map(t => ({ ...t, due: t.deadline, done: t.completed }));
       setTasks(mapped);
@@ -254,7 +254,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
   useEffect(() => {
     if (!search.trim()) { loadTasks(); return; }
     const timeout = setTimeout(async () => {
-      const data = await apiFetch(`/api/tasks/${USER_ID}/search?keyword=${encodeURIComponent(search)}`);
+      const data = await apiFetch(`/api/tasks/search?keyword=${encodeURIComponent(search)}`);
       if (data) setTasks(data.map(t => ({ ...t, due: t.deadline, done: t.completed })));
     }, 400);
     return () => clearTimeout(timeout);
@@ -263,7 +263,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
   useEffect(() => {
     if (!courseFilter) { loadTasks(); return; }
     const fetchByCourse = async () => {
-      const data = await apiFetch(`/api/tasks/${USER_ID}/list?course=${encodeURIComponent(courseFilter)}`);
+      const data = await apiFetch(`/api/tasks/list?course=${encodeURIComponent(courseFilter)}`);
       if (data) setTasks(data.map(t => ({ ...t, due: t.deadline, done: t.completed })));
     };
     fetchByCourse();
@@ -272,7 +272,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
   const toggleDone = async id => {
     const task = tasks.find(t => t.id === id);
     if (!task) return;
-    const updated = await apiFetch(`/api/tasks/${USER_ID}/edit/${id}`, {
+    const updated = await apiFetch(`/api/tasks/edit/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ ...task, completed: !task.done }),
     });
@@ -280,7 +280,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
   };
 
   const deleteTask = async id => {
-    await apiFetch(`/api/tasks/${USER_ID}/delete/${id}`, { method: "DELETE" });
+    await apiFetch(`/api/tasks/delete/${id}`, { method: "DELETE" });
     setTasks(p => p.filter(t => t.id !== id));
   };
 
@@ -301,7 +301,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
     clearTimeout(undoSyllabus.timer);
     const { task } = undoSyllabus;
     setUndoSyllabus(null);
-    const res = await fetch(`${API_BASE}/api/tasks/${USER_ID}/add`, {
+    const res = await fetch(`${API_BASE}/api/tasks/add`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getToken()}` },
       body: JSON.stringify({ title: task.title, course: task.course, type: task.type, deadline: task.due, notes: task.notes || "" }),
@@ -321,7 +321,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
     const resolvedType = task.type === "Other" ? (task.customType?.trim() || "Other") : task.type;
     const payload = { title: task.title, course: task.course, type: resolvedType, deadline: task.due, notes: task.notes };
     if (isEdit) {
-      const res = await fetch(`${API_BASE}/api/tasks/${USER_ID}/edit/${task.id}`, {
+      const res = await fetch(`${API_BASE}/api/tasks/edit/${task.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getToken()}` },
         body: JSON.stringify(payload),
@@ -335,7 +335,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
         if (onError) onError(data.message || "Failed to update task.");
       }
     } else {
-      const res = await fetch(`${API_BASE}/api/tasks/${USER_ID}/add`, {
+      const res = await fetch(`${API_BASE}/api/tasks/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getToken()}` },
         body: JSON.stringify(payload),
@@ -406,33 +406,33 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
             {" "}Set your weekly availability in the Study Planner and KourseKit will auto-generate study blocks around your deadlines.
           </div>
           {onNavigate && (
-            <button
-              onClick={() => onNavigate("planner")}
-              style={{ flexShrink:0, background:"var(--accent)", color:"#fff", border:"none", borderRadius:9, padding:"7px 16px", fontSize:13, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" }}
-            >
-              Go to Study Planner →
-            </button>
+              <button
+                  onClick={() => onNavigate("planner")}
+                  style={{ flexShrink:0, background:"var(--accent)", color:"#fff", border:"none", borderRadius:9, padding:"7px 16px", fontSize:13, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" }}
+              >
+                Go to Study Planner →
+              </button>
           )}
         </div>
 
         {composing && (
-        <TaskForm
-          initial={null}
-          onSave={saveTask}
-          onCancel={() => setComposing(false)}
-          courses={savedCourses}
-        />
-      )}
+            <TaskForm
+                initial={null}
+                onSave={saveTask}
+                onCancel={() => setComposing(false)}
+                courses={savedCourses}
+            />
+        )}
 
-        <div style={{ 
-          display:"flex", 
-          gap:4, 
-          background:"var(--surface)", 
-          padding:5, 
-          borderRadius:14, 
-          marginBottom:20, 
+        <div style={{
+          display:"flex",
+          gap:4,
+          background:"var(--surface)",
+          padding:5,
+          borderRadius:14,
+          marginBottom:20,
           width:"fit-content",
-          border:"1px solid var(--border)" 
+          border:"1px solid var(--border)"
         }}>
           {[
             { label:"All",     val:counts.all,     filter:"All"     },
@@ -440,20 +440,20 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
             { label:"Done",    val:counts.done,    filter:"Done"    },
             { label:"Overdue", val:counts.overdue, filter:"Overdue", warn:counts.overdue>0 },
           ].map(c => (
-            <button key={c.filter} onClick={() => setFilter(c.filter)} style={{
-              padding:"7px 16px", 
-              border:"none", 
-              borderRadius:8, 
-              fontSize:13, 
-              fontWeight:600, 
-              cursor:"pointer", 
-              fontFamily:"'DM Sans',sans-serif",
-              transition:"all .15s",
-              background: filter === c.filter ? "var(--primary)" : "transparent",
-              color: filter === c.filter ? "#ffffff" : c.warn ? "var(--error)" : "var(--text2)",
-            }}>
-              {c.label} <span style={{ opacity:.7 }}>{c.val}</span>
-            </button>
+              <button key={c.filter} onClick={() => setFilter(c.filter)} style={{
+                padding:"7px 16px",
+                border:"none",
+                borderRadius:8,
+                fontSize:13,
+                fontWeight:600,
+                cursor:"pointer",
+                fontFamily:"'DM Sans',sans-serif",
+                transition:"all .15s",
+                background: filter === c.filter ? "var(--primary)" : "transparent",
+                color: filter === c.filter ? "#ffffff" : c.warn ? "var(--error)" : "var(--text2)",
+              }}>
+                {c.label} <span style={{ opacity:.7 }}>{c.val}</span>
+              </button>
           ))}
         </div>
 
@@ -486,7 +486,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
               {filter==="All" && <div style={{ fontSize:13, marginTop:6 }}>Hit "+ New Task" to add one.</div>}
             </div>
         ) : (<>
-            {syllabusDisplayed.length > 0 && (
+          {syllabusDisplayed.length > 0 && (
               <div style={{ marginBottom:20 }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
                   <div style={{ width:3, height:16, background:"var(--accent)", borderRadius:2 }} />
@@ -495,42 +495,42 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                   {syllabusDisplayed.map(t => (
-                    <div key={t.id}>
-                      <TaskRow task={t} onToggle={toggleDone} onDelete={deleteSyllabusTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
-                      {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
-                    </div>
+                      <div key={t.id}>
+                        <TaskRow task={t} onToggle={toggleDone} onDelete={deleteSyllabusTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
+                        {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
+                      </div>
                   ))}
                 </div>
               </div>
-            )}
+          )}
 
-            {manualDisplayed.length > 0 && (
+          {manualDisplayed.length > 0 && (
               <div>
                 {syllabusDisplayed.length > 0 && (
-                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-                    <div style={{ width:3, height:16, background:"var(--accent)", borderRadius:2 }} />
-                    <span style={{ fontSize:13, fontWeight:700, color:"var(--primary)", fontFamily:"'DM Sans',sans-serif" }}>My Tasks</span>
-                  </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+                      <div style={{ width:3, height:16, background:"var(--accent)", borderRadius:2 }} />
+                      <span style={{ fontSize:13, fontWeight:700, color:"var(--primary)", fontFamily:"'DM Sans',sans-serif" }}>My Tasks</span>
+                    </div>
                 )}
                 <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                   {manualDisplayed.map(t => (
-                    <div key={t.id}>
-                      <TaskRow task={t} onToggle={toggleDone} onDelete={deleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
-                      {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
-                    </div>
+                      <div key={t.id}>
+                        <TaskRow task={t} onToggle={toggleDone} onDelete={deleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
+                        {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
+                      </div>
                   ))}
                 </div>
               </div>
-            )}
+          )}
         </>)}
 
-      {undoSyllabus && (
-        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:"var(--primary)", color:"white", borderRadius:14, padding:"12px 20px", display:"flex", alignItems:"center", gap:14, boxShadow:"0 4px 24px rgba(49,72,122,0.28)", zIndex:9999, fontFamily:"'DM Sans',sans-serif", whiteSpace:"nowrap" }}>
-          <span style={{ fontSize:13 }}>Syllabus task deleted</span>
-          <button onClick={undoDelete} style={{ background:"white", color:"var(--primary)", border:"none", borderRadius:8, padding:"5px 14px", fontSize:13, fontWeight:700, cursor:"pointer" }}>Undo</button>
-          <button onClick={() => { clearTimeout(undoSyllabus.timer); setUndoSyllabus(null); }} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.6)", fontSize:16, cursor:"pointer", padding:"0 2px", lineHeight:1 }}>✕</button>
-        </div>
-      )}
+        {undoSyllabus && (
+            <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:"var(--primary)", color:"white", borderRadius:14, padding:"12px 20px", display:"flex", alignItems:"center", gap:14, boxShadow:"0 4px 24px rgba(49,72,122,0.28)", zIndex:9999, fontFamily:"'DM Sans',sans-serif", whiteSpace:"nowrap" }}>
+              <span style={{ fontSize:13 }}>Syllabus task deleted</span>
+              <button onClick={undoDelete} style={{ background:"white", color:"var(--primary)", border:"none", borderRadius:8, padding:"5px 14px", fontSize:13, fontWeight:700, cursor:"pointer" }}>Undo</button>
+              <button onClick={() => { clearTimeout(undoSyllabus.timer); setUndoSyllabus(null); }} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.6)", fontSize:16, cursor:"pointer", padding:"0 2px", lineHeight:1 }}>✕</button>
+            </div>
+        )}
       </div>
   );
 }

@@ -5,11 +5,13 @@ import com.koursekit.model.SchedulerResult;
 import com.koursekit.model.SchedulerSettings;
 import com.koursekit.model.StudyBlock;
 import com.koursekit.model.StudyPlanEntry;
+import com.koursekit.model.User;
 import com.koursekit.service.StudyPlanService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.DayOfWeek;
@@ -22,6 +24,11 @@ public class StudyPlanController {
 
     @Autowired
     private StudyPlanService studyPlanService;
+
+    private Long currentUserId() {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return user.getId();
+    }
 
     public static class ScheduleWarning {
         public final Long   entryId;
@@ -80,12 +87,12 @@ public class StudyPlanController {
         return new PlanResponse(weeklyView, warnings);
     }
 
-    @PostMapping("/{userId}/generate")
+    @PostMapping("/generate")
     public ResponseEntity<PlanResponse> generatePlan(
-            @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
             @RequestBody SchedulerSettings settings) {
 
+        Long userId = currentUserId();
         List<StudyPlanEntry> entriesBefore = studyPlanService.getActiveEntries(userId, weekStart);
         Map<Long, Double> remainingPerEntry = new HashMap<>();
         for (StudyPlanEntry e : entriesBefore) {
@@ -96,12 +103,12 @@ public class StudyPlanController {
         return ResponseEntity.ok(buildPlanResponse(userId, result, entriesBefore, remainingPerEntry, weekStart));
     }
 
-    @PostMapping("/{userId}/rebalance")
+    @PostMapping("/rebalance")
     public ResponseEntity<PlanResponse> rebalance(
-            @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
             @RequestBody SchedulerSettings settings) {
 
+        Long userId = currentUserId();
         List<StudyPlanEntry> entriesBefore = studyPlanService.getActiveEntries(userId, weekStart);
         Map<Long, Double> remainingPerEntry = new HashMap<>();
         for (StudyPlanEntry e : entriesBefore) {
@@ -114,17 +121,16 @@ public class StudyPlanController {
         return ResponseEntity.ok(buildPlanResponse(userId, result, entriesBefore, remainingPerEntry, weekStart));
     }
 
-    @PostMapping("/{userId}/blocks/complete-past")
-    public ResponseEntity<Map<String, Integer>> markPastBlocksDone(@PathVariable Long userId) {
-        int count = studyPlanService.markPastBlocksDone(userId);
+    @PostMapping("/blocks/complete-past")
+    public ResponseEntity<Map<String, Integer>> markPastBlocksDone() {
+        int count = studyPlanService.markPastBlocksDone(currentUserId());
         return ResponseEntity.ok(Map.of("marked", count));
     }
 
-    @GetMapping("/{userId}/entries")
+    @GetMapping("/entries")
     public ResponseEntity<List<StudyPlanEntry>> getActiveEntries(
-            @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
-        return ResponseEntity.ok(studyPlanService.getActiveEntries(userId, weekStart));
+        return ResponseEntity.ok(studyPlanService.getActiveEntries(currentUserId(), weekStart));
     }
 
     @GetMapping("/entries/{entryId}")
@@ -157,11 +163,10 @@ public class StudyPlanController {
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/{userId}/blocks")
+    @DeleteMapping("/blocks")
     public ResponseEntity<Void> clearAllBlocks(
-            @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
-        studyPlanService.clearBlocksByWeek(userId, weekStart);
+        studyPlanService.clearBlocksByWeek(currentUserId(), weekStart);
         return ResponseEntity.noContent().build();
     }
 
@@ -171,21 +176,19 @@ public class StudyPlanController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/{userId}/weekly")
+    @GetMapping("/weekly")
     public ResponseEntity<Map<DayOfWeek, List<StudyBlock>>> getWeeklyView(
-            @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
-        return ResponseEntity.ok(studyPlanService.getWeeklyView(userId, weekStart));
+        return ResponseEntity.ok(studyPlanService.getWeeklyView(currentUserId(), weekStart));
     }
 
-    @PostMapping("/{userId}/entries/add")
+    @PostMapping("/entries/add")
     public ResponseEntity<?> createEntry(
-            @PathVariable Long userId,
             @RequestParam Long taskId,
             @RequestParam double estimatedWorkload,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
         try {
-            StudyPlanEntry entry = studyPlanService.createEntry(userId, taskId, estimatedWorkload, weekStart);
+            StudyPlanEntry entry = studyPlanService.createEntry(currentUserId(), taskId, estimatedWorkload, weekStart);
             return ResponseEntity.status(HttpStatus.CREATED).body(entry);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -199,27 +202,23 @@ public class StudyPlanController {
         return ResponseEntity.ok(studyPlanService.editBlock(blockId, updates));
     }
 
-    // Availability Slots
-    @GetMapping("/{userId}/slots")
+    @GetMapping("/slots")
     public ResponseEntity<List<AvailabilitySlot>> getSlots(
-            @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
-        return ResponseEntity.ok(studyPlanService.getSlots(userId, weekStart));
+        return ResponseEntity.ok(studyPlanService.getSlots(currentUserId(), weekStart));
     }
 
-    @PostMapping("/{userId}/slots")
+    @PostMapping("/slots")
     public ResponseEntity<List<AvailabilitySlot>> saveSlots(
-            @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
             @RequestBody List<Map<String, Object>> slots) {
-        return ResponseEntity.ok(studyPlanService.saveSlots(userId, weekStart, slots));
+        return ResponseEntity.ok(studyPlanService.saveSlots(currentUserId(), weekStart, slots));
     }
 
-    @DeleteMapping("/{userId}/slots")
+    @DeleteMapping("/slots")
     public ResponseEntity<Void> clearSlots(
-            @PathVariable Long userId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
-        studyPlanService.clearSlots(userId, weekStart);
+        studyPlanService.clearSlots(currentUserId(), weekStart);
         return ResponseEntity.noContent().build();
     }
 }

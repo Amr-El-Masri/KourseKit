@@ -45,4 +45,9 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Transactional
     @Query("DELETE FROM Notification n WHERE n.task.deadline < :now")
     void deleteAllOverdue(@Param("now") LocalDateTime now);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Notification n WHERE n.createdAt < :cutoff AND n.task.deadline >= CURRENT_TIMESTAMP")
+    void deleteOlderThanAndNotOverdue(@Param("cutoff") LocalDateTime cutoff);
 }
