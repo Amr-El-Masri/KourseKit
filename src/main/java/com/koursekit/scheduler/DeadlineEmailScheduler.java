@@ -2,6 +2,7 @@ package com.koursekit.scheduler;
 
 import com.koursekit.model.Task;
 import com.koursekit.model.User;
+import com.koursekit.repository.TaskRepository;
 import com.koursekit.repository.UserRepo;
 import com.koursekit.service.TaskService;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -19,18 +20,19 @@ import java.util.Optional;
 public class DeadlineEmailScheduler {
 
     private final TaskService taskService;
+    private final TaskRepository taskRepository;
     private final UserRepo userRepository;
     private final JavaMailSender mailSender;
 
-    private final java.util.Map<String, LocalDateTime> lastSent = new java.util.concurrent.ConcurrentHashMap<>();
     private static final int DEDUP_HOURS = 6;
-
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("MMM d, yyyy 'at' HH:mm");
 
     public DeadlineEmailScheduler(TaskService taskService,
+                                  TaskRepository taskRepository,
                                   UserRepo userRepository,
                                   JavaMailSender mailSender) {
         this.taskService = taskService;
+        this.taskRepository = taskRepository;
         this.userRepository = userRepository;
         this.mailSender = mailSender;
     }
@@ -45,9 +47,11 @@ public class DeadlineEmailScheduler {
             if (task.isCompleted()) continue;
             Optional<User> userOpt = userRepository.findById(task.getUserId());
             if (userOpt.isEmpty() || !userOpt.get().isEmailRemindersEnabled()) continue;
-            if (!recentlySent(task.getId(), "today", now)) {
+            LocalDateTime lastSent = task.getEmailSentAt();
+            if (lastSent == null || lastSent.isBefore(now.minusHours(DEDUP_HOURS))) {
                 sendEmail(userOpt.get(), task);
-                markSent(task.getId(), "today", now);
+                task.setEmailSentAt(now);
+                taskRepository.save(task);
             }
         }
     }
@@ -95,16 +99,4 @@ public class DeadlineEmailScheduler {
         }
     }
 
-    private String dedupKey(Long taskId, String window) {
-        return taskId + "_" + window;
-    }
-
-    private boolean recentlySent(Long taskId, String window, LocalDateTime now) {
-        LocalDateTime last = lastSent.get(dedupKey(taskId, window));
-        return last != null && last.isAfter(now.minusHours(DEDUP_HOURS));
-    }
-
-    private void markSent(Long taskId, String window, LocalDateTime now) {
-        lastSent.put(dedupKey(taskId, window), now);
-    }
 }

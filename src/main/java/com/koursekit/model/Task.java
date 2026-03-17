@@ -41,6 +41,9 @@ public class Task {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
     private LocalDateTime deadline;
 
+    @Column(name = "email_sent_at")
+    private LocalDateTime emailSentAt;
+
     public Task(String course, String title, LocalDateTime deadline) {
         this.course = course;
         this.title = title;
@@ -73,6 +76,9 @@ public class Task {
         u.setId(id);
         this.user = u;
     }
+
+    public LocalDateTime getEmailSentAt() { return emailSentAt; }
+    public void setEmailSentAt(LocalDateTime emailSentAt) { this.emailSentAt = emailSentAt; }
 
     public Long getId() { return id; }
     public String getTitle() { return title; }

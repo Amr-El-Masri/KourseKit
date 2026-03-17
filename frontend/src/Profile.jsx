@@ -213,7 +213,7 @@ export default function Profile({ onProfileSave, onLogout, onSemestersUpdated })
   const { theme, toggleTheme, isDark } = useTheme();
   const [syllabi, setSyllabi] = useState(() => { try { return JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"); } catch { return {}; } });
   const [confirmingRemove, setConfirmingRemove] = useState(null); // course name
-  const [profile,    setProfile]    = useState({ ...DEFAULT_PROFILE, email });
+  const [profile,    setProfile]    = useState(() => ({ ...DEFAULT_PROFILE, email, emailRemindersEnabled: localStorage.getItem("kk_email_reminders") !== "false" }));
   const [editing,    setEditing]    = useState(false);
   const [draft,      setDraft]      = useState({ ...DEFAULT_PROFILE, email });
   const [saved,      setSaved]      = useState(false);
@@ -269,6 +269,7 @@ export default function Profile({ onProfileSave, onLogout, onSemestersUpdated })
     profileFetch("/api/profile")
       .then(data => {
         restoreFacultyFields(data);
+        localStorage.setItem("kk_email_reminders", String(data.emailRemindersEnabled));
         setProfile(data);
         setDraft(data);
       })
@@ -446,6 +447,7 @@ const refetchSemesters = () =>
   const toggleEmailReminders = async () => {
     const newValue = !profile.emailRemindersEnabled;
     setProfile(p => ({ ...p, emailRemindersEnabled: newValue }));
+    localStorage.setItem("kk_email_reminders", String(newValue));
     try {
       await profileFetch("/api/profile/email-reminders", {
         method: "PUT",
