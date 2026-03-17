@@ -12,7 +12,7 @@ const passrequirements = [
   { label: "One special character",      test: p => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(p) },
 ];
 
-export default function Settings() {
+export default function Settings({ onLogout }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const { theme } = useTheme();
 
@@ -245,6 +245,22 @@ export default function Settings() {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Logout */}
+      <div style={{ marginTop: 20 }}>
+        <button
+          onClick={onLogout}
+          style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: "var(--error-bg)", border: "1px solid var(--error-border)",
+            borderRadius: 10, padding: "10px 20px",
+            color: "var(--error)", fontWeight: 600, fontSize: 14,
+            cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          Log out
+        </button>
       </div>
     </div>
   );

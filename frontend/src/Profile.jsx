@@ -196,7 +196,7 @@ function CourseSearchInput({ value = "", onSelect }) {
   );
 }
 
-export default function Profile({ onProfileSave, onLogout, onSemestersUpdated }) {
+export default function Profile({ onProfileSave, onSemestersUpdated }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const isAdmin = getTokenRole() === "ADMIN";
   const [section, setSection] = useState("profile");
@@ -980,11 +980,6 @@ const refetchSemesters = () =>
 
       </div>
 
-      <div style={{ marginTop:24 }}>
-        <button onClick={onLogout} style={{ display:"flex", alignItems:"center", gap:8, background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:10, padding:"10px 20px", color:"var(--error)", fontWeight:600, fontSize:14, cursor:"pointer" }}>
-          Log out
-        </button>
-      </div>
       </>}
     </div>
   );

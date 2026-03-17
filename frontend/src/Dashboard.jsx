@@ -1625,9 +1625,9 @@ export default function Dashboard({ onLogout }) {
           {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
           {activePage === "planner" && <StudyPlanner />}
           {activePage === "profile" && (
-              <Profile onProfileSave={p => setProfile(p)} onLogout={handleLogout} onSemestersUpdated={fetchSemesters} />
+              <Profile onProfileSave={p => setProfile(p)} onSemestersUpdated={fetchSemesters} />
           )}
-          {activePage === "settings" && <Settings />}
+          {activePage === "settings" && <Settings onLogout={handleLogout} />}
 
           {activePage === "courseDetails" && courseDetailsTarget && (
               <CourseDetails
