@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle } from "lucide-react";
 import AdminDashboard from "./AdminDashboard";
-import ThemeToggle from "./ThemeToggle";
-import { useTheme } from "./ThemeContext";
 import TranscriptModal from "./TranscriptModal";
 
 function getTokenRole() {
@@ -22,14 +20,6 @@ const AVATAR_ICONS = [
   { id:"Panda", icon: Panda  },
   { id:"Turtle", icon: Turtle   },
 ];
-const passrequirements = [
-  { label: "At least 8 characters",     test: p => p.length >= 8 },
-  { label: "One uppercase letter (A-Z)", test: p => /[A-Z]/.test(p) },
-  { label: "One lowercase letter (a-z)", test: p => /[a-z]/.test(p) },
-  { label: "One number (0-9)",           test: p => /\d/.test(p) },
-  { label: "One special character",      test: p => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(p) },
-];
-
 const FACULTIES = [
   "Arts & Sciences",
   "Engineering & Architecture",
@@ -210,7 +200,6 @@ export default function Profile({ onProfileSave, onLogout, onSemestersUpdated })
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const isAdmin = getTokenRole() === "ADMIN";
   const [section, setSection] = useState("profile");
-  const { theme, toggleTheme, isDark } = useTheme();
   const [syllabi, setSyllabi] = useState(() => { try { return JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"); } catch { return {}; } });
   const [confirmingRemove, setConfirmingRemove] = useState(null); // course name
   const [profile,    setProfile]    = useState(() => ({ ...DEFAULT_PROFILE, email, emailRemindersEnabled: localStorage.getItem("kk_email_reminders") !== "false" }));
@@ -218,17 +207,6 @@ export default function Profile({ onProfileSave, onLogout, onSemestersUpdated })
   const [draft,      setDraft]      = useState({ ...DEFAULT_PROFILE, email });
   const [saved,      setSaved]      = useState(false);
   const [profilepic, setProfilepic] = useState(false);
-
-  const [changing,    setchanging]    = useState(false);
-  const [current,     setcurrent]     = useState("");
-  const [newpass,     setnewpass]     = useState("");
-  const [confirm,     setconfirm]     = useState("");
-  const [passerror,   setpasserror]   = useState("");
-  const [passsuccess, setpasssuccess] = useState(false);
-  const [passloading, setpassloading] = useState(false);
-  const [newpass2,    setnewpass2]    = useState(false);
-  const [showCurrent, setshowCurrent] = useState(false);
-  const [showNew,     setshowNew]     = useState(false);
 
   // My Semesters
   const [semesters,    setSemesters]    = useState([]);
@@ -391,37 +369,6 @@ const refetchSemesters = () =>
     await refetchSemesters();
   };
 
-  const newpassok    = passrequirements.every(r => r.test(newpass));
-  const confirmmatch = confirm.length > 0 && newpass === confirm;
-  const confirmwrong = confirm.length > 0 && newpass !== confirm;
-
-  const handlechangepassword = async () => {
-    if (!current || !newpass || !confirm) { setpasserror("Please fill in all fields."); return; }
-    if (!newpassok)          { setpasserror("New password does not meet the requirements."); return; }
-    if (newpass !== confirm) { setpasserror("Passwords don't match."); return; }
-    setpassloading(true);
-    try {
-      const res  = await fetch("http://localhost:8080/api/auth/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("kk_token")}` },
-        body: JSON.stringify({ email, currentpass: current, newpass }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setpasssuccess(true);
-        setchanging(false);
-        setcurrent(""); setnewpass(""); setconfirm(""); setpasserror("");
-        setTimeout(() => setpasssuccess(false), 3000);
-      } else {
-        setpasserror(data.message || "Failed to change password.");
-      }
-    } catch {
-      setpasserror("Could not connect to server.");
-    } finally {
-      setpassloading(false);
-    }
-  };
-
   const set = (k, v) => setDraft(p => {
     const updated = { ...p, [k]: v };
     return updated;
@@ -444,19 +391,6 @@ const refetchSemesters = () =>
 
   const handleCancel = () => { setDraft(profile); setEditing(false); };
 
-  const toggleEmailReminders = async () => {
-    const newValue = !profile.emailRemindersEnabled;
-    setProfile(p => ({ ...p, emailRemindersEnabled: newValue }));
-    localStorage.setItem("kk_email_reminders", String(newValue));
-    try {
-      await profileFetch("/api/profile/email-reminders", {
-        method: "PUT",
-        body: JSON.stringify({ emailRemindersEnabled: newValue }),
-      });
-    } catch {
-      setProfile(p => ({ ...p, emailRemindersEnabled: !newValue }));
-    }
-  };
 
   const selectAvatar = async (iconId) => {
     const updated = { ...profile, avatar: iconId };
@@ -836,151 +770,6 @@ const refetchSemesters = () =>
         </div>
       </div>
 
-      <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", padding:"20px 24px" }}>
-        <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>Account</div>
-
-        <div style={{
-          display:"flex",
-          justifyContent:"space-between",
-          alignItems:"center",
-          padding:"8px 0",
-          borderBottom:"1px solid #F4F4F8",
-          }}>
-            <div>
-              <div style={{ fontSize:13, fontWeight:500, color:"var(--accent2)" }}>
-                {theme === "light" ? "Light Mode" : "Dark Mode"}
-              </div>
-              <div style={{ fontSize:11, color:"var(--text2)", marginTop:2 }}>
-                Switch to {theme === "light" ? "dark" : "light"} mode
-              </div>
-            </div>
-          <ThemeToggle showLabel={false} />
-        </div>
-
-        <div style={{
-          display:"flex",
-          justifyContent:"space-between",
-          alignItems:"center",
-          padding:"8px 0",
-          borderBottom:"1px solid #F4F4F8",
-          marginBottom:12
-          }}>
-            <div style={{ fontSize:13, fontWeight:500, color:"var(--accent2)" }}>
-              Email Reminders
-            </div>
-          <button
-            onClick={toggleEmailReminders}
-            style={{
-              width:46, height:26, borderRadius:13, border:"none", outline:"none",
-              padding:0, cursor:"pointer", flexShrink:0,
-              background: profile.emailRemindersEnabled ? "var(--accent)" : "#b0b8c8",
-              position:"relative", transition:"background 0.2s",
-            }}
-            aria-label="Toggle email reminders"
-          >
-            <span style={{
-              position:"absolute", top:3, left: profile.emailRemindersEnabled ? 24 : 3,
-              width:20, height:20, borderRadius:"50%", background:"white",
-              boxShadow:"0 1px 3px rgba(0,0,0,0.2)",
-              transition:"left 0.2s", display:"block",
-            }} />
-          </button>
-        </div>
-
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:13 }}>
-          <span style={{ color:"var(--accent2)" }}>AUB Email</span>
-          <span style={{ fontWeight:600, color:"var(--primary)" }}>{profile.email}</span>
-        </div>
-
-        <div style={{ height:1, background:"var(--bg)", margin:"12px 0" }} />
-        
-        <div style={{ display:"flex", justifyContent:"flex-end", alignItems:"center", fontSize:13, gap:8 }}>
-          {passsuccess && <span style={{ fontSize:12, color:"#2d7a4a", fontWeight:600 }}>✓ Updated</span>}
-          <button
-            onClick={() => { setchanging(!changing); setpasserror(""); }}
-            style={{ background:"none", border:"none", color:"var(--accent)", fontSize:13, fontWeight:600, cursor:"pointer", padding:0 }}
-          >
-            {changing ? "Cancel" : "Change Password"}
-          </button>
-        </div>
-
-        {changing && (
-          <div style={{ marginTop:14, borderTop:"1px solid #F4F4F8", paddingTop:14 }}>
-            {passerror && (
-              <div style={{ background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:8, padding:"8px 12px", fontSize:12, color:"var(--error)", marginBottom:12 }}>
-                {passerror}
-              </div>
-            )}
-
-            <label style={pf.label}>Current Password</label>
-            <div style={{ position:"relative", marginBottom:14 }}>
-              <input className="pf-input"
-                type={showCurrent ? "text" : "password"}
-                value={current}
-                onChange={e => { setcurrent(e.target.value); setpasserror(""); }}
-                placeholder="Enter current password"
-                style={{ ...pf.input, marginBottom:0, paddingRight:40 }}
-              />
-              <button type="button" onClick={() => setshowCurrent(v => !v)}
-                style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"var(--text2)", padding:0, display:"flex", alignItems:"center" }}>
-                {showCurrent
-                  ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                  : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                }
-              </button>
-            </div>
-
-            <label style={pf.label}>New Password</label>
-            <div style={{ position:"relative", marginBottom:14 }}>
-              <input className="pf-input"
-                type={showNew ? "text" : "password"}
-                value={newpass}
-                onChange={e => { setnewpass(e.target.value); setpasserror(""); }}
-                onFocus={() => setnewpass2(true)}
-                placeholder="Create a new password"
-                style={{ ...pf.input, marginBottom:0, paddingRight:40 }}
-              />
-              <button type="button" onClick={() => setshowNew(v => !v)}
-                style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"var(--text2)", padding:0, display:"flex", alignItems:"center" }}>
-                {showNew
-                  ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                  : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                }
-              </button>
-            </div>
-
-            {(newpass2 || newpass.length > 0) && (
-              <div style={{ background:"#f7f5fb", border:"1px solid #e2ddf0", borderRadius:8, padding:"8px 12px", marginBottom:14, marginTop:-10 }}>
-                {passrequirements.map(r => {
-                  const met = r.test(newpass);
-                  return (
-                    <div key={r.label} style={{ fontSize:11, fontWeight:500, color: met ? "#2e7d32" : "var(--text2)", padding:"2px 0", display:"flex", alignItems:"center", gap:6 }}>
-                      <span>{met ? "✓" : "○"}</span>{r.label}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <label style={pf.label}>Confirm New Password</label>
-            <input className="pf-input"
-              type="password"
-              value={confirm}
-              onChange={e => { setconfirm(e.target.value); setpasserror(""); }}
-              onKeyDown={e => e.key === "Enter" && handlechangepassword()}
-              placeholder="Re-enter your new password"
-              style={{ ...pf.input, borderColor: confirmwrong ? "#e74c3c" : confirmmatch ? "#2e7d32" : "var(--border)" }}
-            />
-            {confirmwrong && <p style={{ fontSize:11, color:"#e74c3c", marginTop:-10, marginBottom:12 }}>Passwords don't match</p>}
-            {confirmmatch && <p style={{ fontSize:11, color:"#2e7d32", marginTop:-10, marginBottom:12 }}>Passwords match ✓</p>}
-
-            <button onClick={handlechangepassword} disabled={passloading}
-              style={{ ...pf.saveBtn, fontSize:13, opacity: passloading ? 0.7 : 1 }}>
-              {passloading ? "Saving…" : "Update Password"}
-            </button>
-          </div>
-        )}
-      </div>
       {transcriptModal && (
         <TranscriptModal
           onClose={() => setTranscriptModal(false)}
@@ -999,6 +788,30 @@ const refetchSemesters = () =>
         <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"12px 20px", boxShadow:"0 8px 32px rgba(49,72,122,0.18)", display:"flex", alignItems:"center", gap:16, zIndex:9998, fontFamily:"'DM Sans',sans-serif", fontSize:13 }}>
           <span style={{ color:"var(--text)" }}>Transcript semesters removed.</span>
           <button onClick={undoRemoveTranscript} style={{ background:"var(--primary)", color:"white", border:"none", borderRadius:8, padding:"6px 14px", fontWeight:600, fontSize:13, cursor:"pointer" }}>Undo</button>
+        </div>
+      )}
+
+      {/* Uploaded Transcript */}
+      {transcriptInfo && (
+        <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px", marginTop:20 }}>
+          <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)", marginBottom:4 }}>Uploaded Transcript</div>
+          <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16 }}>Remove to clear transcript-imported semesters from data.</div>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface2)", borderRadius:10, padding:"12px 16px", border:"1px solid var(--border)" }}>
+            <div>
+              <div style={{ fontSize:14, fontWeight:600, color:"var(--primary)" }}>
+                {transcriptInfo.semesterCount} semester{transcriptInfo.semesterCount !== 1 ? "s" : ""} · {transcriptInfo.courseCount} course{transcriptInfo.courseCount !== 1 ? "s" : ""}
+              </div>
+              <div style={{ fontSize:12, color:"var(--text2)", marginTop:2 }}>
+                Imported {new Date(transcriptInfo.uploadedAt).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" })}
+              </div>
+            </div>
+            <button
+              onClick={removeTranscript}
+              style={{ background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:8, padding:"6px 14px", color:"var(--error)", fontSize:12, fontWeight:600, cursor:"pointer" }}
+            >
+              Remove
+            </button>
+          </div>
         </div>
       )}
 
@@ -1096,19 +909,25 @@ const refetchSemesters = () =>
                           <button onClick={async () => {
                             try {
                               const token = localStorage.getItem("kk_token");
-                              const userId = token ? JSON.parse(atob(token.split(".")[1])).sub : null;
-                              const taskIds = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "[]");
-                              if (userId && taskIds.length > 0) {
-                                await Promise.all(taskIds.map(id =>
-                                  fetch(`http://localhost:8080/api/tasks/${userId}/delete/${id}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{})
+                              const raw = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "{}");
+                              const map = Array.isArray(raw) ? {} : raw;
+                              const courseTaskIds = [
+                                ...(map[c.courseCode] || []),
+                                ...(map[c.name] || []),
+                              ];
+                              if (token && courseTaskIds.length > 0) {
+                                await Promise.all(courseTaskIds.map(id =>
+                                  fetch(`http://localhost:8080/api/tasks/delete/${id}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{})
                                 ));
                               }
+                              delete map[c.courseCode];
+                              delete map[c.name];
+                              localStorage.setItem("kk_syllabus_task_ids", JSON.stringify(map));
                               const next = { ...syllabi }; delete next[c.courseCode];
                               localStorage.setItem("kk_course_syllabus", JSON.stringify(next)); setSyllabi(next);
                               window.dispatchEvent(new Event("kk_syllabus_changed"));
                               const data = JSON.parse(localStorage.getItem("kk_course_data") || "{}"); delete data[c.courseCode]; localStorage.setItem("kk_course_data", JSON.stringify(data));
                               const oh = JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}"); delete oh[c.courseCode]; localStorage.setItem("kk_course_office_hours", JSON.stringify(oh));
-                              localStorage.removeItem("kk_syllabus_task_ids");
                             } catch {}
                             setConfirmingRemove(null);
                           }} style={{ background:"var(--error)", border:"none", borderRadius:6, padding:"2px 8px", color:"#fff", fontSize:11, fontWeight:600, cursor:"pointer" }}>Yes</button>
@@ -1160,30 +979,6 @@ const refetchSemesters = () =>
         ))}
 
       </div>
-
-      {/* Uploaded Transcript */}
-      {transcriptInfo && (
-        <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px", marginTop:20 }}>
-          <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)", marginBottom:4 }}>Uploaded Transcript</div>
-          <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16 }}>Remove to clear transcript-imported semesters from data.</div>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface2)", borderRadius:10, padding:"12px 16px", border:"1px solid var(--border)" }}>
-            <div>
-              <div style={{ fontSize:14, fontWeight:600, color:"var(--primary)" }}>
-                {transcriptInfo.semesterCount} semester{transcriptInfo.semesterCount !== 1 ? "s" : ""} · {transcriptInfo.courseCount} course{transcriptInfo.courseCount !== 1 ? "s" : ""}
-              </div>
-              <div style={{ fontSize:12, color:"var(--text2)", marginTop:2 }}>
-                Imported {new Date(transcriptInfo.uploadedAt).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" })}
-              </div>
-            </div>
-            <button
-              onClick={removeTranscript}
-              style={{ background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:8, padding:"6px 14px", color:"var(--error)", fontSize:12, fontWeight:600, cursor:"pointer" }}
-            >
-              Remove
-            </button>
-          </div>
-        </div>
-      )}
 
       <div style={{ marginTop:24 }}>
         <button onClick={onLogout} style={{ display:"flex", alignItems:"center", gap:8, background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:10, padding:"10px 20px", color:"var(--error)", fontWeight:600, fontSize:14, cursor:"pointer" }}>
