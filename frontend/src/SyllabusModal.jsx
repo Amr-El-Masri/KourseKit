@@ -27,6 +27,14 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const fileRef = useRef(null);
+  const [dragging, setDragging] = useState(false);
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragging(false);
+    const dropped = e.dataTransfer.files[0];
+    if (dropped) { setFile(dropped); setError(null); }
+  };
 
   // Editable extracted data
   const [info, setInfo] = useState({
@@ -185,10 +193,18 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
 
         {step === "upload" && (
           <>
-            <div style={{ border: "2px dashed var(--border)", borderRadius: 12, padding: "32px 20px", textAlign: "center", background: "var(--surface2)", marginBottom: 16 }}>
-              <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 12 }}>Upload your course syllabus (PDF or .txt)</div>
-              <input ref={fileRef} type="file" accept=".pdf,.txt" onChange={e => { setFile(e.target.files[0] || null); setError(null); }}
-                style={{ fontSize: 13, color: "var(--accent2)" }} />
+            <div
+              onDragOver={e => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
+              onClick={() => fileRef.current?.click()}
+              style={{ border:`2px dashed ${dragging ? "var(--primary)" : "var(--border)"}`, borderRadius:12, padding:"32px 20px", textAlign:"center", background: dragging ? "var(--surface3, var(--surface2))" : "var(--surface2)", marginBottom:16, cursor:"pointer", transition:"border-color .15s, background .15s" }}>
+              <div style={{ fontSize:13, color:"var(--text2)", marginBottom:8 }}>
+                {file ? file.name : "Drag & drop your syllabus PDF here, or click to browse"}
+              </div>
+              <input ref={fileRef} type="file" accept=".pdf,.txt"
+                onChange={e => { setFile(e.target.files[0] || null); setError(null); }}
+                style={{ display:"none" }} />
             </div>
             {error && <div style={{ fontSize: 12, color: "var(--error)", marginBottom: 10 }}>{error}</div>}
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
