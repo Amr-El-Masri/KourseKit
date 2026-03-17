@@ -43,19 +43,18 @@ public class DeadlineEmailScheduler {
         List<Task> urgentTasks = taskService.findByDeadlineBetween(now, now.plusHours(6));
         for (Task task : urgentTasks) {
             if (task.isCompleted()) continue;
+            Optional<User> userOpt = userRepository.findById(task.getUserId());
+            if (userOpt.isEmpty() || !userOpt.get().isEmailRemindersEnabled()) continue;
             if (!recentlySent(task.getId(), "today", now)) {
-                sendEmail(task, now);
+                sendEmail(userOpt.get(), task);
                 markSent(task.getId(), "today", now);
             }
         }
     }
 
-    private void sendEmail(Task task, LocalDateTime now) {
-        Optional<User> userOpt = userRepository.findById(task.getUserId());
-        if (userOpt.isEmpty()) return;
-
-        String toEmail = userOpt.get().getEmail();
-        String firstName = userOpt.get().getFirstName();
+    private void sendEmail(User user, Task task) {
+        String toEmail = user.getEmail();
+        String firstName = user.getFirstName();
         String name = (firstName != null && !firstName.isBlank()) ? firstName : "Student";
 
         String subject = "Reminder: " + task.getCourse() + " — " + task.getTitle() + " is due soon";

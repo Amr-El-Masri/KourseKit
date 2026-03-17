@@ -71,6 +71,8 @@ public class User {
     private String courseColorsJson;
     @Column(name = "theme", nullable = false, columnDefinition = "VARCHAR(20) DEFAULT 'light'")
     private String theme = "light";
+    @Column(name = "email_reminders_enabled", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
+    private boolean emailRemindersEnabled = true;
 
     public User() {}
     public User(String email, String pass) {
@@ -164,6 +166,9 @@ public class User {
 
     public String getTheme() { return theme; }
     public void setTheme(String theme) { this.theme = theme; }
+
+    public boolean isEmailRemindersEnabled() { return emailRemindersEnabled; }
+    public void setEmailRemindersEnabled(boolean emailRemindersEnabled) { this.emailRemindersEnabled = emailRemindersEnabled; }
 
     // integrate microsoft login?
 }

@@ -121,6 +121,7 @@ const DEFAULT_PROFILE = {
   tripleMinor:   false,
   thirdMinorFaculty: "",
   thirdMinor:    "",
+  emailRemindersEnabled: true,
 };
 
 async function profileFetch(path, options = {}) {
@@ -392,6 +393,19 @@ const refetchSemesters = () =>
   };
 
   const handleCancel = () => { setDraft(profile); setEditing(false); };
+
+  const toggleEmailReminders = async () => {
+    const newValue = !profile.emailRemindersEnabled;
+    setProfile(p => ({ ...p, emailRemindersEnabled: newValue }));
+    try {
+      await profileFetch("/api/profile/email-reminders", {
+        method: "PUT",
+        body: JSON.stringify({ emailRemindersEnabled: newValue }),
+      });
+    } catch {
+      setProfile(p => ({ ...p, emailRemindersEnabled: !newValue }));
+    }
+  };
 
   const selectAvatar = async (iconId) => {
     const updated = { ...profile, avatar: iconId };
@@ -774,13 +788,12 @@ const refetchSemesters = () =>
       <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", padding:"20px 24px" }}>
         <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>Account</div>
 
-        <div style={{ 
-          display:"flex", 
-          justifyContent:"space-between", 
-          alignItems:"center", 
+        <div style={{
+          display:"flex",
+          justifyContent:"space-between",
+          alignItems:"center",
           padding:"8px 0",
           borderBottom:"1px solid #F4F4F8",
-          marginBottom:12
           }}>
             <div>
               <div style={{ fontSize:13, fontWeight:500, color:"var(--accent2)" }}>
@@ -791,6 +804,36 @@ const refetchSemesters = () =>
               </div>
             </div>
           <ThemeToggle showLabel={false} />
+        </div>
+
+        <div style={{
+          display:"flex",
+          justifyContent:"space-between",
+          alignItems:"center",
+          padding:"8px 0",
+          borderBottom:"1px solid #F4F4F8",
+          marginBottom:12
+          }}>
+            <div style={{ fontSize:13, fontWeight:500, color:"var(--accent2)" }}>
+              Email Reminders
+            </div>
+          <button
+            onClick={toggleEmailReminders}
+            style={{
+              width:46, height:26, borderRadius:13, border:"none", outline:"none",
+              padding:0, cursor:"pointer", flexShrink:0,
+              background: profile.emailRemindersEnabled ? "var(--accent)" : "#b0b8c8",
+              position:"relative", transition:"background 0.2s",
+            }}
+            aria-label="Toggle email reminders"
+          >
+            <span style={{
+              position:"absolute", top:3, left: profile.emailRemindersEnabled ? 24 : 3,
+              width:20, height:20, borderRadius:"50%", background:"white",
+              boxShadow:"0 1px 3px rgba(0,0,0,0.2)",
+              transition:"left 0.2s", display:"block",
+            }} />
+          </button>
         </div>
 
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", fontSize:13 }}>

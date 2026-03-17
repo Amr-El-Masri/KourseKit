@@ -82,6 +82,16 @@ public class ProfileController {
         return ResponseEntity.ok(resp);
     }
 
+    @PutMapping("/email-reminders")
+    public ResponseEntity<Map<String, Object>> updateEmailReminders(@RequestBody Map<String, Object> body) {
+        User user = getAuthenticatedUser();
+        user.setEmailRemindersEnabled(Boolean.TRUE.equals(body.get("emailRemindersEnabled")));
+        userRepo.save(user);
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("emailRemindersEnabled", user.isEmailRemindersEnabled());
+        return ResponseEntity.ok(resp);
+    }
+
     @PutMapping("/colors")
     public ResponseEntity<Map<String, Object>> updateColors(@RequestBody Map<String, Object> colors) {
         User user = getAuthenticatedUser();
@@ -113,7 +123,8 @@ public class ProfileController {
         m.put("secondMinor",   user.getSecondMinor()   != null ? user.getSecondMinor()   : "");
         m.put("tripleMinor",   user.isTripleMinor());
         m.put("thirdMinor",    user.getThirdMinor()    != null ? user.getThirdMinor()    : "");
-        m.put("theme",         user.getTheme()         != null ? user.getTheme()         : "light");
+        m.put("theme",                  user.getTheme()         != null ? user.getTheme()         : "light");
+        m.put("emailRemindersEnabled",  user.isEmailRemindersEnabled());
         return m;
     }
 

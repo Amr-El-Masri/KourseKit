@@ -32,7 +32,7 @@ const PRIORITIES = [
   { id:"medium", label:"Medium", color:"var(--warn)", bg:"var(--warn-bg)", dot:"var(--warn)" },
   { id:"low",    label:"Low",    color:"var(--success)", bg:"var(--success-bg)", dot:"var(--success)" },
 ];
-const TYPES   = ["Midterm Exam","Final Exam","Assignment","Project","Quiz","Lab","Attendance","Participation","Other"];
+const TYPES   = ["Midterm Exam","Final Exam","Assignment","Project","Quiz","Lab","Attendance","Other"];
 const FILTERS = ["All","Pending","Done","Overdue"];
 
 const priority  = id => PRIORITIES.find(p => p.id === id) || PRIORITIES[1];
@@ -348,7 +348,8 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
         setComposing(false);
       } else {
         const data = await res.json().catch(() => ({}));
-        if (onError) onError(data.message || "Failed to add task.");
+        const msg = res.status === 409 ? "A task with this course and title already exists." : (data.error || data.message || "Failed to add task.");
+        if (onError) onError(msg);
       }
     }
   };
