@@ -3,6 +3,7 @@ import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle } from "lucide-reac
 import AdminDashboard from "./AdminDashboard";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./ThemeContext";
+import TranscriptModal from "./TranscriptModal";
 
 function getTokenRole() {
   try {
@@ -205,7 +206,7 @@ function CourseSearchInput({ value = "", onSelect }) {
   );
 }
 
-export default function Profile({ onProfileSave, onLogout }) {
+export default function Profile({ onProfileSave, onLogout, onSemestersUpdated }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const isAdmin = getTokenRole() === "ADMIN";
   const [section, setSection] = useState("profile");
@@ -239,6 +240,14 @@ export default function Profile({ onProfileSave, onLogout }) {
   const [editCourses,  setEditCourses]  = useState([]);
   const [semSaveLoad,  setSemSaveLoad]  = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+  // Transcript uploader
+  const [transcriptModal, setTranscriptModal] = useState(false);
+  const [transcriptInfo,  setTranscriptInfo]  = useState(() => {
+    try { return JSON.parse(localStorage.getItem("kk_transcript_info") || "null"); } catch { return null; }
+  });
+  const [undoToast,   setUndoToast]   = useState(null); // { semIds, semesters }
+  const undoTimerRef = useRef(null);
 
   function restoreFacultyFields(data) {
     if (data.minor && data.minorName) {
@@ -295,7 +304,7 @@ const sortSemesters = (list) => {
 const refetchSemesters = () =>
   fetch(`${API}/api/grades/saved`, { headers: semAuthHeaders() })
     .then(r => r.json())
-    .then(data => Array.isArray(data) && setSemesters(sortSemesters(data)))
+    .then(data => { if (Array.isArray(data)) { setSemesters(sortSemesters(data)); onSemestersUpdated?.(); } })
     .catch(() => {});
 
   const createSemester = async () => {
@@ -339,6 +348,46 @@ const refetchSemesters = () =>
     setEditingId(sem.id);
     setEditName(sem.semesterName);
     setEditCourses((sem.courses || []).map((c,i) => ({ id: i+1, code: c.courseCode || "", credits: String(c.credits || ""), grade: c.grade || "" })));
+  };
+
+  const removeTranscript = async () => {
+    const ids = (() => { try { return JSON.parse(localStorage.getItem("kk_transcript_sem_ids") || "[]"); } catch { return []; } })();
+    const snapshots = semesters.filter(s => ids.includes(String(s.id)));
+    // Delete from backend
+    await Promise.all(ids.map(id =>
+      fetch(`${API}/api/grades/saved/${id}`, { method: "DELETE", headers: semAuthHeaders() }).catch(() => {})
+    ));
+    localStorage.removeItem("kk_transcript_sem_ids");
+    localStorage.removeItem("kk_transcript_info");
+    setTranscriptInfo(null);
+    await refetchSemesters();
+    // Show undo toast for 6 seconds
+    setUndoToast({ ids, snapshots });
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    undoTimerRef.current = setTimeout(() => setUndoToast(null), 6000);
+  };
+
+  const undoRemoveTranscript = async () => {
+    if (!undoToast) return;
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    const restoredIds = [];
+    for (const sem of undoToast.snapshots) {
+      const res = await fetch(`${API}/api/grades/saved`, {
+        method: "POST",
+        headers: semAuthHeaders(),
+        body: JSON.stringify({ semesterName: sem.semesterName, courses: (sem.courses || []).map(c => ({ courseCode: c.courseCode, grade: c.grade, credits: c.credits })) }),
+      }).catch(() => null);
+      if (res?.ok) {
+        const created = await res.json();
+        if (created?.id) restoredIds.push(String(created.id));
+      }
+    }
+    const info = { uploadedAt: new Date().toISOString(), semesterCount: restoredIds.length, courseCount: undoToast.snapshots.reduce((s, sem) => s + (sem.courses?.length || 0), 0) };
+    localStorage.setItem("kk_transcript_sem_ids", JSON.stringify(restoredIds));
+    localStorage.setItem("kk_transcript_info", JSON.stringify(info));
+    setTranscriptInfo(info);
+    setUndoToast(null);
+    await refetchSemesters();
   };
 
   const newpassok    = passrequirements.every(r => r.test(newpass));
@@ -930,14 +979,42 @@ const refetchSemesters = () =>
           </div>
         )}
       </div>
+      {transcriptModal && (
+        <TranscriptModal
+          onClose={() => setTranscriptModal(false)}
+          onApply={({ semesterCount, courseCount }) => {
+            const info = { uploadedAt: new Date().toISOString(), semesterCount, courseCount };
+            setTranscriptInfo(info);
+            localStorage.setItem("kk_transcript_info", JSON.stringify(info));
+            refetchSemesters();
+            setTranscriptModal(false);
+          }}
+        />
+      )}
+
+      {/* Undo toast */}
+      {undoToast && (
+        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"12px 20px", boxShadow:"0 8px 32px rgba(49,72,122,0.18)", display:"flex", alignItems:"center", gap:16, zIndex:9998, fontFamily:"'DM Sans',sans-serif", fontSize:13 }}>
+          <span style={{ color:"var(--text)" }}>Transcript semesters removed.</span>
+          <button onClick={undoRemoveTranscript} style={{ background:"var(--primary)", color:"white", border:"none", borderRadius:8, padding:"6px 14px", fontWeight:600, fontSize:13, cursor:"pointer" }}>Undo</button>
+        </div>
+      )}
+
       {/* My Semesters */}
       <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px", marginTop:20 }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
           <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)" }}>My Semesters</div>
           {!creating && (
-            <button onClick={() => { setCreating(true); setEditingId(null); }} style={{ background:"var(--primary)", color:"white", border:"none", borderRadius:10, padding:"8px 16px", fontSize:13, fontWeight:600, cursor:"pointer" }}>
-              + New Semester
-            </button>
+            <div style={{ display:"flex", gap:8 }}>
+              {!transcriptInfo && (
+                <button onClick={() => setTranscriptModal(true)} style={{ background:"var(--surface2)", color:"var(--primary)", border:"1px solid var(--border)", borderRadius:10, padding:"8px 14px", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                  Upload Transcript
+                </button>
+              )}
+              <button onClick={() => { setCreating(true); setEditingId(null); }} style={{ background:"var(--primary)", color:"white", border:"none", borderRadius:10, padding:"8px 16px", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                + New Semester
+              </button>
+            </div>
           )}
         </div>
 
@@ -1006,10 +1083,42 @@ const refetchSemesters = () =>
             {editingId !== sem.id && (sem.courses||[]).length > 0 && (
               <div style={{ padding:"10px 16px", display:"flex", flexDirection:"column", gap:4 }}>
                 {(sem.courses||[]).map((c,i) => (
-                  <div key={i} style={{ display:"flex", gap:12, fontSize:13, color:"var(--text-body)" }}>
+                  <div key={i} style={{ display:"flex", gap:12, fontSize:13, color:"var(--text-body)", alignItems:"center" }}>
                     <span style={{ fontWeight:600, minWidth:100 }}>{c.courseCode}</span>
                     <span style={{ color:"var(--text2)" }}>{c.credits} cr</span>
                     <span style={{ color:"var(--accent)", fontWeight:600 }}>{c.grade}</span>
+                    {syllabi[c.courseCode] && (
+                      confirmingRemove === `${sem.id}:${c.courseCode}` ? (
+                        <span style={{ display:"flex", alignItems:"center", gap:4, marginLeft:"auto" }}>
+                          <span style={{ fontSize:11, color:"var(--error)", fontWeight:600 }}>Remove?</span>
+                          <button onClick={async () => {
+                            try {
+                              const token = localStorage.getItem("kk_token");
+                              const userId = token ? JSON.parse(atob(token.split(".")[1])).sub : null;
+                              const taskIds = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "[]");
+                              if (userId && taskIds.length > 0) {
+                                await Promise.all(taskIds.map(id =>
+                                  fetch(`http://localhost:8080/api/tasks/${userId}/delete/${id}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{})
+                                ));
+                              }
+                              const next = { ...syllabi }; delete next[c.courseCode];
+                              localStorage.setItem("kk_course_syllabus", JSON.stringify(next)); setSyllabi(next);
+                              window.dispatchEvent(new Event("kk_syllabus_changed"));
+                              const data = JSON.parse(localStorage.getItem("kk_course_data") || "{}"); delete data[c.courseCode]; localStorage.setItem("kk_course_data", JSON.stringify(data));
+                              const oh = JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}"); delete oh[c.courseCode]; localStorage.setItem("kk_course_office_hours", JSON.stringify(oh));
+                              localStorage.removeItem("kk_syllabus_task_ids");
+                            } catch {}
+                            setConfirmingRemove(null);
+                          }} style={{ background:"var(--error)", border:"none", borderRadius:6, padding:"2px 8px", color:"#fff", fontSize:11, fontWeight:600, cursor:"pointer" }}>Yes</button>
+                          <button onClick={() => setConfirmingRemove(null)} style={{ background:"none", border:"1px solid var(--border)", borderRadius:6, padding:"2px 8px", color:"var(--text2)", fontSize:11, cursor:"pointer" }}>Cancel</button>
+                        </span>
+                      ) : (
+                        <span style={{ display:"flex", alignItems:"center", gap:4, marginLeft:"auto" }}>
+                          <span style={{ fontSize:11, color:"var(--success-text, var(--accent))", fontWeight:500 }}>Syllabus uploaded</span>
+                          <button onClick={() => setConfirmingRemove(`${sem.id}:${c.courseCode}`)} style={{ fontSize:11, color:"var(--error)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>✕</button>
+                        </span>
+                      )
+                    )}
                   </div>
                 ))}
               </div>
@@ -1047,72 +1156,29 @@ const refetchSemesters = () =>
             )}
           </div>
         ))}
+
       </div>
 
-      {/* Course Syllabi */}
-      {Object.keys(syllabi).length > 0 && (
+      {/* Uploaded Transcript */}
+      {transcriptInfo && (
         <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px", marginTop:20 }}>
-          <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)", marginBottom:4 }}>Uploaded Syllabi</div>
-          <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16 }}>Remove a syllabus to re-upload or clear its extracted data.</div>
-          <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-            {Object.keys(syllabi).map(course => (
-              <div key={course} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface2)", borderRadius:10, padding:"10px 14px", border:"1px solid #E8E4F0" }}>
-                <div>
-                  <div style={{ fontSize:14, fontWeight:600, color:"var(--primary)" }}>{course}</div>
-                  <div style={{ fontSize:12, color:"var(--text2)", marginTop:2 }}>
-                    {syllabi[course]?.assessments?.length ? `${syllabi[course].assessments.length} assessment${syllabi[course].assessments.length !== 1 ? "s" : ""}` : "No assessments"}
-                  </div>
-                </div>
-                {confirmingRemove === course ? (
-                  <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-                    <span style={{ fontSize:12, color:"var(--error)", fontWeight:600 }}>Remove?</span>
-                    <button
-                      onClick={async () => {
-                        try {
-                          // Delete syllabus-imported tasks from backend
-                          const token = localStorage.getItem("kk_token");
-                          const userId = token ? JSON.parse(atob(token.split(".")[1])).sub : null;
-                          const taskIds = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "[]");
-                          if (userId && taskIds.length > 0) {
-                            await Promise.all(taskIds.map(id =>
-                              fetch(`http://localhost:8080/api/tasks/${userId}/delete/${id}`, {
-                                method: "DELETE",
-                                headers: { "Authorization": `Bearer ${token}` },
-                              }).catch(() => {})
-                            ));
-                          }
-                          const next = { ...syllabi };
-                          delete next[course];
-                          localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
-                          setSyllabi(next);
-                          window.dispatchEvent(new Event("kk_syllabus_changed"));
-                          const data = JSON.parse(localStorage.getItem("kk_course_data") || "{}");
-                          delete data[course];
-                          localStorage.setItem("kk_course_data", JSON.stringify(data));
-                          const oh = JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}");
-                          delete oh[course];
-                          localStorage.setItem("kk_course_office_hours", JSON.stringify(oh));
-                          localStorage.removeItem("kk_syllabus_task_ids");
-                        } catch {}
-                        setConfirmingRemove(null);
-                      }}
-                      style={{ background:"var(--error)", border:"none", borderRadius:8, padding:"4px 10px", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}
-                    >Yes</button>
-                    <button
-                      onClick={() => setConfirmingRemove(null)}
-                      style={{ background:"var(--bg)", border:"1px solid var(--border)", borderRadius:8, padding:"4px 10px", color:"var(--text2)", fontSize:12, cursor:"pointer" }}
-                    >Cancel</button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => setConfirmingRemove(course)}
-                    style={{ background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:8, padding:"5px 12px", color:"var(--error)", fontSize:12, fontWeight:600, cursor:"pointer" }}
-                  >
-                    Remove
-                  </button>
-                )}
+          <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)", marginBottom:4 }}>Uploaded Transcript</div>
+          <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16 }}>Remove to clear transcript-imported semesters from data.</div>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface2)", borderRadius:10, padding:"12px 16px", border:"1px solid var(--border)" }}>
+            <div>
+              <div style={{ fontSize:14, fontWeight:600, color:"var(--primary)" }}>
+                {transcriptInfo.semesterCount} semester{transcriptInfo.semesterCount !== 1 ? "s" : ""} · {transcriptInfo.courseCount} course{transcriptInfo.courseCount !== 1 ? "s" : ""}
               </div>
-            ))}
+              <div style={{ fontSize:12, color:"var(--text2)", marginTop:2 }}>
+                Imported {new Date(transcriptInfo.uploadedAt).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" })}
+              </div>
+            </div>
+            <button
+              onClick={removeTranscript}
+              style={{ background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:8, padding:"6px 14px", color:"var(--error)", fontSize:12, fontWeight:600, cursor:"pointer" }}
+            >
+              Remove
+            </button>
           </div>
         </div>
       )}

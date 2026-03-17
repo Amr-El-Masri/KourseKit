@@ -443,9 +443,11 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
   // Selected course (shared across course/target/simulator tabs)
   const [selectedCourse, setSelectedCourse] = useState("");
-  const semesterCourses = selectedSemester
-    ? (savedSemesters.find(s => s.semesterName === selectedSemester)?.courses || []).filter(c => c.courseCode).map(c => ({ name: c.courseCode }))
-    : dashboardCourses;
+  const semesterCourses = semToLoad
+    ? (savedSemesters.find(s => String(s.id) === String(semToLoad))?.courses || []).filter(c => c.courseCode).map(c => ({ name: c.courseCode }))
+    : selectedSemester
+      ? (savedSemesters.find(s => s.semesterName === selectedSemester)?.courses || []).filter(c => c.courseCode).map(c => ({ name: c.courseCode }))
+      : dashboardCourses;
 
   // Switch course — loads saved state or falls back to syllabus extract
   const switchCourse = (courseName) => {
@@ -460,34 +462,35 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       return;
     }
     const saved = loadCourseData(courseName);
-    if (saved) {
-      if (saved.components?.length)  setComponents(saved.components);
-      if (saved.graded?.length)      setGraded(saved.graded);
-      if (saved.finalWeight != null) setFinalWeight(saved.finalWeight);
-      if (saved.targetGoal != null)  setTargetGoal(saved.targetGoal);
-      if (saved.simPast?.length)     setSimPast(saved.simPast);
-      if (saved.simFutureGrade != null)  setSimFutureGrade(saved.simFutureGrade);
-      if (saved.simFutureWeight != null) setSimFutureWeight(saved.simFutureWeight);
+    const syl = loadSyllabus(courseName);
+    const hasSavedComponents = saved?.components?.some(c => c.type || c.weight || c.grade);
+    if (hasSavedComponents) {
+      setComponents(saved.components);
+    } else if (syl?.assessments?.length) {
+      setComponents(syl.assessments.map((a, i) => {
+        const t = inferType(a.name);
+        return { id: Date.now() + i, type: t, weight: String(a.weight ?? ""), grade: "", customType: t === "Other" ? (a.name || "") : "" };
+      }));
     } else {
-      const syl = loadSyllabus(courseName);
-      if (syl?.assessments?.length) {
-        setComponents(syl.assessments.map((a, i) => {
-          const t = inferType(a.name);
-          return { id: Date.now() + i, type: t, weight: String(a.weight ?? ""), grade: "", customType: t === "Other" ? (a.name || "") : "" };
-        }));
-        setSimPast(syl.assessments.map((a, i) => {
-          const t = inferType(a.name);
-          return { id: Date.now() + i, type: t, weight: String(a.weight ?? ""), grade: "", customType: t === "Other" ? (a.name || "") : "" };
-        }));
-      } else {
-        setComponents([{ id: Date.now(), type:"", weight:"", grade:"", customType:"" }]);
-        setSimPast([{ id: Date.now(), type:"", weight:"", grade:"", customType:"" }]);
-      }
-      setGraded([{ id: Date.now(), weight:"", grade:"" }]);
-      setFinalWeight(syl?.finalExamWeight != null ? String(syl.finalExamWeight) : "");
-      setTargetGoal("");
-      setSimFutureGrade(""); setSimFutureWeight("");
+      setComponents([{ id: Date.now(), type:"", weight:"", grade:"", customType:"" }]);
     }
+    const hasSavedSimPast = saved?.simPast?.some(c => c.type || c.weight || c.grade);
+    if (hasSavedSimPast) {
+      setSimPast(saved.simPast);
+    } else if (syl?.assessments?.length) {
+      setSimPast(syl.assessments.map((a, i) => {
+        const t = inferType(a.name);
+        return { id: Date.now() + i, type: t, weight: String(a.weight ?? ""), grade: "", customType: t === "Other" ? (a.name || "") : "" };
+      }));
+    } else {
+      setSimPast([{ id: Date.now(), type:"", weight:"", grade:"", customType:"" }]);
+    }
+    if (saved?.graded?.length)      setGraded(saved.graded);
+    else                            setGraded([{ id: Date.now(), weight:"", grade:"" }]);
+    setFinalWeight(saved?.finalWeight != null ? saved.finalWeight : syl?.finalExamWeight != null ? String(syl.finalExamWeight) : "");
+    setTargetGoal(saved?.targetGoal ?? "");
+    setSimFutureGrade(saved?.simFutureGrade ?? "");
+    setSimFutureWeight(saved?.simFutureWeight ?? "");
   };
 
   // Auto-save whenever course-specific state changes
@@ -495,6 +498,16 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
     if (!selectedCourse) return;
     saveCourseData(selectedCourse, { components, graded, finalWeight, targetGoal, simPast, simFutureGrade, simFutureWeight });
   }, [selectedCourse, components, graded, finalWeight, targetGoal, simPast, simFutureGrade, simFutureWeight]);
+
+  // Auto-load most recent semester from transcript upload
+  useEffect(() => {
+    const autofill = (() => { try { return JSON.parse(localStorage.getItem("kk_transcript_autofill")); } catch { return null; } })();
+    if (autofill?.courses?.length) {
+      loadSnapshot(autofill);
+      localStorage.removeItem("kk_transcript_autofill");
+      setActiveTab("semester");
+    }
+  }, []);
 
   const calcSim = async () => {
     setSimError(null);
@@ -648,27 +661,33 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       {/* Semester GPA */}
       {activeTab==="semester" && (
         <div style={gc.card}>
-          <SectionTitle>Current Semester GPA</SectionTitle>
+          <SectionTitle>Semester GPA</SectionTitle>
           <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:18 }}>
             Enter each course, your grade (letter or GPA point), and its credit hours.
           </p>
 
           {savedSemesters.length > 0 && (
-            <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:18 }}>
-              <select value={semToLoad} onChange={e => setSelectedLoad(e.target.value)} style={{ ...gc.input, flex:1, maxWidth:260, cursor:"pointer" }}>
-                <option value="">Load from My Semesters…</option>
-                {savedSemesters.map(s => <option key={s.id} value={s.id}>{s.semesterName}</option>)}
-              </select>
-              <button
-                onClick={() => {
-                  const sem = savedSemesters.find(s => String(s.id) === String(semToLoad));
-                  if (sem) { loadSnapshot(sem); setSelectedLoad(""); }
-                }}
-                disabled={!semToLoad}
-                style={{ ...gc.calcBtn, padding:"8px 16px", opacity: semToLoad ? 1 : 0.45 }}
-              >
-                Load
-              </button>
+            <div style={{ marginBottom:18 }}>
+              <div style={{ marginBottom:8 }}>
+                <span style={{ fontSize:11, color:"var(--text3)" }}>Past semesters extracted from your uploaded transcripts</span>
+              </div>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+              {savedSemesters.map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => { loadSnapshot(s); setSemResult(null); setSelectedLoad(String(s.id)); }}
+                  style={{
+                    fontSize:12, fontWeight:600, padding:"5px 14px", borderRadius:20,
+                    border: String(semToLoad) === String(s.id) ? "none" : "1px solid var(--border)",
+                    background: String(semToLoad) === String(s.id) ? "var(--primary)" : "var(--bg)",
+                    color: String(semToLoad) === String(s.id) ? "#fff" : "var(--accent2)",
+                    cursor:"pointer", transition:"all .15s",
+                  }}
+                >
+                  {s.semesterName}
+                </button>
+              ))}
+              </div>
             </div>
           )}
 
@@ -680,7 +699,12 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
           </div>
           {semCourses.map(c => (
             <div key={c.id} style={gc.row}>
-              {dashboardCourses.length > 0 ? (
+              {semToLoad ? (
+                <select className="gc-input" value={c.name} onChange={e=>updateRow(setSemCourses,c.id,"name",e.target.value)} style={{ ...gc.input, cursor:"pointer" }}>
+                  <option value="">Select course</option>
+                  {(savedSemesters.find(s => String(s.id) === String(semToLoad))?.courses || []).filter(x => x.courseCode).map(x => <option key={x.courseCode} value={x.courseCode}>{x.courseCode}</option>)}
+                </select>
+              ) : dashboardCourses.length > 0 ? (
                 <select className="gc-input" value={c.name} onChange={e=>updateRow(setSemCourses,c.id,"name",e.target.value)} style={{ ...gc.input, cursor:"pointer" }}>
                   <option value="">Select course</option>
                   {dashboardCourses.map(dc => <option key={dc.id} value={dc.name}>{dc.name}</option>)}

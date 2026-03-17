@@ -498,7 +498,9 @@ export default function Dashboard({ onLogout }) {
   const [activePage, setActivePage] = useState(() => localStorage.getItem("kk_activePage") || "dashboard");
   const [sidebarOpen,    setSidebarOpen]   = useState(true);
   useEffect(() => {
-    localStorage.setItem("kk_activePage", activePage); }, [activePage]);
+    localStorage.setItem("kk_activePage", activePage);
+    if (activePage === "grades") fetchSemesters();
+  }, [activePage]);
   const [semester,       setSemester]      = useState("");
   const [apiSemesters,   setApiSemesters]  = useState([]);
   const [showToggle,    setShowToggle]    = useState(false);
@@ -1042,27 +1044,21 @@ export default function Dashboard({ onLogout }) {
 
                 {visible.courses && (
                     <section className="card-anim" style={{...s.card, gridColumn:"span 2"}}>
-                      <SectionTitle>My Courses — {semester}</SectionTitle>
+                      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                        <SectionTitle>My Courses — {semester}</SectionTitle>
+                        {Object.keys(courseColors).length > 0 && (
+                          <button onClick={() => {
+                            setCourseColors({});
+                            const t = localStorage.getItem("kk_token");
+                            if (t) fetch("http://localhost:8080/api/profile/colors", { method:"PUT", headers:{ "Authorization":"Bearer "+t, "Content-Type":"application/json" }, body:JSON.stringify({}) }).catch(()=>{});
+                          }} style={{ fontSize:11, color:"var(--text3)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:500 }}>Reset colors</button>
+                        )}
+                      </div>
                       {semCourseList.length === 0
                           ? <div style={{fontSize:13,color:"var(--text3)",marginTop:16,textAlign:"center",padding:"20px 0"}}>No courses registered for this semester yet.</div>
                           : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
                             {semCourseList.map(c => (
                                 <div key={c.id} className="course-card"
-                                     onClick={() => {
-                                       const token = localStorage.getItem("kk_token");
-                                       fetch(`http://localhost:8080/api/courses/search?query=${encodeURIComponent(c.name)}`, {
-                                         headers: { "Authorization": "Bearer " + token }
-                                       })
-                                           .then(r => r.json())
-                                           .then(results => {
-                                             const match = results.find(r => r.courseCode === c.name);
-                                             if (match) {
-                                               setCourseDetailsTarget({ id: match.id, courseCode: match.courseCode, title: match.title });
-                                               setActivePage("courseDetails");
-                                             }
-                                           })
-                                           .catch(() => {});
-                                     }}
                                      style={{...s.courseCard, border: `2px solid ${courseColors[c.name] || "var(--text2)"}`}}>
                                   <div style={{display:"flex", alignItems:"center", justifyContent:"space-between"}}>
                                     <div style={{fontWeight:700, fontSize:15, color:"var(--primary)"}}>{c.name}</div>
@@ -1083,11 +1079,8 @@ export default function Dashboard({ onLogout }) {
                                       />
                                     </label>
                                   </div>
-                                  {courseSyllabi[c.name] ? (
-                                      <div style={{ marginTop:8, fontSize:11, color:"var(--success-bg)", background:"var(--success)", border:"1px solid #b7dfc5", borderRadius:6, padding:"3px 8px", display:"flex", alignItems:"center", gap:4 }}>
-                                        <span>✓</span> Syllabus uploaded
-                                      </div>
-                                  ) : (
+
+                                  {!courseSyllabi[c.name] && (
                                       <button
                                           onClick={e => { e.stopPropagation(); setSyllabusTarget(c.name); }}
                                           style={{ marginTop:8, fontSize:11, color:"var(--accent)", background:"none", border:"1px solid var(--border)", borderRadius:6, padding:"3px 8px", cursor:"pointer", width:"100%", textAlign:"left" }}
@@ -1475,7 +1468,7 @@ export default function Dashboard({ onLogout }) {
           {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
           {activePage === "planner" && <StudyPlanner />}
           {activePage === "profile" && (
-              <Profile onProfileSave={p => setProfile(p)} onLogout={handleLogout} />
+              <Profile onProfileSave={p => setProfile(p)} onLogout={handleLogout} onSemestersUpdated={fetchSemesters} />
           )}
 
           {activePage === "courseDetails" && courseDetailsTarget && (

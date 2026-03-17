@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PartyPopper } from "lucide-react";
+import TranscriptModal from "./TranscriptModal";
 
 const requirements = [
   { label: "At least 8 characters",       test: p => p.length >= 8 },
@@ -25,10 +26,11 @@ export default function Register({ onGoToLogin }) {
   const [semStep,   setSemStep]   = useState(false);
   const [regToken,  setRegToken]  = useState("");
 
-  const [semName,    setSemName]    = useState("");
-  const [semCourses, setSemCourses] = useState([{ id:1, name:"" }]);
-  const [semSaving,  setSemSaving]  = useState(false);
-  const [semError,   setSemError]   = useState("");
+  const [semName,       setSemName]       = useState("");
+  const [semCourses,    setSemCourses]    = useState([{ id:1, name:"" }]);
+  const [semSaving,     setSemSaving]     = useState(false);
+  const [semError,      setSemError]      = useState("");
+  const [showTranscript, setShowTranscript] = useState(false);
 
   const [loading,      setLoading]      = useState(false);
   const [passfocused,  setpassfocused]  = useState(false);
@@ -120,6 +122,12 @@ export default function Register({ onGoToLogin }) {
             </div>
           ) : semStep ? (
             <div>
+              {showTranscript && (
+                <TranscriptModal
+                  onClose={() => setShowTranscript(false)}
+                  onApply={() => { setShowTranscript(false); setSuccess(true); }}
+                />
+              )}
               <h2 style={s.title}>One last step</h2>
               <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 20, lineHeight: 1.6 }}>
                 Tell us your current semester so we can set up your courses.
@@ -156,6 +164,10 @@ export default function Register({ onGoToLogin }) {
               <button className="reg-btn" onClick={handleSemesterSubmit} disabled={semSaving || !semName}
                 style={{ ...s.btn, opacity: semSaving || !semName ? 0.7 : 1, cursor: semSaving || !semName ? "not-allowed" : "pointer", marginBottom:10 }}>
                 {semSaving ? "Saving…" : "Get Started"}
+              </button>
+              <button onClick={() => setShowTranscript(true)}
+                style={{ width:"100%", background:"none", border:"1px solid var(--border)", borderRadius:10, color:"var(--primary)", fontSize:13, fontWeight:600, cursor:"pointer", padding:"10px 0", marginBottom:6, fontFamily:"'DM Sans',sans-serif" }}>
+                Upload Transcript Instead
               </button>
               <button onClick={() => setSuccess(true)}
                 style={{ width:"100%", background:"none", border:"none", color:"var(--text2)", fontSize:13, cursor:"pointer", padding:"6px 0" }}>
