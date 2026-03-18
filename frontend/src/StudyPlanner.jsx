@@ -468,6 +468,14 @@ function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId,
     const [selectedTaskId, setSelectedTaskId] = useState("");
     const [hoursPerWeek, setHoursPerWeek] = useState("");
     const [color, setColor] = useState(PALETTE[0]);
+    const [openColorPickerId, setOpenColorPickerId] = useState(null);
+
+    useEffect(() => {
+        if (!openColorPickerId) return;
+        const close = () => setOpenColorPickerId(null);
+        const timer = setTimeout(() => window.addEventListener("click", close), 0);
+        return () => { clearTimeout(timer); window.removeEventListener("click", close); };
+    }, [openColorPickerId]);
 
     useEffect(() => {
         apiFetch(`/api/tasks/list-all`).then(data => {
@@ -530,7 +538,7 @@ function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId,
                         <option value="">— Pick a task —</option>
                         {availableTasks.map(t => (
                             <option key={t.id} value={t.id}>
-                                [{t.course}] {t.title}
+                                {t.title} - {t.course}
                             </option>
                         ))}
                     </select>
@@ -579,31 +587,35 @@ function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId,
                     <div className="sp-empty-hint">No entries yet. Add a course above.</div>
                 )}
                 {entries.map(entry => {
+                    const isOpen = openColorPickerId === entry.id;
+                    const entryColor = colorMap[String(entry.id)] || entry.color;
                     return (
-                        <div key={entry.id} className="sp-entry-item">
-                            <div className="sp-entry-color-col">
-                                <div style={{ position:"relative" }}>
+                        <div key={entry.id} className="sp-entry-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 0 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                                <div className="sp-entry-color-col">
                                     <div
-                                        onClick={e => { e.stopPropagation(); const el = e.currentTarget.nextSibling; el.style.display = el.style.display === "grid" ? "none" : "grid"; }}
-                                        style={{ width:20, height:20, borderRadius:6, background: colorMap[String(entry.id)] || entry.color, cursor:"pointer", border:"2px solid var(--border)" }}
+                                        onClick={e => { e.stopPropagation(); setOpenColorPickerId(isOpen ? null : entry.id); }}
+                                        style={{ width:20, height:20, borderRadius:6, background: entryColor, cursor:"pointer", border:"2px solid var(--border)" }}
                                     />
-                                    <div style={{ display:"none", position:"absolute", left:24, top:0, zIndex:50, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:10, padding:8, gridTemplateColumns:"repeat(7,1fr)", gap:4, width:180, boxShadow:"0 4px 16px rgba(49,72,122,0.12)" }}>
-                                        {PALETTE.map(c => (
-                                            <button key={c} onClick={() => onColorChange(entry.id, c)}
-                                                    style={{ width:20, height:20, borderRadius:"50%", background:c, border: (colorMap[String(entry.id)]||entry.color)===c?"2px solid var(--text)":"2px solid transparent", cursor:"pointer", padding:0 }}
-                                            />
-                                        ))}
+                                </div>
+                                <div className="sp-entry-info">
+                                    <div className="sp-entry-name">{entry.name}</div>
+                                    {entry.course && <div style={{ fontSize:10, color:"var(--text2)", marginTop:1, marginBottom:2 }}>{entry.course}</div>}
+                                    <div className="sp-entry-meta">
+                                        <span className="sp-hours-badge">{entry.hoursPerWeek}h/wk</span>
                                     </div>
                                 </div>
+                                <button className="sp-entry-delete" onClick={() => onDelete(entry.id)}>×</button>
                             </div>
-                            <div className="sp-entry-info">
-                                <div className="sp-entry-name">{entry.name}</div>
-                                {entry.course && <div style={{ fontSize:10, color:"var(--text2)", marginTop:1, marginBottom:2 }}>{entry.course}</div>}
-                                <div className="sp-entry-meta">
-                                    <span className="sp-hours-badge">{entry.hoursPerWeek}h/wk</span>
+                            {isOpen && (
+                                <div onClick={e => e.stopPropagation()} style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:5, marginTop:8, padding:"8px 4px 2px", borderTop:"1px solid var(--border)" }}>
+                                    {PALETTE.map(c => (
+                                        <button key={c} onClick={() => { onColorChange(entry.id, c); setOpenColorPickerId(null); }}
+                                                style={{ width:"100%", aspectRatio:"1", borderRadius:"50%", background:c, border: entryColor===c?"2px solid var(--text)":"2px solid transparent", cursor:"pointer", padding:0 }}
+                                        />
+                                    ))}
                                 </div>
-                            </div>
-                            <button className="sp-entry-delete" onClick={() => onDelete(entry.id)}>×</button>
+                            )}
                         </div>
                     );
                 })}
@@ -613,8 +625,8 @@ function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId,
 }
 
 function SlotPanel({ availability, onDeleteSlot, onClearAll }) {
-    const allSlots = Object.entries(availability).flatMap(([dayKey, slots]) =>
-        slots.map(s => ({ ...s, dayKey }))
+    const allSlots = DAY_KEYS.flatMap(dayKey =>
+        (availability[dayKey] || []).slice().sort((a, b) => a.startHour - b.startHour).map(s => ({ ...s, dayKey }))
     );
 
     return (
@@ -1440,7 +1452,6 @@ export default function StudyPlanner() {
           flex-shrink: 0;
           border-bottom: 1px solid var(--border);
           background: var(--surface);
-          padding-right: 8px;
         }
 
         .sp-gutter-spacer {
@@ -1480,21 +1491,17 @@ export default function StudyPlanner() {
         /* ── Calendar body ── */
         .sp-cal-body {
           display: flex;
-          align-items: flex-start;
-          height: ${VISIBLE_HOURS * HOUR_HEIGHT}px;
-          flex-shrink: 0;
-          overflow-y: scroll;
+          flex: 1;
+          min-height: 0;
+          overflow-y: overlay;
           overflow-x: hidden;
         }
-        .sp-cal-body::-webkit-scrollbar { width: 8px; }
-        .sp-cal-body::-webkit-scrollbar-track { background: var(--surface2); }
-        .sp-cal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
         .sp-time-gutter {
           width: 56px;
           flex-shrink: 0;
           position: relative;
-          height: ${TOTAL_HOURS * HOUR_HEIGHT + HOUR_HEIGHT * 1.5}px;
+          height: ${TOTAL_HOURS * HOUR_HEIGHT + 20}px;
           border-right: 1px solid var(--border);
           background: var(--surface);
         }
@@ -1512,14 +1519,14 @@ export default function StudyPlanner() {
           transform: translateY(0);
         }
 
-        .sp-days-grid { display: flex; flex: 1; min-width: 0; height: ${TOTAL_HOURS * HOUR_HEIGHT + HOUR_HEIGHT * 1.5}px; }
+        .sp-days-grid { display: flex; flex: 1; min-width: 0; }
 
         /* ── Day Column ── */
         .sp-day-column {
           flex: 1;
           min-width: 70px;
           position: relative;
-          height: ${TOTAL_HOURS * HOUR_HEIGHT + HOUR_HEIGHT * 1.5}px;
+          height: ${TOTAL_HOURS * HOUR_HEIGHT + 20}px;
           border-right: 1px solid var(--border);
           cursor: default;
           user-select: none;
