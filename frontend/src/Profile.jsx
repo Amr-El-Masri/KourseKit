@@ -201,6 +201,20 @@ export default function Profile({ onProfileSave, onSemestersUpdated }) {
   const isAdmin = getTokenRole() === "ADMIN";
   const [section, setSection] = useState("profile");
   const [syllabi, setSyllabi] = useState(() => { try { return JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"); } catch { return {}; } });
+
+  useEffect(() => {
+    const token = localStorage.getItem("kk_token");
+    if (!token) return;
+    fetch("http://localhost:8080/api/user-syllabi", { headers: { "Authorization": `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && typeof data === "object") {
+          localStorage.setItem("kk_course_syllabus", JSON.stringify(data));
+          setSyllabi(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
   const [confirmingRemove, setConfirmingRemove] = useState(null); // course name
   const [profile,    setProfile]    = useState(() => ({ ...DEFAULT_PROFILE, email, emailRemindersEnabled: localStorage.getItem("kk_email_reminders") !== "false" }));
   const [editing,    setEditing]    = useState(false);
@@ -925,6 +939,7 @@ const refetchSemesters = () =>
                               localStorage.setItem("kk_syllabus_task_ids", JSON.stringify(map));
                               const next = { ...syllabi }; delete next[c.courseCode];
                               localStorage.setItem("kk_course_syllabus", JSON.stringify(next)); setSyllabi(next);
+                              fetch(`http://localhost:8080/api/user-syllabi/${encodeURIComponent(c.courseCode)}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{});
                               window.dispatchEvent(new Event("kk_syllabus_changed"));
                               const data = JSON.parse(localStorage.getItem("kk_course_data") || "{}"); delete data[c.courseCode]; localStorage.setItem("kk_course_data", JSON.stringify(data));
                               const oh = JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}"); delete oh[c.courseCode]; localStorage.setItem("kk_course_office_hours", JSON.stringify(oh));

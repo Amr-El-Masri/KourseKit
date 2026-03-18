@@ -695,12 +695,19 @@ export default function Dashboard({ onLogout }) {
   const [courseSyllabi, setCourseSyllabi] = useState(() => {
     try { return JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"); } catch { return {}; }
   });
+
+  const authHeaders = () => ({ "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("kk_token")}` });
+
   useEffect(() => {
-    const sync = () => {
-      try { setCourseSyllabi(JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}")); } catch {}
-    };
-    window.addEventListener("kk_syllabus_changed", sync);
-    return () => window.removeEventListener("kk_syllabus_changed", sync);
+    fetch("http://localhost:8080/api/user-syllabi", { headers: authHeaders() })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && typeof data === "object") {
+          localStorage.setItem("kk_course_syllabus", JSON.stringify(data));
+          setCourseSyllabi(data);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const saveCourseOfficeHours = (courseName, hours) => {
@@ -1651,9 +1658,15 @@ export default function Dashboard({ onLogout }) {
                     if (data.assessments?.length || data.finalExamWeight || data.professor) {
                       try {
                         const all = JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}");
-                        const next = { ...all, [name]: { assessments: data.assessments || [], finalExamWeight: data.finalExamWeight ?? null, professor: data.professor || null } };
+                        const payload = { assessments: data.assessments || [], finalExamWeight: data.finalExamWeight ?? null, professor: data.professor || null };
+                        const next = { ...all, [name]: payload };
                         localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
                         setCourseSyllabi(next);
+                        fetch(`http://localhost:8080/api/user-syllabi/${encodeURIComponent(name)}`, {
+                          method: "PUT",
+                          headers: authHeaders(),
+                          body: JSON.stringify(payload),
+                        }).catch(() => {});
                       } catch {}
                     }
                     if (data.assessments) {
