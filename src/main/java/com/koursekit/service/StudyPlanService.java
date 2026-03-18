@@ -1,6 +1,8 @@
 package com.koursekit.service;
 import com.koursekit.model.AvailabilitySlot;
+import com.koursekit.model.DefaultScheduleSlot;
 import com.koursekit.repository.AvailabilitySlotRepository;
+import com.koursekit.repository.DefaultScheduleSlotRepository;
 
 import com.koursekit.exception.ResourceNotFoundException;
 import com.koursekit.model.*;
@@ -30,6 +32,9 @@ public class StudyPlanService {
 
     @Autowired
     private AvailabilitySlotRepository slotRepository;
+
+    @Autowired
+    private DefaultScheduleSlotRepository defaultSlotRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -353,8 +358,27 @@ public class StudyPlanService {
                 .orElseThrow(() -> new RuntimeException("Entry not found"));
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public List<AvailabilitySlot> getSlots(Long userId, LocalDate weekStart) {
-        return slotRepository.findByUserIdAndWeekStart(userId, weekStart);
+        List<AvailabilitySlot> existing = slotRepository.findByUserIdAndWeekStart(userId, weekStart);
+        if (!existing.isEmpty()) return existing;
+
+        // No slots for this week — seed from the user's default schedule
+        List<DefaultScheduleSlot> defaults = defaultSlotRepository.findByUserId(userId);
+        if (defaults.isEmpty()) return existing;
+
+        User user = entityManager.getReference(User.class, userId);
+        List<AvailabilitySlot> seeded = new ArrayList<>();
+        for (DefaultScheduleSlot def : defaults) {
+            AvailabilitySlot slot = new AvailabilitySlot();
+            slot.setUser(user);
+            slot.setDayKey(def.getDayKey());
+            slot.setStartTime(def.getStartTime());
+            slot.setEndTime(def.getEndTime());
+            slot.setWeekStart(weekStart);
+            seeded.add(slot);
+        }
+        return slotRepository.saveAll(seeded);
     }
 
     @org.springframework.transaction.annotation.Transactional
@@ -378,5 +402,10 @@ public class StudyPlanService {
     @org.springframework.transaction.annotation.Transactional
     public void clearSlots(Long userId, LocalDate weekStart) {
         slotRepository.deleteByUserIdAndWeekStart(userId, weekStart);
+    }
+
+    @org.springframework.transaction.annotation.Transactional
+    public void clearAllSlots(Long userId) {
+        slotRepository.deleteAllByUserId(userId);
     }
 }

@@ -221,4 +221,10 @@ public class StudyPlanController {
         studyPlanService.clearSlots(currentUserId(), weekStart);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/slots/all")
+    public ResponseEntity<Void> clearAllSlots() {
+        studyPlanService.clearAllSlots(currentUserId());
+        return ResponseEntity.noContent().build();
+    }
 }

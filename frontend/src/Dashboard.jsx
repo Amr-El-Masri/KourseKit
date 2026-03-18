@@ -1449,7 +1449,7 @@ export default function Dashboard({ onLogout }) {
         </aside>
 
         <main style={s.main}>
-          <header style={s.topbar}>
+          <header style={{ ...s.topbar, ...(activePage === "planner" ? { display: "none" } : {}) }}>
             <div>
               <div style={s.greeting}>Hello, <span style={{fontFamily:"'Fraunces',serif",fontStyle:"italic",color:"var(--primary)"}}>{displayName}!</span></div>
               <div style={{fontSize:13,color:"var(--accent2)",marginTop:2}}>{today.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</div>

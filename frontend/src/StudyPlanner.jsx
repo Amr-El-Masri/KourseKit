@@ -2,8 +2,9 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Pencil, Zap, RotateCcw } from "lucide-react";
 
 const HOUR_HEIGHT = 80;
-const START_HOUR = 6;
+const START_HOUR = 0;
 const END_HOUR = 24;
+const VISIBLE_HOURS = 8;
 const TOTAL_HOURS = END_HOUR - START_HOUR;
 const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const DAY_KEYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
@@ -134,12 +135,12 @@ function normalizeWeeklyData(data) {
 function TimeGutter() {
     return (
         <div className="sp-time-gutter">
-            {Array.from({ length: TOTAL_HOURS }, (_, i) => {
+            {Array.from({ length: TOTAL_HOURS + 1 }, (_, i) => {
                 const hour = START_HOUR + i;
-                if (hour === START_HOUR) return <div key={hour} className="sp-time-label" style={{ top: 0 }} />;
+                const label = hour === 0 || hour === 24 ? "12am" : hour === 12 ? "12pm" : hour > 12 ? `${hour - 12}pm` : `${hour}am`;
                 return (
-                    <div key={hour} className="sp-time-label" style={{ top: hourToPx(hour) }}>
-                        <span>{hour > 12 ? `${hour - 12}pm` : hour === 12 ? "12pm" : `${hour}am`}</span>
+                    <div key={hour} className={`sp-time-label${i === 0 ? " sp-time-label-first" : ""}`} style={{ top: i * HOUR_HEIGHT }}>
+                        <span>{label}</span>
                     </div>
                 );
             })}
@@ -650,17 +651,12 @@ export default function StudyPlanner() {
     const [hasGenerated, setHasGenerated] = useState(false);
     const [showSlotOverlay, setShowSlotOverlay] = useState(true);
 
-    const calBodyRef = useRef(null);
-    const [sbWidth, setSbWidth] = useState(0);
-
-    useEffect(() => {
-        const el = calBodyRef.current;
-        if (!el) return;
-        const update = () => setSbWidth(el.offsetWidth - el.clientWidth);
-        update();
-        const ro = new ResizeObserver(update);
-        ro.observe(el);
-        return () => ro.disconnect();
+    const calBodyRef = useCallback((el) => {
+        if (el) {
+            el.scrollTop = 8 * HOUR_HEIGHT;
+            const main = document.querySelector("main");
+            if (main) main.scrollTop = 0;
+        }
     }, []);
 
     const weekDates = getWeekDates(currentDate);
@@ -1437,6 +1433,7 @@ export default function StudyPlanner() {
           flex-shrink: 0;
           border-bottom: 1px solid var(--border);
           background: var(--surface);
+          padding-right: 8px;
         }
 
         .sp-gutter-spacer {
@@ -1476,17 +1473,21 @@ export default function StudyPlanner() {
         /* ── Calendar body ── */
         .sp-cal-body {
           display: flex;
-          flex: 1;
+          align-items: flex-start;
+          height: ${VISIBLE_HOURS * HOUR_HEIGHT}px;
+          flex-shrink: 0;
           overflow-y: scroll;
           overflow-x: hidden;
-          min-height: 0;
         }
+        .sp-cal-body::-webkit-scrollbar { width: 8px; }
+        .sp-cal-body::-webkit-scrollbar-track { background: var(--surface2); }
+        .sp-cal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
         .sp-time-gutter {
           width: 56px;
           flex-shrink: 0;
           position: relative;
-          height: ${TOTAL_HOURS * HOUR_HEIGHT}px;
+          height: ${TOTAL_HOURS * HOUR_HEIGHT + HOUR_HEIGHT}px;
           border-right: 1px solid var(--border);
           background: var(--surface);
         }
@@ -1500,15 +1501,18 @@ export default function StudyPlanner() {
           white-space: nowrap;
           user-select: none;
         }
+        .sp-time-label-first {
+          transform: translateY(0);
+        }
 
-        .sp-days-grid { display: flex; flex: 1; min-width: 0; }
+        .sp-days-grid { display: flex; flex: 1; min-width: 0; height: ${TOTAL_HOURS * HOUR_HEIGHT + HOUR_HEIGHT}px; }
 
         /* ── Day Column ── */
         .sp-day-column {
           flex: 1;
           min-width: 70px;
           position: relative;
-          height: ${TOTAL_HOURS * HOUR_HEIGHT}px;
+          height: ${TOTAL_HOURS * HOUR_HEIGHT + HOUR_HEIGHT}px;
           border-right: 1px solid var(--border);
           cursor: default;
           user-select: none;
@@ -1855,7 +1859,6 @@ export default function StudyPlanner() {
                                             <div className="sp-day-number">{date.getDate()}</div>
                                         </div>
                                     ))}
-                                    {sbWidth > 0 && <div style={{ width: sbWidth, flexShrink: 0 }} />}
                                 </div>
                                 <div className="sp-cal-body" ref={calBodyRef}>
                                     <TimeGutter />
