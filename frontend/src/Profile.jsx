@@ -238,6 +238,26 @@ export default function Profile({ onProfileSave, onSemestersUpdated }) {
   const [transcriptInfo,  setTranscriptInfo]  = useState(() => {
     try { return JSON.parse(localStorage.getItem("kk_transcript_info") || "null"); } catch { return null; }
   });
+
+  useEffect(() => {
+    const token = localStorage.getItem("kk_token");
+    if (!token) return;
+    fetch("http://localhost:8080/api/transcript-info", { headers: { "Authorization": `Bearer ${token}` } })
+      .then(r => r.status === 204 ? null : r.json())
+      .then(data => {
+        if (data) {
+          const info = { uploadedAt: data.uploadedAt, semesterCount: data.semesterCount, courseCount: data.courseCount };
+          localStorage.setItem("kk_transcript_info", JSON.stringify(info));
+          localStorage.setItem("kk_transcript_sem_ids", data.semIds);
+          setTranscriptInfo(info);
+        } else {
+          localStorage.removeItem("kk_transcript_info");
+          localStorage.removeItem("kk_transcript_sem_ids");
+          setTranscriptInfo(null);
+        }
+      })
+      .catch(() => {});
+  }, []);
   const [undoToast,   setUndoToast]   = useState(null); // { semIds, semesters }
   const undoTimerRef = useRef(null);
 
@@ -346,10 +366,12 @@ const refetchSemesters = () =>
   const removeTranscript = async () => {
     const ids = (() => { try { return JSON.parse(localStorage.getItem("kk_transcript_sem_ids") || "[]"); } catch { return []; } })();
     const snapshots = semesters.filter(s => ids.includes(String(s.id)));
-    // Delete from backend
+    // Delete semesters from backend
     await Promise.all(ids.map(id =>
       fetch(`${API}/api/grades/saved/${id}`, { method: "DELETE", headers: semAuthHeaders() }).catch(() => {})
     ));
+    // Delete transcript info from backend
+    fetch(`${API}/api/transcript-info`, { method: "DELETE", headers: semAuthHeaders() }).catch(() => {});
     localStorage.removeItem("kk_transcript_sem_ids");
     localStorage.removeItem("kk_transcript_info");
     setTranscriptInfo(null);
