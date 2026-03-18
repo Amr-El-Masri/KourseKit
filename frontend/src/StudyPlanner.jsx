@@ -366,6 +366,13 @@ function DayColumn({
         const endHour = Math.max(snapToHalf(currentHour), dragRef.current.startHour + 0.5);
         dragRef.current.endHour = endHour;
         setDragging({ startHour: dragRef.current.startHour, endHour });
+        const scrollEl = columnRef.current?.closest(".sp-cal-body");
+        if (scrollEl) {
+            const { top, bottom } = scrollEl.getBoundingClientRect();
+            const ZONE = 80;
+            if (e.clientY > bottom - ZONE) scrollEl.scrollTop += Math.round((ZONE - (bottom - e.clientY)) / 4);
+            else if (e.clientY < top + ZONE) scrollEl.scrollTop -= Math.round((ZONE - (e.clientY - top)) / 4);
+        }
     }, [getHourFromEvent]);
 
     const handleMouseUp = useCallback(() => {

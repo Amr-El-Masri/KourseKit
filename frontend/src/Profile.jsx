@@ -264,7 +264,7 @@ function DsMiniSlot({ slot, dayKey, onDelete, onResize, readonly }) {
   );
 }
 
-function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly }) {
+function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scrollRef }) {
   const colRef  = useRef(null);
   const dragRef = useRef(null);
   const [dragging, setDragging] = useState(null);
@@ -288,7 +288,14 @@ function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly }) {
     const eh = Math.min(Math.max(dsSnap(getHour(e)), dragRef.current.startHour + 0.5), DS_END);
     dragRef.current.endHour = eh;
     setDragging({ startHour: dragRef.current.startHour, endHour: eh });
-  }, [getHour]);
+    const scrollEl = scrollRef?.current;
+    if (scrollEl) {
+      const { top, bottom } = scrollEl.getBoundingClientRect();
+      const ZONE = 60;
+      if (e.clientY > bottom - ZONE) scrollEl.scrollTop += Math.round((ZONE - (bottom - e.clientY)) / 4);
+      else if (e.clientY < top + ZONE) scrollEl.scrollTop -= Math.round((ZONE - (e.clientY - top)) / 4);
+    }
+  }, [getHour, scrollRef]);
 
   const onUp = useCallback(() => {
     if (!dragRef.current) return;
@@ -515,6 +522,7 @@ function DefaultScheduleEditor({ token }) {
                     onDelete={handleDelete}
                     onResize={handleResize}
                     readonly={!isEditing}
+                    scrollRef={scrollRef}
                   />
                 ))}
               </div>
