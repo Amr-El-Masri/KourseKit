@@ -355,15 +355,15 @@ function DayColumn({
         if (!isAvailabilityMode) return;
         if (e.target.closest(".sp-avail-slot") || e.target.closest(".sp-study-block")) return;
         e.preventDefault();
-        const startHour = getHourFromEvent(e);
-        dragRef.current = { startHour, endHour: startHour + 0.5 };
-        setDragging({ startHour, endHour: startHour + 0.5 });
+        const startHour = Math.min(getHourFromEvent(e), END_HOUR - 0.5);
+        dragRef.current = { startHour, endHour: Math.min(startHour + 0.5, END_HOUR) };
+        setDragging({ startHour, endHour: Math.min(startHour + 0.5, END_HOUR) });
     }, [isAvailabilityMode, getHourFromEvent]);
 
     const handleMouseMove = useCallback((e) => {
         if (!dragRef.current) return;
         const currentHour = getHourFromEvent(e);
-        const endHour = Math.max(snapToHalf(currentHour), dragRef.current.startHour + 0.5);
+        const endHour = Math.min(Math.max(snapToHalf(currentHour), dragRef.current.startHour + 0.5), END_HOUR);
         dragRef.current.endHour = endHour;
         setDragging({ startHour: dragRef.current.startHour, endHour });
         const scrollEl = columnRef.current?.closest(".sp-cal-body");
@@ -1494,7 +1494,7 @@ export default function StudyPlanner() {
           width: 56px;
           flex-shrink: 0;
           position: relative;
-          height: ${TOTAL_HOURS * HOUR_HEIGHT + HOUR_HEIGHT}px;
+          height: ${TOTAL_HOURS * HOUR_HEIGHT + HOUR_HEIGHT * 1.5}px;
           border-right: 1px solid var(--border);
           background: var(--surface);
         }
@@ -1512,14 +1512,14 @@ export default function StudyPlanner() {
           transform: translateY(0);
         }
 
-        .sp-days-grid { display: flex; flex: 1; min-width: 0; height: ${TOTAL_HOURS * HOUR_HEIGHT + HOUR_HEIGHT}px; }
+        .sp-days-grid { display: flex; flex: 1; min-width: 0; height: ${TOTAL_HOURS * HOUR_HEIGHT + HOUR_HEIGHT * 1.5}px; }
 
         /* ── Day Column ── */
         .sp-day-column {
           flex: 1;
           min-width: 70px;
           position: relative;
-          height: ${TOTAL_HOURS * HOUR_HEIGHT + HOUR_HEIGHT}px;
+          height: ${TOTAL_HOURS * HOUR_HEIGHT + HOUR_HEIGHT * 1.5}px;
           border-right: 1px solid var(--border);
           cursor: default;
           user-select: none;

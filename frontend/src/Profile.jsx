@@ -269,9 +269,9 @@ function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scro
   const dragRef = useRef(null);
   const [dragging, setDragging] = useState(null);
 
-  const getHour = useCallback((e) => {
+  const getHour = useCallback((e, allowEnd = false) => {
     const rect = colRef.current.getBoundingClientRect();
-    return Math.min(Math.max(dsSnap(dsPxToHour(e.clientY - rect.top)), DS_START), DS_END - 0.5);
+    return Math.min(Math.max(dsSnap(dsPxToHour(e.clientY - rect.top)), DS_START), allowEnd ? DS_END : DS_END - 0.5);
   }, []);
 
   const onDown = useCallback((e) => {
@@ -285,7 +285,7 @@ function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scro
 
   const onMove = useCallback((e) => {
     if (!dragRef.current) return;
-    const eh = Math.min(Math.max(dsSnap(getHour(e)), dragRef.current.startHour + 0.5), DS_END);
+    const eh = Math.min(Math.max(dsSnap(getHour(e, true)), dragRef.current.startHour + 0.5), DS_END);
     dragRef.current.endHour = eh;
     setDragging({ startHour: dragRef.current.startHour, endHour: eh });
     const scrollEl = scrollRef?.current;
@@ -437,10 +437,10 @@ function DefaultScheduleEditor({ token }) {
     <div style={{ background: "var(--surface)", borderRadius: 20, border: "1px solid var(--border)", boxShadow: "0 2px 14px rgba(49,72,122,0.07)", overflow: "hidden", marginBottom: 20 }}>
       <style>{`
         .ds-grid-wrap { display:flex; user-select:none; }
-        .ds-gutter { width:56px; flex-shrink:0; position:relative; height:${(DS_TOTAL + 1) * DS_HOUR_H + 12}px; border-right:1px solid var(--border); background:var(--surface); }
+        .ds-gutter { width:56px; flex-shrink:0; position:relative; height:${DS_TOTAL * DS_HOUR_H + 20}px; border-right:1px solid var(--border); background:var(--surface); }
         .ds-gutter-lbl { position:absolute; right:8px; transform:translateY(-50%); font-size:10px; color:var(--text3); white-space:nowrap; pointer-events:none; }
         .ds-days-grid { display:flex; flex:1; }
-        .ds-day-col { flex:1; position:relative; height:${(DS_TOTAL + 1) * DS_HOUR_H + 12}px; border-right:1px solid var(--border); cursor:crosshair; background:var(--surface); }
+        .ds-day-col { flex:1; position:relative; height:${DS_TOTAL * DS_HOUR_H + 20}px; border-right:1px solid var(--border); cursor:crosshair; background:var(--surface); }
         .ds-day-col.ds-day-readonly { cursor:default; }
         .ds-day-col:last-child { border-right:none; }
         .ds-hour-line { position:absolute; left:0; right:0; height:1px; background:var(--divider); pointer-events:none; }
