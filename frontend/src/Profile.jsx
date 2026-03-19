@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import StudentDirectoryPanel from "./StudentDirectoryPanel";
 import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle } from "lucide-react";
 import AdminDashboard from "./AdminDashboard";
 import TranscriptModal from "./TranscriptModal";
@@ -554,6 +555,20 @@ export default function Profile({ onProfileSave, onSemestersUpdated }) {
   const isAdmin = getTokenRole() === "ADMIN";
   const [section, setSection] = useState("profile");
   const [syllabi, setSyllabi] = useState(() => { try { return JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"); } catch { return {}; } });
+
+  useEffect(() => {
+    const token = localStorage.getItem("kk_token");
+    if (!token) return;
+    fetch("http://localhost:8080/api/user-syllabi", { headers: { "Authorization": `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && typeof data === "object") {
+          localStorage.setItem("kk_course_syllabus", JSON.stringify(data));
+          setSyllabi(data);
+        }
+      })
+      .catch(() => {});
+  }, []);
   const [confirmingRemove, setConfirmingRemove] = useState(null); // course name
   const [profile,    setProfile]    = useState(() => ({ ...DEFAULT_PROFILE, email, emailRemindersEnabled: localStorage.getItem("kk_email_reminders") !== "false" }));
   const [editing,    setEditing]    = useState(false);
@@ -571,12 +586,35 @@ export default function Profile({ onProfileSave, onSemestersUpdated }) {
   const [editCourses,  setEditCourses]  = useState([]);
   const [semSaveLoad,  setSemSaveLoad]  = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [showFollowList, setShowFollowList] = useState(null);
+  const [showDirectory, setShowDirectory] = useState(false);
+  const [friends, setFriends] = useState(() => { try { return JSON.parse(localStorage.getItem("kk_friends") || "[]"); } catch { return []; } });
 
   // Transcript uploader
   const [transcriptModal, setTranscriptModal] = useState(false);
   const [transcriptInfo,  setTranscriptInfo]  = useState(() => {
     try { return JSON.parse(localStorage.getItem("kk_transcript_info") || "null"); } catch { return null; }
   });
+
+  useEffect(() => {
+    const token = localStorage.getItem("kk_token");
+    if (!token) return;
+    fetch("http://localhost:8080/api/transcript-info", { headers: { "Authorization": `Bearer ${token}` } })
+      .then(r => r.status === 204 ? null : r.json())
+      .then(data => {
+        if (data) {
+          const info = { uploadedAt: data.uploadedAt, semesterCount: data.semesterCount, courseCount: data.courseCount };
+          localStorage.setItem("kk_transcript_info", JSON.stringify(info));
+          localStorage.setItem("kk_transcript_sem_ids", data.semIds);
+          setTranscriptInfo(info);
+        } else {
+          localStorage.removeItem("kk_transcript_info");
+          localStorage.removeItem("kk_transcript_sem_ids");
+          setTranscriptInfo(null);
+        }
+      })
+      .catch(() => {});
+  }, []);
   const [undoToast,   setUndoToast]   = useState(null); // { semIds, semesters }
   const undoTimerRef = useRef(null);
 
@@ -685,10 +723,12 @@ const refetchSemesters = () =>
   const removeTranscript = async () => {
     const ids = (() => { try { return JSON.parse(localStorage.getItem("kk_transcript_sem_ids") || "[]"); } catch { return []; } })();
     const snapshots = semesters.filter(s => ids.includes(String(s.id)));
-    // Delete from backend
+    // Delete semesters from backend
     await Promise.all(ids.map(id =>
       fetch(`${API}/api/grades/saved/${id}`, { method: "DELETE", headers: semAuthHeaders() }).catch(() => {})
     ));
+    // Delete transcript info from backend
+    fetch(`${API}/api/transcript-info`, { method: "DELETE", headers: semAuthHeaders() }).catch(() => {});
     localStorage.removeItem("kk_transcript_sem_ids");
     localStorage.removeItem("kk_transcript_info");
     setTranscriptInfo(null);
@@ -767,6 +807,18 @@ const refetchSemesters = () =>
 
   return (
     <div style={{ padding:"28px 28px 60px" }}>
+      {showDirectory &&
+        <StudentDirectoryPanel
+          onClose={() => setShowDirectory(false)}
+          friends={friends}
+          onFriendToggle={student => {
+            const exists = friends.find(f => f.id === student.id);
+            const updated = exists ? friends.filter(f => f.id !== student.id) : [...friends, student];
+            setFriends(updated);
+            localStorage.setItem("kk_friends", JSON.stringify(updated));
+          }}
+        />
+      }
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; }
@@ -861,6 +913,8 @@ const refetchSemesters = () =>
               <div style={{ fontSize:12, color:"var(--text2)" }}>{profile.email}</div>
             </div>
             <div style={{ marginLeft:"auto", display:"flex", gap:10, paddingBottom:4 }}>
+               <button onClick={() => setShowDirectory(true)} style={{ padding:"8px 16px", background:"var(--surface2)", color:"var(--primary)", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}> 
+                  Find Students </button>
               {saved && (
                 <div style={{ fontSize:12, fontWeight:600, color:"#2d7a4a", background:"#eef7f0", border:"1px solid #b7d9c0", borderRadius:8, padding:"6px 14px", display:"flex", alignItems:"center", gap:6 }}>
                   ✓ Saved
@@ -883,6 +937,40 @@ const refetchSemesters = () =>
             <StatChip label="Cumulative GPA" value={profile.cumGPA || "—"} color={gpaColor(profile.cumGPA)} bg="var(--bg)" />
             {profile.totalCredits && <StatChip label="Credits" value={`${profile.totalCredits} cr`} color="var(--accent2)" bg="var(--surface3)" />}
           </div>
+
+          <div style={{ display:"flex", gap:16, marginTop:16 }}>
+            <button onClick={() => setShowFollowList("following")} style={{ background:"none", border:"none", cursor:"pointer", padding:0, fontFamily:"inherit", textAlign:"left" }}>
+              <span style={{ fontSize:18, fontWeight:700, color:"var(--primary)" }}>{friends.length}</span>
+              <span style={{ fontSize:12, color:"var(--text2)", marginLeft:5 }}>Following</span>
+            </button>
+          </div>
+
+          {showFollowList && (
+            <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", zIndex:1001, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <div style={{ background:"var(--bg)", borderRadius:18, width:360, maxHeight:"70vh", display:"flex", flexDirection:"column", boxShadow:"0 8px 40px rgba(0,0,0,0.18)" }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 22px", borderBottom:"1px solid var(--border)" }}>
+                  <div style={{ fontFamily:"'Fraunces',serif", fontSize:16, fontWeight:700, color:"var(--primary)" }}>Following</div>
+                  <button onClick={() => setShowFollowList(null)} style={{ background:"none", border:"1px solid var(--border)", borderRadius:8, width:30, height:30, cursor:"pointer", fontSize:16, color:"var(--text2)" }}>✕</button>
+                </div>
+                <div style={{ overflowY:"auto", padding:"12px 16px", display:"flex", flexDirection:"column", gap:8 }}>
+                  {friends.length === 0 && <div style={{ fontSize:13, color:"var(--text3)", textAlign:"center", padding:"24px 0" }}>Not following anyone yet.</div>}
+                  {friends.map(f => (
+                    <div key={f.id} onClick={() => { setShowFollowList(null); setShowDirectory(true); }} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 12px", background:"var(--surface2)", borderRadius:12, border:"1px solid var(--border)", cursor:"pointer" }}>
+                      <div style={{ width:36, height:36, borderRadius:"50%", background:"linear-gradient(135deg,#8FB3E2,#A59AC9)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                        <span style={{ fontWeight:700, fontSize:13, color:"white" }}>{(f.firstName?.[0] || "?").toUpperCase()}</span>
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontWeight:600, fontSize:13, color:"var(--primary)" }}>{[f.firstName, f.lastName].filter(Boolean).join(" ") || "Student"}</div>
+                        {f.email && <div style={{ fontSize:11, color:"var(--text3)", marginTop:1 }}>{f.email}</div>}
+                      </div>
+                      <button onClick={() => { const next = friends.filter(x => x.id !== f.id); setFriends(next); localStorage.setItem("kk_friends", JSON.stringify(next)); }} style={{ fontSize:11, color:"var(--error)", background:"none", border:"1px solid var(--border)", borderRadius:7, padding:"3px 8px", cursor:"pointer", fontFamily:"inherit", flexShrink:0 }}>
+                        Unfollow </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {editing && (
             <div style={{ borderTop:"1px solid #F4F4F8", paddingTop:24 }}>
@@ -1280,6 +1368,7 @@ const refetchSemesters = () =>
                               localStorage.setItem("kk_syllabus_task_ids", JSON.stringify(map));
                               const next = { ...syllabi }; delete next[c.courseCode];
                               localStorage.setItem("kk_course_syllabus", JSON.stringify(next)); setSyllabi(next);
+                              fetch(`http://localhost:8080/api/user-syllabi/${encodeURIComponent(c.courseCode)}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{});
                               window.dispatchEvent(new Event("kk_syllabus_changed"));
                               const data = JSON.parse(localStorage.getItem("kk_course_data") || "{}"); delete data[c.courseCode]; localStorage.setItem("kk_course_data", JSON.stringify(data));
                               const oh = JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}"); delete oh[c.courseCode]; localStorage.setItem("kk_course_office_hours", JSON.stringify(oh));

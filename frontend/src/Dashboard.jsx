@@ -8,6 +8,7 @@ import StudyPlanner from "./StudyPlanner";
 import CourseDetails from "./CourseDetails";
 import SyllabusModal from "./SyllabusModal";
 import ThemeToggle from "./ThemeToggle";
+import StudentDirectory from "./StudentDirectoryPanel";
 import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle, Settings as SettingsIcon } from 'lucide-react';
 
 const AVATAR_ICONS = [
@@ -529,6 +530,20 @@ export default function Dashboard({ onLogout }) {
     { id:"reviews",   label:"Reviews",          icon:<Star size={17}/> },
   ];
 
+  const widgetSaveTimer = useRef(null);
+  const saveWidgetPrefsToBackend = (prefs) => {
+    clearTimeout(widgetSaveTimer.current);
+    widgetSaveTimer.current = setTimeout(() => {
+      const token = localStorage.getItem("kk_token");
+      if (!token) return;
+      fetch("http://localhost:8080/api/widget-prefs", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify(prefs),
+      }).catch(() => {});
+    }, 600);
+  };
+
   const [editingTask, setEditingTask] = useState(null);
   const [courseDetailsTarget, setCourseDetailsTarget] = useState(null);
   const [syllabusTarget, setSyllabusTarget] = useState(null); // course name for syllabus modal
@@ -568,18 +583,63 @@ export default function Dashboard({ onLogout }) {
   const [showToggle,    setShowToggle]    = useState(false);
   const toggleRef = useRef(null);
 
+  const knownIds = new Set(ALL_WIDGETS.map(w => w.id));
+  const defaultVisible = () => Object.fromEntries(ALL_WIDGETS.map(w => [w.id, true]));
+  const defaultOrder   = () => ALL_WIDGETS.map(w => w.id);
+  const defaultSizes   = () => Object.fromEntries(ALL_WIDGETS.map(w => [w.id, w.span]));
+
   const [visible, setVisible] = useState(() => {
-    try {
-      const saved = localStorage.getItem("kk_widgets");
-      return saved ? JSON.parse(saved) : Object.fromEntries(ALL_WIDGETS.map(w => [w.id, true]));
-    } catch {
-      return Object.fromEntries(ALL_WIDGETS.map(w => [w.id, true]));}
+    try { const s = localStorage.getItem("kk_widgets"); return s ? JSON.parse(s) : defaultVisible(); } catch { return defaultVisible(); }
   });
+  const [widgetOrder, setWidgetOrder] = useState(() => {
+    try {
+      const s = localStorage.getItem("kk_widget_order");
+      const saved = s ? JSON.parse(s) : [];
+      const filtered = saved.filter(id => knownIds.has(id));
+      return [...filtered, ...ALL_WIDGETS.map(w => w.id).filter(id => !filtered.includes(id))];
+    } catch { return defaultOrder(); }
+  });
+  const [widgetSizes, setWidgetSizes] = useState(() => {
+    try { const s = localStorage.getItem("kk_widget_sizes"); return s ? JSON.parse(s) : defaultSizes(); } catch { return defaultSizes(); }
+  });
+  const [widgetCollapsed, setWidgetCollapsed] = useState(() => {
+    try { const s = localStorage.getItem("kk_widget_collapsed"); return s ? JSON.parse(s) : {}; } catch { return {}; }
+  });
+
+  const [dragId,     setDragId]     = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+
+  // Fetch widget prefs from backend on mount
+  useEffect(() => {
+    const token = localStorage.getItem("kk_token");
+    if (!token) return;
+    fetch("http://localhost:8080/api/widget-prefs", { headers: { "Authorization": `Bearer ${token}` } })
+      .then(r => r.status === 204 ? null : r.json())
+      .then(data => {
+        if (!data) return;
+        if (data.visible)   { localStorage.setItem("kk_widgets", JSON.stringify(data.visible)); setVisible(data.visible); }
+        if (data.order)     { const filtered = data.order.filter(id => knownIds.has(id)); const full = [...filtered, ...defaultOrder().filter(id => !filtered.includes(id))]; localStorage.setItem("kk_widget_order", JSON.stringify(full)); setWidgetOrder(full); }
+        if (data.sizes)     { localStorage.setItem("kk_widget_sizes", JSON.stringify(data.sizes)); setWidgetSizes(data.sizes); }
+        if (data.collapsed) { localStorage.setItem("kk_widget_collapsed", JSON.stringify(data.collapsed)); setWidgetCollapsed(data.collapsed); }
+      })
+      .catch(() => {});
+  }, []);
+
+  const persistWidgetPrefs = (patch) => {
+    const prefs = {
+      visible:   patch.visible   ?? visible,
+      order:     patch.order     ?? widgetOrder,
+      sizes:     patch.sizes     ?? widgetSizes,
+      collapsed: patch.collapsed ?? widgetCollapsed,
+    };
+    saveWidgetPrefsToBackend(prefs);
+  };
 
   const toggleWidget = id => {
     setVisible(v => {
       const next = { ...v, [id]: !v[id] };
       localStorage.setItem("kk_widgets", JSON.stringify(next));
+      persistWidgetPrefs({ visible: next });
       return next;
     });
   };
@@ -588,39 +648,28 @@ export default function Dashboard({ onLogout }) {
     const next = Object.fromEntries(ALL_WIDGETS.map(w => [w.id, on]));
     setVisible(next);
     localStorage.setItem("kk_widgets", JSON.stringify(next));
+    persistWidgetPrefs({ visible: next });
   };
 
-  const _wUid = (() => { try { const t = localStorage.getItem("kk_token"); return t ? JSON.parse(atob(t.split(".")[1])).sub : "anon"; } catch { return "anon"; } })();
-  const [widgetOrder, setWidgetOrder] = useState(() => {
-    const knownIds = new Set(ALL_WIDGETS.map(w => w.id));
-    try {
-      const s = localStorage.getItem(`kk_widget_order_${_wUid}`);
-      const saved = s ? JSON.parse(s) : [];
-      const filtered = saved.filter(id => knownIds.has(id));
-      const missing = ALL_WIDGETS.map(w => w.id).filter(id => !filtered.includes(id));
-      return [...filtered, ...missing];
-    } catch { return ALL_WIDGETS.map(w => w.id); }
-  });
-  const [widgetSizes, setWidgetSizes] = useState(() => {
-    try { const s = localStorage.getItem(`kk_widget_sizes_${_wUid}`); return s ? JSON.parse(s) : Object.fromEntries(ALL_WIDGETS.map(w => [w.id, w.span])); } catch { return Object.fromEntries(ALL_WIDGETS.map(w => [w.id, w.span])); }
-  });
-  const [dragId,     setDragId]     = useState(null);
-  const [dragOverId, setDragOverId] = useState(null);
-
-  const saveWidgetOrder = (order) => { setWidgetOrder(order); localStorage.setItem(`kk_widget_order_${_wUid}`, JSON.stringify(order)); };
-  const saveWidgetSizes = (sizes) => { setWidgetSizes(sizes); localStorage.setItem(`kk_widget_sizes_${_wUid}`, JSON.stringify(sizes)); };
+  const saveWidgetOrder = (order) => {
+    setWidgetOrder(order);
+    localStorage.setItem("kk_widget_order", JSON.stringify(order));
+    persistWidgetPrefs({ order });
+  };
+  const saveWidgetSizes = (sizes) => {
+    setWidgetSizes(sizes);
+    localStorage.setItem("kk_widget_sizes", JSON.stringify(sizes));
+    persistWidgetPrefs({ sizes });
+  };
   const toggleSize = (id) => {
     const cur = widgetSizes[id] ?? ALL_WIDGETS.find(w => w.id === id)?.span ?? 1;
     saveWidgetSizes({ ...widgetSizes, [id]: cur >= 3 ? 1 : cur + 1 });
   };
-
-  const [widgetCollapsed, setWidgetCollapsed] = useState(() => {
-    try { const s = localStorage.getItem(`kk_widget_collapsed_${_wUid}`); return s ? JSON.parse(s) : {}; } catch { return {}; }
-  });
   const toggleCollapse = (id) => {
     const next = { ...widgetCollapsed, [id]: !widgetCollapsed[id] };
     setWidgetCollapsed(next);
-    localStorage.setItem(`kk_widget_collapsed_${_wUid}`, JSON.stringify(next));
+    localStorage.setItem("kk_widget_collapsed", JSON.stringify(next));
+    persistWidgetPrefs({ collapsed: next });
   };
   const onDragStart = (id) => setDragId(id);
   const onDragOver  = (e, id) => { e.preventDefault(); if (dragOverId !== id) setDragOverId(id); };
@@ -708,12 +757,19 @@ export default function Dashboard({ onLogout }) {
   const [courseSyllabi, setCourseSyllabi] = useState(() => {
     try { return JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"); } catch { return {}; }
   });
+
+  const authHeaders = () => ({ "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("kk_token")}` });
+
   useEffect(() => {
-    const sync = () => {
-      try { setCourseSyllabi(JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}")); } catch {}
-    };
-    window.addEventListener("kk_syllabus_changed", sync);
-    return () => window.removeEventListener("kk_syllabus_changed", sync);
+    fetch("http://localhost:8080/api/user-syllabi", { headers: authHeaders() })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && typeof data === "object") {
+          localStorage.setItem("kk_course_syllabus", JSON.stringify(data));
+          setCourseSyllabi(data);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const saveCourseOfficeHours = (courseName, hours) => {
@@ -1637,6 +1693,7 @@ export default function Dashboard({ onLogout }) {
           )}
           {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
           {activePage === "planner" && <StudyPlanner />}
+          {activePage === "students" && <StudentDirectory />}
           {activePage === "profile" && (
               <Profile onProfileSave={p => setProfile(p)} onSemestersUpdated={fetchSemesters} />
           )}
@@ -1686,9 +1743,15 @@ export default function Dashboard({ onLogout }) {
                     if (data.assessments?.length || data.finalExamWeight || data.professor) {
                       try {
                         const all = JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}");
-                        const next = { ...all, [name]: { assessments: data.assessments || [], finalExamWeight: data.finalExamWeight ?? null, professor: data.professor || null } };
+                        const payload = { assessments: data.assessments || [], finalExamWeight: data.finalExamWeight ?? null, professor: data.professor || null };
+                        const next = { ...all, [name]: payload };
                         localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
                         setCourseSyllabi(next);
+                        fetch(`http://localhost:8080/api/user-syllabi/${encodeURIComponent(name)}`, {
+                          method: "PUT",
+                          headers: authHeaders(),
+                          body: JSON.stringify(payload),
+                        }).catch(() => {});
                       } catch {}
                     }
                     if (data.assessments) {

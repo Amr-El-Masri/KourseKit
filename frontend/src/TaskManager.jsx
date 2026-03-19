@@ -232,7 +232,20 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
         .then(r => r.json())
         .then(data => {
           if (Array.isArray(data) && data.length > 0) {
-            const current = data[data.length - 1];
+            const TERM_ORDER = { spring: 2, summer: 1, fall: 0 };
+            const parse = name => {
+              if (!name) return { year: 0, term: 0 };
+              const lower = name.toLowerCase();
+              const yearMatch = name.match(/(\d{2,4})/g);
+              const year = yearMatch ? parseInt(yearMatch[yearMatch.length - 1]) : 0;
+              const term = Object.entries(TERM_ORDER).find(([k]) => lower.includes(k))?.[1] ?? -1;
+              return { year, term };
+            };
+            const sorted = [...data].sort((a, b) => {
+              const pa = parse(a.semesterName), pb = parse(b.semesterName);
+              return pa.year !== pb.year ? pa.year - pb.year : pa.term - pb.term;
+            });
+            const current = sorted[sorted.length - 1];
             const names = (current.courses || []).map(c => c.courseCode).filter(Boolean).sort();
             setSavedCourses(names);
           }
@@ -286,10 +299,6 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
 
   const deleteSyllabusTask = async (id) => {
     const task = tasks.find(t => t.id === id);
-    try {
-      const ids = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "[]").filter(x => String(x) !== String(id));
-      localStorage.setItem("kk_syllabus_task_ids", JSON.stringify(ids));
-    } catch {}
     await deleteTask(id);
     if (undoSyllabus?.timer) clearTimeout(undoSyllabus.timer);
     const timer = setTimeout(() => setUndoSyllabus(null), 6000);
@@ -304,14 +313,9 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
     const res = await fetch(`${API_BASE}/api/tasks/add`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getToken()}` },
-      body: JSON.stringify({ title: task.title, course: task.course, type: task.type, deadline: task.due, notes: task.notes || "" }),
+      body: JSON.stringify({ title: task.title, course: task.course, type: task.type, deadline: task.due, notes: task.notes || "", allowPastDeadline: true, fromSyllabus: true }),
     });
     if (res.ok) {
-      const created = await res.json();
-      try {
-        const existing = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "[]");
-        localStorage.setItem("kk_syllabus_task_ids", JSON.stringify([...existing, String(created.id)]));
-      } catch {}
       await loadTasks();
     }
   };
@@ -354,10 +358,6 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
     }
   };
 
-  const syllabusIds = (() => {
-    try { return new Set(JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "[]").map(String)); } catch { return new Set(); }
-  })();
-
   const filterFn = t => {
     if (filter==="Pending") return !t.done;
     if (filter==="Done")    return t.done;
@@ -365,9 +365,9 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
     return true;
   };
 
-  let displayed = tasks.filter(filterFn);
-  const syllabusDisplayed = displayed.filter(t => syllabusIds.has(String(t.id)));
-  const manualDisplayed   = displayed.filter(t => !syllabusIds.has(String(t.id)));
+  const displayed = tasks.filter(filterFn);
+  const syllabusDisplayed = displayed.filter(t => t.fromSyllabus);
+  const manualDisplayed   = displayed.filter(t => !t.fromSyllabus);
 
 
 
@@ -379,7 +379,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
   };
 
   return (
-      <div style={{ padding:"28px 28px 60px", maxWidth:860 }}>
+      <div style={{ padding:"28px 28px 60px" }}>
         <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; }
@@ -488,40 +488,37 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
             </div>
         ) : (<>
           {syllabusDisplayed.length > 0 && (
-              <div style={{ marginBottom:20 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-                  <div style={{ width:3, height:16, background:"var(--accent)", borderRadius:2 }} />
-                  <span style={{ fontSize:13, fontWeight:700, color:"var(--primary)", fontFamily:"'DM Sans',sans-serif" }}>From Syllabus</span>
-                  <span style={{ fontSize:12, color:"var(--text3)" }}>— imported automatically</span>
-                </div>
-                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                  {syllabusDisplayed.map(t => (
-                      <div key={t.id}>
-                        <TaskRow task={t} onToggle={toggleDone} onDelete={deleteSyllabusTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
-                        {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
-                      </div>
-                  ))}
-                </div>
+            <div style={{ marginBottom:20 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+                <div style={{ width:3, height:16, background:"var(--accent)", borderRadius:2 }} />
+                <span style={{ fontSize:13, fontWeight:700, color:"var(--primary)", fontFamily:"'DM Sans',sans-serif" }}>From Syllabus</span>
+                <span style={{ fontSize:12, color:"var(--text3)" }}>— imported automatically</span>
               </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {syllabusDisplayed.map(t => (
+                  <div key={t.id}>
+                    <TaskRow task={t} onToggle={toggleDone} onDelete={deleteSyllabusTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
+                    {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
-
           {manualDisplayed.length > 0 && (
-              <div>
-                {syllabusDisplayed.length > 0 && (
-                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
-                      <div style={{ width:3, height:16, background:"var(--accent)", borderRadius:2 }} />
-                      <span style={{ fontSize:13, fontWeight:700, color:"var(--primary)", fontFamily:"'DM Sans',sans-serif" }}>My Tasks</span>
-                    </div>
-                )}
-                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                  {manualDisplayed.map(t => (
-                      <div key={t.id}>
-                        <TaskRow task={t} onToggle={toggleDone} onDelete={deleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
-                        {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
-                      </div>
-                  ))}
-                </div>
+            <div>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+                <div style={{ width:3, height:16, background:"var(--accent)", borderRadius:2 }} />
+                <span style={{ fontSize:13, fontWeight:700, color:"var(--primary)", fontFamily:"'DM Sans',sans-serif" }}>My Tasks</span>
               </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {manualDisplayed.map(t => (
+                  <div key={t.id}>
+                    <TaskRow task={t} onToggle={toggleDone} onDelete={deleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
+                    {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
         </>)}
 

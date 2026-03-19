@@ -1279,7 +1279,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       )}
 
       {/* Grade Scale Reference */}
-      <div style={{ maxWidth:800, marginTop:28 }}>
+      <div style={{ marginTop:28 }}>
         <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
           <div style={{ width:3, height:18, background:"var(--accent)", borderRadius:2 }} />
           <h3 style={{ fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:15, color:"var(--primary)" }}>Grade Scale Reference</h3>
@@ -1330,7 +1330,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 const gc = {
   tabBar:    { display:"flex", gap:4, background:"var(--surface)", padding:5, borderRadius:14, border:"1px solid var(--border)", marginBottom:24, flexWrap:"wrap" },
   tab:       { padding:"9px 16px", border:"none", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s, color .15s", display:"flex", alignItems:"center" },
-  card:      { background:"var(--surface)", borderRadius:18, padding:"24px 26px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid var(--border)", maxWidth:800 },
+  card:      { background:"var(--surface)", borderRadius:18, padding:"24px 26px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid var(--border)" },
   headerRow: { display:"flex", gap:12, marginBottom:8, paddingBottom:8, borderBottom:"1px solid var(--border)" },
   colHead:   { fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", flex:1 },
   row:       { display:"flex", gap:12, marginBottom:8, alignItems:"center" },

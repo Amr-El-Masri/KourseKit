@@ -94,18 +94,24 @@ export default function TranscriptModal({ onClose, onApply }) {
       }
 
       // Store IDs for removal later
-      try {
-        const existing = JSON.parse(localStorage.getItem("kk_transcript_sem_ids") || "[]");
-        localStorage.setItem("kk_transcript_sem_ids", JSON.stringify([...existing, ...savedIds]));
-      } catch {}
+      const allIds = (() => {
+        try { return [...JSON.parse(localStorage.getItem("kk_transcript_sem_ids") || "[]"), ...savedIds]; }
+        catch { return savedIds; }
+      })();
+      localStorage.setItem("kk_transcript_sem_ids", JSON.stringify(allIds));
 
       // Store transcript info for Profile display
+      const uploadedAt = new Date().toISOString();
+      localStorage.setItem("kk_transcript_info", JSON.stringify({ uploadedAt, semesterCount: semCount, courseCount }));
+
+      // Persist to backend
       try {
-        localStorage.setItem("kk_transcript_info", JSON.stringify({
-          uploadedAt: new Date().toISOString(),
-          semesterCount: semCount,
-          courseCount,
-        }));
+        const token = localStorage.getItem("kk_token");
+        await fetch("http://localhost:8080/api/transcript-info", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+          body: JSON.stringify({ uploadedAt: uploadedAt.replace("Z", "").slice(0, 19), semesterCount: semCount, courseCount, semIds: JSON.stringify(allIds) }),
+        });
       } catch {}
 
       // Store most recent semester for GradeCalculator autofill
