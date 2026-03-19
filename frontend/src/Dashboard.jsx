@@ -8,6 +8,7 @@ import StudyPlanner from "./StudyPlanner";
 import CourseDetails from "./CourseDetails";
 import SyllabusModal from "./SyllabusModal";
 import ThemeToggle from "./ThemeToggle";
+import StudentDirectory from "./StudentDirectoryPanel";
 import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle, Settings as SettingsIcon } from 'lucide-react';
 
 const AVATAR_ICONS = [
@@ -1679,6 +1680,7 @@ export default function Dashboard({ onLogout }) {
           )}
           {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
           {activePage === "planner" && <StudyPlanner />}
+          {activePage === "students" && <StudentDirectory />}
           {activePage === "profile" && (
               <Profile onProfileSave={p => setProfile(p)} onSemestersUpdated={fetchSemesters} />
           )}
