@@ -423,8 +423,7 @@ function DayColumn({
                 const isPastDay = dateOnly < today;
 
                 const blockList = (blocks || []).filter(b => {
-                    if (b.completed) return false;  // never show completed blocks
-                    if (isPastDay) return false;     // hide all blocks on past days
+                    if (isPastDay) return false; // hide all blocks on past days
                     return true;
                 });
                 // Group overlapping blocks into columns

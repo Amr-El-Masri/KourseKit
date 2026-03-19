@@ -90,15 +90,22 @@ public class StudyPlanService {
 
             Map<Long, List<StudyBlock>> completedBlocksByEntry = new HashMap<>();
             Map<Long, Double> completedHoursByEntry = new HashMap<>();
+            Map<Long, List<StudyBlock>> pinnedBlocksByEntry = new HashMap<>();
+            Map<Long, Double> pinnedHoursByEntry = new HashMap<>();
             for (StudyPlanEntry entry : entries) {
                 List<StudyBlock> completed = blockRepository.findByStudyPlanEntryAndCompleted(entry, true);
                 completedBlocksByEntry.put(entry.getId(), completed);
-                double hrs = completed.stream().mapToDouble(StudyBlock::getDuration).sum();
-                completedHoursByEntry.put(entry.getId(), hrs);
+                double completedHrs = completed.stream().mapToDouble(StudyBlock::getDuration).sum();
+                completedHoursByEntry.put(entry.getId(), completedHrs);
+
+                List<StudyBlock> pinned = blockRepository.findPinnedUncompletedByEntry(entry);
+                pinnedBlocksByEntry.put(entry.getId(), pinned);
+                double pinnedHrs = pinned.stream().mapToDouble(StudyBlock::getDuration).sum();
+                pinnedHoursByEntry.put(entry.getId(), pinnedHrs);
             }
 
             for (StudyPlanEntry entry : entries) {
-                blockRepository.deleteByStudyPlanEntryAndCompletedFalse(entry);
+                blockRepository.deleteByStudyPlanEntryAndCompletedFalseAndPinnedFalse(entry);
             }
             entityManager.flush();
 
@@ -106,7 +113,9 @@ public class StudyPlanService {
             for (StudyPlanEntry entry : entries) {
                 originalWorkloads.put(entry.getId(), entry.getEstimatedWorkload());
                 double completedHrs = completedHoursByEntry.getOrDefault(entry.getId(), 0.0);
-                double futureWorkload = Math.max(0, entry.getEstimatedWorkload() - completedHrs);
+                double pinnedHrs = pinnedHoursByEntry.getOrDefault(entry.getId(), 0.0);
+                // Subtract both completed and pinned hours — scheduler only fills what's left
+                double futureWorkload = Math.max(0, entry.getEstimatedWorkload() - completedHrs - pinnedHrs);
                 entry.setEstimatedWorkload(futureWorkload);
                 entry.setCompletedHours(0);
                 entryRepository.save(entry);
@@ -115,8 +124,10 @@ public class StudyPlanService {
 
             for (StudyPlanEntry entry : entries) {
                 List<StudyBlock> completed = completedBlocksByEntry.getOrDefault(entry.getId(), new ArrayList<>());
+                List<StudyBlock> pinned = pinnedBlocksByEntry.getOrDefault(entry.getId(), new ArrayList<>());
                 entry.getAssignedBlocks().clear();
                 entry.getAssignedBlocks().addAll(completed);
+                entry.getAssignedBlocks().addAll(pinned);
             }
 
             SchedulerResult result = schedulerService.rebalance(entries, settings, today, weekStart);
@@ -295,6 +306,7 @@ public class StudyPlanService {
             block.setDuration(newDuration);
         }
 
+        block.setPinned(true);
         return blockRepository.save(block);
     }
 

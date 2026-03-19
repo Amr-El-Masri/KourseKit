@@ -58,7 +58,7 @@ public class SchedulerService {
 
         for (StudyPlanEntry entry : entries) {
             for (StudyBlock block : entry.getAssignedBlocks()) {
-                if (block.isCompleted()) {
+                if (block.isCompleted() || block.isPinned()) {
                     DayOfWeek dow = block.getDay().getDayOfWeek();
                     DaySchedule daySchedule = settings.getAvailability().get(dow);
                     if (daySchedule != null) {

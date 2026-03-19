@@ -28,6 +28,13 @@ public interface StudyBlockRepository extends JpaRepository<StudyBlock, Long> {
     void deleteByStudyPlanEntryAndCompletedFalse(@Param("entry") StudyPlanEntry entry);
 
     @Modifying
+    @Query("DELETE FROM StudyBlock b WHERE b.studyPlanEntry = :entry AND b.completed = false AND b.pinned = false")
+    void deleteByStudyPlanEntryAndCompletedFalseAndPinnedFalse(@Param("entry") StudyPlanEntry entry);
+
+    @Query("SELECT b FROM StudyBlock b WHERE b.studyPlanEntry = :entry AND b.pinned = true AND b.completed = false")
+    List<StudyBlock> findPinnedUncompletedByEntry(@Param("entry") StudyPlanEntry entry);
+
+    @Modifying
     @Query("DELETE FROM StudyBlock b WHERE b.studyPlanEntry = :entry AND b.completed = false AND b.day BETWEEN :from AND :to")
     void deleteByStudyPlanEntryAndCompletedFalseAndDayBetween(
             @Param("entry") StudyPlanEntry entry,
