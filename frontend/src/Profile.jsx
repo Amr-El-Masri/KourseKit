@@ -331,7 +331,7 @@ function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scro
   );
 }
 
-function DefaultScheduleEditor({ token }) {
+export function DefaultScheduleEditor({ token, onDone, extraAction }) {
   const [availability, setAvailability] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [snapshot,  setSnapshot]  = useState({});
@@ -429,6 +429,7 @@ function DefaultScheduleEditor({ token }) {
       setAvailability(av);
       setHasSaved(true);
       setIsEditing(false);
+      if (onDone) onDone();
     } catch {}
     setSaving(false);
   };
@@ -540,6 +541,7 @@ function DefaultScheduleEditor({ token }) {
                 Cancel
               </button>
             )}
+            {extraAction && <div style={{ marginLeft: "auto" }}>{extraAction}</div>}
           </div>
         )}
       </div>
