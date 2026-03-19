@@ -25,6 +25,9 @@ public class StudyBlock{
     private double duration;
     private boolean completed;
 
+    @Column(nullable = false)
+    private boolean pinned = false;
+
     public StudyBlock(){
 
     }
@@ -63,6 +66,7 @@ public class StudyBlock{
         return duration;
     }
     public boolean isCompleted(){return completed;}
+    public boolean isPinned() { return pinned; }
 
     @Transient
     @JsonIgnore
@@ -88,4 +92,5 @@ public class StudyBlock{
     public void setStartTime(LocalTime startTime) {this.startTime = startTime;}
     public void setDuration(double duration) {this.duration = duration;}
     public void setCompleted(boolean completed){this.completed = completed;}
+    public void setPinned(boolean pinned) { this.pinned = pinned; }
 }

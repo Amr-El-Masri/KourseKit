@@ -2,8 +2,9 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Pencil, Zap, RotateCcw } from "lucide-react";
 
 const HOUR_HEIGHT = 80;
-const START_HOUR = 6;
+const START_HOUR = 0;
 const END_HOUR = 24;
+const VISIBLE_HOURS = 8;
 const TOTAL_HOURS = END_HOUR - START_HOUR;
 const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 const DAY_KEYS = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
@@ -134,12 +135,12 @@ function normalizeWeeklyData(data) {
 function TimeGutter() {
     return (
         <div className="sp-time-gutter">
-            {Array.from({ length: TOTAL_HOURS }, (_, i) => {
+            {Array.from({ length: TOTAL_HOURS + 1 }, (_, i) => {
                 const hour = START_HOUR + i;
-                if (hour === START_HOUR) return <div key={hour} className="sp-time-label" style={{ top: 0 }} />;
+                const label = hour === 0 || hour === 24 ? "12am" : hour === 12 ? "12pm" : hour > 12 ? `${hour - 12}pm` : `${hour}am`;
                 return (
-                    <div key={hour} className="sp-time-label" style={{ top: hourToPx(hour) }}>
-                        <span>{hour > 12 ? `${hour - 12}pm` : hour === 12 ? "12pm" : `${hour}am`}</span>
+                    <div key={hour} className={`sp-time-label${i === 0 ? " sp-time-label-first" : ""}`} style={{ top: i * HOUR_HEIGHT }}>
+                        <span>{label}</span>
                     </div>
                 );
             })}
@@ -354,17 +355,24 @@ function DayColumn({
         if (!isAvailabilityMode) return;
         if (e.target.closest(".sp-avail-slot") || e.target.closest(".sp-study-block")) return;
         e.preventDefault();
-        const startHour = getHourFromEvent(e);
-        dragRef.current = { startHour, endHour: startHour + 0.5 };
-        setDragging({ startHour, endHour: startHour + 0.5 });
+        const startHour = Math.min(getHourFromEvent(e), END_HOUR - 0.5);
+        dragRef.current = { startHour, endHour: Math.min(startHour + 0.5, END_HOUR) };
+        setDragging({ startHour, endHour: Math.min(startHour + 0.5, END_HOUR) });
     }, [isAvailabilityMode, getHourFromEvent]);
 
     const handleMouseMove = useCallback((e) => {
         if (!dragRef.current) return;
         const currentHour = getHourFromEvent(e);
-        const endHour = Math.max(snapToHalf(currentHour), dragRef.current.startHour + 0.5);
+        const endHour = Math.min(Math.max(snapToHalf(currentHour), dragRef.current.startHour + 0.5), END_HOUR);
         dragRef.current.endHour = endHour;
         setDragging({ startHour: dragRef.current.startHour, endHour });
+        const scrollEl = columnRef.current?.closest(".sp-cal-body");
+        if (scrollEl) {
+            const { top, bottom } = scrollEl.getBoundingClientRect();
+            const ZONE = 80;
+            if (e.clientY > bottom - ZONE) scrollEl.scrollTop += Math.round((ZONE - (bottom - e.clientY)) / 4);
+            else if (e.clientY < top + ZONE) scrollEl.scrollTop -= Math.round((ZONE - (e.clientY - top)) / 4);
+        }
     }, [getHourFromEvent]);
 
     const handleMouseUp = useCallback(() => {
@@ -415,8 +423,7 @@ function DayColumn({
                 const isPastDay = dateOnly < today;
 
                 const blockList = (blocks || []).filter(b => {
-                    if (b.completed) return false;  // never show completed blocks
-                    if (isPastDay) return false;     // hide all blocks on past days
+                    if (isPastDay) return false; // hide all blocks on past days
                     return true;
                 });
                 // Group overlapping blocks into columns
@@ -460,6 +467,14 @@ function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId,
     const [selectedTaskId, setSelectedTaskId] = useState("");
     const [hoursPerWeek, setHoursPerWeek] = useState("");
     const [color, setColor] = useState(PALETTE[0]);
+    const [openColorPickerId, setOpenColorPickerId] = useState(null);
+
+    useEffect(() => {
+        if (!openColorPickerId) return;
+        const close = () => setOpenColorPickerId(null);
+        const timer = setTimeout(() => window.addEventListener("click", close), 0);
+        return () => { clearTimeout(timer); window.removeEventListener("click", close); };
+    }, [openColorPickerId]);
 
     useEffect(() => {
         apiFetch(`/api/tasks/list-all`).then(data => {
@@ -522,7 +537,7 @@ function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId,
                         <option value="">— Pick a task —</option>
                         {availableTasks.map(t => (
                             <option key={t.id} value={t.id}>
-                                [{t.course}] {t.title}
+                                {t.title} - {t.course}
                             </option>
                         ))}
                     </select>
@@ -571,31 +586,35 @@ function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId,
                     <div className="sp-empty-hint">No entries yet. Add a course above.</div>
                 )}
                 {entries.map(entry => {
+                    const isOpen = openColorPickerId === entry.id;
+                    const entryColor = colorMap[String(entry.id)] || entry.color;
                     return (
-                        <div key={entry.id} className="sp-entry-item">
-                            <div className="sp-entry-color-col">
-                                <div style={{ position:"relative" }}>
+                        <div key={entry.id} className="sp-entry-item" style={{ flexDirection: "column", alignItems: "stretch", gap: 0 }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                                <div className="sp-entry-color-col">
                                     <div
-                                        onClick={e => { e.stopPropagation(); const el = e.currentTarget.nextSibling; el.style.display = el.style.display === "grid" ? "none" : "grid"; }}
-                                        style={{ width:20, height:20, borderRadius:6, background: colorMap[String(entry.id)] || entry.color, cursor:"pointer", border:"2px solid var(--border)" }}
+                                        onClick={e => { e.stopPropagation(); setOpenColorPickerId(isOpen ? null : entry.id); }}
+                                        style={{ width:20, height:20, borderRadius:6, background: entryColor, cursor:"pointer", border:"2px solid var(--border)" }}
                                     />
-                                    <div style={{ display:"none", position:"absolute", left:24, top:0, zIndex:50, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:10, padding:8, gridTemplateColumns:"repeat(7,1fr)", gap:4, width:180, boxShadow:"0 4px 16px rgba(49,72,122,0.12)" }}>
-                                        {PALETTE.map(c => (
-                                            <button key={c} onClick={() => onColorChange(entry.id, c)}
-                                                    style={{ width:20, height:20, borderRadius:"50%", background:c, border: (colorMap[String(entry.id)]||entry.color)===c?"2px solid var(--text)":"2px solid transparent", cursor:"pointer", padding:0 }}
-                                            />
-                                        ))}
+                                </div>
+                                <div className="sp-entry-info">
+                                    <div className="sp-entry-name">{entry.name}</div>
+                                    {entry.course && <div style={{ fontSize:10, color:"var(--text2)", marginTop:1, marginBottom:2 }}>{entry.course}</div>}
+                                    <div className="sp-entry-meta">
+                                        <span className="sp-hours-badge">{entry.hoursPerWeek}h/wk</span>
                                     </div>
                                 </div>
+                                <button className="sp-entry-delete" onClick={() => onDelete(entry.id)}>×</button>
                             </div>
-                            <div className="sp-entry-info">
-                                <div className="sp-entry-name">{entry.name}</div>
-                                {entry.course && <div style={{ fontSize:10, color:"var(--text2)", marginTop:1, marginBottom:2 }}>{entry.course}</div>}
-                                <div className="sp-entry-meta">
-                                    <span className="sp-hours-badge">{entry.hoursPerWeek}h/wk</span>
+                            {isOpen && (
+                                <div onClick={e => e.stopPropagation()} style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:5, marginTop:8, padding:"8px 4px 2px", borderTop:"1px solid var(--border)" }}>
+                                    {PALETTE.map(c => (
+                                        <button key={c} onClick={() => { onColorChange(entry.id, c); setOpenColorPickerId(null); }}
+                                                style={{ width:"100%", aspectRatio:"1", borderRadius:"50%", background:c, border: entryColor===c?"2px solid var(--text)":"2px solid transparent", cursor:"pointer", padding:0 }}
+                                        />
+                                    ))}
                                 </div>
-                            </div>
-                            <button className="sp-entry-delete" onClick={() => onDelete(entry.id)}>×</button>
+                            )}
                         </div>
                     );
                 })}
@@ -605,8 +624,8 @@ function EntryPanel({ entries, onAdd, onDelete, colorMap, onColorChange, userId,
 }
 
 function SlotPanel({ availability, onDeleteSlot, onClearAll }) {
-    const allSlots = Object.entries(availability).flatMap(([dayKey, slots]) =>
-        slots.map(s => ({ ...s, dayKey }))
+    const allSlots = DAY_KEYS.flatMap(dayKey =>
+        (availability[dayKey] || []).slice().sort((a, b) => a.startHour - b.startHour).map(s => ({ ...s, dayKey }))
     );
 
     return (
@@ -650,17 +669,12 @@ export default function StudyPlanner() {
     const [hasGenerated, setHasGenerated] = useState(false);
     const [showSlotOverlay, setShowSlotOverlay] = useState(true);
 
-    const calBodyRef = useRef(null);
-    const [sbWidth, setSbWidth] = useState(0);
-
-    useEffect(() => {
-        const el = calBodyRef.current;
-        if (!el) return;
-        const update = () => setSbWidth(el.offsetWidth - el.clientWidth);
-        update();
-        const ro = new ResizeObserver(update);
-        ro.observe(el);
-        return () => ro.disconnect();
+    const calBodyRef = useCallback((el) => {
+        if (el) {
+            el.scrollTop = 8 * HOUR_HEIGHT;
+            const main = document.querySelector("main");
+            if (main) main.scrollTop = 0;
+        }
     }, []);
 
     const weekDates = getWeekDates(currentDate);
@@ -984,16 +998,16 @@ export default function StudyPlanner() {
             await apiFetch(`/api/study-plan/blocks?weekStart=${weekStart}`, { method: "DELETE" });
             await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`, { method: "DELETE" });
             setWeekBlocks({});
-            setAvailability({});
             setHasGenerated(false);
             localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
             setShowSlotOverlay(true);
+            await loadSlots(); // re-seeds from default since slots were just cleared
             showToast("Plan cleared", "info");
         } catch (e) {
             showToast(e.message || "Failed to clear plan", "error");
         }
         setLoading(false);
-    }, [showToast, weekStart]);
+    }, [showToast, weekStart, loadSlots]);
 
     const handleRebalance = useCallback(async () => {
         setLoading(true);
@@ -1433,6 +1447,9 @@ export default function StudyPlanner() {
         }
 
         .sp-day-header-row {
+          position: sticky;
+          top: 0;
+          z-index: 10;
           display: flex;
           flex-shrink: 0;
           border-bottom: 1px solid var(--border);
@@ -1476,17 +1493,23 @@ export default function StudyPlanner() {
         /* ── Calendar body ── */
         .sp-cal-body {
           display: flex;
+          flex-direction: column;
           flex: 1;
+          min-height: 0;
           overflow-y: scroll;
           overflow-x: hidden;
-          min-height: 0;
+        }
+
+        .sp-cal-content {
+          display: flex;
+          flex: 1;
         }
 
         .sp-time-gutter {
           width: 56px;
           flex-shrink: 0;
           position: relative;
-          height: ${TOTAL_HOURS * HOUR_HEIGHT}px;
+          height: ${TOTAL_HOURS * HOUR_HEIGHT + 20}px;
           border-right: 1px solid var(--border);
           background: var(--surface);
         }
@@ -1500,6 +1523,9 @@ export default function StudyPlanner() {
           white-space: nowrap;
           user-select: none;
         }
+        .sp-time-label-first {
+          transform: translateY(0);
+        }
 
         .sp-days-grid { display: flex; flex: 1; min-width: 0; }
 
@@ -1508,7 +1534,7 @@ export default function StudyPlanner() {
           flex: 1;
           min-width: 70px;
           position: relative;
-          height: ${TOTAL_HOURS * HOUR_HEIGHT}px;
+          height: ${TOTAL_HOURS * HOUR_HEIGHT + 20}px;
           border-right: 1px solid var(--border);
           cursor: default;
           user-select: none;
@@ -1847,17 +1873,17 @@ export default function StudyPlanner() {
                     <div className="sp-calendar-area">
                         <div className="sp-calendar-scroll-wrapper">
                             <div className="sp-calendar-inner">
-                                <div className="sp-day-header-row">
-                                    <div className="sp-gutter-spacer" />
-                                    {weekDates.map((date, i) => (
-                                        <div key={i} className={`sp-day-header ${isToday(date) ? "today" : ""}`}>
-                                            <div className="sp-day-name">{DAYS[i]}</div>
-                                            <div className="sp-day-number">{date.getDate()}</div>
-                                        </div>
-                                    ))}
-                                    {sbWidth > 0 && <div style={{ width: sbWidth, flexShrink: 0 }} />}
-                                </div>
                                 <div className="sp-cal-body" ref={calBodyRef}>
+                                    <div className="sp-day-header-row">
+                                        <div className="sp-gutter-spacer" />
+                                        {weekDates.map((date, i) => (
+                                            <div key={i} className={`sp-day-header ${isToday(date) ? "today" : ""}`}>
+                                                <div className="sp-day-name">{DAYS[i]}</div>
+                                                <div className="sp-day-number">{date.getDate()}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="sp-cal-content">
                                     <TimeGutter />
                                     <div className="sp-days-grid">
                                         {weekDates.map((date, i) => {
@@ -1884,6 +1910,7 @@ export default function StudyPlanner() {
                                             );
                                         })}
                                     </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1894,7 +1921,7 @@ export default function StudyPlanner() {
                     <div className="sp-modal-backdrop" onClick={() => setShowClearModal(false)}>
                         <div className="sp-modal" onClick={e => e.stopPropagation()}>
                             <h2>Clear This Week's Plan?</h2>
-                            <p>This will delete all study blocks and availability slots for this week. This cannot be undone.</p>
+                            <p>This will delete all study blocks for this week and restore your default availability slots. This cannot be undone.</p>
                             <div className="sp-modal-actions">
                                 <button className="sp-btn sp-btn-ghost" onClick={() => setShowClearModal(false)}>Cancel</button>
                                 <button className="sp-btn sp-btn-primary" style={{background:"var(--error)",borderColor:"var(--error)"}} onClick={handleClearPlanConfirmed}>Clear Plan</button>

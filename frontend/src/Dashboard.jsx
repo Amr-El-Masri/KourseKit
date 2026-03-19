@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import GradeCalculator from "./GradeCalculator";
 import Reviews from "./Reviews";
 import TaskManager from "./TaskManager";
-import Profile from "./Profile";
+import Profile, { DefaultScheduleEditor } from "./Profile";
 import Settings from "./Settings";
 import StudyPlanner from "./StudyPlanner";
 import CourseDetails from "./CourseDetails";
@@ -561,6 +561,19 @@ export default function Dashboard({ onLogout }) {
 
   const [activePage, setActivePage] = useState(() => localStorage.getItem("kk_activePage") || "dashboard");
   const [sidebarOpen,    setSidebarOpen]   = useState(true);
+
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const dismissOnboarding = useCallback(() => {
+    const email = localStorage.getItem("kk_email") || "";
+    if (email) localStorage.setItem(`kk_schedule_onboarded_${email}`, "true");
+    setShowOnboarding(false);
+  }, []);
+  useEffect(() => {
+    const email = localStorage.getItem("kk_email") || "";
+    if (!email) return;
+    if (localStorage.getItem(`kk_schedule_onboarded_${email}`)) return;
+    setShowOnboarding(true);
+  }, []);
   useEffect(() => {
     localStorage.setItem("kk_activePage", activePage);
     if (activePage === "grades") fetchSemesters();
@@ -1505,7 +1518,7 @@ export default function Dashboard({ onLogout }) {
         </aside>
 
         <main style={s.main}>
-          <header style={s.topbar}>
+          <header style={{ ...s.topbar, ...(activePage === "planner" ? { display: "none" } : {}) }}>
             <div>
               <div style={s.greeting}>Hello, <span style={{fontFamily:"'Fraunces',serif",fontStyle:"italic",color:"var(--primary)"}}>{displayName}!</span></div>
               <div style={{fontSize:13,color:"var(--accent2)",marginTop:2}}>{today.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}</div>
@@ -1694,6 +1707,28 @@ export default function Dashboard({ onLogout }) {
           )}
 
         </main>
+
+        {showOnboarding && (
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:"32px 24px" }}>
+            <div style={{ background:"var(--surface)", borderRadius:24, padding:"28px 32px", maxWidth:880, width:"100%", boxShadow:"0 8px 40px rgba(0,0,0,0.18)" }}>
+              <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:22, color:"var(--primary)", marginBottom:6 }}>Welcome to KourseKit!</div>
+              <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16, lineHeight:1.5 }}>
+                Set your weekly availability so the Study Planner knows when you're free to study. Drag on the grid below to mark your free time.
+              </div>
+              <div style={{ marginBottom: -20 }}>
+                <DefaultScheduleEditor
+                  token={localStorage.getItem("kk_token")}
+                  onDone={dismissOnboarding}
+                  extraAction={
+                    <button onClick={dismissOnboarding} style={{ background:"none", border:"none", color:"var(--text2)", fontSize:13, cursor:"pointer", padding:"6px 0", textDecoration:"underline", fontFamily:"'DM Sans',sans-serif" }}>
+                      Skip for now
+                    </button>
+                  }
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {syllabusTarget && (
             <SyllabusModal

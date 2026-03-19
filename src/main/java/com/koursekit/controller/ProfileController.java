@@ -1,10 +1,14 @@
 package com.koursekit.controller;
 
+import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,8 +19,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.koursekit.model.DefaultScheduleSlot;
 import com.koursekit.model.User;
+import com.koursekit.repository.DefaultScheduleSlotRepository;
 import com.koursekit.repository.UserRepo;
+import com.koursekit.service.StudyPlanService;
 
 @RestController
 @RequestMapping("/api/profile")
@@ -24,6 +31,10 @@ public class ProfileController {
     private final UserRepo userRepo;
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private DefaultScheduleSlotRepository defaultSlotRepo;
+    @Autowired
+    private StudyPlanService studyPlanService;
 
     public ProfileController(UserRepo userRepo) { this.userRepo = userRepo; }
 
@@ -100,6 +111,52 @@ public class ProfileController {
             userRepo.save(user);
         } catch (Exception ignored) {}
         return ResponseEntity.ok(colors);
+    }
+
+    @GetMapping("/default-schedule")
+    public ResponseEntity<List<Map<String, Object>>> getDefaultSchedule() {
+        User user = getAuthenticatedUser();
+        List<DefaultScheduleSlot> slots = defaultSlotRepo.findByUserId(user.getId());
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (DefaultScheduleSlot s : slots) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", s.getId());
+            m.put("dayKey", s.getDayKey());
+            m.put("startTime", s.getStartTime().toString());
+            m.put("endTime", s.getEndTime().toString());
+            result.add(m);
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    @PutMapping("/default-schedule")
+    @Transactional
+    public ResponseEntity<List<Map<String, Object>>> saveDefaultSchedule(
+            @RequestBody List<Map<String, Object>> slots) {
+        User user = getAuthenticatedUser();
+        defaultSlotRepo.deleteByUserId(user.getId());
+        List<DefaultScheduleSlot> toSave = new ArrayList<>();
+        for (Map<String, Object> s : slots) {
+            DefaultScheduleSlot slot = new DefaultScheduleSlot();
+            slot.setUser(user);
+            slot.setDayKey((String) s.get("dayKey"));
+            slot.setStartTime(LocalTime.parse((String) s.get("startTime")));
+            slot.setEndTime(LocalTime.parse((String) s.get("endTime")));
+            toSave.add(slot);
+        }
+        List<DefaultScheduleSlot> saved = defaultSlotRepo.saveAll(toSave);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (DefaultScheduleSlot s : saved) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", s.getId());
+            m.put("dayKey", s.getDayKey());
+            m.put("startTime", s.getStartTime().toString());
+            m.put("endTime", s.getEndTime().toString());
+            result.add(m);
+        }
+        // Clear slots for weeks with no generated plan so they re-seed from the new default
+        studyPlanService.syncSlotsFromDefault(user.getId());
+        return ResponseEntity.ok(result);
     }
 
     private Map<String, Object> toMap(User user) {

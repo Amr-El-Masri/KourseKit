@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import StudentDirectoryPanel from "./StudentDirectoryPanel";
 import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle } from "lucide-react";
 import AdminDashboard from "./AdminDashboard";
@@ -193,6 +193,359 @@ function CourseSearchInput({ value = "", onSelect }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Mini default-schedule planner constants ──────────────────────────────────
+const DS_HOUR_H   = 40;
+const DS_START    = 0;
+const DS_END      = 24;
+const DS_TOTAL    = DS_END - DS_START;
+const DS_VISIBLE_H = 8 * DS_HOUR_H;
+const DS_DAY_KEYS_LIST  = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"];
+const DS_DAY_SHORT      = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+function dsHourToPx(h)  { return (h - DS_START) * DS_HOUR_H; }
+function dsPxToHour(px) { return px / DS_HOUR_H + DS_START; }
+function dsSnap(h)      { return Math.round(h * 2) / 2; }
+function dsFmt(h) {
+  const hh = Math.floor(h), mm = Math.round((h % 1) * 60);
+  const ap = hh < 12 ? "AM" : "PM", h12 = hh % 12 || 12;
+  return mm ? `${h12}:${String(mm).padStart(2,"0")} ${ap}` : `${h12} ${ap}`;
+}
+function dsFmtISO(h) {
+  return `${String(Math.floor(h)).padStart(2,"0")}:${String(Math.round((h % 1) * 60)).padStart(2,"0")}:00`;
+}
+function dsParseHour(t) { const [h, m] = t.split(":"); return parseInt(h) + parseInt(m) / 60; }
+
+function DsMiniSlot({ slot, dayKey, onDelete, onResize, readonly }) {
+  const [liveEnd, setLiveEnd] = useState(null);
+  const liveRef = useRef(null);
+  const dragRef = useRef(null);
+  const endH = liveEnd ?? slot.endHour;
+
+  const handleResizeStart = useCallback((e) => {
+    if (readonly) return;
+    e.stopPropagation(); e.preventDefault();
+    dragRef.current = { startY: e.clientY, startEnd: slot.endHour };
+    liveRef.current = slot.endHour;
+    const onMove = (ev) => {
+      const diff = (ev.clientY - dragRef.current.startY) / DS_HOUR_H;
+      const ne = Math.min(Math.max(dsSnap(dragRef.current.startEnd + diff), slot.startHour + 0.5), DS_END);
+      liveRef.current = ne;
+      setLiveEnd(ne);
+    };
+    const onUp = () => {
+      if (dragRef.current) { onResize(dayKey, slot.id, liveRef.current); setLiveEnd(null); liveRef.current = null; }
+      dragRef.current = null;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [slot, dayKey, onResize, readonly]);
+
+  return (
+    <div
+      className="ds-slot"
+      style={{ top: dsHourToPx(slot.startHour) + 1, height: Math.max((endH - slot.startHour) * DS_HOUR_H - 2, 10) }}
+      onMouseDown={e => e.stopPropagation()}
+    >
+      <span className="ds-slot-time">{dsFmt(slot.startHour)}–{dsFmt(endH)}</span>
+      {!readonly && (
+        <button className="ds-slot-del" onClick={e => { e.stopPropagation(); onDelete(dayKey, slot.id); }}>×</button>
+      )}
+      {!readonly && (
+        <div onMouseDown={handleResizeStart} className="ds-slot-resize">
+          <div style={{ width: 16, height: 2, borderRadius: 1, background: "rgba(123,94,167,0.4)" }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scrollRef }) {
+  const colRef  = useRef(null);
+  const dragRef = useRef(null);
+  const [dragging, setDragging] = useState(null);
+
+  const getHour = useCallback((e, allowEnd = false) => {
+    const rect = colRef.current.getBoundingClientRect();
+    return Math.min(Math.max(dsSnap(dsPxToHour(e.clientY - rect.top)), DS_START), allowEnd ? DS_END : DS_END - 0.5);
+  }, []);
+
+  const onDown = useCallback((e) => {
+    if (readonly) return;
+    if (e.target.closest(".ds-slot")) return;
+    e.preventDefault();
+    const sh = getHour(e);
+    dragRef.current = { startHour: sh, endHour: sh + 0.5 };
+    setDragging({ startHour: sh, endHour: sh + 0.5 });
+  }, [getHour, readonly]);
+
+  const onMove = useCallback((e) => {
+    if (!dragRef.current) return;
+    const eh = Math.min(Math.max(dsSnap(getHour(e, true)), dragRef.current.startHour + 0.5), DS_END);
+    dragRef.current.endHour = eh;
+    setDragging({ startHour: dragRef.current.startHour, endHour: eh });
+    const scrollEl = scrollRef?.current;
+    if (scrollEl) {
+      const { top, bottom } = scrollEl.getBoundingClientRect();
+      const ZONE = 60;
+      if (e.clientY > bottom - ZONE) scrollEl.scrollTop += Math.round((ZONE - (bottom - e.clientY)) / 4);
+      else if (e.clientY < top + ZONE) scrollEl.scrollTop -= Math.round((ZONE - (e.clientY - top)) / 4);
+    }
+  }, [getHour, scrollRef]);
+
+  const onUp = useCallback(() => {
+    if (!dragRef.current) return;
+    const { startHour, endHour } = dragRef.current;
+    if (endHour - startHour >= 0.5) {
+      const overlaps = (slots || []).some(s => startHour < s.endHour && endHour > s.startHour);
+      if (!overlaps) onAdd(dayKey, { startHour, endHour, id: Date.now() + Math.random() });
+    }
+    dragRef.current = null;
+    setDragging(null);
+  }, [dayKey, slots, onAdd]);
+
+  useEffect(() => {
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("mousemove", onMove);
+    return () => { window.removeEventListener("mouseup", onUp); window.removeEventListener("mousemove", onMove); };
+  }, [onMove, onUp]);
+
+  return (
+    <div className={`ds-day-col${readonly ? " ds-day-readonly" : ""}`} ref={colRef} onMouseDown={onDown}>
+      {Array.from({ length: DS_TOTAL }, (_, i) => (
+        <div key={i} className="ds-hour-line" style={{ top: i * DS_HOUR_H }} />
+      ))}
+      {(slots || []).map(slot => (
+        <DsMiniSlot key={slot.id} slot={slot} dayKey={dayKey} onDelete={onDelete} onResize={onResize} readonly={readonly} />
+      ))}
+      {dragging && (
+        <div className="ds-drag-preview" style={{ top: dsHourToPx(dragging.startHour) + 1, height: (dragging.endHour - dragging.startHour) * DS_HOUR_H - 2 }}>
+          {dsFmt(dragging.startHour)}–{dsFmt(dragging.endHour)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function DefaultScheduleEditor({ token, onDone, extraAction }) {
+  const [availability, setAvailability] = useState({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [snapshot,  setSnapshot]  = useState({});
+  const [saving,         setSaving]         = useState(false);
+  const [hasSaved,       setHasSaved]       = useState(false);
+  const [confirmDelete,  setConfirmDelete]  = useState(false);
+  const scrollRef = useRef(null);
+
+  const authH = () => ({ "Content-Type": "application/json", "Authorization": `Bearer ${token}` });
+
+  useEffect(() => {
+    fetch(`${API}/api/profile/default-schedule`, { headers: authH() })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        if (!Array.isArray(data)) return;
+        const av = {};
+        data.forEach(s => {
+          if (!av[s.dayKey]) av[s.dayKey] = [];
+          av[s.dayKey].push({ id: s.id || Date.now() + Math.random(), startHour: dsParseHour(s.startTime), endHour: dsParseHour(s.endTime) });
+        });
+        setAvailability(av);
+        const hasAny = Object.values(av).some(arr => arr.length > 0);
+        setHasSaved(hasAny);
+        setIsEditing(!hasAny);
+      })
+      .catch(() => {});
+  }, []);
+
+  // Auto-scroll to 8AM on mount
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = 8 * DS_HOUR_H;
+    }
+  }, []);
+
+  const handleAdd = useCallback((dayKey, slot) => {
+    setAvailability(prev => ({ ...prev, [dayKey]: [...(prev[dayKey] || []), slot] }));
+  }, []);
+
+  const handleDelete = useCallback((dayKey, id) => {
+    setAvailability(prev => ({ ...prev, [dayKey]: (prev[dayKey] || []).filter(s => s.id !== id) }));
+  }, []);
+
+  const handleResize = useCallback((dayKey, id, newEnd) => {
+    setAvailability(prev => ({
+      ...prev,
+      [dayKey]: (prev[dayKey] || []).map(s => s.id === id ? { ...s, endHour: newEnd } : s),
+    }));
+  }, []);
+
+  const startEditing = () => {
+    setSnapshot(JSON.parse(JSON.stringify(availability)));
+    setIsEditing(true);
+  };
+
+  const handleCancel = () => {
+    setAvailability(snapshot);
+    setIsEditing(false);
+  };
+
+  const handleDeleteSchedule = async () => {
+    try {
+      await fetch(`${API}/api/profile/default-schedule`, {
+        method: "PUT", headers: authH(), body: JSON.stringify([]),
+      });
+      await fetch(`${API}/api/study-plan/slots/all`, {
+        method: "DELETE", headers: authH(),
+      });
+      setAvailability({});
+      setHasSaved(false);
+      setIsEditing(true);
+      setConfirmDelete(false);
+    } catch {}
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const payload = [];
+    for (const [dayKey, slots] of Object.entries(availability)) {
+      for (const s of slots) {
+        payload.push({ dayKey, startTime: dsFmtISO(s.startHour), endTime: dsFmtISO(s.endHour) });
+      }
+    }
+    try {
+      const res = await fetch(`${API}/api/profile/default-schedule`, {
+        method: "PUT", headers: authH(), body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      const av = {};
+      data.forEach(s => {
+        if (!av[s.dayKey]) av[s.dayKey] = [];
+        av[s.dayKey].push({ id: s.id, startHour: dsParseHour(s.startTime), endHour: dsParseHour(s.endTime) });
+      });
+      setAvailability(av);
+      setHasSaved(true);
+      setIsEditing(false);
+      if (onDone) onDone();
+    } catch {}
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ background: "var(--surface)", borderRadius: 20, border: "1px solid var(--border)", boxShadow: "0 2px 14px rgba(49,72,122,0.07)", overflow: "hidden", marginBottom: 20 }}>
+      <style>{`
+        .ds-grid-wrap { display:flex; user-select:none; }
+        .ds-gutter { width:56px; flex-shrink:0; position:relative; height:${DS_TOTAL * DS_HOUR_H + 20}px; border-right:1px solid var(--border); background:var(--surface); }
+        .ds-gutter-lbl { position:absolute; right:8px; transform:translateY(-50%); font-size:10px; color:var(--text3); white-space:nowrap; pointer-events:none; }
+        .ds-days-grid { display:flex; flex:1; }
+        .ds-day-col { flex:1; position:relative; height:${DS_TOTAL * DS_HOUR_H + 20}px; border-right:1px solid var(--border); cursor:crosshair; background:var(--surface); }
+        .ds-day-col.ds-day-readonly { cursor:default; }
+        .ds-day-col:last-child { border-right:none; }
+        .ds-hour-line { position:absolute; left:0; right:0; height:1px; background:var(--divider); pointer-events:none; }
+        .ds-slot { position:absolute; left:2px; right:2px; background:rgba(123,94,167,0.1); border:1px dashed rgba(123,94,167,0.4); border-radius:5px; z-index:1; display:flex; align-items:flex-start; justify-content:space-between; padding:2px 4px; overflow:hidden; }
+        .ds-slot-time { font-size:8px; color:var(--accent); line-height:1.4; }
+        .ds-slot-del { background:none; border:none; color:var(--error); font-size:12px; cursor:pointer; padding:0; line-height:1; opacity:0; transition:opacity .15s; flex-shrink:0; }
+        .ds-slot:hover .ds-slot-del { opacity:1; }
+        .ds-slot-resize { position:absolute; bottom:0; left:0; right:0; height:7px; cursor:ns-resize; display:flex; align-items:center; justify-content:center; }
+        .ds-drag-preview { position:absolute; left:2px; right:2px; background:rgba(123,94,167,0.15); border:1px dashed var(--accent); border-radius:5px; z-index:10; display:flex; align-items:center; justify-content:center; font-size:9px; color:var(--accent); pointer-events:none; }
+      `}</style>
+      <div style={{ padding: "20px 28px 24px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: "var(--text)", marginBottom: 3 }}>Default Weekly Schedule</div>
+            <div style={{ fontSize: 12, color: "var(--text2)" }}>Drag to mark your free time each week.</div>
+          </div>
+          {hasSaved && !isEditing && (
+            <div style={{ display: "flex", gap: 8 }}>
+              {!confirmDelete && (
+                <button onClick={startEditing} style={{ padding: "6px 16px", background: "var(--bg)", color: "var(--primary)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
+                  Edit
+                </button>
+              )}
+              {confirmDelete ? (
+                <>
+                  <button onClick={handleDeleteSchedule} style={{ padding: "6px 14px", background: "var(--error)", color: "white", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
+                    Confirm Delete
+                  </button>
+                  <button onClick={() => setConfirmDelete(false)} style={{ padding: "6px 14px", background: "var(--bg)", color: "var(--text2)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button onClick={() => setConfirmDelete(true)} style={{ padding: "6px 14px", background: "var(--error-bg)", color: "var(--error)", border: "1px solid var(--error-border)", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
+                  Delete
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Day headers */}
+        <div style={{ display: "flex", paddingLeft: 56, marginBottom: 4 }}>
+          {DS_DAY_KEYS_LIST.map((k, i) => (
+            <div key={k} style={{ flex: 1, textAlign: "center", fontSize: 10, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              {DS_DAY_SHORT[i]}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar grid */}
+        <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+          <div
+            className="ds-scroll"
+            ref={scrollRef}
+            style={{ overflowY: "auto", maxHeight: DS_VISIBLE_H }}
+          >
+            <div className="ds-grid-wrap">
+              {/* Time gutter */}
+              <div className="ds-gutter">
+                {Array.from({ length: DS_TOTAL + 1 }, (_, i) => {
+                  if (i === 0) return null;
+                  const h = i;
+                  return (
+                    <div key={h} className="ds-gutter-lbl" style={{ top: i * DS_HOUR_H }}>
+                      {h === 24 ? "12am" : h === 12 ? "12pm" : h > 12 ? `${h - 12}pm` : `${h}am`}
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Day columns */}
+              <div className="ds-days-grid">
+                {DS_DAY_KEYS_LIST.map(dayKey => (
+                  <DsMiniDayCol
+                    key={dayKey}
+                    dayKey={dayKey}
+                    slots={availability[dayKey] || []}
+                    onAdd={handleAdd}
+                    onDelete={handleDelete}
+                    onResize={handleResize}
+                    readonly={!isEditing}
+                    scrollRef={scrollRef}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {isEditing && (
+          <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 8 }}>
+            <button onClick={handleSave} disabled={saving} style={{ padding: "8px 22px", background: "var(--primary)", color: "white", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", opacity: saving ? 0.7 : 1 }}>
+              {saving ? "Saving…" : "Save"}
+            </button>
+            {hasSaved && (
+              <button onClick={handleCancel} style={{ padding: "8px 16px", background: "var(--bg)", color: "var(--text2)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
+                Cancel
+              </button>
+            )}
+            {extraAction && <div style={{ marginLeft: "auto" }}>{extraAction}</div>}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -879,9 +1232,11 @@ const refetchSemesters = () =>
         </div>
       )}
 
+      <DefaultScheduleEditor token={localStorage.getItem("kk_token")} />
+
       {/* Uploaded Transcript */}
       {transcriptInfo && (
-        <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px", marginTop:20 }}>
+        <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px", marginTop:24 }}>
           <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)", marginBottom:4 }}>Uploaded Transcript</div>
           <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16 }}>Remove to clear transcript-imported semesters from data.</div>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface2)", borderRadius:10, padding:"12px 16px", border:"1px solid var(--border)" }}>
