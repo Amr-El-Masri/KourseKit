@@ -23,6 +23,7 @@ import com.koursekit.model.DefaultScheduleSlot;
 import com.koursekit.model.User;
 import com.koursekit.repository.DefaultScheduleSlotRepository;
 import com.koursekit.repository.UserRepo;
+import com.koursekit.service.StudyPlanService;
 
 @RestController
 @RequestMapping("/api/profile")
@@ -32,6 +33,8 @@ public class ProfileController {
     private ObjectMapper objectMapper;
     @Autowired
     private DefaultScheduleSlotRepository defaultSlotRepo;
+    @Autowired
+    private StudyPlanService studyPlanService;
 
     public ProfileController(UserRepo userRepo) { this.userRepo = userRepo; }
 
@@ -151,6 +154,8 @@ public class ProfileController {
             m.put("endTime", s.getEndTime().toString());
             result.add(m);
         }
+        // Clear slots for weeks with no generated plan so they re-seed from the new default
+        studyPlanService.syncSlotsFromDefault(user.getId());
         return ResponseEntity.ok(result);
     }
 

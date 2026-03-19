@@ -20,4 +20,7 @@ public interface AvailabilitySlotRepository extends JpaRepository<AvailabilitySl
     @Modifying
     @Query("DELETE FROM AvailabilitySlot s WHERE s.user.id = :userId")
     void deleteAllByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT DISTINCT s.weekStart FROM AvailabilitySlot s WHERE s.user.id = :userId")
+    List<LocalDate> findDistinctWeekStartsByUserId(@Param("userId") Long userId);
 }

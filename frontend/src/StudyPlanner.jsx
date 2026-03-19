@@ -999,16 +999,16 @@ export default function StudyPlanner() {
             await apiFetch(`/api/study-plan/blocks?weekStart=${weekStart}`, { method: "DELETE" });
             await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`, { method: "DELETE" });
             setWeekBlocks({});
-            setAvailability({});
             setHasGenerated(false);
             localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
             setShowSlotOverlay(true);
+            await loadSlots(); // re-seeds from default since slots were just cleared
             showToast("Plan cleared", "info");
         } catch (e) {
             showToast(e.message || "Failed to clear plan", "error");
         }
         setLoading(false);
-    }, [showToast, weekStart]);
+    }, [showToast, weekStart, loadSlots]);
 
     const handleRebalance = useCallback(async () => {
         setLoading(true);
@@ -1448,6 +1448,9 @@ export default function StudyPlanner() {
         }
 
         .sp-day-header-row {
+          position: sticky;
+          top: 0;
+          z-index: 10;
           display: flex;
           flex-shrink: 0;
           border-bottom: 1px solid var(--border);
@@ -1491,10 +1494,16 @@ export default function StudyPlanner() {
         /* ── Calendar body ── */
         .sp-cal-body {
           display: flex;
+          flex-direction: column;
           flex: 1;
           min-height: 0;
-          overflow-y: overlay;
+          overflow-y: scroll;
           overflow-x: hidden;
+        }
+
+        .sp-cal-content {
+          display: flex;
+          flex: 1;
         }
 
         .sp-time-gutter {
@@ -1865,16 +1874,17 @@ export default function StudyPlanner() {
                     <div className="sp-calendar-area">
                         <div className="sp-calendar-scroll-wrapper">
                             <div className="sp-calendar-inner">
-                                <div className="sp-day-header-row">
-                                    <div className="sp-gutter-spacer" />
-                                    {weekDates.map((date, i) => (
-                                        <div key={i} className={`sp-day-header ${isToday(date) ? "today" : ""}`}>
-                                            <div className="sp-day-name">{DAYS[i]}</div>
-                                            <div className="sp-day-number">{date.getDate()}</div>
-                                        </div>
-                                    ))}
-                                </div>
                                 <div className="sp-cal-body" ref={calBodyRef}>
+                                    <div className="sp-day-header-row">
+                                        <div className="sp-gutter-spacer" />
+                                        {weekDates.map((date, i) => (
+                                            <div key={i} className={`sp-day-header ${isToday(date) ? "today" : ""}`}>
+                                                <div className="sp-day-name">{DAYS[i]}</div>
+                                                <div className="sp-day-number">{date.getDate()}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="sp-cal-content">
                                     <TimeGutter />
                                     <div className="sp-days-grid">
                                         {weekDates.map((date, i) => {
@@ -1901,6 +1911,7 @@ export default function StudyPlanner() {
                                             );
                                         })}
                                     </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1911,7 +1922,7 @@ export default function StudyPlanner() {
                     <div className="sp-modal-backdrop" onClick={() => setShowClearModal(false)}>
                         <div className="sp-modal" onClick={e => e.stopPropagation()}>
                             <h2>Clear This Week's Plan?</h2>
-                            <p>This will delete all study blocks and availability slots for this week. This cannot be undone.</p>
+                            <p>This will delete all study blocks for this week and restore your default availability slots. This cannot be undone.</p>
                             <div className="sp-modal-actions">
                                 <button className="sp-btn sp-btn-ghost" onClick={() => setShowClearModal(false)}>Cancel</button>
                                 <button className="sp-btn sp-btn-primary" style={{background:"var(--error)",borderColor:"var(--error)"}} onClick={handleClearPlanConfirmed}>Clear Plan</button>

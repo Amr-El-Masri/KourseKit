@@ -408,4 +408,16 @@ public class StudyPlanService {
     public void clearAllSlots(Long userId) {
         slotRepository.deleteAllByUserId(userId);
     }
+    
+    @org.springframework.transaction.annotation.Transactional
+    public void syncSlotsFromDefault(Long userId) {
+        List<LocalDate> weeks = slotRepository.findDistinctWeekStartsByUserId(userId);
+        for (LocalDate weekStart : weeks) {
+            LocalDate weekEnd = weekStart.plusDays(6);
+            List<StudyBlock> blocks = blockRepository.findByStudyPlanEntry_User_IdAndDayBetween(userId, weekStart, weekEnd);
+            if (blocks.isEmpty()) {
+                slotRepository.deleteByUserIdAndWeekStart(userId, weekStart);
+            }
+        }
+    }
 }
