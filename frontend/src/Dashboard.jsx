@@ -9,7 +9,8 @@ import CourseDetails from "./CourseDetails";
 import SyllabusModal from "./SyllabusModal";
 import ThemeToggle from "./ThemeToggle";
 import StudentDirectory from "./StudentDirectoryPanel";
-import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle, Settings as SettingsIcon } from 'lucide-react';
+import Forum from "./Forum";
+import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle, Settings as SettingsIcon, MessageSquare } from 'lucide-react';
 
 const AVATAR_ICONS = [
   { id:"Banana", icon: Banana },
@@ -528,6 +529,7 @@ export default function Dashboard({ onLogout }) {
     { id:"planner",   label:"Study Planner",    icon:<BookOpen size={17}/> },
     { id:"grades",    label:"Grade Calculator", icon:<Calculator size={17}/> },
     { id:"reviews",   label:"Reviews",          icon:<Star size={17}/> },
+    { id:"forum",     label:"Forum",            icon:<MessageSquare size={17}/> },
   ];
 
   const widgetSaveTimer = useRef(null);
@@ -1692,6 +1694,7 @@ export default function Dashboard({ onLogout }) {
               />
           )}
           {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
+          {activePage === "forum" && <Forum />}
           {activePage === "planner" && <StudyPlanner />}
           {activePage === "students" && <StudentDirectory />}
           {activePage === "profile" && (
