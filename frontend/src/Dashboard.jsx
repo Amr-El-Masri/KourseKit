@@ -89,28 +89,6 @@ function SemesterSelect({ value, onChange, semesters }) {
   );
 }
 
-function WidgetTogglePanel({ visible, onToggle, onToggleAll }) {
-  const allOn = ALL_WIDGETS.every(w => visible[w.id]);
-  return (
-      <div style={sd.togglePanel}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
-          <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em" }}>Widgets</div>
-          <button onClick={() => onToggleAll(!allOn)} style={{ fontSize:11, fontWeight:600, padding:"3px 9px", borderRadius:6, border:"1px solid var(--border)", background:"var(--surface)", color:"var(--accent)", cursor:"pointer", fontFamily:"inherit" }}>
-            {allOn ? "Hide all" : "Show all"}
-          </button>
-        </div>
-        {ALL_WIDGETS.map(w => (
-            <div key={w.id} onClick={() => onToggle(w.id)}
-                 style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"7px 10px", borderRadius:8, marginBottom:4, cursor:"pointer", background: visible[w.id] ? "var(--surface3)" : "transparent", transition:"background .15s" }}>
-              <span style={{ fontSize:13, color: visible[w.id] ? "var(--primary)" : "var(--text2)" }}>{w.label}</span>
-              <div style={{ width:32, height:18, borderRadius:9, background: visible[w.id] ? "var(--accent)" : "var(--border)", position:"relative", transition:"background .2s" }}>
-                <div style={{ position:"absolute", top:2, left: visible[w.id] ? 16 : 2, width:14, height:14, borderRadius:"50%", background:"white", transition:"left .2s", boxShadow:"0 1px 3px rgba(0,0,0,0.2)" }} />
-              </div>
-            </div>
-        ))}
-      </div>
-  );
-}
 
 function PomodoroTimer() {
   const MODES = [
@@ -580,8 +558,6 @@ export default function Dashboard({ onLogout }) {
   }, [activePage]);
   const [semester,       setSemester]      = useState("");
   const [apiSemesters,   setApiSemesters]  = useState([]);
-  const [showToggle,    setShowToggle]    = useState(false);
-  const toggleRef = useRef(null);
 
   const knownIds = new Set(ALL_WIDGETS.map(w => w.id));
   const defaultVisible = () => Object.fromEntries(ALL_WIDGETS.map(w => [w.id, true]));
@@ -644,12 +620,6 @@ export default function Dashboard({ onLogout }) {
     });
   };
 
-  const toggleAllWidgets = (on) => {
-    const next = Object.fromEntries(ALL_WIDGETS.map(w => [w.id, on]));
-    setVisible(next);
-    localStorage.setItem("kk_widgets", JSON.stringify(next));
-    persistWidgetPrefs({ visible: next });
-  };
 
   const saveWidgetOrder = (order) => {
     setWidgetOrder(order);
@@ -682,11 +652,6 @@ export default function Dashboard({ onLogout }) {
   };
   const onDragEnd = () => { setDragId(null); setDragOverId(null); };
 
-  useEffect(() => {
-    const h = e => { if (toggleRef.current && !toggleRef.current.contains(e.target)) setShowToggle(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
 
   const [todos, setTodos] = useState(() => {
     try {
@@ -1409,7 +1374,14 @@ export default function Dashboard({ onLogout }) {
         style={{ cursor:"grab", color:"var(--text3)", fontSize:15, userSelect:"none", padding:"2px 4px", lineHeight:1 }}>⠿</div>
     ) : null;
 
-    const controls = <div style={{ display:"flex", alignItems:"center", gap:4 }}>{collapseBtn}{sizeBtn}{dragHandle}</div>;
+    const hideBtn = !isPinned ? (
+      <button onClick={() => toggleWidget(id)} title="Hide widget"
+        style={{ background:"none", border:"1px solid var(--border)", borderRadius:6, padding:"2px 7px", cursor:"pointer", color:"var(--text3)", fontSize:11, lineHeight:1.6, fontFamily:"inherit" }}>
+        ×
+      </button>
+    ) : null;
+
+    const controls = <div style={{ display:"flex", alignItems:"center", gap:4 }}>{collapseBtn}{sizeBtn}{dragHandle}{hideBtn}</div>;
 
     const collapsedBar = (
       <section key={id} className="card-anim"
@@ -1527,14 +1499,6 @@ export default function Dashboard({ onLogout }) {
             <div style={{display:"flex", alignItems:"center", gap:8, marginLeft:"auto"}}>
               {activePage === "dashboard" && (
                 <SemesterSelect value={semester} onChange={setSemester} semesters={apiSemesters.map(s => s.semesterName)} />
-              )}
-              {activePage === "dashboard" && (
-                <div ref={toggleRef} style={{position:"relative"}}>
-                  <button onClick={() => setShowToggle(o=>!o)} style={sd.toggleBtn} title="Customize widgets">
-                    <span style={{fontSize:12,fontWeight:600,color:"var(--primary)",marginLeft:4}}>Widgets</span>
-                  </button>
-                  {showToggle && <WidgetTogglePanel visible={visible} onToggle={toggleWidget} onToggleAll={toggleAllWidgets} />}
-                </div>
               )}
               <button
                   onClick={() => window.location.reload()}
@@ -1676,6 +1640,17 @@ export default function Dashboard({ onLogout }) {
                 )}
                 {/* Reorderable widgets */}
                 {widgetOrder.filter(id => { const w = ALL_WIDGETS.find(x => x.id === id); return visible[id] && !w?.pinned; }).map(id => renderWidget(id))}
+                {/* Ghost cards for hidden widgets */}
+                {widgetOrder.filter(id => { const w = ALL_WIDGETS.find(x => x.id === id); return !visible[id] && !w?.pinned; }).map(id => {
+                  const wDef = ALL_WIDGETS.find(w => w.id === id);
+                  return (
+                    <div key={id} style={{ gridColumn:"span 1", border:"2px dashed var(--border)", borderRadius:16, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface2)", opacity:0.65 }}>
+                      <span style={{ fontSize:13, color:"var(--text3)", fontWeight:500 }}>{wDef?.label}</span>
+                      <button onClick={() => toggleWidget(id)} title="Show widget"
+                        style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:6, padding:"2px 10px", cursor:"pointer", color:"var(--accent)", fontSize:15, fontWeight:700, lineHeight:1.6, fontFamily:"inherit" }}>+</button>
+                    </div>
+                  );
+                })}
               </div>
           )}
 

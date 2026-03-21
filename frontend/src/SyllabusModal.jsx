@@ -120,16 +120,18 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
             if (!isoDate) continue;
             iso = `${isoDate}T23:59`;
           } catch { continue; }
-          const res = await fetch(`${API}/api/tasks/${uid}/add`, {
+          const res = await fetch(`${API}/api/tasks/add`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${token()}` },
             body: JSON.stringify({
-              course: info.courseCode || courseName,
+              course: courseName || info.courseCode,
               title: d.title,
               type: d.type || "Assignment",
               deadline: iso,
               completed: false,
               notes: "",
+              allowPastDeadline: true,
+              fromSyllabus: true,
             }),
           });
           if (res.ok) {
@@ -137,8 +139,11 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
             if (created?.id) {
               taskCount++;
               try {
-                const existing = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "[]");
-                localStorage.setItem("kk_syllabus_task_ids", JSON.stringify([...existing, String(created.id)]));
+                const raw = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "{}");
+                const map = Array.isArray(raw) ? {} : raw;
+                const key = courseName || info.courseCode || "__unknown";
+                map[key] = [...(map[key] || []), String(created.id)];
+                localStorage.setItem("kk_syllabus_task_ids", JSON.stringify(map));
               } catch {}
             }
           }
@@ -148,6 +153,7 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
       // Pass data to parent for calculator auto-fill + office hours
       onApply({
         officeHours,
+        professor: info.professor || null,
         ...(applyCalc ? {
           courseCode: info.courseCode || courseName,
           credits: info.credits,
@@ -218,6 +224,10 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
 
         {step === "confirm" && (
           <>
+            <div style={{ fontSize: 12, color: "var(--text2)", background: "var(--surface2)", borderRadius: 8, padding: "8px 12px", marginBottom: 18 }}>
+              Extracted automatically from syllabus — review and edit before applying.
+            </div>
+
             {/* Course Info */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: "var(--primary)", marginBottom: 12 }}>Course Info</div>
@@ -284,16 +294,36 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
             )}
 
             {/* Office Hours */}
-            {officeHours.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: "var(--primary)", marginBottom: 8 }}>Office Hours</div>
-                {officeHours.map((o, i) => (
-                  <div key={i} style={{ fontSize: 12, color: "var(--accent2)", marginBottom: 4 }}>
-                    {o.day} {o.time} {o.location && `— ${o.location}`}
-                  </div>
-                ))}
-              </div>
-            )}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, color: "var(--primary)", marginBottom: 10 }}>Office Hours</div>
+              {officeHours.length === 0 && (
+                <div style={{ fontSize: 12, color: "var(--text2)", marginBottom: 8 }}>No office hours extracted — add them manually.</div>
+              )}
+              {officeHours.map((o, i) => (
+                <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "center" }}>
+                  <input
+                    style={{ ...input, flex: 1 }}
+                    value={o.day || ""}
+                    onChange={e => setOfficeHours(p => p.map((x, j) => j === i ? { ...x, day: e.target.value } : x))}
+                    placeholder="Day (e.g. Mon)"
+                  />
+                  <input
+                    style={{ ...input, flex: 1 }}
+                    value={o.time || ""}
+                    onChange={e => setOfficeHours(p => p.map((x, j) => j === i ? { ...x, time: e.target.value } : x))}
+                    placeholder="Time (e.g. 2–4pm)"
+                  />
+                  <input
+                    style={{ ...input, flex: 2 }}
+                    value={o.location || ""}
+                    onChange={e => setOfficeHours(p => p.map((x, j) => j === i ? { ...x, location: e.target.value } : x))}
+                    placeholder="Location (optional)"
+                  />
+                  <button onClick={() => setOfficeHours(p => p.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", fontSize: 14 }}>✕</button>
+                </div>
+              ))}
+              <button onClick={() => setOfficeHours(p => [...p, { day: "", time: "", location: "" }])} style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}>+ Add office hours</button>
+            </div>
 
             {/* Apply to Calculator checkbox */}
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--accent2)", marginBottom: 20, cursor: "pointer" }}>
