@@ -19,7 +19,7 @@ function calcDropPos(inputEl, dropHeight = 260, minWidth = 340) {
 export default function StudentCourses({ value, onSelect, inputStyle = {} }) {
   const hasSection = !!value?.sectioncrn;
 
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(value?.code || "");
   const [courseResults, setCourseResults] = useState([]);
   const [loadingCourses, setLoadingCourses] = useState(false);
   const [showCourses, setShowCourses] = useState(false);

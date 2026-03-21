@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -64,8 +65,13 @@ public class ProfileController {
         if (body.containsKey("minorName"))     user.setMinorName((String) body.get("minorName"));
         if (body.containsKey("doubleMinor"))   user.setDoubleMinor(Boolean.TRUE.equals(body.get("doubleMinor")));
         if (body.containsKey("secondMinor"))   user.setSecondMinor((String) body.get("secondMinor"));
-        if (body.containsKey("tripleMinor"))   user.setTripleMinor(Boolean.TRUE.equals(body.get("tripleMinor")));
-        if (body.containsKey("thirdMinor"))    user.setThirdMinor((String) body.get("thirdMinor"));
+        if (body.containsKey("tripleMinor"))       user.setTripleMinor(Boolean.TRUE.equals(body.get("tripleMinor")));
+        if (body.containsKey("thirdMinor"))        user.setThirdMinor((String) body.get("thirdMinor"));
+        if (body.containsKey("graduationYear"))    user.setGraduationYear((String) body.get("graduationYear"));
+        if (body.containsKey("linkedin"))          user.setLinkedin((String) body.get("linkedin"));
+        if (body.containsKey("github"))            user.setGithub((String) body.get("github"));
+        if (body.containsKey("openToStudyGroups")) user.setOpenToStudyGroups(Boolean.TRUE.equals(body.get("openToStudyGroups")));
+        if (body.containsKey("interests"))         user.setInterests((String) body.get("interests"));
 
         userRepo.save(user);
         return ResponseEntity.ok(toMap(user));
@@ -180,9 +186,48 @@ public class ProfileController {
         m.put("secondMinor",   user.getSecondMinor()   != null ? user.getSecondMinor()   : "");
         m.put("tripleMinor",   user.isTripleMinor());
         m.put("thirdMinor",    user.getThirdMinor()    != null ? user.getThirdMinor()    : "");
-        m.put("theme",                  user.getTheme()         != null ? user.getTheme()         : "light");
-        m.put("emailRemindersEnabled",  user.isEmailRemindersEnabled());
+        m.put("theme",               user.getTheme()          != null ? user.getTheme()          : "light");
+        m.put("emailRemindersEnabled", user.isEmailRemindersEnabled());
+        m.put("graduationYear",      user.getGraduationYear() != null ? user.getGraduationYear() : "");
+        m.put("linkedin",            user.getLinkedin()       != null ? user.getLinkedin()        : "");
+        m.put("github",              user.getGithub()         != null ? user.getGithub()          : "");
+        m.put("openToStudyGroups",   user.isOpenToStudyGroups());
+        m.put("interests",           user.getInterests()      != null ? user.getInterests()       : "");
         return m;
+    }
+
+    @GetMapping("/notification-prefs")
+    public ResponseEntity<Map<String, Object>> getNotifPrefs() {
+        User user = getAuthenticatedUser();
+        try {
+            String json = user.getNotificationPrefsJson();
+            if (json != null && !json.isBlank())
+                return ResponseEntity.ok(objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {}));
+        } catch (Exception ignored) {}
+        Map<String, Object> defaults = new HashMap<>();
+        defaults.put("overdue", true);
+        defaults.put("dueToday", true);
+        defaults.put("threeDays", true);
+        return ResponseEntity.ok(defaults);
+    }
+
+    @PutMapping("/notification-prefs")
+    public ResponseEntity<Map<String, Object>> updateNotifPrefs(@RequestBody Map<String, Object> body) {
+        User user = getAuthenticatedUser();
+        try {
+            user.setNotificationPrefsJson(objectMapper.writeValueAsString(body));
+            userRepo.save(user);
+        } catch (Exception ignored) {}
+        return ResponseEntity.ok(body);
+    }
+
+    @DeleteMapping
+    public ResponseEntity<Map<String, Object>> deleteAccount() {
+        User user = getAuthenticatedUser();
+        userRepo.delete(user);
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("deleted", true);
+        return ResponseEntity.ok(resp);
     }
 
     private User getAuthenticatedUser() { return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal(); }

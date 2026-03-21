@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./ThemeContext";
 
@@ -19,6 +19,43 @@ export default function Settings({ onLogout }) {
   const [emailReminders, setEmailReminders] = useState(
     localStorage.getItem("kk_email_reminders") !== "false"
   );
+  const [notifPrefs, setNotifPrefs] = useState({ overdue: true, dueToday: true, threeDays: true });
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem("kk_token");
+    if (!token) return;
+    fetch(`${API}/api/profile/notification-prefs`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setNotifPrefs(d); })
+      .catch(() => {});
+  }, []);
+
+  const toggleNotifPref = async (key) => {
+    const next = { ...notifPrefs, [key]: !notifPrefs[key] };
+    setNotifPrefs(next);
+    try {
+      const token = localStorage.getItem("kk_token");
+      await fetch(`${API}/api/profile/notification-prefs`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(next),
+      });
+    } catch { setNotifPrefs(notifPrefs); }
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true);
+    try {
+      const token = localStorage.getItem("kk_token");
+      const res = await fetch(`${API}/api/profile`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k));
+        onLogout();
+      }
+    } catch { setDeleting(false); }
+  };
 
   const [changing,    setChanging]    = useState(false);
   const [current,     setCurrent]     = useState("");
@@ -128,26 +165,22 @@ export default function Settings({ onLogout }) {
       {/* Notifications */}
       <div style={{ background: "var(--surface)", borderRadius: 16, border: "1px solid var(--border)", padding: "20px 24px", marginBottom: 20 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Notifications</div>
-        <div style={{ ...row, borderBottom: "none" }}>
-          <div style={label}>Email Reminders</div>
-          <button
-            onClick={toggleEmailReminders}
-            style={{
-              width: 46, height: 26, borderRadius: 13, border: "none", outline: "none",
-              padding: 0, cursor: "pointer", flexShrink: 0,
-              background: emailReminders ? "var(--accent)" : "#b0b8c8",
-              position: "relative", transition: "background 0.2s",
-            }}
-            aria-label="Toggle email reminders"
-          >
-            <span style={{
-              position: "absolute", top: 3, left: emailReminders ? 24 : 3,
-              width: 20, height: 20, borderRadius: "50%", background: "white",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
-              transition: "left 0.2s", display: "block",
-            }} />
-          </button>
-        </div>
+        {[
+          { key: "emailReminders", label: "Email Reminders", desc: "Receive email notifications for upcoming deadlines", value: emailReminders, toggle: toggleEmailReminders },
+          { key: "overdue",    label: "Overdue alerts",       desc: "Notify when a task deadline has passed",         value: notifPrefs.overdue,    toggle: () => toggleNotifPref("overdue") },
+          { key: "dueToday",  label: "Due today",             desc: "Notify on the day a task is due",               value: notifPrefs.dueToday,   toggle: () => toggleNotifPref("dueToday") },
+          { key: "threeDays", label: "Due in 3 days",         desc: "Notify 3 days before a deadline",               value: notifPrefs.threeDays,  toggle: () => toggleNotifPref("threeDays") },
+        ].map(({ key, label: lbl, desc, value, toggle }, i, arr) => (
+          <div key={key} style={{ ...row, ...(i === arr.length - 1 ? { borderBottom: "none" } : {}) }}>
+            <div>
+              <div style={label}>{lbl}</div>
+              <div style={sub}>{desc}</div>
+            </div>
+            <button onClick={toggle} style={{ width: 46, height: 26, borderRadius: 13, border: "none", outline: "none", padding: 0, cursor: "pointer", flexShrink: 0, background: value ? "var(--accent)" : "#b0b8c8", position: "relative", transition: "background 0.2s" }}>
+              <span style={{ position: "absolute", top: 3, left: value ? 24 : 3, width: 20, height: 20, borderRadius: "50%", background: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.2)", transition: "left 0.2s", display: "block" }} />
+            </button>
+          </div>
+        ))}
       </div>
 
       {/* Account */}
@@ -243,6 +276,34 @@ export default function Settings({ onLogout }) {
             >
               {passloading ? "Saving..." : "Update Password"}
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* Danger Zone */}
+      <div style={{ background: "var(--surface)", borderRadius: 16, border: "1px solid var(--error-border)", padding: "20px 24px", marginBottom: 20 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--error)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Danger Zone</div>
+        {!deleteConfirm ? (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={label}>Delete Account</div>
+              <div style={sub}>Permanently delete your account and all data. This cannot be undone.</div>
+            </div>
+            <button onClick={() => setDeleteConfirm(true)} style={{ padding: "8px 16px", borderRadius: 9, border: "1px solid var(--error-border)", background: "var(--error-bg)", color: "var(--error)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap" }}>
+              Delete Account
+            </button>
+          </div>
+        ) : (
+          <div>
+            <div style={{ fontSize: 13, color: "var(--error)", fontWeight: 600, marginBottom: 12 }}>Are you sure? This will permanently delete your account and all your data.</div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={handleDeleteAccount} disabled={deleting} style={{ padding: "8px 18px", borderRadius: 9, border: "none", background: "var(--error)", color: "white", fontSize: 13, fontWeight: 700, cursor: deleting ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif", opacity: deleting ? 0.7 : 1 }}>
+                {deleting ? "Deleting..." : "Yes, delete my account"}
+              </button>
+              <button onClick={() => setDeleteConfirm(false)} style={{ padding: "8px 16px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--text2)", fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+                Cancel
+              </button>
+            </div>
           </div>
         )}
       </div>

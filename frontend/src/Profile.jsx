@@ -115,6 +115,11 @@ const DEFAULT_PROFILE = {
   thirdMinorFaculty: "",
   thirdMinor:    "",
   emailRemindersEnabled: true,
+  graduationYear: "",
+  linkedin: "",
+  github: "",
+  openToStudyGroups: false,
+  interests: "",
 };
 
 async function profileFetch(path, options = {}) {
@@ -523,6 +528,9 @@ export default function Profile({ onProfileSave, onSemestersUpdated }) {
       })
       .catch(() => {});
   }, []);
+  const [sectOpen, setSectOpen] = useState({ profile: false, transcript: false, semesters: false, schedule: false });
+  const toggleSect = k => setSectOpen(p => ({ ...p, [k]: !p[k] }));
+
   const [profile,    setProfile]    = useState(() => ({ ...DEFAULT_PROFILE, email, emailRemindersEnabled: localStorage.getItem("kk_email_reminders") !== "false" }));
   const [editing,    setEditing]    = useState(false);
   const [draft,      setDraft]      = useState({ ...DEFAULT_PROFILE, email });
@@ -891,12 +899,15 @@ const refetchSemesters = () =>
       )}
 
       {section === "profile" && <>
-      <div style={{ marginBottom:28 }}>
-        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:4 }}>My Profile</div>
-        <div style={{ fontSize:13, color:"var(--text2)" }}>Your info shows up on the dashboard greeting and affects how KourseKit personalizes your experience.</div>
+      <div onClick={() => toggleSect("profile")} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: sectOpen.profile ? 16 : 28, cursor:"pointer", userSelect:"none" }}>
+        <div>
+          <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:4 }}>My Profile</div>
+          <div style={{ fontSize:13, color:"var(--text2)" }}>Your info shows up on the dashboard greeting and affects how KourseKit personalizes your experience.</div>
+        </div>
+        <span style={{ fontSize:18, color:"var(--text3)", marginLeft:16 }}>{sectOpen.profile ? "▾" : "▸"}</span>
       </div>
 
-      <div style={{ background:"var(--surface)", borderRadius:20, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", overflow:"hidden", marginBottom:20 }}>
+      {sectOpen.profile && <div style={{ background:"var(--surface)", borderRadius:20, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", overflow:"hidden", marginBottom:20 }}>
         <div style={{ padding:"24px 28px 24px" }}>
 
           <div style={{ display:"flex", alignItems:"flex-end", gap:16, marginBottom:20 }}>
@@ -1233,16 +1244,58 @@ const refetchSemesters = () =>
               <div style={{ fontSize:11, color:"var(--text3)", marginTop:-8, marginBottom:16 }}>
                 GPA and credits here are self-reported — once backend is connected, this will sync with your actual academic record.
               </div>
+
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:4 }}>
+                <div>
+                  <label style={pf.label}>Expected Graduation Year</label>
+                  <select className="pf-input" value={draft.graduationYear} onChange={e => set("graduationYear", e.target.value)} style={{ ...pf.input, cursor:"pointer" }}>
+                    <option value="">Select year…</option>
+                    {["2025","2026","2027","2028","2029","2030"].map(y => <option key={y}>{y}</option>)}
+                  </select>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:12, paddingTop:22 }}>
+                  <span style={{ fontSize:13, fontWeight:500, color:"var(--accent2)" }}>Open to study groups</span>
+                  <button type="button" onClick={() => set("openToStudyGroups", !draft.openToStudyGroups)}
+                    style={{ width:46, height:26, borderRadius:13, border:"none", padding:0, cursor:"pointer", flexShrink:0, background: draft.openToStudyGroups ? "var(--accent)" : "#b0b8c8", position:"relative", transition:"background 0.2s" }}>
+                    <span style={{ position:"absolute", top:3, left: draft.openToStudyGroups ? 24 : 3, width:20, height:20, borderRadius:"50%", background:"white", boxShadow:"0 1px 3px rgba(0,0,0,0.2)", transition:"left 0.2s", display:"block" }} />
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                <div>
+                  <label style={pf.label}>LinkedIn</label>
+                  <input className="pf-input" value={draft.linkedin} onChange={e => set("linkedin", e.target.value)} placeholder="linkedin.com/in/..." style={pf.input} />
+                </div>
+                <div>
+                  <label style={pf.label}>GitHub</label>
+                  <input className="pf-input" value={draft.github} onChange={e => set("github", e.target.value)} placeholder="github.com/..." style={pf.input} />
+                </div>
+              </div>
+
+              <label style={pf.label}>Interests / Skills <span style={{ color:"var(--text3)", fontWeight:400 }}>(comma-separated)</span></label>
+              <input className="pf-input" value={draft.interests} onChange={e => set("interests", e.target.value)} placeholder="e.g. Machine Learning, Web Dev, Photography" style={pf.input} />
             </div>
           )}
 
-          {!editing && profile.bio && (
-            <div style={{ marginTop:16, fontSize:13, color:"var(--accent2)", lineHeight:1.7, borderTop:"1px solid #F4F4F8", paddingTop:16 }}>
-              {profile.bio}
+          {!editing && (
+            <div style={{ marginTop:16, borderTop:"1px solid #F4F4F8", paddingTop:16, display:"flex", flexDirection:"column", gap:10 }}>
+              {profile.bio && <div style={{ fontSize:13, color:"var(--accent2)", lineHeight:1.7 }}>{profile.bio}</div>}
+              {(profile.graduationYear || profile.linkedin || profile.github || profile.openToStudyGroups || profile.interests) && (
+                <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:4 }}>
+                  {profile.graduationYear && <span style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20, background:"var(--surface2)", color:"var(--primary)", border:"1px solid var(--border)" }}>Class of {profile.graduationYear}</span>}
+                  {profile.openToStudyGroups && <span style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20, background:"#eef7f0", color:"#2d7a4a", border:"1px solid #b6e5c8" }}>Open to study groups</span>}
+                  {profile.linkedin && <a href={profile.linkedin.startsWith("http") ? profile.linkedin : `https://${profile.linkedin}`} target="_blank" rel="noreferrer" style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20, background:"var(--surface2)", color:"var(--accent)", border:"1px solid var(--border)", textDecoration:"none" }}>LinkedIn</a>}
+                  {profile.github && <a href={profile.github.startsWith("http") ? profile.github : `https://${profile.github}`} target="_blank" rel="noreferrer" style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20, background:"var(--surface2)", color:"var(--accent)", border:"1px solid var(--border)", textDecoration:"none" }}>GitHub</a>}
+                  {profile.interests && profile.interests.split(",").map(t => t.trim()).filter(Boolean).map(tag => (
+                    <span key={tag} style={{ fontSize:11, fontWeight:500, padding:"3px 10px", borderRadius:20, background:"var(--surface3,var(--surface2))", color:"var(--text2)", border:"1px solid var(--border)" }}>{tag}</span>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
-      </div>
+      </div>}
 
       {transcriptModal && (
         <TranscriptModal
@@ -1279,127 +1332,59 @@ const refetchSemesters = () =>
 
       {/* Uploaded Transcript */}
       {transcriptInfo && (
-        <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px", marginTop:24 }}>
-          <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)", marginBottom:4 }}>Uploaded Transcript</div>
-          <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16 }}>Remove to clear transcript-imported semesters from data.</div>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface2)", borderRadius:10, padding:"12px 16px", border:"1px solid var(--border)" }}>
-            <div>
-              <div style={{ fontSize:14, fontWeight:600, color:"var(--primary)" }}>
-                {transcriptInfo.semesterCount} semester{transcriptInfo.semesterCount !== 1 ? "s" : ""} · {transcriptInfo.courseCount} course{transcriptInfo.courseCount !== 1 ? "s" : ""}
-              </div>
-              <div style={{ fontSize:12, color:"var(--text2)", marginTop:2 }}>
-                Imported {new Date(transcriptInfo.uploadedAt).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" })}
+        <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", marginTop:24, overflow:"hidden" }}>
+          <div onClick={() => toggleSect("transcript")} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", cursor:"pointer", userSelect:"none" }}>
+            <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)" }}>Uploaded Transcript</div>
+            <span style={{ fontSize:16, color:"var(--text3)" }}>{sectOpen.transcript ? "▾" : "▸"}</span>
+          </div>
+          {sectOpen.transcript && (
+            <div style={{ padding:"0 28px 24px" }}>
+              <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16 }}>Remove to clear transcript-imported semesters from data.</div>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface2)", borderRadius:10, padding:"12px 16px", border:"1px solid var(--border)" }}>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:600, color:"var(--primary)" }}>
+                    {transcriptInfo.semesterCount} semester{transcriptInfo.semesterCount !== 1 ? "s" : ""} · {transcriptInfo.courseCount} course{transcriptInfo.courseCount !== 1 ? "s" : ""}
+                  </div>
+                  <div style={{ fontSize:12, color:"var(--text2)", marginTop:2 }}>
+                    Imported {new Date(transcriptInfo.uploadedAt).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" })}
+                  </div>
+                </div>
+                <button onClick={removeTranscript} style={{ background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:8, padding:"6px 14px", color:"var(--error)", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                  Remove
+                </button>
               </div>
             </div>
-            <button
-              onClick={removeTranscript}
-              style={{ background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:8, padding:"6px 14px", color:"var(--error)", fontSize:12, fontWeight:600, cursor:"pointer" }}
-            >
-              Remove
-            </button>
-          </div>
+          )}
         </div>
       )}
 
       {/* My Semesters */}
-      <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px", marginTop:20 }}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+      <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", marginTop:20, overflow:"hidden" }}>
+        <div onClick={() => toggleSect("semesters")} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", cursor:"pointer", userSelect:"none" }}>
           <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)" }}>My Semesters</div>
-          {!creating && (
-            <div style={{ display:"flex", gap:8 }}>
-              {!transcriptInfo && (
-                <button onClick={() => setTranscriptModal(true)} style={{ background:"var(--surface2)", color:"var(--primary)", border:"1px solid var(--border)", borderRadius:10, padding:"8px 14px", fontSize:13, fontWeight:600, cursor:"pointer" }}>
-                  Upload Transcript
+          <div style={{ display:"flex", alignItems:"center", gap:10 }} onClick={e => e.stopPropagation()}>
+            {sectOpen.semesters && !creating && (
+              <div style={{ display:"flex", gap:8 }}>
+                {!transcriptInfo && (
+                  <button onClick={() => setTranscriptModal(true)} style={{ background:"var(--surface2)", color:"var(--primary)", border:"1px solid var(--border)", borderRadius:10, padding:"6px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                    Upload Transcript
+                  </button>
+                )}
+                <button onClick={() => { setCreating(true); setEditingId(null); }} style={{ background:"var(--primary)", color:"white", border:"none", borderRadius:10, padding:"6px 14px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                  + New Semester
                 </button>
-              )}
-              <button onClick={() => { setCreating(true); setEditingId(null); }} style={{ background:"var(--primary)", color:"white", border:"none", borderRadius:10, padding:"8px 16px", fontSize:13, fontWeight:600, cursor:"pointer" }}>
-                + New Semester
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Create form */}
-        {creating && (
-          <div style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:12, padding:"16px 18px", marginBottom:16 }}>
-            <select
-              value={newSemName} onChange={e => setNewSemName(e.target.value)}
-              style={{ ...pf.input, marginBottom:12, cursor:"pointer" }}
-            >
-              <option value="">Select semester…</option>
-              {AUB_SEMESTERS.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
-              <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Course Name</span>
-              <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Credits</span>
-              <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Grade</span>
-              <span />
-            </div>
-            {newSemCourses.map(c => (
-              <div key={c.id} style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
-                <StudentCourses
-                  value={c}
-                  onSelect={data => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionno, professorName:data.professorName} : r))}
-                />
-                <input value={c.credits} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
-                <select value={c.grade} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
-                  {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}
-                </select>
-                <button onClick={() => setNewSemCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
-              </div>
-            ))}
-            <button onClick={() => setNewSemCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"" }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
-            {semErr && <div style={{ fontSize:12, color:"var(--error)", background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:8, padding:"8px 12px", marginTop:8 }}>{semErr}</div>}
-            <div style={{ display:"flex", gap:8, marginTop:12 }}>
-              <button onClick={createSemester} disabled={semSaveLoad || !newSemName.trim()} style={{ ...pf.saveBtn, fontSize:13, opacity: semSaveLoad || !newSemName.trim() ? 0.6 : 1 }}>{semSaveLoad ? "Saving…" : "Save Semester"}</button>
-              <button onClick={() => { setCreating(false); setNewSemName(""); setNewSemCourses([{ id:1, code:"", credits:"", grade:"" }]); setSemErr(""); }} style={{ ...pf.cancelBtn }}>Cancel</button>
-            </div>
-          </div>
-        )}
-
-        {/* Semester list */}
-        {semesters.length === 0 && !creating && (
-          <div style={{ textAlign:"center", padding:"24px 0", color:"var(--text3)", fontSize:13 }}>No semesters yet. Create one above.</div>
-        )}
-        {semesters.map(sem => (
-          <div key={sem.id} style={{ border:"1px solid var(--border)", borderRadius:12, marginBottom:10 }}>
-            {/* Card header */}
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", background:"var(--surface2)", borderRadius:"12px 12px 0 0" }}>
-              <div>
-                <span style={{ fontWeight:700, fontSize:14, color:"var(--primary)" }}>{sem.semesterName}</span>
-                <span style={{ fontSize:11, color:"var(--text3)", marginLeft:10 }}>{(sem.courses||[]).length} course{(sem.courses||[]).length !== 1 ? "s" : ""} · {fmtDateShort(sem.createdAt)}</span>
-              </div>
-              <div style={{ display:"flex", gap:6 }}>
-                <button onClick={() => editingId === sem.id ? setEditingId(null) : startEdit(sem)} style={{ fontSize:12, fontWeight:600, padding:"5px 12px", border:"1px solid var(--border)", borderRadius:8, background:"var(--surface)", color:"var(--primary)", cursor:"pointer" }}>
-                  {editingId === sem.id ? "Close" : "Edit"}
-                </button>
-                <button onClick={() => deleteSemester(sem.id)} style={{ fontSize:12, padding:"5px 10px", border:"1px solid var(--error-border)", borderRadius:8, background:"var(--surface)", color:"var(--error)", cursor:"pointer" }}>Delete</button>
-              </div>
-            </div>
-
-            {/* Course list (view mode) */}
-            {editingId !== sem.id && (sem.courses||[]).length > 0 && (
-              <div style={{ padding:"10px 16px", display:"flex", flexDirection:"column", gap:4 }}>
-                {(sem.courses||[]).map((c,i) => (
-                  <div key={i} style={{ display:"flex", gap:12, fontSize:13, color:"var(--text-body)", alignItems:"center" }}>
-                    <span style={{ fontWeight:600, minWidth:100 }}>{c.courseCode}</span>
-                    <span style={{ color:"var(--text2)" }}>{c.credits} cr</span>
-                    <span style={{ color:"var(--accent)", fontWeight:600 }}>{c.grade}</span>
-                    {syllabi[c.courseCode] && (
-                      <span style={{ display:"flex", alignItems:"center", gap:4, marginLeft:"auto" }}>
-                        <span style={{ fontSize:11, color:"var(--success-text, var(--accent))", fontWeight:500 }}>Syllabus uploaded</span>
-                        <button onClick={() => removeSyllabus(c.courseCode)} style={{ fontSize:11, color:"var(--error)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>✕</button>
-                      </span>
-                    )}
-                  </div>
-                ))}
               </div>
             )}
+            <span onClick={() => toggleSect("semesters")} style={{ fontSize:16, color:"var(--text3)", cursor:"pointer" }}>{sectOpen.semesters ? "▾" : "▸"}</span>
+          </div>
+        </div>
 
-            {/* Edit mode */}
-            {editingId === sem.id && (
-              <div style={{ padding:"14px 16px" }}>
-                <select value={editName} onChange={e => setEditName(e.target.value)} style={{ ...pf.input, marginBottom:10, cursor:"pointer" }}>
+        {sectOpen.semesters && (
+          <div style={{ padding:"0 28px 24px" }}>
+            {/* Create form */}
+            {creating && (
+              <div style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:12, padding:"16px 18px", marginBottom:16 }}>
+                <select value={newSemName} onChange={e => setNewSemName(e.target.value)} style={{ ...pf.input, marginBottom:12, cursor:"pointer" }}>
                   <option value="">Select semester…</option>
                   {AUB_SEMESTERS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -1409,34 +1394,108 @@ const refetchSemesters = () =>
                   <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Grade</span>
                   <span />
                 </div>
-                {editCourses.map(c => (
+                {newSemCourses.map(c => (
                   <div key={c.id} style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
-                    <StudentCourses
-                      value={c}
-                      onSelect={data => setEditCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionno, professorName:data.professorName} : r))}
-                    />
-                    <input value={c.credits} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
-                    <select value={c.grade} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
+                    <StudentCourses value={c} onSelect={data => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r))} />
+                    <input value={c.credits} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
+                    <select value={c.grade} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
                       {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}
                     </select>
-                    <button onClick={() => setEditCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
+                    <button onClick={() => setNewSemCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
                   </div>
                 ))}
-                <button onClick={() => setEditCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"" }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
+                <button onClick={() => setNewSemCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"" }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
                 {semErr && <div style={{ fontSize:12, color:"var(--error)", background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:8, padding:"8px 12px", marginTop:8 }}>{semErr}</div>}
                 <div style={{ display:"flex", gap:8, marginTop:12 }}>
-                  <button onClick={saveEdit} disabled={semSaveLoad} style={{ ...pf.saveBtn, fontSize:13, opacity: semSaveLoad ? 0.6 : 1 }}>{semSaveLoad ? "Saving…" : "Save Changes"}</button>
-                  <button onClick={() => { setEditingId(null); setSemErr(""); }} style={{ ...pf.cancelBtn }}>Cancel</button>
+                  <button onClick={createSemester} disabled={semSaveLoad || !newSemName.trim()} style={{ ...pf.saveBtn, fontSize:13, opacity: semSaveLoad || !newSemName.trim() ? 0.6 : 1 }}>{semSaveLoad ? "Saving…" : "Save Semester"}</button>
+                  <button onClick={() => { setCreating(false); setNewSemName(""); setNewSemCourses([{ id:1, code:"", credits:"", grade:"" }]); setSemErr(""); }} style={{ ...pf.cancelBtn }}>Cancel</button>
                 </div>
               </div>
             )}
-          </div>
-        ))}
 
+            {semesters.length === 0 && !creating && (
+              <div style={{ textAlign:"center", padding:"24px 0", color:"var(--text3)", fontSize:13 }}>No semesters yet. Create one above.</div>
+            )}
+            {semesters.map(sem => (
+              <div key={sem.id} style={{ border:"1px solid var(--border)", borderRadius:12, marginBottom:10 }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", background:"var(--surface2)", borderRadius:"12px 12px 0 0" }}>
+                  <div>
+                    <span style={{ fontWeight:700, fontSize:14, color:"var(--primary)" }}>{sem.semesterName}</span>
+                    <span style={{ fontSize:11, color:"var(--text3)", marginLeft:10 }}>{(sem.courses||[]).length} course{(sem.courses||[]).length !== 1 ? "s" : ""} · {fmtDateShort(sem.createdAt)}</span>
+                  </div>
+                  <div style={{ display:"flex", gap:6 }}>
+                    <button onClick={() => editingId === sem.id ? setEditingId(null) : startEdit(sem)} style={{ fontSize:12, fontWeight:600, padding:"5px 12px", border:"1px solid var(--border)", borderRadius:8, background:"var(--surface)", color:"var(--primary)", cursor:"pointer" }}>
+                      {editingId === sem.id ? "Close" : "Edit"}
+                    </button>
+                    <button onClick={() => deleteSemester(sem.id)} style={{ fontSize:12, padding:"5px 10px", border:"1px solid var(--error-border)", borderRadius:8, background:"var(--surface)", color:"var(--error)", cursor:"pointer" }}>Delete</button>
+                  </div>
+                </div>
+
+                {editingId !== sem.id && (sem.courses||[]).length > 0 && (
+                  <div style={{ padding:"10px 16px", display:"flex", flexDirection:"column", gap:4 }}>
+                    {(sem.courses||[]).map((c,i) => (
+                      <div key={i} style={{ display:"flex", gap:12, fontSize:13, color:"var(--text-body)", alignItems:"center" }}>
+                        <span style={{ fontWeight:600, minWidth:100 }}>{c.courseCode}</span>
+                        <span style={{ color:"var(--text2)" }}>{c.credits} cr</span>
+                        <span style={{ color:"var(--accent)", fontWeight:600 }}>{c.grade}</span>
+                        {syllabi[c.courseCode] && (
+                          <span style={{ display:"flex", alignItems:"center", gap:4, marginLeft:"auto" }}>
+                            <span style={{ fontSize:11, color:"var(--success-text, var(--accent))", fontWeight:500 }}>Syllabus uploaded</span>
+                            <button onClick={() => removeSyllabus(c.courseCode)} style={{ fontSize:11, color:"var(--error)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>✕</button>
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {editingId === sem.id && (
+                  <div style={{ padding:"14px 16px" }}>
+                    <select value={editName} onChange={e => setEditName(e.target.value)} style={{ ...pf.input, marginBottom:10, cursor:"pointer" }}>
+                      <option value="">Select semester…</option>
+                      {AUB_SEMESTERS.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
+                      <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Course Name</span>
+                      <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Credits</span>
+                      <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Grade</span>
+                      <span />
+                    </div>
+                    {editCourses.map(c => (
+                      <div key={c.id} style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
+                        <StudentCourses value={c} onSelect={data => setEditCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r))} />
+                        <input value={c.credits} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
+                        <select value={c.grade} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
+                          {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}
+                        </select>
+                        <button onClick={() => setEditCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
+                      </div>
+                    ))}
+                    <button onClick={() => setEditCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"" }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
+                    {semErr && <div style={{ fontSize:12, color:"var(--error)", background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:8, padding:"8px 12px", marginTop:8 }}>{semErr}</div>}
+                    <div style={{ display:"flex", gap:8, marginTop:12 }}>
+                      <button onClick={saveEdit} disabled={semSaveLoad} style={{ ...pf.saveBtn, fontSize:13, opacity: semSaveLoad ? 0.6 : 1 }}>{semSaveLoad ? "Saving…" : "Save Changes"}</button>
+                      <button onClick={() => { setEditingId(null); setSemErr(""); }} style={{ ...pf.cancelBtn }}>Cancel</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      <div style={{ marginTop: 24 }}>
-        <DefaultScheduleEditor token={localStorage.getItem("kk_token")} />
+      {/* Default Weekly Schedule */}
+      <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", marginTop:20, overflow:"hidden" }}>
+        <div onClick={() => toggleSect("schedule")} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", cursor:"pointer", userSelect:"none" }}>
+          <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)" }}>Default Weekly Schedule</div>
+          <span style={{ fontSize:16, color:"var(--text3)" }}>{sectOpen.schedule ? "▾" : "▸"}</span>
+        </div>
+        {sectOpen.schedule && (
+          <div style={{ padding:"0 28px 24px" }}>
+            <DefaultScheduleEditor token={localStorage.getItem("kk_token")} />
+          </div>
+        )}
       </div>
 
       </>}
