@@ -10,7 +10,8 @@ public record GroupStudySessionResponseDTO(
     LocalDate date,
     LocalTime startTime,
     double duration,
-    String createdByName,
+    String createdByFirstName,
+    String createdByLastName,
     boolean isSynced,
-    LocalDateTime createdAt
+    LocalTime endTime
 ) {}
