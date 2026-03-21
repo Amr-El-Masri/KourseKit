@@ -523,7 +523,6 @@ export default function Profile({ onProfileSave, onSemestersUpdated }) {
       })
       .catch(() => {});
   }, []);
-  const [confirmingRemove, setConfirmingRemove] = useState(null); // course name
   const [profile,    setProfile]    = useState(() => ({ ...DEFAULT_PROFILE, email, emailRemindersEnabled: localStorage.getItem("kk_email_reminders") !== "false" }));
   const [editing,    setEditing]    = useState(false);
   const [draft,      setDraft]      = useState({ ...DEFAULT_PROFILE, email });
@@ -540,7 +539,10 @@ export default function Profile({ onProfileSave, onSemestersUpdated }) {
   const [editCourses,  setEditCourses]  = useState([]);
   const [semSaveLoad,  setSemSaveLoad]  = useState(false);
   const [semErr,       setSemErr]       = useState("");
-  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [semUndoToast, setSemUndoToast] = useState(null);
+  const semUndoTimerRef = useRef(null);
+  const [syllabusUndoToast, setSyllabusUndoToast] = useState(null);
+  const syllabusUndoTimerRef = useRef(null);
   const [showFollowList, setShowFollowList] = useState(null);
   const [showDirectory, setShowDirectory] = useState(false);
   const [friends, setFriends] = useState(() => { try { return JSON.parse(localStorage.getItem("kk_friends") || "[]"); } catch { return []; } });
@@ -670,9 +672,79 @@ const refetchSemesters = () =>
   };
 
   const deleteSemester = async (id) => {
+    const sem = semesters.find(s => s.id === id);
     await fetch(`${API}/api/grades/saved/${id}`, { method: "DELETE", headers: semAuthHeaders() });
-    setDeleteConfirmId(null);
     await refetchSemesters();
+    setSemUndoToast(sem);
+    if (semUndoTimerRef.current) clearTimeout(semUndoTimerRef.current);
+    semUndoTimerRef.current = setTimeout(() => setSemUndoToast(null), 5000);
+  };
+
+  const undoDeleteSemester = async () => {
+    if (!semUndoToast) return;
+    if (semUndoTimerRef.current) clearTimeout(semUndoTimerRef.current);
+    await fetch(`${API}/api/grades/saved`, {
+      method: "POST",
+      headers: semAuthHeaders(),
+      body: JSON.stringify({ semesterName: semUndoToast.semesterName, courses: (semUndoToast.courses || []).map(c => ({ courseCode: c.courseCode, grade: c.grade, credits: c.credits })) }),
+    });
+    setSemUndoToast(null);
+    await refetchSemesters();
+    if (onSemestersUpdated) onSemestersUpdated();
+  };
+
+  const removeSyllabus = (courseCode) => {
+    const snapshot = syllabi[courseCode];
+    const ohMap = JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}");
+    const dataMap = JSON.parse(localStorage.getItem("kk_course_data") || "{}");
+    const ohSnapshot = ohMap[courseCode];
+    const dataSnapshot = dataMap[courseCode];
+
+    const next = { ...syllabi };
+    delete next[courseCode];
+    setSyllabi(next);
+    localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
+    window.dispatchEvent(new Event("kk_syllabus_changed"));
+    delete dataMap[courseCode]; localStorage.setItem("kk_course_data", JSON.stringify(dataMap));
+    delete ohMap[courseCode]; localStorage.setItem("kk_course_office_hours", JSON.stringify(ohMap));
+    setSyllabusUndoToast({ courseCode, snapshot, ohSnapshot, dataSnapshot });
+    if (syllabusUndoTimerRef.current) clearTimeout(syllabusUndoTimerRef.current);
+    syllabusUndoTimerRef.current = setTimeout(async () => {
+      const token = localStorage.getItem("kk_token");
+      const raw = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "{}");
+      const map = Array.isArray(raw) ? {} : raw;
+      const courseTaskIds = [...(map[courseCode] || [])];
+      if (token && courseTaskIds.length > 0) {
+        await Promise.all(courseTaskIds.map(id =>
+          fetch(`${API}/api/tasks/delete/${id}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{})
+        ));
+      }
+      delete map[courseCode];
+      localStorage.setItem("kk_syllabus_task_ids", JSON.stringify(map));
+      if (token) fetch(`${API}/api/user-syllabi/${encodeURIComponent(courseCode)}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{});
+      setSyllabusUndoToast(null);
+    }, 5000);
+  };
+
+  const undoRemoveSyllabus = () => {
+    if (!syllabusUndoToast) return;
+    if (syllabusUndoTimerRef.current) clearTimeout(syllabusUndoTimerRef.current);
+    const { courseCode, snapshot, ohSnapshot, dataSnapshot } = syllabusUndoToast;
+    const next = { ...syllabi, [courseCode]: snapshot };
+    setSyllabi(next);
+    localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
+    if (ohSnapshot) {
+      const ohMap = JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}");
+      ohMap[courseCode] = ohSnapshot;
+      localStorage.setItem("kk_course_office_hours", JSON.stringify(ohMap));
+    }
+    if (dataSnapshot) {
+      const dataMap = JSON.parse(localStorage.getItem("kk_course_data") || "{}");
+      dataMap[courseCode] = dataSnapshot;
+      localStorage.setItem("kk_course_data", JSON.stringify(dataMap));
+    }
+    window.dispatchEvent(new Event("kk_syllabus_changed"));
+    setSyllabusUndoToast(null);
   };
 
   const startEdit = (sem) => {
@@ -1192,6 +1264,18 @@ const refetchSemesters = () =>
           <button onClick={undoRemoveTranscript} style={{ background:"var(--primary)", color:"white", border:"none", borderRadius:8, padding:"6px 14px", fontWeight:600, fontSize:13, cursor:"pointer" }}>Undo</button>
         </div>
       )}
+      {semUndoToast && (
+        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"12px 20px", boxShadow:"0 8px 32px rgba(49,72,122,0.18)", display:"flex", alignItems:"center", gap:16, zIndex:9997, fontFamily:"'DM Sans',sans-serif", fontSize:13 }}>
+          <span style={{ color:"var(--text)" }}><strong>{semUndoToast.semesterName}</strong> deleted.</span>
+          <button onClick={undoDeleteSemester} style={{ background:"var(--primary)", color:"white", border:"none", borderRadius:8, padding:"6px 14px", fontWeight:600, fontSize:13, cursor:"pointer" }}>Undo</button>
+        </div>
+      )}
+      {syllabusUndoToast && (
+        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"12px 20px", boxShadow:"0 8px 32px rgba(49,72,122,0.18)", display:"flex", alignItems:"center", gap:16, zIndex:9996, fontFamily:"'DM Sans',sans-serif", fontSize:13 }}>
+          <span style={{ color:"var(--text)" }}>Syllabus for <strong>{syllabusUndoToast.courseCode}</strong> removed.</span>
+          <button onClick={undoRemoveSyllabus} style={{ background:"var(--primary)", color:"white", border:"none", borderRadius:8, padding:"6px 14px", fontWeight:600, fontSize:13, cursor:"pointer" }}>Undo</button>
+        </div>
+      )}
 
       {/* Uploaded Transcript */}
       {transcriptInfo && (
@@ -1289,14 +1373,7 @@ const refetchSemesters = () =>
                 <button onClick={() => editingId === sem.id ? setEditingId(null) : startEdit(sem)} style={{ fontSize:12, fontWeight:600, padding:"5px 12px", border:"1px solid var(--border)", borderRadius:8, background:"var(--surface)", color:"var(--primary)", cursor:"pointer" }}>
                   {editingId === sem.id ? "Close" : "Edit"}
                 </button>
-                {deleteConfirmId === sem.id ? (
-                  <>
-                    <button onClick={() => deleteSemester(sem.id)} style={{ fontSize:12, fontWeight:600, padding:"5px 12px", border:"none", borderRadius:8, background:"var(--error)", color:"white", cursor:"pointer" }}>Confirm</button>
-                    <button onClick={() => setDeleteConfirmId(null)} style={{ fontSize:12, padding:"5px 10px", border:"1px solid var(--border)", borderRadius:8, background:"var(--surface)", color:"var(--text2)", cursor:"pointer" }}>Cancel</button>
-                  </>
-                ) : (
-                  <button onClick={() => setDeleteConfirmId(sem.id)} style={{ fontSize:12, padding:"5px 10px", border:"1px solid var(--error-border)", borderRadius:8, background:"var(--surface)", color:"var(--error)", cursor:"pointer" }}>Delete</button>
-                )}
+                <button onClick={() => deleteSemester(sem.id)} style={{ fontSize:12, padding:"5px 10px", border:"1px solid var(--error-border)", borderRadius:8, background:"var(--surface)", color:"var(--error)", cursor:"pointer" }}>Delete</button>
               </div>
             </div>
 
@@ -1309,43 +1386,10 @@ const refetchSemesters = () =>
                     <span style={{ color:"var(--text2)" }}>{c.credits} cr</span>
                     <span style={{ color:"var(--accent)", fontWeight:600 }}>{c.grade}</span>
                     {syllabi[c.courseCode] && (
-                      confirmingRemove === `${sem.id}:${c.courseCode}` ? (
-                        <span style={{ display:"flex", alignItems:"center", gap:4, marginLeft:"auto" }}>
-                          <span style={{ fontSize:11, color:"var(--error)", fontWeight:600 }}>Remove?</span>
-                          <button onClick={async () => {
-                            try {
-                              const token = localStorage.getItem("kk_token");
-                              const raw = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "{}");
-                              const map = Array.isArray(raw) ? {} : raw;
-                              const courseTaskIds = [
-                                ...(map[c.courseCode] || []),
-                                ...(map[c.name] || []),
-                              ];
-                              if (token && courseTaskIds.length > 0) {
-                                await Promise.all(courseTaskIds.map(id =>
-                                  fetch(`http://localhost:8080/api/tasks/delete/${id}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{})
-                                ));
-                              }
-                              delete map[c.courseCode];
-                              delete map[c.name];
-                              localStorage.setItem("kk_syllabus_task_ids", JSON.stringify(map));
-                              const next = { ...syllabi }; delete next[c.courseCode];
-                              localStorage.setItem("kk_course_syllabus", JSON.stringify(next)); setSyllabi(next);
-                              fetch(`http://localhost:8080/api/user-syllabi/${encodeURIComponent(c.courseCode)}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{});
-                              window.dispatchEvent(new Event("kk_syllabus_changed"));
-                              const data = JSON.parse(localStorage.getItem("kk_course_data") || "{}"); delete data[c.courseCode]; localStorage.setItem("kk_course_data", JSON.stringify(data));
-                              const oh = JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}"); delete oh[c.courseCode]; localStorage.setItem("kk_course_office_hours", JSON.stringify(oh));
-                            } catch {}
-                            setConfirmingRemove(null);
-                          }} style={{ background:"var(--error)", border:"none", borderRadius:6, padding:"2px 8px", color:"#fff", fontSize:11, fontWeight:600, cursor:"pointer" }}>Yes</button>
-                          <button onClick={() => setConfirmingRemove(null)} style={{ background:"none", border:"1px solid var(--border)", borderRadius:6, padding:"2px 8px", color:"var(--text2)", fontSize:11, cursor:"pointer" }}>Cancel</button>
-                        </span>
-                      ) : (
-                        <span style={{ display:"flex", alignItems:"center", gap:4, marginLeft:"auto" }}>
-                          <span style={{ fontSize:11, color:"var(--success-text, var(--accent))", fontWeight:500 }}>Syllabus uploaded</span>
-                          <button onClick={() => setConfirmingRemove(`${sem.id}:${c.courseCode}`)} style={{ fontSize:11, color:"var(--error)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>✕</button>
-                        </span>
-                      )
+                      <span style={{ display:"flex", alignItems:"center", gap:4, marginLeft:"auto" }}>
+                        <span style={{ fontSize:11, color:"var(--success-text, var(--accent))", fontWeight:500 }}>Syllabus uploaded</span>
+                        <button onClick={() => removeSyllabus(c.courseCode)} style={{ fontSize:11, color:"var(--error)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>✕</button>
+                      </span>
                     )}
                   </div>
                 ))}

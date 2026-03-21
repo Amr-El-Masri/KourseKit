@@ -582,6 +582,7 @@ export default function Dashboard({ onLogout }) {
     try { const s = localStorage.getItem("kk_widget_collapsed"); return s ? JSON.parse(s) : {}; } catch { return {}; }
   });
 
+  const [editMode,   setEditMode]   = useState(false);
   const [dragId,     setDragId]     = useState(null);
   const [dragOverId, setDragOverId] = useState(null);
 
@@ -635,12 +636,7 @@ export default function Dashboard({ onLogout }) {
     const cur = widgetSizes[id] ?? ALL_WIDGETS.find(w => w.id === id)?.span ?? 1;
     saveWidgetSizes({ ...widgetSizes, [id]: cur >= 3 ? 1 : cur + 1 });
   };
-  const toggleCollapse = (id) => {
-    const next = { ...widgetCollapsed, [id]: !widgetCollapsed[id] };
-    setWidgetCollapsed(next);
-    localStorage.setItem("kk_widget_collapsed", JSON.stringify(next));
-    persistWidgetPrefs({ collapsed: next });
-  };
+
   const onDragStart = (id) => setDragId(id);
   const onDragOver  = (e, id) => { e.preventDefault(); if (dragOverId !== id) setDragOverId(id); };
   const onDrop      = (id) => {
@@ -1352,70 +1348,49 @@ export default function Dashboard({ onLogout }) {
   const renderWidget = (id, isPinned = false) => {
     const wDef = ALL_WIDGETS.find(w => w.id === id);
     const span = widgetSizes[id] ?? (wDef?.span || 1);
-    const collapsed = !!widgetCollapsed[id];
     const isDragging = dragId === id;
     const isTarget  = dragOverId === id && dragId !== id;
-    const wrapStyle = { gridColumn:`span ${span}`, opacity: isDragging ? 0.4 : 1, outline: isTarget ? "2px solid var(--primary)" : "none", borderRadius:18, transition:"opacity .15s" };
+    const wrapStyle = { gridColumn:`span ${span}`, opacity: isDragging ? 0.4 : 1, outline: isTarget ? "2px solid var(--primary)" : "none", borderRadius:18, transition:"opacity .15s", position:"relative" };
 
-    const collapseBtn = (
-      <button onClick={() => toggleCollapse(id)} title={collapsed ? "Expand" : "Collapse"}
-        style={{ background:"none", border:"1px solid var(--border)", borderRadius:6, padding:"2px 7px", cursor:"pointer", color:"var(--text3)", fontSize:11, lineHeight:1.6, fontFamily:"inherit" }}>
-        {collapsed ? "▸" : "▾"}
-      </button>
-    );
-    const sizeBtn = (
-      <button onClick={() => toggleSize(id)} title={span >= 3 ? "Shrink" : "Expand"}
-        style={{ background:"none", border:"1px solid var(--border)", borderRadius:6, padding:"2px 7px", cursor:"pointer", color:"var(--text3)", fontSize:11, lineHeight:1.6, fontFamily:"inherit" }}>
-        {span >= 3 ? "↙" : "↗"}
-      </button>
-    );
-    const dragHandle = !isPinned ? (
-      <div draggable onDragStart={() => onDragStart(id)} title="Drag to reorder"
-        style={{ cursor:"grab", color:"var(--text3)", fontSize:15, userSelect:"none", padding:"2px 4px", lineHeight:1 }}>⠿</div>
+    const editOverlay = editMode && !isPinned ? (
+      <>
+        <button onClick={() => toggleWidget(id)} title="Hide widget" style={{
+          position:"absolute", top:-8, right:-8, zIndex:10,
+          width:22, height:22, borderRadius:"50%", border:"none",
+          background:"var(--error)", color:"white", fontSize:14, fontWeight:700,
+          cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
+          boxShadow:"0 2px 6px rgba(0,0,0,0.2)", lineHeight:1
+        }}>×</button>
+        <div style={{ position:"absolute", bottom:8, right:10, display:"flex", alignItems:"center", gap:4, zIndex:10 }}>
+          <button onClick={() => toggleSize(id)} title={span >= 3 ? "Shrink" : "Expand"} style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:6, padding:"2px 8px", cursor:"pointer", color:"var(--text2)", fontSize:11, fontFamily:"inherit" }}>
+            {span >= 3 ? "↙" : "↗"}
+          </button>
+          <div draggable onDragStart={() => onDragStart(id)} title="Drag to reorder"
+            style={{ cursor:"grab", color:"var(--text2)", fontSize:15, userSelect:"none", padding:"2px 4px" }}>⠿</div>
+        </div>
+      </>
     ) : null;
-
-    const hideBtn = !isPinned ? (
-      <button onClick={() => toggleWidget(id)} title="Hide widget"
-        style={{ background:"none", border:"1px solid var(--border)", borderRadius:6, padding:"2px 7px", cursor:"pointer", color:"var(--text3)", fontSize:11, lineHeight:1.6, fontFamily:"inherit" }}>
-        ×
-      </button>
-    ) : null;
-
-    const controls = <div style={{ display:"flex", alignItems:"center", gap:4 }}>{collapseBtn}{sizeBtn}{dragHandle}{hideBtn}</div>;
-
-    const collapsedBar = (
-      <section key={id} className="card-anim"
-        style={{ ...s.card, ...wrapStyle, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 18px" }}
-        onDragOver={!isPinned ? e => onDragOver(e,id) : undefined}
-        onDrop={!isPinned ? () => onDrop(id) : undefined}
-        onDragEnd={!isPinned ? onDragEnd : undefined}>
-        <span style={{ fontSize:13, fontWeight:600, color:"var(--text2)" }}>{wDef?.label}</span>
-        {controls}
-      </section>
-    );
-
-    if (collapsed) return collapsedBar;
 
     if (wDef?.selfCard) {
-      const footer = <div style={{ display:"flex", justifyContent:"flex-end", gap:4 }}>{controls}</div>;
       return (
         <div key={id} style={wrapStyle}
-          onDragOver={!isPinned ? e => onDragOver(e,id) : undefined}
-          onDrop={!isPinned ? () => onDrop(id) : undefined}
-          onDragEnd={!isPinned ? onDragEnd : undefined}>
-          {id==="courseGrades" && <CourseGradeSummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} footer={footer}/>}
-          {id==="gpasummary"   && <GPASummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} onNavigate={setActivePage} footer={footer}/>}
+          onDragOver={editMode && !isPinned ? e => onDragOver(e,id) : undefined}
+          onDrop={editMode && !isPinned ? () => onDrop(id) : undefined}
+          onDragEnd={editMode && !isPinned ? onDragEnd : undefined}>
+          {editOverlay}
+          {id==="courseGrades" && <CourseGradeSummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} footer={null}/>}
+          {id==="gpasummary"   && <GPASummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} onNavigate={setActivePage} footer={null}/>}
         </div>
       );
     }
     return (
       <section key={id} className="card-anim"
-        style={{ ...s.card, ...wrapStyle, position:"relative", display:"flex", flexDirection:"column" }}
-        onDragOver={!isPinned ? e => onDragOver(e,id) : undefined}
-        onDrop={!isPinned ? () => onDrop(id) : undefined}
-        onDragEnd={!isPinned ? onDragEnd : undefined}>
+        style={{ ...s.card, ...wrapStyle, display:"flex", flexDirection:"column" }}
+        onDragOver={editMode && !isPinned ? e => onDragOver(e,id) : undefined}
+        onDrop={editMode && !isPinned ? () => onDrop(id) : undefined}
+        onDragEnd={editMode && !isPinned ? onDragEnd : undefined}>
+        {editOverlay}
         <div style={{ flex:1 }}>{renderWidgetContent(id)}</div>
-        <div style={{ display:"flex", justifyContent:"flex-end", gap:4, marginTop:10, paddingTop:8, borderTop:"1px solid var(--border)" }}>{controls}</div>
       </section>
     );
   };
@@ -1499,6 +1474,11 @@ export default function Dashboard({ onLogout }) {
             <div style={{display:"flex", alignItems:"center", gap:8, marginLeft:"auto"}}>
               {activePage === "dashboard" && (
                 <SemesterSelect value={semester} onChange={setSemester} semesters={apiSemesters.map(s => s.semesterName)} />
+              )}
+              {activePage === "dashboard" && (
+                <button onClick={() => setEditMode(e => !e)} style={{ height:38, padding:"0 16px", borderRadius:10, border: editMode ? "1px solid var(--primary)" : "1px solid var(--border)", background: editMode ? "var(--primary)" : "var(--surface)", color: editMode ? "white" : "var(--primary)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap" }}>
+                  {editMode ? "Done" : "Edit Widgets"}
+                </button>
               )}
               <button
                   onClick={() => window.location.reload()}
@@ -1640,17 +1620,21 @@ export default function Dashboard({ onLogout }) {
                 )}
                 {/* Reorderable widgets */}
                 {widgetOrder.filter(id => { const w = ALL_WIDGETS.find(x => x.id === id); return visible[id] && !w?.pinned; }).map(id => renderWidget(id))}
-                {/* Ghost cards for hidden widgets */}
-                {widgetOrder.filter(id => { const w = ALL_WIDGETS.find(x => x.id === id); return !visible[id] && !w?.pinned; }).map(id => {
-                  const wDef = ALL_WIDGETS.find(w => w.id === id);
-                  return (
-                    <div key={id} style={{ gridColumn:"span 1", border:"2px dashed var(--border)", borderRadius:16, padding:"14px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface2)", opacity:0.65 }}>
-                      <span style={{ fontSize:13, color:"var(--text3)", fontWeight:500 }}>{wDef?.label}</span>
-                      <button onClick={() => toggleWidget(id)} title="Show widget"
-                        style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:6, padding:"2px 10px", cursor:"pointer", color:"var(--accent)", fontSize:15, fontWeight:700, lineHeight:1.6, fontFamily:"inherit" }}>+</button>
-                    </div>
-                  );
-                })}
+                {/* Hidden widgets strip — only in edit mode */}
+                {editMode && widgetOrder.some(id => { const w = ALL_WIDGETS.find(x => x.id === id); return !visible[id] && !w?.pinned; }) && (
+                  <div style={{ gridColumn:"span 3", display:"flex", flexWrap:"wrap", gap:8, padding:"14px 18px", background:"var(--surface2)", borderRadius:14, border:"1px dashed var(--border)", alignItems:"center" }}>
+                    <span style={{ fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.07em", marginRight:4 }}>Hidden</span>
+                    {widgetOrder.filter(id => { const w = ALL_WIDGETS.find(x => x.id === id); return !visible[id] && !w?.pinned; }).map(id => {
+                      const wDef = ALL_WIDGETS.find(w => w.id === id);
+                      return (
+                        <button key={id} onClick={() => toggleWidget(id)}
+                          style={{ display:"flex", alignItems:"center", gap:6, padding:"5px 12px", borderRadius:20, border:"1px solid var(--border)", background:"var(--surface)", color:"var(--primary)", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                          + {wDef?.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
           )}
 
