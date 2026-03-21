@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Optional;
 
 import com.koursekit.model.StudyGroup;
+import com.koursekit.model.Course;
+import com.koursekit.repository.CourseRepository;
 
 public interface StudyGroupRepo extends JpaRepository<StudyGroup, Long> {
     List<StudyGroup> findByCourse_IdAndIsPrivateFalse(Long courseId); //if public, can be found by courseId only

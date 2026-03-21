@@ -10,6 +10,7 @@ import com.koursekit.model.StudyGroupMember;
 public interface StudyGroupMemberRepo extends JpaRepository<StudyGroupMember, Long>{
     List<StudyGroupMember> findByGroup_Id(Long groupId);
     List<StudyGroupMember> findByUser_Id(Long userID);
+    List<StudyGroupMember> findByGroup_IdAndUser_Id(Long groupId, Long userID);
     boolean existsByGroup_IdAndUser_Id(Long groupId, Long userID);
     int countByGroup_Id(Long groupId);
 

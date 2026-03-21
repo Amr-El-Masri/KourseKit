@@ -96,6 +96,43 @@ public class StudyGroupService {
 
             studyGroupMemberRepo.save(new StudyGroupMember(g, u, StudyGroupMember.Role.MEMBER)); 
         }
+
+        public void leaveGroup(Long userId, Long groupId) {
+            if (!studyGroupMemberRepo.existsByGroup_IdAndUser_Id(groupId, userId)) {
+                throw new IllegalArgumentException("Membership not found"); }
+
+            if (studyGroupMemberRepo.findByGroup_IdAndUser_Id(groupId, userId).get(0).getRole() == StudyGroupMember.Role.HOST) {
+                throw new IllegalStateException("Host cannot leave the group. Please assign a new host before leaving."); }
+
+            if (studyGroupMemberRepo.findByGroup_IdAndUser_Id(groupId, userId).get(0) == null) {
+                throw new IllegalArgumentException("Membership not found"); }
+            
+            studyGroupMemberRepo.deleteByStudyGroup_IdAndUser_Id(groupId, userId);
+        }
+
+        public List<StudyGroup> getGroupsForCourse(Long courseId) {
+            if (!courseRepo.existsById(courseId)) {
+                throw new IllegalArgumentException("Course not found"); }
+            return studyGroupRepo.findByCourse_IdAndIsPrivateFalse(courseId);
+        }
+
+        public List<StudyGroup> getGroupsForUser(Long userId) {
+            if (!userRepo.existsById(userId)) {
+                throw new IllegalArgumentException("User not found"); }
+
+            List<StudyGroup> groupsMemberIsIn = studyGroupMemberRepo.findByUser_Id(userId).stream()
+                .map(StudyGroupMember::getStudyGroup)
+                .toList();
+            
+            return groupsMemberIsIn;
+        }
+
+        public List<StudyGroupMember> getMembers(Long groupId) {
+            return studyGroupRepo.findById(groupId)
+                .map(group -> studyGroupMemberRepo.findByGroup_Id(groupId))
+                .orElseThrow(() -> new IllegalArgumentException("Group not found"));
+        }
+            
     }
 
 
