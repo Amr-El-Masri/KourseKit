@@ -1339,7 +1339,7 @@ const refetchSemesters = () =>
               <div key={c.id} style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
                 <StudentCourses
                   value={c}
-                  onSelect={data => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r))}
+                  onSelect={data => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionno, professorName:data.professorName} : r))}
                 />
                 <input value={c.credits} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                 <select value={c.grade} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
@@ -1413,7 +1413,7 @@ const refetchSemesters = () =>
                   <div key={c.id} style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
                     <StudentCourses
                       value={c}
-                      onSelect={data => setEditCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r))}
+                      onSelect={data => setEditCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionno, professorName:data.professorName} : r))}
                     />
                     <input value={c.credits} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                     <select value={c.grade} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>

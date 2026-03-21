@@ -151,7 +151,7 @@ export default function Register({ onGoToLogin }) {
                     <div style={{ flex:1 }}>
                       <StudentCourses
                         value={{ code: c.name, sectioncrn: c.sectioncrn, sectionNumber: c.sectionNumber }}
-                        onSelect={data => setSemCourses(p => p.map(r => r.id===c.id ? {...r, name:data.code, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName, credits:data.credits||0} : r))}
+                        onSelect={data => setSemCourses(p => p.map(r => r.id===c.id ? {...r, name:data.code, sectioncrn:data.sectioncrn, sectionNumber:data.sectionno, professorName:data.profname, credits:data.credits||0} : r))}
                         inputStyle={{ ...s.input, marginBottom:0 }}
                       />
                     </div>

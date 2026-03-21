@@ -82,8 +82,8 @@ export default function StudentCourses({ value, onSelect, inputStyle = {} }) {
       code: selectedCourse.courseCode,
       credits: section.creditHours || 0,
       sectioncrn: section.crn,
-      sectionno: section.sectionno,
-      profname: section.profname,
+      sectionno: section.sectionNumber,
+      profname: section.professorName,
     });
   };
 
@@ -99,7 +99,7 @@ export default function StudentCourses({ value, onSelect, inputStyle = {} }) {
   };
 
   const displayValue = hasSection
-    ? `${value.code}  ·  Sec ${value.sectionno || value.sectioncrn}`
+    ? `${value.code}  ·  ${value.sectionNumber || value.sectionno || value.sectioncrn}`
     : query;
 
   const base = {
@@ -181,7 +181,7 @@ export default function StudentCourses({ value, onSelect, inputStyle = {} }) {
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                 <span style={{ fontWeight: 700, fontSize: 13, color: "var(--primary)" }}>
-                  Sec {s.sectionno} — {s.profname}
+                  Sec {s.sectionNumber} — {s.professorName}
                 </span>
                 <span style={{ fontSize: 11, color: "var(--text3)", flexShrink: 0, marginLeft: 8 }}>
                   {s.creditHours} cr · {s.seatsAvailable} seats
