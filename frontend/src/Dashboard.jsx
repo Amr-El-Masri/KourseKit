@@ -733,6 +733,14 @@ export default function Dashboard({ onLogout }) {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const refresh = () => {
+      try { setCourseSyllabi(JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}")); } catch {}
+    };
+    window.addEventListener("kk_syllabus_changed", refresh);
+    return () => window.removeEventListener("kk_syllabus_changed", refresh);
+  }, []);
+
   const saveCourseOfficeHours = (courseName, hours) => {
     const next = { ...courseOfficeHours, [courseName]: hours };
     setCourseOfficeHours(next);

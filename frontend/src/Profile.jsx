@@ -552,6 +552,9 @@ export default function Profile({ onProfileSave, onSemestersUpdated }) {
   const [syllabusUndoToast, setSyllabusUndoToast] = useState(null);
   const syllabusUndoTimerRef = useRef(null);
   const [showFollowList, setShowFollowList] = useState(null);
+  const [syllabusEditCourse, setSyllabusEditCourse] = useState(null); // courseCode being edited
+  const [syllabusEditProf, setSyllabusEditProf] = useState("");
+  const [syllabusEditOH, setSyllabusEditOH] = useState([]);
   const [showDirectory, setShowDirectory] = useState(false);
   const [friends, setFriends] = useState(() => { try { return JSON.parse(localStorage.getItem("kk_friends") || "[]"); } catch { return []; } });
 
@@ -899,15 +902,12 @@ const refetchSemesters = () =>
       )}
 
       {section === "profile" && <>
-      <div onClick={() => toggleSect("profile")} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: sectOpen.profile ? 16 : 28, cursor:"pointer", userSelect:"none" }}>
-        <div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:4 }}>My Profile</div>
-          <div style={{ fontSize:13, color:"var(--text2)" }}>Your info shows up on the dashboard greeting and affects how KourseKit personalizes your experience.</div>
-        </div>
-        <span style={{ fontSize:18, color:"var(--text3)", marginLeft:16 }}>{sectOpen.profile ? "▾" : "▸"}</span>
+      <div style={{ marginBottom:16 }}>
+        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:4 }}>My Profile</div>
+        <div style={{ fontSize:13, color:"var(--text2)" }}>Your info shows up on the dashboard greeting and affects how KourseKit personalizes your experience.</div>
       </div>
 
-      {sectOpen.profile && <div style={{ background:"var(--surface)", borderRadius:20, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", overflow:"hidden", marginBottom:20 }}>
+      <div style={{ background:"var(--surface)", borderRadius:20, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", overflow:"hidden", marginBottom:20 }}>
         <div style={{ padding:"24px 28px 24px" }}>
 
           <div style={{ display:"flex", alignItems:"flex-end", gap:16, marginBottom:20 }}>
@@ -1295,7 +1295,7 @@ const refetchSemesters = () =>
             </div>
           )}
         </div>
-      </div>}
+      </div>
 
       {transcriptModal && (
         <TranscriptModal
@@ -1327,6 +1327,71 @@ const refetchSemesters = () =>
         <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"12px 20px", boxShadow:"0 8px 32px rgba(49,72,122,0.18)", display:"flex", alignItems:"center", gap:16, zIndex:9996, fontFamily:"'DM Sans',sans-serif", fontSize:13 }}>
           <span style={{ color:"var(--text)" }}>Syllabus for <strong>{syllabusUndoToast.courseCode}</strong> removed.</span>
           <button onClick={undoRemoveSyllabus} style={{ background:"var(--primary)", color:"white", border:"none", borderRadius:8, padding:"6px 14px", fontWeight:600, fontSize:13, cursor:"pointer" }}>Undo</button>
+        </div>
+      )}
+
+      {/* Syllabus edit modal */}
+      {syllabusEditCourse && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.35)", zIndex:10000, display:"flex", alignItems:"center", justifyContent:"center" }}
+          onClick={e => { if (e.target === e.currentTarget) setSyllabusEditCourse(null); }}>
+          <div style={{ background:"var(--surface)", borderRadius:18, padding:"28px 28px 24px", width:"min(480px,94vw)", boxShadow:"0 8px 40px rgba(49,72,122,0.22)", fontFamily:"'DM Sans',sans-serif" }}>
+            <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:18, color:"var(--primary)", marginBottom:18 }}>
+              Edit Syllabus Info — {syllabusEditCourse}
+            </div>
+
+            <label style={pf.label}>Professor</label>
+            <input value={syllabusEditProf} onChange={e => setSyllabusEditProf(e.target.value)}
+              placeholder="Professor name" style={{ ...pf.input }} />
+
+            <div style={{ fontWeight:700, fontSize:14, color:"var(--primary)", marginBottom:10 }}>Office Hours</div>
+            {syllabusEditOH.length === 0 && (
+              <div style={{ fontSize:12, color:"var(--text2)", marginBottom:8 }}>No office hours — add them below.</div>
+            )}
+            {syllabusEditOH.map((o, i) => (
+              <div key={i} style={{ display:"flex", gap:8, marginBottom:6, alignItems:"center" }}>
+                <input value={o.day || ""} onChange={e => setSyllabusEditOH(p => p.map((x,j) => j===i ? {...x, day:e.target.value} : x))}
+                  placeholder="Day" style={{ ...pf.input, flex:1, marginBottom:0 }} />
+                <input value={o.time || ""} onChange={e => setSyllabusEditOH(p => p.map((x,j) => j===i ? {...x, time:e.target.value} : x))}
+                  placeholder="Time" style={{ ...pf.input, flex:1, marginBottom:0 }} />
+                <input value={o.location || ""} onChange={e => setSyllabusEditOH(p => p.map((x,j) => j===i ? {...x, location:e.target.value} : x))}
+                  placeholder="Location" style={{ ...pf.input, flex:2, marginBottom:0 }} />
+                <button onClick={() => setSyllabusEditOH(p => p.filter((_,j) => j!==i))}
+                  style={{ background:"none", border:"none", color:"var(--error)", cursor:"pointer", fontSize:15, flexShrink:0 }}>✕</button>
+              </div>
+            ))}
+            <button onClick={() => setSyllabusEditOH(p => [...p, { day:"", time:"", location:"" }])}
+              style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600, marginBottom:20 }}>+ Add office hours</button>
+
+            <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+              <button onClick={() => setSyllabusEditCourse(null)} style={pf.cancelBtn}>Cancel</button>
+              <button onClick={() => {
+                const code = syllabusEditCourse;
+                const t = localStorage.getItem("kk_token");
+                // Update kk_course_syllabus (what dashboard reads)
+                const allSyllabi = JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}");
+                const existing = allSyllabi[code] || {};
+                const updated = { ...existing, professor: syllabusEditProf };
+                allSyllabi[code] = updated;
+                localStorage.setItem("kk_course_syllabus", JSON.stringify(allSyllabi));
+                // Persist to backend
+                fetch(`http://localhost:8080/api/user-syllabi/${encodeURIComponent(code)}`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json", "Authorization": `Bearer ${t}` },
+                  body: JSON.stringify(updated),
+                }).catch(() => {});
+                // Update kk_course_data (grade calculator)
+                const allData = JSON.parse(localStorage.getItem("kk_course_data") || "{}");
+                allData[code] = { ...(allData[code] || {}), professor: syllabusEditProf };
+                localStorage.setItem("kk_course_data", JSON.stringify(allData));
+                // Update office hours
+                const allOH = JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}");
+                allOH[code] = syllabusEditOH;
+                localStorage.setItem("kk_course_office_hours", JSON.stringify(allOH));
+                window.dispatchEvent(new Event("kk_syllabus_changed"));
+                setSyllabusEditCourse(null);
+              }} style={pf.saveBtn}>Save</button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1462,13 +1527,26 @@ const refetchSemesters = () =>
                       <span />
                     </div>
                     {editCourses.map(c => (
-                      <div key={c.id} style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
-                        <StudentCourses value={c} onSelect={data => setEditCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r))} />
-                        <input value={c.credits} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
-                        <select value={c.grade} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
-                          {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}
-                        </select>
-                        <button onClick={() => setEditCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
+                      <div key={c.id}>
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom: syllabi[c.code] ? 4 : 6 }}>
+                          <StudentCourses value={c} onSelect={data => setEditCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r))} />
+                          <input value={c.credits} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
+                          <select value={c.grade} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
+                            {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}
+                          </select>
+                          <button onClick={() => setEditCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
+                        </div>
+                        {syllabi[c.code] && (
+                          <div style={{ marginBottom:6, paddingLeft:2 }}>
+                            <button onClick={() => {
+                              const courseData = JSON.parse(localStorage.getItem("kk_course_data") || "{}")[c.code] || {};
+                              const oh = JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}")[c.code] || [];
+                              setSyllabusEditProf(courseData.professor || "");
+                              setSyllabusEditOH(oh.length ? oh : []);
+                              setSyllabusEditCourse(c.code);
+                            }} style={{ fontSize:11, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>Edit syllabus info</button>
+                          </div>
+                        )}
                       </div>
                     ))}
                     <button onClick={() => setEditCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"" }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>

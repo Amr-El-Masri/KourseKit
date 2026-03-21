@@ -280,9 +280,9 @@ export default function Settings({ onLogout }) {
         )}
       </div>
 
-      {/* Danger Zone */}
+      {/* Account Deletion */}
       <div style={{ background: "var(--surface)", borderRadius: 16, border: "1px solid var(--error-border)", padding: "20px 24px", marginBottom: 20 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--error)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Danger Zone</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--error)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Account Deletion</div>
         {!deleteConfirm ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div>
