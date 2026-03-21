@@ -3,6 +3,7 @@ import StudentDirectoryPanel from "./StudentDirectoryPanel";
 import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle } from "lucide-react";
 import AdminDashboard from "./AdminDashboard";
 import TranscriptModal from "./TranscriptModal";
+import StudentCourses from "./StudentCourses";
 
 function getTokenRole() {
   try {
@@ -148,54 +149,7 @@ const AUB_SEMESTERS = [
   "Spring 22-23","Summer 22-23","Fall 22-23",
 ];
 
-function CourseSearchInput({ value = "", onSelect }) {
-  const [query,   setQuery]   = useState(value);
-  const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [dropPos,  setDropPos] = useState(null);
-  const inputRef = useRef(null);
 
-  useEffect(() => { setQuery(value); }, [value]);
-  useEffect(() => {
-    if (query === value || query.trim().length < 2) { setResults([]); return; }
-    setLoading(true);
-    const t = setTimeout(() => {
-      fetch(`${API}/api/courses/search?query=${encodeURIComponent(query)}`)
-        .then(r => r.json()).then(setResults).catch(() => setResults([])).finally(() => setLoading(false));
-    }, 300);
-    return () => clearTimeout(t);
-  }, [query, value]);
-
-  const showDrop = results.length > 0 || loading;
-  useEffect(() => {
-    if (showDrop && inputRef.current) {
-      const r = inputRef.current.getBoundingClientRect();
-      setDropPos({ top: r.bottom + 4, left: r.left, width: r.width });
-    }
-    if (!showDrop) setDropPos(null);
-  }, [showDrop]);
-
-  return (
-    <div style={{ position:"relative" }}>
-      <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search course (e.g. CMPS 200)"
-        style={{ width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", outline:"none" }} />
-      {showDrop && dropPos && (
-        <div style={{ position:"fixed", top:dropPos.top, left:dropPos.left, width:dropPos.width, background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10, boxShadow:"0 4px 16px rgba(49,72,122,0.1)", zIndex:9999, maxHeight:180, overflowY:"auto" }}>
-          {loading && <div style={{ padding:"10px 14px", fontSize:12, color:"var(--text2)" }}>Searching…</div>}
-          {results.map(c => (
-            <div key={c.id} onClick={() => { onSelect(c.courseCode); setQuery(c.courseCode); setResults([]); }}
-              style={{ padding:"9px 14px", fontSize:13, color:"var(--text)", cursor:"pointer", borderBottom:"1px solid #F4F4F8" }}
-              onMouseEnter={e => e.currentTarget.style.background="var(--surface3)"}
-              onMouseLeave={e => e.currentTarget.style.background="transparent"}>
-              <span style={{ fontWeight:600 }}>{c.courseCode}</span>
-              {c.title && <span style={{ color:"var(--text2)", marginLeft:8 }}>{c.title}</span>}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── Mini default-schedule planner constants ──────────────────────────────────
 const DS_HOUR_H   = 40;
@@ -576,7 +530,7 @@ export default function Profile({ onProfileSave, onSemestersUpdated }) {
   const [saved,      setSaved]      = useState(false);
   const [profilepic, setProfilepic] = useState(false);
 
-  // My Semesters
+  // my semesters
   const [semesters,    setSemesters]    = useState([]);
   const [creating,     setCreating]     = useState(false);
   const [newSemName,   setNewSemName]   = useState("");
@@ -585,6 +539,7 @@ export default function Profile({ onProfileSave, onSemestersUpdated }) {
   const [editName,     setEditName]     = useState("");
   const [editCourses,  setEditCourses]  = useState([]);
   const [semSaveLoad,  setSemSaveLoad]  = useState(false);
+  const [semErr,       setSemErr]       = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [showFollowList, setShowFollowList] = useState(null);
   const [showDirectory, setShowDirectory] = useState(false);
@@ -680,12 +635,15 @@ const refetchSemesters = () =>
   const createSemester = async () => {
     if (!newSemName.trim()) return;
     const courses = newSemCourses.filter(c => c.code.trim());
+    const missing = courses.filter(c => !c.sectioncrn);
+    if (missing.length > 0) { setSemErr(`Please pick a section for: ${missing.map(c => c.code || "empty course").join(", ")}`); return; }
+    setSemErr("");
     setSemSaveLoad(true);
     try {
       await fetch(`${API}/api/grades/saved`, {
         method: "POST",
         headers: semAuthHeaders(),
-        body: JSON.stringify({ semesterName: newSemName.trim(), courses: courses.map(c => ({ courseCode: c.code, grade: c.grade, credits: parseInt(c.credits) || 0 })) }),
+        body: JSON.stringify({ semesterName: newSemName.trim(), courses: courses.map(c => ({ courseCode: c.code, grade: c.grade, credits: parseInt(c.credits) || 0, sectioncrn: c.sectioncrn || null })) }),
       });
       await refetchSemesters();
       setCreating(false); setNewSemName(""); setNewSemCourses([{ id:1, code:"", credits:"", grade:"" }]);
@@ -694,13 +652,16 @@ const refetchSemesters = () =>
   };
 
   const saveEdit = async () => {
+    const courses = editCourses.filter(c => c.code.trim());
+    const missing = courses.filter(c => !c.sectioncrn);
+    if (missing.length > 0) { setSemErr(`Please pick a section for: ${missing.map(c => c.code || "empty course").join(", ")}`); return; }
+    setSemErr("");
     setSemSaveLoad(true);
     try {
-      const courses = editCourses.filter(c => c.code.trim());
       await fetch(`${API}/api/grades/saved/${editingId}`, {
         method: "PUT",
         headers: semAuthHeaders(),
-        body: JSON.stringify({ semesterName: editName.trim(), courses: courses.map(c => ({ courseCode: c.code, grade: c.grade, credits: parseInt(c.credits) || 0 })) }),
+        body: JSON.stringify({ semesterName: editName.trim(), courses: courses.map(c => ({ courseCode: c.code, grade: c.grade, credits: parseInt(c.credits) || 0, sectioncrn: c.sectioncrn || null })) }),
       });
       await refetchSemesters();
       setEditingId(null);
@@ -717,7 +678,7 @@ const refetchSemesters = () =>
   const startEdit = (sem) => {
     setEditingId(sem.id);
     setEditName(sem.semesterName);
-    setEditCourses((sem.courses || []).map((c,i) => ({ id: i+1, code: c.courseCode || "", credits: String(c.credits || ""), grade: c.grade || "" })));
+    setEditCourses((sem.courses || []).map((c,i) => ({ id: i+1, code: c.courseCode || "", credits: String(c.credits || ""), grade: c.grade || "", sectioncrn: c.sectioncrn || null, sectionNumber: c.section?.sectionNumber || null, professorName: c.section?.professorName || null })));
   };
 
   const removeTranscript = async () => {
@@ -1232,8 +1193,6 @@ const refetchSemesters = () =>
         </div>
       )}
 
-      <DefaultScheduleEditor token={localStorage.getItem("kk_token")} />
-
       {/* Uploaded Transcript */}
       {transcriptInfo && (
         <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", padding:"24px 28px", marginTop:24 }}>
@@ -1294,7 +1253,10 @@ const refetchSemesters = () =>
             </div>
             {newSemCourses.map(c => (
               <div key={c.id} style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
-                <CourseSearchInput value={c.code} onSelect={code => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,code} : r))} />
+                <StudentCourses
+                  value={c}
+                  onSelect={data => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r))}
+                />
                 <input value={c.credits} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                 <select value={c.grade} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
                   {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}
@@ -1303,9 +1265,10 @@ const refetchSemesters = () =>
               </div>
             ))}
             <button onClick={() => setNewSemCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"" }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
+            {semErr && <div style={{ fontSize:12, color:"var(--error)", background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:8, padding:"8px 12px", marginTop:8 }}>{semErr}</div>}
             <div style={{ display:"flex", gap:8, marginTop:12 }}>
               <button onClick={createSemester} disabled={semSaveLoad || !newSemName.trim()} style={{ ...pf.saveBtn, fontSize:13, opacity: semSaveLoad || !newSemName.trim() ? 0.6 : 1 }}>{semSaveLoad ? "Saving…" : "Save Semester"}</button>
-              <button onClick={() => { setCreating(false); setNewSemName(""); setNewSemCourses([{ id:1, code:"", credits:"", grade:"" }]); }} style={{ ...pf.cancelBtn }}>Cancel</button>
+              <button onClick={() => { setCreating(false); setNewSemName(""); setNewSemCourses([{ id:1, code:"", credits:"", grade:"" }]); setSemErr(""); }} style={{ ...pf.cancelBtn }}>Cancel</button>
             </div>
           </div>
         )}
@@ -1404,7 +1367,10 @@ const refetchSemesters = () =>
                 </div>
                 {editCourses.map(c => (
                   <div key={c.id} style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
-                    <CourseSearchInput value={c.code} onSelect={code => setEditCourses(p => p.map(r => r.id===c.id ? {...r,code} : r))} />
+                    <StudentCourses
+                      value={c}
+                      onSelect={data => setEditCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r))}
+                    />
                     <input value={c.credits} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                     <select value={c.grade} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
                       {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}
@@ -1413,15 +1379,20 @@ const refetchSemesters = () =>
                   </div>
                 ))}
                 <button onClick={() => setEditCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"" }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
+                {semErr && <div style={{ fontSize:12, color:"var(--error)", background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:8, padding:"8px 12px", marginTop:8 }}>{semErr}</div>}
                 <div style={{ display:"flex", gap:8, marginTop:12 }}>
                   <button onClick={saveEdit} disabled={semSaveLoad} style={{ ...pf.saveBtn, fontSize:13, opacity: semSaveLoad ? 0.6 : 1 }}>{semSaveLoad ? "Saving…" : "Save Changes"}</button>
-                  <button onClick={() => setEditingId(null)} style={{ ...pf.cancelBtn }}>Cancel</button>
+                  <button onClick={() => { setEditingId(null); setSemErr(""); }} style={{ ...pf.cancelBtn }}>Cancel</button>
                 </div>
               </div>
             )}
           </div>
         ))}
 
+      </div>
+
+      <div style={{ marginTop: 24 }}>
+        <DefaultScheduleEditor token={localStorage.getItem("kk_token")} />
       </div>
 
       </>}
