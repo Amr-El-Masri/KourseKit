@@ -22,6 +22,25 @@ const AVATAR_ICONS = [
 ];
 
 const DAYS_OF_WEEK = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const COURSE_COLORS = ["#2563EB","#16A34A","#EA580C","#7C3AED","#DC2626","#0891B2","#DB2777","#65A30D"];
+const _SECTION_DAY_MAP = { M:"MONDAY", T:"TUESDAY", W:"WEDNESDAY", R:"THURSDAY", F:"FRIDAY", S:"SATURDAY", U:"SUNDAY" };
+function _parseSectionTime(t) {
+  if (!t || t === "0000" || !t.trim() || t.trim() === ".") return null;
+  if (t.includes(":")) { const [h,m] = t.split(":"); return parseInt(h) + parseInt(m)/60; }
+  const p = t.padStart(4,"0"); return parseInt(p.slice(0,2)) + parseInt(p.slice(2,4))/60;
+}
+function _getSectionSlots(section) {
+  const slots = [];
+  if (section?.days1 && section.beginTime1) {
+    const s = _parseSectionTime(section.beginTime1), e = _parseSectionTime(section.endTime1);
+    if (s !== null && e !== null) section.days1.split(" ").forEach(d => { if (_SECTION_DAY_MAP[d]) slots.push({ dayKey: _SECTION_DAY_MAP[d], startHour: s, endHour: e }); });
+  }
+  if (section?.days2 && section.beginTime2 && section.beginTime2 !== "0000" && section.beginTime2.trim() !== ".") {
+    const s = _parseSectionTime(section.beginTime2), e = _parseSectionTime(section.endTime2);
+    if (s !== null && e !== null) section.days2.split(" ").forEach(d => { if (_SECTION_DAY_MAP[d]) slots.push({ dayKey: _SECTION_DAY_MAP[d], startHour: s, endHour: e }); });
+  }
+  return slots;
+}
 const EVENT_TYPES  = [
   { label:"Class",   color:"var(--primary)",  bg:"var(--blue-light-bg)" },
   { label:"Gym",     color:"var(--success)",  bg:"var(--success-bg)" },
@@ -669,8 +688,23 @@ export default function Dashboard({ onLogout }) {
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [newEvent, setNewEvent] = useState({ day:"Mon", label:"", time:"", type:"Class" });
 
+  const [dismissedSections, setDismissedSections] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("kk_dismissed_sections") || "[]")); } catch { return new Set(); }
+  });
+  const dismissSection = (dateStr, crn) => {
+    const key = `${dateStr}_${crn}`;
+    const next = new Set(dismissedSections);
+    next.add(key);
+    setDismissedSections(next);
+    localStorage.setItem("kk_dismissed_sections", JSON.stringify([...next]));
+  };
+
   const selectedSem = apiSemesters.find(s => s.semesterName === semester) ?? { courses: [] };
   const semCourseList = (selectedSem.courses || []).map(c => ({ id: c.id, name: c.courseCode }));
+  const _savedCourseColors = (() => { try { return JSON.parse(localStorage.getItem("kk_course_section_colors") || "{}"); } catch { return {}; } })();
+  const enrolledSections = (selectedSem.courses || [])
+    .filter(c => c.section)
+    .map((c, i) => ({ courseCode: c.courseCode, sectionNumber: c.section.sectionNumber || c.sectioncrn, crn: c.sectioncrn, section: c.section, color: _savedCourseColors[c.sectioncrn] || COURSE_COLORS[i % COURSE_COLORS.length] }));
 
   const addTodo = () => {
     if (!todoInput.trim()) { setTodoError(true); return; }
@@ -1105,19 +1139,45 @@ export default function Dashboard({ onLogout }) {
                   const DAY_LABELS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
                   const hasBlocks=DAY_KEYS.some(k=>(studyBlocks[k]||[]).length>0);
                   const hasSlots=DAY_KEYS.some(k=>(studySlots[k]||[]).length>0);
-                  if (!hasBlocks&&!hasSlots) return <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"20px 0"}}>No schedule for this week — open the planner to generate one!</div>;
-                  const fmt=timeStr=>{if(!timeStr)return"";const parts=Array.isArray(timeStr)?timeStr:timeStr.split(":");return`${String(parts[0]).padStart(2,"0")}:${String(parts[1]||0).padStart(2,"0")}`;};
                   const fmtH=h=>`${String(Math.floor(h)).padStart(2,"0")}:${String(Math.round((h%1)*60)).padStart(2,"0")}`;
+                  // Compute per-day course blocks (accounting for dismissals)
+                  const weekStartDate2 = (() => { const d=new Date(); const diff=d.getDay()===0?-6:1-d.getDay(); d.setDate(d.getDate()+diff+schedWeekOffset*7); return d; })();
+                  const courseBlocksPerDay = {};
+                  enrolledSections.forEach(es => {
+                    _getSectionSlots(es.section).forEach(({ dayKey, startHour, endHour }) => {
+                      if (!courseBlocksPerDay[dayKey]) courseBlocksPerDay[dayKey] = [];
+                      const dayIdx = DAY_KEYS.indexOf(dayKey);
+                      const dayDate = new Date(weekStartDate2); dayDate.setDate(weekStartDate2.getDate() + dayIdx);
+                      const dateStr = `${dayDate.getFullYear()}-${String(dayDate.getMonth()+1).padStart(2,"0")}-${String(dayDate.getDate()).padStart(2,"0")}`;
+                      const dismissKey = `${dateStr}_${es.crn}`;
+                      if (!dismissedSections.has(dismissKey)) {
+                        courseBlocksPerDay[dayKey].push({ startHour, endHour, courseCode: es.courseCode, sectionNumber: es.sectionNumber, color: es.color, crn: es.crn, dateStr, dismissKey });
+                      }
+                    });
+                  });
+                  const hasCourseBlocks = DAY_KEYS.some(k => (courseBlocksPerDay[k]||[]).length > 0);
+                  if (!hasBlocks&&!hasSlots&&!hasCourseBlocks) return <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"20px 0"}}>No schedule for this week — open the planner to generate one!</div>;
+                  const fmt=timeStr=>{if(!timeStr)return"";const parts=Array.isArray(timeStr)?timeStr:timeStr.split(":");return`${String(parts[0]).padStart(2,"0")}:${String(parts[1]||0).padStart(2,"0")}`;};
                   const PALETTE=["var(--accent2)","#31487A","#2d7a4a","#7a4a2d","#7a2d5a","#2d5a7a","#6b2d7a"];
                   const entryLookup={};
                   studyEntries.forEach((e,idx)=>{const entryIdStr=String(e.id);const course=e.task?.course||"";const title=e.task?.title||"Study";const label=course?`${course} — ${title}`:title;const color=schedColorMap[entryIdStr]||courseColors[course]||PALETTE[idx%PALETTE.length];entryLookup[entryIdStr]={label,color};});
                   return DAY_KEYS.map((key,i)=>{
                     const blocks=(studyBlocks[key]||[]).slice().sort((a,b)=>fmt(a.startTime).localeCompare(fmt(b.startTime)));
                     const slots=studySlots[key]||[];
-                    if(!blocks.length&&!slots.length)return null;
+                    const courseDayBlocks=courseBlocksPerDay[key]||[];
+                    if(!blocks.length&&!slots.length&&!courseDayBlocks.length)return null;
                     return (
                       <div key={key} style={{marginBottom:2}}>
                         <div style={{fontSize:11,fontWeight:700,color:"#8FB3E2",marginBottom:4,textTransform:"uppercase",letterSpacing:"0.06em"}}>{DAY_LABELS[i]}</div>
+                        {courseDayBlocks.map((cb,ci)=>(
+                          <div key={`c${ci}`} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 10px",borderRadius:8,marginBottom:4,background:cb.color,boxShadow:`0 2px 6px ${cb.color}44`}}>
+                            <div style={{minWidth:0}}>
+                              <span style={{fontSize:12,fontWeight:700,color:"#fff",display:"block",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis",textShadow:"0 1px 2px rgba(0,0,0,0.2)"}}>{cb.courseCode} · {cb.sectionNumber}</span>
+                              <span style={{fontSize:11,color:"rgba(255,255,255,0.85)"}}>{fmtH(cb.startHour)} – {fmtH(cb.endHour)}</span>
+                            </div>
+                            <button onClick={()=>dismissSection(cb.dateStr,cb.crn)} title="Remove for today" style={{background:"rgba(0,0,0,0.15)",border:"none",color:"#fff",cursor:"pointer",fontSize:13,padding:"2px 6px",lineHeight:1,borderRadius:4,flexShrink:0}}>×</button>
+                          </div>
+                        ))}
                         {blocks.map((b,bi)=>{const startH=Array.isArray(b.startTime)?b.startTime[0]+b.startTime[1]/60:parseFloat(b.startTime?.split(":")[0]||0)+parseFloat(b.startTime?.split(":")[1]||0)/60;const endH=startH+(b.duration||1);const info=entryLookup[String(b.studyPlanEntryId)]||{};const color=info.color||"#7B5EA7";const label=info.label||"Study Block";return <div key={bi} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 10px",borderRadius:8,marginBottom:4,background:b.completed?"#f5f5f5":color+"18",borderLeft:`3px solid ${b.completed?"#ccc":color}`,opacity:b.completed?0.65:1}}><div style={{minWidth:0}}><span style={{fontSize:12,fontWeight:700,color:b.completed?"#aaa":color,display:"block",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{label}</span><span style={{fontSize:11,color:"var(--text3)"}}>{fmtH(startH)} – {fmtH(endH)} · {b.duration}h</span></div>{b.completed?<span style={{fontSize:10,background:"#eef7f0",color:"#2d7a4a",padding:"2px 6px",borderRadius:4,fontWeight:600,flexShrink:0}}>✓ Done</span>:<span style={{fontSize:10,background:color+"22",color,padding:"2px 6px",borderRadius:4,fontWeight:600,flexShrink:0}}>{b.duration}h</span>}</div>;})}
                         {!blocks.length&&slots.map((slot,si)=>(
                           <div key={si} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 10px",borderRadius:8,marginBottom:4,background:"var(--blue2-bg)",borderLeft:"3px solid var(--border2)"}}><div><span style={{fontSize:12,fontWeight:600,color:"var(--primary)"}}>{fmt(slot.startTime)} – {fmt(slot.endTime)}</span><div style={{fontSize:11,color:"var(--text2)",marginTop:1}}>Available slot</div></div><span style={{fontSize:10,background:"var(--blue2-bg)",color:"var(--primary)",padding:"2px 6px",borderRadius:4,flexShrink:0}}>Free</span></div>
@@ -1659,7 +1719,7 @@ export default function Dashboard({ onLogout }) {
               />
           )}
           {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
-          {activePage === "planner" && <StudyPlanner />}
+          {activePage === "planner" && <StudyPlanner enrolledSections={enrolledSections} />}
           {activePage === "students" && <StudentDirectory />}
           {activePage === "profile" && (
               <Profile onProfileSave={p => setProfile(p)} onSemestersUpdated={fetchSemesters} />

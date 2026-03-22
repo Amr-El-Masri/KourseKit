@@ -168,6 +168,26 @@ const DS_DAY_SHORT      = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 function dsHourToPx(h)  { return (h - DS_START) * DS_HOUR_H; }
 function dsPxToHour(px) { return px / DS_HOUR_H + DS_START; }
 function dsSnap(h)      { return Math.round(h * 2) / 2; }
+
+const COURSE_COLORS = ["#2563EB","#16A34A","#EA580C","#7C3AED","#DC2626","#0891B2","#DB2777","#65A30D"];
+const DS_DAY_ABBR   = { M:"MONDAY", T:"TUESDAY", W:"WEDNESDAY", R:"THURSDAY", F:"FRIDAY", S:"SATURDAY", U:"SUNDAY" };
+function parseCourseTime(t) {
+  if (!t || t === "0000" || !t.trim() || t.trim() === ".") return null;
+  if (t.includes(":")) { const [h,m] = t.split(":"); return parseInt(h) + parseInt(m)/60; }
+  const p = t.padStart(4,"0"); return parseInt(p.slice(0,2)) + parseInt(p.slice(2,4))/60;
+}
+function getSectionSlots(section) {
+  const slots = [];
+  if (section?.days1 && section.beginTime1) {
+    const s = parseCourseTime(section.beginTime1), e = parseCourseTime(section.endTime1);
+    if (s !== null && e !== null) section.days1.split(" ").forEach(d => { if (DS_DAY_ABBR[d]) slots.push({ dayKey: DS_DAY_ABBR[d], startHour: s, endHour: e }); });
+  }
+  if (section?.days2 && section.beginTime2 && section.beginTime2 !== "0000" && section.beginTime2.trim() !== ".") {
+    const s = parseCourseTime(section.beginTime2), e = parseCourseTime(section.endTime2);
+    if (s !== null && e !== null) section.days2.split(" ").forEach(d => { if (DS_DAY_ABBR[d]) slots.push({ dayKey: DS_DAY_ABBR[d], startHour: s, endHour: e }); });
+  }
+  return slots;
+}
 function dsFmt(h) {
   const hh = Math.floor(h), mm = Math.round((h % 1) * 60);
   const ap = hh < 12 ? "AM" : "PM", h12 = hh % 12 || 12;
@@ -224,7 +244,7 @@ function DsMiniSlot({ slot, dayKey, onDelete, onResize, readonly }) {
   );
 }
 
-function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scrollRef }) {
+function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scrollRef, courseBlocks }) {
   const colRef  = useRef(null);
   const dragRef = useRef(null);
   const [dragging, setDragging] = useState(null);
@@ -261,8 +281,9 @@ function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scro
     if (!dragRef.current) return;
     const { startHour, endHour } = dragRef.current;
     if (endHour - startHour >= 0.5) {
-      const overlaps = (slots || []).some(s => startHour < s.endHour && endHour > s.startHour);
-      if (!overlaps) onAdd(dayKey, { startHour, endHour, id: Date.now() + Math.random() });
+      const overlapsSlot = (slots || []).some(s => startHour < s.endHour && endHour > s.startHour);
+      const overlapsCourse = (courseBlocks || []).some(cb => startHour < cb.endHour && endHour > cb.startHour);
+      if (!overlapsSlot && !overlapsCourse) onAdd(dayKey, { startHour, endHour, id: Date.now() + Math.random() });
     }
     dragRef.current = null;
     setDragging(null);
@@ -282,6 +303,12 @@ function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scro
       {(slots || []).map(slot => (
         <DsMiniSlot key={slot.id} slot={slot} dayKey={dayKey} onDelete={onDelete} onResize={onResize} readonly={readonly} />
       ))}
+      {(courseBlocks || []).map((cb, i) => (
+        <div key={`cb-${i}`} style={{ position:"absolute", left:2, right:2, top:dsHourToPx(cb.startHour)+1, height:Math.max((cb.endHour-cb.startHour)*DS_HOUR_H-2,10), background:cb.color, borderRadius:5, zIndex:3, padding:"2px 4px", overflow:"hidden", pointerEvents:"none", boxShadow:`0 1px 4px ${cb.color}55` }}>
+          <div style={{ fontSize:8, fontWeight:800, color:"#fff", lineHeight:1.3, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", textShadow:"0 1px 2px rgba(0,0,0,0.2)" }}>{cb.courseCode}</div>
+          <div style={{ fontSize:7, color:"rgba(255,255,255,0.85)" }}>{dsFmt(cb.startHour)}–{dsFmt(cb.endHour)}</div>
+        </div>
+      ))}
       {dragging && (
         <div className="ds-drag-preview" style={{ top: dsHourToPx(dragging.startHour) + 1, height: (dragging.endHour - dragging.startHour) * DS_HOUR_H - 2 }}>
           {dsFmt(dragging.startHour)}–{dsFmt(dragging.endHour)}
@@ -298,6 +325,7 @@ export function DefaultScheduleEditor({ token, onDone, extraAction }) {
   const [saving,         setSaving]         = useState(false);
   const [hasSaved,       setHasSaved]       = useState(false);
   const [confirmDelete,  setConfirmDelete]  = useState(false);
+  const [enrolledSections, setEnrolledSections] = useState([]);
   const scrollRef = useRef(null);
 
   const authH = () => ({ "Content-Type": "application/json", "Authorization": `Bearer ${token}` });
@@ -325,6 +353,25 @@ export function DefaultScheduleEditor({ token, onDone, extraAction }) {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = 8 * DS_HOUR_H;
     }
+  }, []);
+
+  // Fetch enrolled sections to display as course blocks on the schedule
+  useEffect(() => {
+    fetch(`${API}/api/grades/saved`, { headers: authH() })
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        if (!Array.isArray(data) || data.length === 0) return;
+        const latest = data[0]; // API returns DESC order, so first = most recent
+        const courses = (latest?.courses || []).filter(c => c.section);
+        const savedColors = (() => { try { return JSON.parse(localStorage.getItem("kk_course_section_colors") || "{}"); } catch { return {}; } })();
+        setEnrolledSections(courses.map((c, i) => ({
+          courseCode: c.courseCode,
+          sectionNumber: c.section.sectionNumber || c.sectioncrn,
+          section: c.section,
+          color: savedColors[c.sectioncrn] || COURSE_COLORS[i % COURSE_COLORS.length],
+        })));
+      })
+      .catch(() => {});
   }, []);
 
   const handleAdd = useCallback((dayKey, slot) => {
@@ -474,18 +521,28 @@ export function DefaultScheduleEditor({ token, onDone, extraAction }) {
               </div>
               {/* Day columns */}
               <div className="ds-days-grid">
-                {DS_DAY_KEYS_LIST.map(dayKey => (
-                  <DsMiniDayCol
-                    key={dayKey}
-                    dayKey={dayKey}
-                    slots={availability[dayKey] || []}
-                    onAdd={handleAdd}
-                    onDelete={handleDelete}
-                    onResize={handleResize}
-                    readonly={!isEditing}
-                    scrollRef={scrollRef}
-                  />
-                ))}
+                {(() => {
+                  const courseBlocksPerDay = {};
+                  enrolledSections.forEach(es => {
+                    getSectionSlots(es.section).forEach(({ dayKey, startHour, endHour }) => {
+                      if (!courseBlocksPerDay[dayKey]) courseBlocksPerDay[dayKey] = [];
+                      courseBlocksPerDay[dayKey].push({ startHour, endHour, courseCode: es.courseCode, sectionNumber: es.sectionNumber, color: es.color });
+                    });
+                  });
+                  return DS_DAY_KEYS_LIST.map(dayKey => (
+                    <DsMiniDayCol
+                      key={dayKey}
+                      dayKey={dayKey}
+                      slots={availability[dayKey] || []}
+                      onAdd={handleAdd}
+                      onDelete={handleDelete}
+                      onResize={handleResize}
+                      readonly={!isEditing}
+                      scrollRef={scrollRef}
+                      courseBlocks={courseBlocksPerDay[dayKey] || []}
+                    />
+                  ));
+                })()}
               </div>
             </div>
           </div>
