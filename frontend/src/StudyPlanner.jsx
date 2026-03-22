@@ -187,7 +187,6 @@ function TimeGutter() {
 
 function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUncomplete, onEdit, colIndex = 0, totalCols = 1 }) {
     const [showMenu, setShowMenu] = useState(false);
-    const [confirmingDelete, setConfirmingDelete] = useState(false);
     useEffect(() => {
         if (!showMenu) return;
         const close = () => setShowMenu(false);
@@ -225,14 +224,7 @@ function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUnco
                     : <button className="sp-block-action-btn" title="Undo complete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onUncomplete(block.id); }}>↩</button>
                 }
                 <button className="sp-block-action-btn" title="Edit" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onEdit(block); }}>✎</button>
-                {confirmingDelete ? (
-                    <>
-                        <button className="sp-block-action-btn danger" title="Confirm delete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(block.id); }} style={{ fontSize:9, padding:"1px 4px" }}>✓ Yes</button>
-                        <button className="sp-block-action-btn" title="Cancel" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); setConfirmingDelete(false); }} style={{ fontSize:9, padding:"1px 4px" }}>✗ No</button>
-                    </>
-                ) : (
-                    <button className="sp-block-action-btn danger" title="Delete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); setConfirmingDelete(true); }}>✕</button>
-                )}
+                <button className="sp-block-action-btn danger" title="Delete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(block.id); }}>✕</button>
             </div>
             {showMenu && (
                 <div className="sp-block-menu" onClick={e => e.stopPropagation()}>
@@ -241,13 +233,7 @@ function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUnco
                         : <button onClick={() => { onUncomplete(block.id); setShowMenu(false); }}>↩ Undo</button>
                     }
                     <button onClick={() => { onEdit(block); setShowMenu(false); }}><Pencil size={13} style={{verticalAlign:"middle",marginRight:4}}/>Edit</button>
-                    {confirmingDelete
-                        ? <>
-                            <button className="danger" onClick={() => { onDelete(block.id); setShowMenu(false); }}>✓ Confirm Delete</button>
-                            <button onClick={() => { setConfirmingDelete(false); setShowMenu(false); }}>✗ Cancel</button>
-                        </>
-                        : <button className="danger" onClick={() => { setConfirmingDelete(true); }}>✕ Delete</button>
-                    }
+                    <button className="danger" onClick={() => { onDelete(block.id); setShowMenu(false); }}>✕ Delete</button>
                 </div>
             )}
         </div>
@@ -319,7 +305,6 @@ function EditBlockModal({ block, entries, dayBlocks, onClose, onSave }) {
 
 function AvailabilitySlot({ slot, dayKey, onDelete, onResize }) {
     const [liveEndHour, setLiveEndHour] = useState(null);
-    const [confirmingDelete, setConfirmingDelete] = useState(false);
     const liveEndHourRef = useRef(null);
     const dragRef = useRef(null);
     const endHour = liveEndHour ?? slot.endHour;
@@ -359,14 +344,7 @@ function AvailabilitySlot({ slot, dayKey, onDelete, onResize }) {
             onMouseDown={e => e.stopPropagation()}
         >
             <span className="sp-slot-time">{formatTime(slot.startHour)}–{formatTime(endHour)}</span>
-            {confirmingDelete ? (
-                <span style={{ display:"flex", alignItems:"center", gap:2 }} onMouseDown={e => e.stopPropagation()}>
-                    <button className="sp-slot-delete" onClick={e => { e.stopPropagation(); onDelete(dayKey, slot.id); }} style={{ fontSize:9, opacity:1, position:"static", padding:"1px 4px" }}>✓</button>
-                    <button className="sp-slot-delete" onClick={e => { e.stopPropagation(); setConfirmingDelete(false); }} style={{ fontSize:9, opacity:1, position:"static", padding:"1px 4px" }}>✗</button>
-                </span>
-            ) : (
-                <button className="sp-slot-delete" onMouseDown={e => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setConfirmingDelete(true); }}>×</button>
-            )}
+            <button className="sp-slot-delete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(dayKey, slot.id); }}>×</button>
             <div onMouseDown={handleResizeStart} style={{ position:"absolute", bottom:0, left:0, right:0, height:8, cursor:"ns-resize", display:"flex", alignItems:"center", justifyContent:"center" }}>
                 <div style={{ width:24, height:3, borderRadius:2, background:"rgba(123,94,167,0.4)" }} />
             </div>
@@ -846,6 +824,8 @@ export default function StudyPlanner({ enrolledSections = [] }) {
     const [colorMap, setColorMap] = useState({});
     const [loading, setLoading] = useState(false);
     const [toast, setToast] = useState(null);
+    const [undoToast, setUndoToast] = useState(null); // { msg }
+    const undoPendingRef = useRef(null);
     const [showGenerateModal, setShowGenerateModal] = useState(false);
     const [showClearModal, setShowClearModal] = useState(false);
     const [entries, setEntries] = useState([]);
@@ -856,15 +836,23 @@ export default function StudyPlanner({ enrolledSections = [] }) {
     const [dismissedSections, setDismissedSections] = useState(() => {
         try { return new Set(JSON.parse(localStorage.getItem("kk_dismissed_sections") || "[]")); } catch { return new Set(); }
     });
-    const dismissSection = useCallback((dateStr, crn) => {
-        const key = `${dateStr}_${crn}`;
-        setDismissedSections(prev => {
-            const next = new Set(prev);
-            next.add(key);
-            localStorage.setItem("kk_dismissed_sections", JSON.stringify([...next]));
-            return next;
-        });
+    const clearUndo = useCallback(() => {
+        if (undoPendingRef.current) {
+            clearTimeout(undoPendingRef.current.timer);
+            undoPendingRef.current = null;
+        }
+        setUndoToast(null);
     }, []);
+
+    const triggerUndo = useCallback(() => {
+        if (undoPendingRef.current) {
+            clearTimeout(undoPendingRef.current.timer);
+            undoPendingRef.current.restoreFn();
+            undoPendingRef.current = null;
+        }
+        setUndoToast(null);
+    }, []);
+
     const restoreSection = useCallback((key) => {
         setDismissedSections(prev => {
             const next = new Set(prev);
@@ -873,6 +861,24 @@ export default function StudyPlanner({ enrolledSections = [] }) {
             return next;
         });
     }, []);
+    const dismissSection = useCallback((dateStr, crn) => {
+        const key = `${dateStr}_${crn}`;
+        setDismissedSections(prev => {
+            const next = new Set(prev);
+            next.add(key);
+            localStorage.setItem("kk_dismissed_sections", JSON.stringify([...next]));
+            return next;
+        });
+        clearUndo();
+        setUndoToast({ msg: "Class hidden" });
+        undoPendingRef.current = {
+            restoreFn: () => restoreSection(key),
+            timer: setTimeout(() => {
+                undoPendingRef.current = null;
+                setUndoToast(null);
+            }, 5000),
+        };
+    }, [clearUndo, restoreSection]);
     const [courseColorOverrides, setCourseColorOverrides] = useState(() => {
         try { return JSON.parse(localStorage.getItem("kk_course_section_colors") || "{}"); } catch { return {}; }
     });
@@ -899,7 +905,6 @@ export default function StudyPlanner({ enrolledSections = [] }) {
         setToast({ msg, type });
         setTimeout(() => setToast(null), 3000);
     }, []);
-
 
     useEffect(() => {
         if (Object.keys(colorMap).length > 0) {
@@ -1024,18 +1029,37 @@ export default function StudyPlanner({ enrolledSections = [] }) {
         });
     }, []);
 
-    const handleDeleteBlock = useCallback(async (blockId) => {
-        await apiFetch(`/api/study-plan/blocks/${blockId}`, { method: "DELETE" });
+    const handleDeleteBlock = useCallback((blockId) => {
+        let deletedBlock = null, deletedDay = null;
         setWeekBlocks(prev => {
             const next = {};
-            for (const [day, blocks] of Object.entries(prev))
-                next[day] = blocks.filter(b => b.id !== blockId);
+            for (const [day, blocks] of Object.entries(prev)) {
+                const found = blocks.find(b => String(b.id) === String(blockId));
+                if (found) { deletedBlock = found; deletedDay = day; }
+                next[day] = blocks.filter(b => String(b.id) !== String(blockId));
+            }
             return next;
         });
-        // Reload slots so the UI reflects any slot shrinkage/deletion
-        await loadSlots();
-        showToast("Block deleted", "info");
-    }, [showToast, loadSlots]);
+        clearUndo();
+        setUndoToast({ msg: "Study block deleted" });
+        undoPendingRef.current = {
+            restoreFn: () => {
+                if (deletedBlock && deletedDay) {
+                    setWeekBlocks(prev => {
+                        const dayBlocks = [...(prev[deletedDay] || []), deletedBlock];
+                        dayBlocks.sort((a, b) => a.startHour - b.startHour);
+                        return { ...prev, [deletedDay]: dayBlocks };
+                    });
+                }
+            },
+            timer: setTimeout(async () => {
+                undoPendingRef.current = null;
+                setUndoToast(null);
+                await apiFetch(`/api/study-plan/blocks/${blockId}`, { method: "DELETE" });
+                await loadSlots();
+            }, 5000),
+        };
+    }, [clearUndo, loadSlots]);
 
     const handleSaveEditedBlock = useCallback(async (blockId, changes) => {
         try {
@@ -1084,12 +1108,29 @@ export default function StudyPlanner({ enrolledSections = [] }) {
     }, [showToast, persistSlots]);
 
     const handleDeleteSlot = useCallback((dayKey, slotId) => {
+        let deletedSlot = null;
         setAvailability(prev => {
-            const next = { ...prev, [dayKey]: (prev[dayKey] || []).filter(s => s.id !== slotId) };
-            persistSlots(next);
-            return next;
+            deletedSlot = (prev[dayKey] || []).find(s => s.id === slotId) || null;
+            return { ...prev, [dayKey]: (prev[dayKey] || []).filter(s => s.id !== slotId) };
         });
-    }, [persistSlots]);
+        clearUndo();
+        setUndoToast({ msg: "Slot deleted" });
+        undoPendingRef.current = {
+            restoreFn: () => {
+                if (deletedSlot) {
+                    setAvailability(prev => {
+                        const next = { ...prev, [dayKey]: [...(prev[dayKey] || []), deletedSlot] };
+                        return next;
+                    });
+                }
+            },
+            timer: setTimeout(() => {
+                undoPendingRef.current = null;
+                setUndoToast(null);
+                setAvailability(prev => { persistSlots(prev); return prev; });
+            }, 5000),
+        };
+    }, [clearUndo, persistSlots]);
 
     const handleClearAllSlots = useCallback(async () => {
         const userId = getUserId();
@@ -1130,16 +1171,35 @@ export default function StudyPlanner({ enrolledSections = [] }) {
         }
     }, [showToast, loadEntries]);
 
-    const handleDeleteEntry = useCallback(async (entryId) => {
-        try {
-            await apiFetch(`/api/study-plan/entries/${entryId}`, { method: "DELETE" });
-            setEntries(prev => prev.filter(e => e.id !== entryId));
-            setColorMap(prev => { const next = { ...prev }; delete next[String(entryId)]; return next; });
-            showToast("Entry removed", "info");
-        } catch (e) {
-            showToast(e.message || "Failed to remove entry", "error");
-        }
-    }, [showToast]);
+    const handleDeleteEntry = useCallback((entryId) => {
+        let deletedEntry = null, deletedColor = null;
+        setEntries(prev => {
+            deletedEntry = prev.find(e => e.id === entryId) || null;
+            return prev.filter(e => e.id !== entryId);
+        });
+        setColorMap(prev => {
+            deletedColor = prev[String(entryId)] || null;
+            const next = { ...prev };
+            delete next[String(entryId)];
+            return next;
+        });
+        clearUndo();
+        setUndoToast({ msg: "Entry removed" });
+        undoPendingRef.current = {
+            restoreFn: () => {
+                if (deletedEntry) {
+                    setEntries(prev => [...prev, deletedEntry]);
+                    if (deletedColor) setColorMap(prev => ({ ...prev, [String(entryId)]: deletedColor }));
+                }
+            },
+            timer: setTimeout(async () => {
+                undoPendingRef.current = null;
+                setUndoToast(null);
+                try { await apiFetch(`/api/study-plan/entries/${entryId}`, { method: "DELETE" }); }
+                catch (e) { showToast(e.message || "Failed to remove entry", "error"); }
+            }, 5000),
+        };
+    }, [clearUndo, showToast]);
 
     const handleColorChange = useCallback((entryId, color) => {
         setColorMap(prev => {
@@ -1923,6 +1983,10 @@ export default function StudyPlanner({ enrolledSections = [] }) {
         }
         .sp-toast.success { border-color: var(--success); color: var(--success); }
         .sp-toast.error   { border-color: var(--error); color: var(--error); }
+        .sp-undo-toast { bottom: 62px; display: flex; align-items: center; gap: 14px; min-width: 200px; }
+        .sp-undo-btn { background: none; color: var(--primary); border: none; font-size: 12px; font-weight: 700; cursor: pointer; padding: 0; }
+        .sp-undo-btn:hover { opacity: 0.75; }
+        .sp-undo-dismiss { background: none; border: none; color: var(--text3); font-size: 15px; cursor: pointer; padding: 0; line-height: 1; }
 
         @keyframes spFadeUp {
           from { opacity: 0; transform: translateX(-50%) translateY(8px); }
@@ -2206,6 +2270,13 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                 )}
 
                 {toast && <div className={`sp-toast ${toast.type}`}>{toast.msg}</div>}
+                {undoToast && (
+                    <div className="sp-toast sp-undo-toast">
+                        <span style={{ flex:1 }}>{undoToast.msg}</span>
+                        <button onClick={triggerUndo} className="sp-undo-btn">Undo</button>
+                        <button onClick={clearUndo} className="sp-undo-dismiss">✕</button>
+                    </div>
+                )}
 
                 {editingBlock && (
                     <EditBlockModal
