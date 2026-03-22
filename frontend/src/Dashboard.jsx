@@ -1019,7 +1019,7 @@ export default function Dashboard({ onLogout }) {
               </div>
             : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
               {semCourseList.map(c => (
-                <div key={c.id} className="course-card" onClick={()=>setCourseDetailsTarget(c.name)} style={{...s.courseCard, border:"2px solid var(--border)", cursor:"pointer"}}>
+                <div key={c.id} className="course-card" onClick={()=>setCourseDetailsTarget(c.name)} style={{...s.courseCard, border:"1px solid var(--border2)", borderLeft:"3px solid var(--primary)", cursor:"pointer"}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <div>
                       <div style={{fontWeight:700,fontSize:15,color:"var(--primary)"}}>{c.name}</div>
@@ -1697,7 +1697,7 @@ export default function Dashboard({ onLogout }) {
                   display:"flex", alignItems:"center", padding:"10px 16px", margin:"2px 8px", borderRadius:10,
                   justifyContent:sidebarOpen?"flex-start":"center",
                   background:activePage===item.id?"rgba(255,255,255,0.15)":"transparent",
-                  color:activePage===item.id?"#ffffff":"var(--text3)",
+                  color:activePage===item.id?"#ffffff":"rgba(255,255,255,0.60)",
                   fontWeight:activePage===item.id?600:400, userSelect:"none", position:"relative",
                 }}>
                   <span style={{fontSize:17,minWidth:22,textAlign:"center"}}>{item.icon}</span>
@@ -1715,7 +1715,7 @@ export default function Dashboard({ onLogout }) {
             {sidebarOpen && (
                 <div style={{marginLeft:10,display:"flex",flexDirection:"column",lineHeight:1.3,overflow:"hidden"}}>
                   <span style={{fontSize:13,fontWeight:600,color:activePage==="profile"?"#ffffff":"#D9E1F1"}}>Student Profile</span>
-                  <span style={{fontSize:11,color:"var(--text3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{email}</span>
+                  <span style={{fontSize:11,color:"rgba(255,255,255,0.42)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{email}</span>
                 </div>
             )}
           </div>
@@ -2121,7 +2121,7 @@ export default function Dashboard({ onLogout }) {
 
 const s = {
   root:         { display:"flex", minHeight:"100vh", background:"var(--bg)", fontFamily:"'DM Sans',sans-serif" },
-  sidebar:      { display:"flex", flexDirection:"column", background:"#31487A", height:"100vh", position:"sticky", top:0, transition:"width 0.25s ease", overflow:"hidden", flexShrink:0, zIndex:100 },
+  sidebar:      { display:"flex", flexDirection:"column", background:"var(--sidebar-bg)", height:"100vh", position:"sticky", top:0, transition:"width 0.25s ease", overflow:"hidden", flexShrink:0, zIndex:100 },
   sidebarTop:   { display:"flex", alignItems:"center", width:"100%", boxSizing:"border-box", padding:"20px 16px 16px", borderBottom:"1px solid rgba(255,255,255,0.1)" },
   logoMark:     { width:34, height:34, borderRadius:10, background:"#7B5EA7", color:"white", fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:18, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
   logoLabel:    { fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:18, color:"#ffffff", whiteSpace:"nowrap" },
@@ -2134,7 +2134,7 @@ const s = {
   bell:         { width:38, height:38, borderRadius:10, background:"var(--surface)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:16 },
   grid:         { display:"grid", gridTemplateColumns:"repeat(3,1fr)", gridAutoFlow:"dense", gap:20, padding:"24px 28px 40px" },
   card:         { background:"var(--surface)", borderRadius:18, padding:"20px 22px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid var(--border)" },
-  courseCard:   { background:"var(--bg)", borderRadius:12, padding:"12px 14px", minWidth:140, flex:"1 1 140px", boxShadow:"0 2px 8px rgba(49,72,122,0.08)" },
+  courseCard:   { background:"var(--surface)", borderRadius:12, padding:"12px 14px", minWidth:140, flex:"1 1 140px", boxShadow:"0 2px 12px rgba(49,72,122,0.10)" },
   progressTrack:{ height:10, background:"#D9E1F1", borderRadius:10, overflow:"hidden" },
   progressFill: { height:"100%", background:"linear-gradient(90deg, #31487A, #8FB3E2)", borderRadius:10, transition:"width 0.6s ease" },
   chip:         { flex:1, background:"var(--surface2)", borderRadius:10, padding:"8px 12px", textAlign:"center" },
