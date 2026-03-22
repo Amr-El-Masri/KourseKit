@@ -34,7 +34,7 @@ public class TaskService {
     }
 
     public TaskResponseDTO addTask(Long userId, TaskRequestDTO dto) {
-        if (dto.deadline().isBefore(LocalDateTime.now())) {
+        if (!dto.allowPastDeadline() && dto.deadline().isBefore(LocalDateTime.now())) {
             throw new InvalidDeadlineException("Deadline cannot be in the past");
         }
         if (taskRepository.existsByCourseAndTitleAndUserId(dto.course(), dto.title(), userId)) {

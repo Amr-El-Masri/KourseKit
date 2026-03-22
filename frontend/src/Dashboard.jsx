@@ -23,6 +23,22 @@ const AVATAR_ICONS = [
 ];
 
 const DAYS_OF_WEEK = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+const GC_COMP_TYPES = ["Midterm Exam","Final Exam","Assignment","Project","Quiz","Lab","Presentation","Attendance","Participation","Other"];
+function inferGCType(name) {
+  const n = (name || "").toLowerCase();
+  if (/midterm/.test(n)) return "Midterm Exam";
+  if (/final/.test(n)) return "Final Exam";
+  if (/quiz/.test(n)) return "Quiz";
+  if (/project/.test(n)) return "Project";
+  if (/lab/.test(n)) return "Lab";
+  if (/presentation/.test(n)) return "Presentation";
+  if (/^attendance$/.test(n)) return "Attendance";
+  if (/^participation$/.test(n)) return "Participation";
+  const exact = GC_COMP_TYPES.find(t => t.toLowerCase() === n);
+  if (exact) return exact;
+  return "Other";
+}
 const EVENT_TYPES  = [
   { label:"Class",   color:"var(--primary)",  bg:"var(--blue-light-bg)" },
   { label:"Gym",     color:"var(--success)",  bg:"var(--success-bg)" },
@@ -32,20 +48,22 @@ const EVENT_TYPES  = [
 ];
 
 const ALL_WIDGETS = [
-  { id:"courses",       label:"My Courses",          span:3, pinned:true },
-  { id:"progress",      label:"Semester Progress",   span:1, pinned:true },
-  { id:"deadlines",     label:"Upcoming Deadlines",  span:2 },
-  { id:"todo",          label:"To-Do List",          span:1 },
-  { id:"pomodoro",      label:"Pomodoro Timer",      span:1 },
-  { id:"calendar",      label:"Calendar & Schedule", span:1 },
-  { id:"courseGrades",  label:"Course Grades",       span:1, selfCard:true },
-  { id:"gpasummary",    label:"GPA Overview",        span:1, selfCard:true },
-  { id:"goals",         label:"Grade Goals",         span:1 },
-  { id:"credits",       label:"Credits Progress",    span:1 },
-  { id:"streak",        label:"Study Streak",        span:1 },
-  { id:"notepad",       label:"Quick Notes",         span:1 },
-  { id:"examcountdown", label:"Exam Countdown",      span:1 },
-  { id:"weekglance",    label:"Week at a Glance",    span:3 },
+  { id:"courses",       label:"My Courses",              span:3, pinned:true },
+  { id:"progress",      label:"Semester Overview",       span:1, pinned:true },
+  { id:"todo",          label:"To-Do List",              span:1 },
+  { id:"pomodoro",      label:"Pomodoro Timer",          span:1 },
+  { id:"calendar",      label:"Calendar & Deadlines",    span:1 },
+  { id:"schedule",      label:"Course Schedule",         span:1 },
+  { id:"grades",        label:"Academic Performance",    span:1 },
+  { id:"streak",        label:"Streak",                  span:1 },
+  { id:"notepad",       label:"Notepad",                 span:1 },
+  { id:"examcountdown", label:"Exam Countdown",          span:1 },
+  { id:"todayclasses",  label:"Today's Classes",         span:1 },
+  { id:"officehours",   label:"Office Hours",            span:1 },
+  { id:"taskbreakdown", label:"Task Breakdown",          span:1 },
+  { id:"studysessions",   label:"Study Sessions",          span:1 },
+  { id:"gpasimulator",   label:"GPA Simulator",           span:1 },
+  { id:"prioritytasks",  label:"Priority Tasks",          span:1 },
 ];
 
 
@@ -185,7 +203,7 @@ function CourseGradeSummaryWidget({ apiSemesters, selectedSemester, footer }) {
   const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
 
   const semObj = apiSemesters.find(s => s.semesterName === selectedSemester);
-  const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype && !/^[BE]/i.test(c.section?.sectionNumber || ""));
+  const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype && !(/^B(?!L)/i.test(c.section?.sectionNumber || "") || /^E/i.test(c.section?.sectionNumber || "")));
 
   const [selectedCourse, setSelectedCourse] = useState("");
 
@@ -378,7 +396,7 @@ function GPASummaryWidget({ apiSemesters, selectedSemester, onNavigate, footer }
   };
 
   const semObj = apiSemesters.find(s => s.semesterName === selectedSemester);
-  const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype && !/^[BE]/i.test(c.section?.sectionNumber || ""));
+  const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype && !(/^B(?!L)/i.test(c.section?.sectionNumber || "") || /^E/i.test(c.section?.sectionNumber || "")));
   const gradedCourses = courses.filter(c => c.grade && gradePoints[c.grade?.trim()?.toUpperCase()] !== undefined && Number(c.credits) > 0);
   const allGraded = courses.length > 0 && gradedCourses.length === courses.length;
 
@@ -529,7 +547,6 @@ export default function Dashboard({ onLogout }) {
   const [editingTask, setEditingTask] = useState(null);
   const [courseDetailsTarget, setCourseDetailsTarget] = useState(null);
   const [syllabusTarget, setSyllabusTarget] = useState(null); // course name for syllabus modal
-  const [syllabusCalcData, setSyllabusCalcData] = useState(null); // pre-fill data for calculator
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
@@ -558,7 +575,7 @@ export default function Dashboard({ onLogout }) {
   }, []);
   useEffect(() => {
     localStorage.setItem("kk_activePage", activePage);
-    if (activePage === "grades") fetchSemesters();
+    if (activePage === "grades" || activePage === "dashboard" || activePage === "profile") fetchSemesters();
   }, [activePage]);
   const [semester,       setSemester]      = useState("");
   const [apiSemesters,   setApiSemesters]  = useState([]);
@@ -569,7 +586,7 @@ export default function Dashboard({ onLogout }) {
   const defaultSizes   = () => Object.fromEntries(ALL_WIDGETS.map(w => [w.id, w.span]));
 
   const [visible, setVisible] = useState(() => {
-    try { const s = localStorage.getItem("kk_widgets"); return s ? JSON.parse(s) : defaultVisible(); } catch { return defaultVisible(); }
+    try { const s = localStorage.getItem("kk_widgets"); return s ? { ...defaultVisible(), ...JSON.parse(s) } : defaultVisible(); } catch { return defaultVisible(); }
   });
   const [widgetOrder, setWidgetOrder] = useState(() => {
     try {
@@ -674,7 +691,7 @@ export default function Dashboard({ onLogout }) {
   const [newEvent, setNewEvent] = useState({ day:"Mon", label:"", time:"", type:"Class" });
 
   const selectedSem = apiSemesters.find(s => s.semesterName === semester) ?? { courses: [] };
-  const semCourseList = (selectedSem.courses || []).filter(c => !c.componenttype && !/^[BE]/i.test(c.section?.sectionNumber || "")).map(c => ({ id: c.id, name: c.courseCode }));
+  const semCourseList = (selectedSem.courses || []).filter(c => !c.componenttype && !(/^B(?!L)/i.test(c.section?.sectionNumber || "") || /^E/i.test(c.section?.sectionNumber || ""))).map(c => ({ id: c.id, name: c.courseCode, section: c.section, grade: c.grade, credits: c.credits }));
 
   const addTodo = () => {
     if (!todoInput.trim()) { setTodoError(true); return; }
@@ -698,18 +715,6 @@ export default function Dashboard({ onLogout }) {
   };
 
   const [tasks, setTasks] = useState([]);
-  const [courseColors, setCourseColors] = useState({});
-
-  const saveCourseColor = (courseName, color) => {
-    const next = { ...courseColors, [courseName]: color };
-    setCourseColors(next);
-    const t = localStorage.getItem("kk_token");
-    if (t) fetch("http://localhost:8080/api/profile/colors", {
-      method: "PUT",
-      headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
-      body: JSON.stringify(next),
-    }).catch(() => {});
-  };
 
   const [courseOfficeHours, setCourseOfficeHours] = useState(() => {
     try {
@@ -717,10 +722,11 @@ export default function Dashboard({ onLogout }) {
       return saved ? JSON.parse(saved) : {};
     } catch { return {}; }
   });
-  const [expandedOH, setExpandedOH] = useState({});
-
   const [courseSyllabi, setCourseSyllabi] = useState(() => {
     try { return JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"); } catch { return {}; }
+  });
+  const [courseData, setCourseData] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("kk_course_data") || "{}"); } catch { return {}; }
   });
 
   const authHeaders = () => ({ "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("kk_token")}` });
@@ -739,7 +745,11 @@ export default function Dashboard({ onLogout }) {
 
   useEffect(() => {
     const refresh = () => {
-      try { setCourseSyllabi(JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}")); } catch {}
+      try {
+        setCourseSyllabi(JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"));
+        setCourseData(JSON.parse(localStorage.getItem("kk_course_data") || "{}"));
+        setCourseOfficeHours(JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}"));
+      } catch {}
     };
     window.addEventListener("kk_syllabus_changed", refresh);
     return () => window.removeEventListener("kk_syllabus_changed", refresh);
@@ -750,6 +760,7 @@ export default function Dashboard({ onLogout }) {
     setCourseOfficeHours(next);
     localStorage.setItem("kk_course_office_hours", JSON.stringify(next));
   };
+
 
   const getAuthInfo = () => {
     const token = localStorage.getItem("kk_token");
@@ -830,6 +841,8 @@ export default function Dashboard({ onLogout }) {
   });
   const [schedWeekOffset, setSchedWeekOffset] = useState(0);
   const [calTab, setCalTab] = useState("calendar");
+  const [gradesTab, setGradesTab] = useState("grades");
+  const [progressTab, setProgressTab] = useState("semester");
 
   const [quickNote, setQuickNote] = useState(() => {
     try { return localStorage.getItem("kk_quick_note") || ""; } catch { return ""; }
@@ -842,6 +855,7 @@ export default function Dashboard({ onLogout }) {
   });
   const [editingCreditsGoal, setEditingCreditsGoal] = useState(false);
   const [creditsGoalInput, setCreditsGoalInput] = useState("");
+  const [simGrades, setSimGrades] = useState({});
 
   useEffect(() => {
     try {
@@ -983,9 +997,7 @@ export default function Dashboard({ onLogout }) {
     fetch("http://localhost:8080/api/profile", {
       headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
     }).then(r => r.ok ? r.json() : null).then(data => { if (data) setProfile(data); }).catch(() => {});
-    fetch("http://localhost:8080/api/profile/colors", {
-      headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
-    }).then(r => r.ok ? r.json() : null).then(data => { if (data) setCourseColors(data); }).catch(() => {});
+
   }, []);
 
   // Courses from all saved semesters (deduplicated) for Grade Calculator dropdown
@@ -999,12 +1011,7 @@ export default function Dashboard({ onLogout }) {
     switch (id) {
       case "courses": return (
         <>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-            <SectionTitle>My Courses — {semester}</SectionTitle>
-            {Object.keys(courseColors).length > 0 && (
-              <button onClick={() => { setCourseColors({}); const t = localStorage.getItem("kk_token"); if (t) fetch("http://localhost:8080/api/profile/colors", { method:"PUT", headers:{ "Authorization":"Bearer "+t, "Content-Type":"application/json" }, body:JSON.stringify({}) }).catch(()=>{}); }} style={{ fontSize:11, color:"var(--text3)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:500 }}>Reset colors</button>
-            )}
-          </div>
+          <SectionTitle>My Courses — {semester}</SectionTitle>
           {semCourseList.length === 0
             ? <div style={{marginTop:16,textAlign:"center",padding:"20px 0"}}>
                 <div style={{fontSize:13,color:"var(--text3)",marginBottom:10}}>No courses registered for this semester yet.</div>
@@ -1012,33 +1019,28 @@ export default function Dashboard({ onLogout }) {
               </div>
             : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
               {semCourseList.map(c => (
-                <div key={c.id} className="course-card" style={{...s.courseCard, border:`2px solid ${courseColors[c.name]||"var(--text2)"}`}}>
+                <div key={c.id} className="course-card" onClick={()=>setCourseDetailsTarget(c.name)} style={{...s.courseCard, border:"1px solid var(--border2)", borderLeft:"3px solid var(--primary)", cursor:"pointer"}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <div>
                       <div style={{fontWeight:700,fontSize:15,color:"var(--primary)"}}>{c.name}</div>
-                      {courseSyllabi[c.name]?.professor && (
-                        <div style={{fontSize:11,color:"var(--text2)",marginTop:2,fontWeight:500}}>{courseSyllabi[c.name].professor}</div>
+                      {(courseData[c.name]?.professor || courseSyllabi[c.name]?.professor) && (
+                        <div style={{fontSize:11,color:"var(--text2)",marginTop:2,fontWeight:500}}>{courseData[c.name]?.professor || courseSyllabi[c.name]?.professor}</div>
                       )}
                     </div>
-                    <label style={{width:20,height:20,borderRadius:"50%",background:courseColors[c.name]||"var(--text2)",cursor:"pointer",flexShrink:0,boxShadow:"0 1px 4px rgba(0,0,0,0.15)",border:"2px solid white",display:"inline-block",transition:"transform .15s, box-shadow .15s ease"}}>
-                      <input type="color" value={courseColors[c.name]||"var(--text2)"} onChange={e=>{e.stopPropagation();saveCourseColor(c.name,e.target.value);}} style={{opacity:0,width:0,height:0,position:"absolute"}} />
-                    </label>
                   </div>
                   {!courseSyllabi[c.name] && (
-                    <button onClick={e=>{e.stopPropagation();setSyllabusTarget(c.name);}} style={{marginTop:8,fontSize:11,color:"var(--accent)",background:"none",border:"1px solid var(--border)",borderRadius:6,padding:"3px 8px",cursor:"pointer",width:"100%",textAlign:"left"}}>+ Upload Syllabus</button>
-                  )}
-                  {courseOfficeHours[c.name]?.length > 0 && (
-                    <div style={{marginTop:6}}>
-                      <button onClick={e=>{e.stopPropagation();setExpandedOH(p=>({...p,[c.name]:!p[c.name]}));}} style={{fontSize:11,color:"var(--accent2)",background:"none",border:"none",padding:0,cursor:"pointer",display:"flex",alignItems:"center",gap:3}}>
-                        <span style={{fontSize:9}}>{expandedOH[c.name]?"▼":"▶"}</span> Office Hours
+                    <div style={{marginTop:8}}>
+                      <button onClick={e=>{e.stopPropagation();setSyllabusTarget(c.name);}} style={{fontSize:11,color:"var(--accent)",background:"none",border:"1px solid var(--border)",borderRadius:6,padding:"3px 8px",cursor:"pointer"}}>
+                        + Upload Syllabus
                       </button>
-                      {expandedOH[c.name] && (
-                        <div style={{marginTop:4,paddingLeft:4}}>
-                          {courseOfficeHours[c.name].map((oh,i)=>(
-                            <div key={i} style={{fontSize:11,color:"var(--text)",lineHeight:1.5}}>{[oh.day,oh.time,oh.location].filter(Boolean).join(" · ")}</div>
-                          ))}
-                        </div>
-                      )}
+                    </div>
+                  )}
+                  {courseSyllabi[c.name] && courseOfficeHours[c.name]?.length > 0 && (
+                    <div style={{marginTop:6,paddingTop:6,borderTop:"1px solid var(--border)"}}>
+                      <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>Office Hours</div>
+                      {courseOfficeHours[c.name].map((oh,i)=>(
+                        <div key={i} style={{fontSize:11,color:"var(--text2)",lineHeight:1.6}}>{[oh.day,oh.time,oh.location].filter(Boolean).join(" · ")}</div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -1047,16 +1049,53 @@ export default function Dashboard({ onLogout }) {
           }
         </>
       );
-      case "progress": return (
-        <>
-          <SectionTitle>Semester Progress</SectionTitle>
-          <div style={{marginTop:18,display:"flex",gap:10}}>
-            {[{label:"Courses",val:semCourseList.length||"—"},{label:"To-Do",val:todos.filter(t=>!t.done).length},{label:"Due Today",val:tasks.filter(t=>!t.done&&t.due?.slice(0,10)===new Date().toISOString().slice(0,10)).length}].map(chip=>(
-              <div key={chip.label} style={s.chip}><div style={{fontSize:11,color:"var(--text2)"}}>{chip.label}</div><div style={{fontWeight:600,fontSize:13,color:"var(--primary)"}}>{chip.val}</div></div>
-            ))}
-          </div>
-        </>
-      );
+      case "progress": {
+        const gradePoints2 = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
+        const earnedCr = apiSemesters.flatMap(s=>s.courses||[]).filter(c=>c.grade&&c.grade.trim().toUpperCase()!=="F"&&gradePoints2[c.grade.trim().toUpperCase()]!==undefined&&Number(c.credits)>0).reduce((sum,c)=>sum+Number(c.credits),0);
+        const pct2 = Math.min(100,Math.round((earnedCr/creditsGoal)*100));
+        const remaining2 = Math.max(0,creditsGoal-earnedCr);
+        const tabs2 = [{id:"semester",label:"Semester"},{id:"credits",label:"Credits"}];
+        return (
+          <>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+              <SectionTitle>{progressTab==="semester"?"Semester Overview":"Credits Progress"}</SectionTitle>
+              <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:7,padding:2}}>
+                {tabs2.map(t=><button key={t.id} onClick={()=>setProgressTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:progressTab===t.id?"var(--primary)":"transparent",color:progressTab===t.id?"#fff":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
+              </div>
+            </div>
+            {progressTab==="semester" ? (
+              <div style={{marginTop:6,display:"flex",gap:10}}>
+                {[{label:"Courses",val:semCourseList.length||"—"},{label:"To-Do",val:todos.filter(t=>!t.done).length},{label:"Due Today",val:tasks.filter(t=>!t.done&&t.due?.slice(0,10)===new Date().toISOString().slice(0,10)).length}].map(chip=>(
+                  <div key={chip.label} style={s.chip}><div style={{fontSize:11,color:"var(--text2)"}}>{chip.label}</div><div style={{fontWeight:600,fontSize:13,color:"var(--primary)"}}>{chip.val}</div></div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div style={{textAlign:"center",padding:"16px 0 10px"}}>
+                  <div style={{fontFamily:"'Fraunces',serif",fontSize:46,fontWeight:700,color:"var(--primary)",lineHeight:1}}>{earnedCr}</div>
+                  <div style={{fontSize:12,color:"var(--text2)",marginTop:4}}>of {creditsGoal} credits completed</div>
+                </div>
+                <div style={{background:"var(--surface2)",borderRadius:99,height:10,overflow:"hidden",marginBottom:10}}>
+                  <div style={{height:"100%",borderRadius:99,background:"linear-gradient(90deg,var(--accent),var(--primary))",width:`${pct2}%`,transition:"width .5s"}}/>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{fontSize:11,color:"var(--text2)"}}>{pct2}% · {remaining2} cr remaining</span>
+                  {editingCreditsGoal ? (
+                    <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                      <input type="number" value={creditsGoalInput} autoFocus onChange={e=>setCreditsGoalInput(e.target.value)}
+                        onKeyDown={e=>{if(e.key==="Enter"){const v=parseInt(creditsGoalInput);if(v>0){setCreditsGoal(v);localStorage.setItem("kk_credits_goal",v);}setEditingCreditsGoal(false);}if(e.key==="Escape")setEditingCreditsGoal(false);}}
+                        style={{width:54,fontSize:12,padding:"2px 6px",border:"1px solid var(--border)",borderRadius:6,background:"var(--surface)",color:"var(--text)",fontFamily:"inherit"}}/>
+                      <button onClick={()=>{const v=parseInt(creditsGoalInput);if(v>0){setCreditsGoal(v);localStorage.setItem("kk_credits_goal",v);}setEditingCreditsGoal(false);}} style={{fontSize:11,padding:"2px 8px",borderRadius:6,border:"none",background:"var(--primary)",color:"white",cursor:"pointer"}}>✓</button>
+                    </div>
+                  ) : (
+                    <button onClick={()=>{setCreditsGoalInput(String(creditsGoal));setEditingCreditsGoal(true);}} style={{fontSize:11,color:"var(--accent)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit"}}>Edit goal</button>
+                  )}
+                </div>
+              </>
+            )}
+          </>
+        );
+      }
       case "todo": return (
         <>
           <SectionTitle>To-Do List</SectionTitle>
@@ -1082,21 +1121,10 @@ export default function Dashboard({ onLogout }) {
           <PomodoroTimer />
         </>
       );
-      case "calendar": return (
+      case "schedule": return (
         <>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-            <SectionTitle>Calendar & Schedule</SectionTitle>
-            <div style={{ display:"flex", gap:4, background:"var(--surface2)", borderRadius:8, padding:2 }}>
-              {["calendar","schedule"].map(tab => (
-                <button key={tab} onClick={() => setCalTab(tab)} style={{ padding:"4px 12px", borderRadius:6, border:"none", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit", background: calTab===tab ? "var(--primary)" : "transparent", color: calTab===tab ? "#fff" : "var(--text2)", transition:"all .15s" }}>
-                  {tab === "calendar" ? "Calendar" : "Schedule"}
-                </button>
-              ))}
-            </div>
-          </div>
-          {calTab === "schedule" ? (
-            <>
-              {(() => {
+          <div style={{marginBottom:12}}><SectionTitle>Course Schedule</SectionTitle></div>
+          {(() => {
                 const SCH_START = 6.5, SCH_END = 20.5, SCH_H = 52;
                 const DAYS = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"];
                 const DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat"];
@@ -1124,8 +1152,8 @@ export default function Dashboard({ onLogout }) {
                 mainCourses.forEach((c, ci) => { courseColorMap[c.courseCode] = ci % 7; });
                 const classByDay = {};
                 DAYS.forEach(d => { classByDay[d] = []; });
-                semCourses.forEach((c, ci) => {
-                  const colorIdx = c.componenttype ? (courseColorMap[c.courseCode] ?? ci % 7) : ci % 7;
+                semCourses.forEach((c) => {
+                  const colorIdx = courseColorMap[c.courseCode] ?? 0;
                   const sec = c.section;
                   [[sec.days1, sec.beginTime1, sec.endTime1],[sec.days2, sec.beginTime2, sec.endTime2]].forEach(([days, start, end]) => {
                     if (!days || !start) return;
@@ -1143,99 +1171,75 @@ export default function Dashboard({ onLogout }) {
                 });
 
                 return (
-                  <div style={{ marginTop:4, border:"1px solid var(--border)", borderRadius:10, overflow:"hidden", height:348, overflowY:"auto", background:"var(--surface)" }}>
-                    <div style={{ display:"flex", minWidth:0 }}>
-                      <div style={{ width:38, flexShrink:0, position:"relative", height:totalH+24, background:"var(--surface2)", borderRight:"1px solid var(--border)" }}>
-                        <div style={{ position:"sticky", top:0, height:24, background:"var(--surface2)", zIndex:3 }} />
-                        {Array.from({ length: Math.ceil(SCH_END - 7) }, (_,i) => (
-                          <div key={i} style={{ position:"absolute", top: 24 + (i+0.5)*SCH_H - 6, right:4, fontSize:11, color:"var(--text3)", lineHeight:1, textAlign:"right" }}>
-                            {fmtHour(7+i)}
+                  <div style={{ marginTop:4, border:"1px solid var(--border)", borderRadius:10, overflow:"hidden", background:"var(--surface)" }}>
+                    <div style={{ display:"flex", background:"var(--surface2)", borderBottom:"1px solid var(--border)" }}>
+                      <div style={{ width:38, flexShrink:0 }} />
+                      <div style={{ flex:1, display:"grid", gridTemplateColumns:"repeat(6,1fr)" }}>
+                        {DAY_LABELS.map((label, di) => (
+                          <div key={label} style={{ fontSize:11, fontWeight:700, color:"var(--primary)", textAlign:"center", padding:"5px 0", borderLeft: di>0?"1px solid var(--divider)":"none" }}>
+                            {label}
                           </div>
                         ))}
                       </div>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ position:"sticky", top:0, display:"grid", gridTemplateColumns:"repeat(6,1fr)", background:"var(--surface2)", borderBottom:"1px solid var(--border)", zIndex:2 }}>
-                          {DAY_LABELS.map((label, di) => (
-                            <div key={label} style={{ fontSize:11, fontWeight:700, color:"var(--primary)", textAlign:"center", padding:"5px 0", borderLeft: di>0?"1px solid var(--divider)":"none" }}>
-                              {label}
+                    </div>
+                    <div style={{ height:324, overflowY:"auto" }}>
+                      <div style={{ display:"flex" }}>
+                        <div style={{ width:38, flexShrink:0, position:"relative", height:totalH, background:"var(--surface2)", borderRight:"1px solid var(--border)" }}>
+                          {Array.from({ length: Math.ceil(SCH_END - 7) }, (_,i) => (
+                            <div key={i} style={{ position:"absolute", top:(i+0.5)*SCH_H - 6, right:4, fontSize:11, color:"var(--text3)", lineHeight:1, textAlign:"right" }}>
+                              {fmtHour(7+i)}
                             </div>
                           ))}
                         </div>
-                        <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", position:"relative", height:totalH }}>
-                          {Array.from({ length: Math.ceil(SCH_END - 7) }, (_,i) => (
-                            <div key={i} style={{ position:"absolute", top:(i+0.5)*SCH_H, left:0, right:0, borderTop:"1px solid var(--divider)", zIndex:0 }} />
-                          ))}
-                          {DAYS.map((day, di) => (
-                            <div key={day} style={{ position:"relative", borderLeft: di>0?"1px solid var(--divider)":"none" }}>
-                              {(classByDay[day]||[]).map((cl,ci) => {
-                                if (!cl.startH || cl.startH >= SCH_END || cl.endH <= SCH_START) return null;
-                                const top = (Math.max(cl.startH, SCH_START) - SCH_START) * SCH_H;
-                                const height = (Math.min(cl.endH, SCH_END) - Math.max(cl.startH, SCH_START)) * SCH_H - 2;
-                                return <div key={`cl${ci}`} style={{ '--c':`var(--sched${cl.colorIdx+1})`, position:"absolute", top:top+1, left:1, right:1, height, background:"color-mix(in srgb, var(--c) 20%, transparent)", borderLeft:"2px solid var(--c)", borderRadius:3, overflow:"hidden", padding:"2px 6px", zIndex:2 }}>
-                                  <div style={{ fontSize:11, fontWeight:700, color:"var(--c)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{cl.label}</div>
-                                  <div style={{ fontSize:10, color:"var(--text3)" }}>{fmtT(cl.startH)}–{fmtT(cl.endH)}</div>
-                                </div>;
-                              })}
-                            </div>
-                          ))}
+                        <div style={{ flex:1 }}>
+                          <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", position:"relative", height:totalH }}>
+                            {Array.from({ length: Math.ceil(SCH_END - 7) }, (_,i) => (
+                              <div key={i} style={{ position:"absolute", top:(i+0.5)*SCH_H, left:0, right:0, borderTop:"1px solid var(--divider)", zIndex:0 }} />
+                            ))}
+                            {DAYS.map((day, di) => (
+                              <div key={day} style={{ position:"relative", borderLeft: di>0?"1px solid var(--divider)":"none" }}>
+                                {(classByDay[day]||[]).map((cl,ci) => {
+                                  if (!cl.startH || cl.startH >= SCH_END || cl.endH <= SCH_START) return null;
+                                  const top = (Math.max(cl.startH, SCH_START) - SCH_START) * SCH_H;
+                                  const height = (Math.min(cl.endH, SCH_END) - Math.max(cl.startH, SCH_START)) * SCH_H - 2;
+                                  return <div key={`cl${ci}`} style={{ '--c':`var(--sched${cl.colorIdx+1})`, position:"absolute", top:top+1, left:1, right:1, height, background:"color-mix(in srgb, var(--c) 20%, transparent)", borderLeft:"2px solid var(--c)", borderRadius:3, overflow:"hidden", padding:"2px 6px", zIndex:2 }}>
+                                    <div style={{ fontSize:11, fontWeight:700, color:"var(--c)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{cl.label}</div>
+                                    <div style={{ fontSize:10, color:"var(--text3)" }}>{fmtT(cl.startH)}–{fmtT(cl.endH)}</div>
+                                  </div>;
+                                })}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 );
               })()}
-              <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}><button onClick={()=>setActivePage("planner")} style={{fontSize:12,fontWeight:600,color:"var(--accent)",background:"none",border:"1px solid var(--border)",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontFamily:"inherit"}}>Open Planner →</button></div>
-            </>
-          ) : (
-            <>
-          <div style={{marginTop:14, height:384, display:"flex", flexDirection:"column"}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-              <button onClick={prevMonth} style={s.calNavBtn}>‹</button>
-              <span style={{fontWeight:600,fontSize:14,color:"var(--primary)"}}>{monthName} {calYear}</span>
-              <button onClick={nextMonth} style={s.calNavBtn}>›</button>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gridTemplateRows:"auto",gridAutoRows:"1fr",gap:4,flex:1}}>
-              {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d=><div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"var(--text3)",padding:"2px 0"}}>{d}</div>)}
-              {calCells.map((d,i)=>{
-                const dayTasks = d?(tasksByDate[calKey(d)]||[]):[];
-                return (
-                  <div key={i} className={d?"cal-day":""} style={{display:"flex",flexDirection:"column",alignItems:"center",borderRadius:6,cursor:d?"pointer":"default",background:isToday(d)?"var(--primary)":"transparent",paddingBottom:dayTasks.length?3:0,height:"100%"}}>
-                    <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,width:"100%",color:isToday(d)?"#fff":d?"var(--text)":"transparent",fontWeight:isToday(d)?700:400}}>{d||""}</div>
-                    {dayTasks.map((t,ti)=>{
-                      const color = t.done?"#27ae60":new Date(t.due)<new Date()?"var(--error)":courseColors[t.course]||"var(--text2)";
-                      return <div key={ti} onMouseEnter={e=>{const rect=e.target.getBoundingClientRect();const cardRect=e.target.closest("section").getBoundingClientRect();setHoveredTask({task:t,x:rect.left-cardRect.left,y:rect.bottom-cardRect.top+4});}} onMouseLeave={()=>setHoveredTask(null)} onClick={()=>{setEditingTask(t);setActivePage("tasks");}} style={{width:"90%",height:3,borderRadius:2,background:color,marginBottom:1,cursor:"pointer",transition:"height .1s"}} className="cal-task-line" />;
-                    })}
-                  </div>
-                );
-              })}
-            </div>
-            <div style={{marginTop:10,fontSize:11,color:"var(--text3)",textAlign:"center"}}>Today is {today.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</div>
-          </div>
-          {hoveredTask && (
-            <div style={{position:"absolute",left:Math.min(hoveredTask.x,220),top:hoveredTask.y,background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"9px 13px",boxShadow:"0 6px 24px rgba(49,72,122,0.13)",zIndex:300,minWidth:170,maxWidth:220,pointerEvents:"none"}}>
-              <div style={{fontSize:11,fontWeight:700,color:"var(--text2)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>{hoveredTask.task.type} · {hoveredTask.task.course}</div>
-              <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4,lineHeight:1.3}}>{hoveredTask.task.title}</div>
-              <div style={{fontSize:11,color:"var(--text3)"}}>{hoveredTask.task.due?new Date(hoveredTask.task.due).toLocaleDateString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}):"No due date"}</div>
-              {hoveredTask.task.done && <div style={{fontSize:11,color:"#27ae60",fontWeight:600,marginTop:4}}>✓ Completed</div>}
-              {!hoveredTask.task.done && new Date(hoveredTask.task.due)<new Date() && <div style={{fontSize:11,color:"var(--error)",fontWeight:600,marginTop:4}}>Overdue</div>}
-            </div>
-          )}
-          </>
-          )}
         </>
       );
-      case "deadlines": {
-        const now = new Date();
-        const upcoming = tasks.filter(t => !t.done && t.due).sort((a,b) => new Date(a.due)-new Date(b.due)).slice(0,8);
-        const urgencyColor = due => { const d=(new Date(due)-now)/86400000; return d<0?"var(--error)":d<1?"var(--error)":d<3?"#e67e22":"#27ae60"; };
-        const urgencyLabel = due => { const d=(new Date(due)-now)/86400000; return d<0?"Overdue":d<1?"Today":d<2?"Tomorrow":new Date(due).toLocaleDateString("en-US",{month:"short",day:"numeric"}); };
+      case "calendar": {
+        const weekStart2=(()=>{const d=new Date();d.setHours(0,0,0,0);const day=d.getDay();d.setDate(d.getDate()-(day===0?6:day-1));return d;})();
+        const weekEnd2=new Date(weekStart2);weekEnd2.setDate(weekStart2.getDate()+7);
+        const weekTasks2=tasks.filter(t=>t.due&&new Date(t.due)>=weekStart2&&new Date(t.due)<weekEnd2);
+        const calTabs=[{id:"calendar",label:"Calendar"},{id:"deadlines",label:"Deadlines"},{id:"week",label:"Week"}];
         return (
-          <>
-            <SectionTitle>Upcoming Deadlines</SectionTitle>
-            {upcoming.length===0 ? (
+        <>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+            <SectionTitle>{calTab==="calendar"?"Calendar":calTab==="deadlines"?"Upcoming Deadlines":"Week at a Glance"}</SectionTitle>
+            <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:7,padding:2}}>
+              {calTabs.map(t=><button key={t.id} onClick={()=>setCalTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:calTab===t.id?"var(--primary)":"transparent",color:calTab===t.id?"#fff":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
+            </div>
+          </div>
+          {calTab==="deadlines" ? (() => {
+            const now2 = new Date();
+            const upcoming = tasks.filter(t => !t.done && t.due).sort((a,b) => new Date(a.due)-new Date(b.due)).slice(0,8);
+            const urgencyColor = due => { const d=(new Date(due)-now2)/86400000; return d<0?"var(--error)":d<1?"var(--error)":d<3?"#e67e22":"#27ae60"; };
+            const urgencyLabel = due => { const d=(new Date(due)-now2)/86400000; return d<0?"Overdue":d<1?"Today":d<2?"Tomorrow":new Date(due).toLocaleDateString("en-US",{month:"short",day:"numeric"}); };
+            return upcoming.length===0 ? (
               <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No upcoming deadlines!</div>
             ) : (
-              <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:12,maxHeight:220,overflowY:"auto"}}>
+              <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:4,maxHeight:280,overflowY:"auto"}}>
                 {upcoming.map((t,i) => {
                   const color = urgencyColor(t.due);
                   return (
@@ -1249,74 +1253,103 @@ export default function Dashboard({ onLogout }) {
                   );
                 })}
               </div>
-            )}
-          </>
+            );
+          })() : calTab==="week" ? (
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginTop:4}}>
+              {[
+                {label:"Due this week",val:weekTasks2.filter(t=>!t.done).length,color:"var(--primary)"},
+                {label:"Completed",val:weekTasks2.filter(t=>t.done).length,color:"#27ae60"},
+                {label:"Due today",val:tasks.filter(t=>!t.done&&t.due&&new Date(t.due).toISOString().slice(0,10)===new Date().toISOString().slice(0,10)).length,color:"#e67e22"},
+                {label:"Overdue",val:tasks.filter(t=>!t.done&&t.due&&new Date(t.due)<new Date()).length,color:"var(--error)"},
+                {label:"Total tasks",val:tasks.length,color:"var(--accent2)"},
+                {label:"Pending todos",val:todos.filter(t=>!t.done).length,color:"var(--text2)"},
+              ].map(chip=>(
+                <div key={chip.label} style={{background:"var(--surface2)",borderRadius:10,padding:"12px 14px",border:"1px solid var(--border)"}}>
+                  <div style={{fontFamily:"'Fraunces',serif",fontSize:28,fontWeight:700,color:chip.color,lineHeight:1}}>{chip.val}</div>
+                  <div style={{fontSize:11,color:"var(--text2)",marginTop:4,lineHeight:1.3}}>{chip.label}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+          <div style={{marginTop:6, height:384, display:"flex", flexDirection:"column"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+              <button onClick={prevMonth} style={s.calNavBtn}>‹</button>
+              <span style={{fontWeight:600,fontSize:14,color:"var(--primary)"}}>{monthName} {calYear}</span>
+              <button onClick={nextMonth} style={s.calNavBtn}>›</button>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gridTemplateRows:"auto",gridAutoRows:"1fr",gap:4,flex:1}}>
+              {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d=><div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"var(--text3)",padding:"2px 0"}}>{d}</div>)}
+              {calCells.map((d,i)=>{
+                const dayTasks = d?(tasksByDate[calKey(d)]||[]):[];
+                return (
+                  <div key={i} className={d?"cal-day":""} style={{display:"flex",flexDirection:"column",alignItems:"center",borderRadius:6,cursor:d?"pointer":"default",background:isToday(d)?"var(--primary)":"transparent",paddingBottom:dayTasks.length?3:0,height:"100%"}}>
+                    <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,width:"100%",color:isToday(d)?"#fff":d?"var(--text)":"transparent",fontWeight:isToday(d)?700:400}}>{d||""}</div>
+                    {dayTasks.map((t,ti)=>{
+                      const color = t.done?"#27ae60":new Date(t.due)<new Date()?"var(--error)":"var(--text2)";
+                      return <div key={ti} onMouseEnter={e=>{const rect=e.target.getBoundingClientRect();const cardRect=e.target.closest("section").getBoundingClientRect();setHoveredTask({task:t,x:rect.left-cardRect.left,y:rect.bottom-cardRect.top+4});}} onMouseLeave={()=>setHoveredTask(null)} onClick={()=>{setEditingTask(t);setActivePage("tasks");}} style={{width:"90%",height:3,borderRadius:2,background:color,marginBottom:1,cursor:"pointer",transition:"height .1s"}} className="cal-task-line" />;
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{marginTop:10,fontSize:11,color:"var(--text3)",textAlign:"center"}}>Today is {today.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</div>
+          </div>
+          )}
+          {calTab==="calendar" && hoveredTask && (
+            <div style={{position:"absolute",left:Math.min(hoveredTask.x,220),top:hoveredTask.y,background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"9px 13px",boxShadow:"0 6px 24px rgba(49,72,122,0.13)",zIndex:300,minWidth:170,maxWidth:220,pointerEvents:"none"}}>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--text2)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>{hoveredTask.task.type} · {hoveredTask.task.course}</div>
+              <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4,lineHeight:1.3}}>{hoveredTask.task.title}</div>
+              <div style={{fontSize:11,color:"var(--text3)"}}>{hoveredTask.task.due?new Date(hoveredTask.task.due).toLocaleDateString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}):"No due date"}</div>
+              {hoveredTask.task.done && <div style={{fontSize:11,color:"#27ae60",fontWeight:600,marginTop:4}}>✓ Completed</div>}
+              {!hoveredTask.task.done && new Date(hoveredTask.task.due)<new Date() && <div style={{fontSize:11,color:"var(--error)",fontWeight:600,marginTop:4}}>Overdue</div>}
+            </div>
+          )}
+        </>
         );
       }
-      case "goals": {
+      case "grades": {
         const LETTER_GRADES = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
         const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
         const semCourses = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.courseCode);
+        const gradeTabs = [{id:"grades",label:"Grades"},{id:"gpa",label:"GPA"},{id:"goals",label:"Goals"}];
         return (
           <>
-            <SectionTitle>Grade Goals</SectionTitle>
-            {semCourses.length===0 ? (
-              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>Select a semester with courses to set goals.</div>
-            ) : (
-              <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:12}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 90px 44px",gap:8,padding:"0 10px",marginBottom:2}}>
-                  {["Course","Target","Actual"].map(h=><span key={h} style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.05em"}}>{h}</span>)}
-                </div>
-                {semCourses.map(c => {
-                  const goal = gradeGoals[c.courseCode]||"";
-                  const actual = c.grade||null;
-                  const goalPts = gradePoints[goal]; const actualPts = gradePoints[actual?.trim()?.toUpperCase()];
-                  const status = goal&&actual&&actualPts!==undefined ? (actualPts>=goalPts?"on-track":"behind") : null;
-                  return (
-                    <div key={c.courseCode} style={{display:"grid",gridTemplateColumns:"1fr 90px 44px",gap:8,alignItems:"center",padding:"7px 10px",borderRadius:9,background:"var(--surface2)",borderLeft:`3px solid ${status==="on-track"?"#27ae60":status==="behind"?"var(--error)":"var(--border)"}`}}>
-                      <span style={{fontSize:12,fontWeight:600,color:"var(--primary)"}}>{c.courseCode}</span>
-                      <select value={goal} onChange={e=>{const next={...gradeGoals,[c.courseCode]:e.target.value};setGradeGoals(next);localStorage.setItem("kk_grade_goals",JSON.stringify(next));}}
-                        style={{fontSize:11,padding:"3px 6px",borderRadius:6,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer",fontFamily:"inherit"}}>
-                        <option value="">Set goal…</option>
-                        {LETTER_GRADES.map(g=><option key={g} value={g}>{g}</option>)}
-                      </select>
-                      <span style={{fontSize:13,fontWeight:700,fontFamily:"'Fraunces',serif",textAlign:"right",color:status==="on-track"?"#27ae60":status==="behind"?"var(--error)":actual?"var(--text2)":"var(--text3)"}}>{actual||"—"}</span>
-                    </div>
-                  );
-                })}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+              <SectionTitle>{gradesTab==="grades"?"Course Grades":gradesTab==="gpa"?"GPA":"Goals"}</SectionTitle>
+              <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:7,padding:2}}>
+                {gradeTabs.map(t=><button key={t.id} onClick={()=>setGradesTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:gradesTab===t.id?"var(--primary)":"transparent",color:gradesTab===t.id?"#fff":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
               </div>
-            )}
-          </>
-        );
-      }
-      case "credits": {
-        const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
-        const earned = apiSemesters.flatMap(s=>s.courses||[]).filter(c=>c.grade&&c.grade.trim().toUpperCase()!=="F"&&gradePoints[c.grade.trim().toUpperCase()]!==undefined&&Number(c.credits)>0).reduce((sum,c)=>sum+Number(c.credits),0);
-        const pct = Math.min(100,Math.round((earned/creditsGoal)*100));
-        const remaining = Math.max(0, creditsGoal-earned);
-        return (
-          <>
-            <SectionTitle>Credits Progress</SectionTitle>
-            <div style={{textAlign:"center",padding:"16px 0 10px"}}>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:46,fontWeight:700,color:"var(--primary)",lineHeight:1}}>{earned}</div>
-              <div style={{fontSize:12,color:"var(--text2)",marginTop:4}}>of {creditsGoal} credits completed</div>
             </div>
-            <div style={{background:"var(--surface2)",borderRadius:99,height:10,overflow:"hidden",marginBottom:10}}>
-              <div style={{height:"100%",borderRadius:99,background:"linear-gradient(90deg,var(--accent),var(--primary))",width:`${pct}%`,transition:"width .5s"}}/>
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{fontSize:11,color:"var(--text2)"}}>{pct}% · {remaining} cr remaining</span>
-              {editingCreditsGoal ? (
-                <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                  <input type="number" value={creditsGoalInput} autoFocus onChange={e=>setCreditsGoalInput(e.target.value)}
-                    onKeyDown={e=>{if(e.key==="Enter"){const v=parseInt(creditsGoalInput);if(v>0){setCreditsGoal(v);localStorage.setItem("kk_credits_goal",v);}setEditingCreditsGoal(false);}if(e.key==="Escape")setEditingCreditsGoal(false);}}
-                    style={{width:54,fontSize:12,padding:"2px 6px",border:"1px solid var(--border)",borderRadius:6,background:"var(--surface)",color:"var(--text)",fontFamily:"inherit"}}/>
-                  <button onClick={()=>{const v=parseInt(creditsGoalInput);if(v>0){setCreditsGoal(v);localStorage.setItem("kk_credits_goal",v);}setEditingCreditsGoal(false);}} style={{fontSize:11,padding:"2px 8px",borderRadius:6,border:"none",background:"var(--primary)",color:"white",cursor:"pointer"}}>✓</button>
-                </div>
+            {gradesTab==="grades" && <CourseGradeSummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} footer={null}/>}
+            {gradesTab==="gpa"    && <GPASummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} onNavigate={setActivePage} footer={null}/>}
+            {gradesTab==="goals"  && (
+              semCourses.length===0 ? (
+                <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>Select a semester with courses to set goals.</div>
               ) : (
-                <button onClick={()=>{setCreditsGoalInput(String(creditsGoal));setEditingCreditsGoal(true);}} style={{fontSize:11,color:"var(--accent)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit"}}>Edit goal</button>
-              )}
-            </div>
+                <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:4}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 90px 44px",gap:8,padding:"0 10px",marginBottom:2}}>
+                    {["Course","Target","Actual"].map(h=><span key={h} style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.05em"}}>{h}</span>)}
+                  </div>
+                  {semCourses.map(c => {
+                    const goal = gradeGoals[c.courseCode]||"";
+                    const actual = c.grade||null;
+                    const goalPts = gradePoints[goal]; const actualPts = gradePoints[actual?.trim()?.toUpperCase()];
+                    const status = goal&&actual&&actualPts!==undefined ? (actualPts>=goalPts?"on-track":"behind") : null;
+                    return (
+                      <div key={c.courseCode} style={{display:"grid",gridTemplateColumns:"1fr 90px 44px",gap:8,alignItems:"center",padding:"7px 10px",borderRadius:9,background:"var(--surface2)",borderLeft:`3px solid ${status==="on-track"?"#27ae60":status==="behind"?"var(--error)":"var(--border)"}`}}>
+                        <span style={{fontSize:12,fontWeight:600,color:"var(--primary)"}}>{c.courseCode}</span>
+                        <select value={goal} onChange={e=>{const next={...gradeGoals,[c.courseCode]:e.target.value};setGradeGoals(next);localStorage.setItem("kk_grade_goals",JSON.stringify(next));}}
+                          style={{fontSize:11,padding:"3px 6px",borderRadius:6,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer",fontFamily:"inherit"}}>
+                          <option value="">Set goal…</option>
+                          {LETTER_GRADES.map(g=><option key={g} value={g}>{g}</option>)}
+                        </select>
+                        <span style={{fontSize:13,fontWeight:700,fontFamily:"'Fraunces',serif",textAlign:"right",color:status==="on-track"?"#27ae60":status==="behind"?"var(--error)":actual?"var(--text2)":"var(--text3)"}}>{actual||"—"}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            )}
           </>
         );
       }
@@ -1375,33 +1408,213 @@ export default function Dashboard({ onLogout }) {
           </>
         );
       }
-      case "weekglance": {
-        const weekStart = (()=>{const d=new Date();d.setHours(0,0,0,0);const day=d.getDay();d.setDate(d.getDate()-(day===0?6:day-1));return d;})();
-        const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate()+7);
-        const weekTasks = tasks.filter(t=>t.due&&new Date(t.due)>=weekStart&&new Date(t.due)<weekEnd);
-        const dueThisWeek = weekTasks.filter(t=>!t.done).length;
-        const doneThisWeek = weekTasks.filter(t=>t.done).length;
-        const overdue = tasks.filter(t=>!t.done&&t.due&&new Date(t.due)<new Date()).length;
-        const todayCount = tasks.filter(t=>!t.done&&t.due&&new Date(t.due).toISOString().slice(0,10)===new Date().toISOString().slice(0,10)).length;
-        const chips = [
-          {label:"Due this week",val:dueThisWeek,color:"var(--primary)"},
-          {label:"Completed",val:doneThisWeek,color:"#27ae60"},
-          {label:"Due today",val:todayCount,color:todayCount>0?"#e67e22":"var(--text2)"},
-          {label:"Overdue",val:overdue,color:overdue>0?"var(--error)":"var(--text2)"},
-          {label:"Total tasks",val:tasks.length,color:"var(--accent2)"},
-          {label:"Pending todos",val:todos.filter(t=>!t.done).length,color:"var(--text2)"},
-        ];
+      case "todayclasses": {
+        const DAY_MAP = {0:"SUNDAY",1:"MONDAY",2:"TUESDAY",3:"WEDNESDAY",4:"THURSDAY",5:"FRIDAY",6:"SATURDAY"};
+        const today3 = DAY_MAP[new Date().getDay()];
+        const parseDays3 = str => { if(!str) return []; const m={M:"MONDAY",T:"TUESDAY",W:"WEDNESDAY",R:"THURSDAY",F:"FRIDAY",S:"SATURDAY",U:"SUNDAY"}; return str.split("").map(c=>m[c]).filter(Boolean); };
+        const parseT3 = t => { if(!t) return null; const p=Array.isArray(t)?t:String(t).replace(/[^0-9:]/g,"").split(":"); if(p.length===1&&p[0].length===4) return parseInt(p[0].slice(0,2))+parseInt(p[0].slice(2))/60; return parseFloat(p[0])+parseFloat(p[1]||0)/60; };
+        const fmtT3 = h => { const hr=Math.floor(h); const mn=Math.round((h-hr)*60); return `${hr%12||12}:${String(mn).padStart(2,"0")}${h>=12?"pm":"am"}`; };
+        const semCourses3 = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.section);
+        const todayClasses = [];
+        semCourses3.forEach(c => {
+          const sec = c.section;
+          [[sec.days1,sec.beginTime1,sec.endTime1],[sec.days2,sec.beginTime2,sec.endTime2]].forEach(([days,start,end])=>{
+            if(!days||!start) return;
+            if(parseDays3(days).includes(today3)) todayClasses.push({code:c.courseCode,start:parseT3(start),end:parseT3(end),label:`${fmtT3(parseT3(start))} – ${fmtT3(parseT3(end))}`});
+          });
+        });
+        todayClasses.sort((a,b)=>a.start-b.start);
         return (
           <>
-            <SectionTitle>Week at a Glance</SectionTitle>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginTop:12}}>
-              {chips.map(chip=>(
-                <div key={chip.label} style={{background:"var(--surface2)",borderRadius:10,padding:"12px 14px",border:"1px solid var(--border)"}}>
-                  <div style={{fontFamily:"'Fraunces',serif",fontSize:28,fontWeight:700,color:chip.color,lineHeight:1}}>{chip.val}</div>
-                  <div style={{fontSize:11,color:"var(--text2)",marginTop:4,lineHeight:1.3}}>{chip.label}</div>
+            <SectionTitle>Today's Classes</SectionTitle>
+            {todayClasses.length===0 ? (
+              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No classes today!</div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:12}}>
+                {todayClasses.map((cl,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:10,background:"var(--surface2)",borderLeft:"3px solid var(--accent)"}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"var(--primary)"}}>{cl.code}</div>
+                      <div style={{fontSize:11,color:"var(--text2)",marginTop:2}}>{cl.label}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        );
+      }
+      case "officehours": {
+        const ohData = (() => { try { return JSON.parse(localStorage.getItem("kk_course_office_hours")||"{}"); } catch { return {}; } })();
+        const courseData = (() => { try { return JSON.parse(localStorage.getItem("kk_course_data")||"{}"); } catch { return {}; } })();
+        const semCodes = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).map(c=>c.courseCode);
+        const entries = semCodes.map(code=>({ code, prof: courseData[code]?.professor||"", oh: ohData[code]||[] })).filter(e=>e.prof||e.oh.length>0);
+        return (
+          <>
+            <SectionTitle>Office Hours</SectionTitle>
+            {entries.length===0 ? (
+              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No office hours uploaded yet.</div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:12,maxHeight:280,overflowY:"auto"}}>
+                {entries.map(e=>(
+                  <div key={e.code} style={{padding:"10px 14px",borderRadius:10,background:"var(--surface2)"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                      <span style={{fontSize:13,fontWeight:700,color:"var(--primary)"}}>{e.code}</span>
+                      {e.prof && <span style={{fontSize:11,color:"var(--text2)"}}>{e.prof}</span>}
+                    </div>
+                    {e.oh.length>0 ? e.oh.map((oh,i)=>(
+                      <div key={i} style={{fontSize:11,color:"var(--text2)",marginTop:2}}>{oh.day} · {oh.time}{oh.location?` · ${oh.location}`:""}</div>
+                    )) : <div style={{fontSize:11,color:"var(--text3)"}}>No office hours listed</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        );
+      }
+      case "taskbreakdown": {
+        const types = ["Assignment","Quiz","Exam","Project","Lab","Other"];
+        const counts = types.map(type=>({ type, total: tasks.filter(t=>(t.type||"Other")===type).length, done: tasks.filter(t=>(t.type||"Other")===type&&t.done).length })).filter(c=>c.total>0);
+        const colors = ["var(--accent)","#e67e22","var(--error)","var(--primary)","#27ae60","var(--text3)"];
+        const total = tasks.length;
+        return (
+          <>
+            <SectionTitle>Task Breakdown</SectionTitle>
+            {total===0 ? (
+              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No tasks yet.</div>
+            ) : (
+              <div style={{marginTop:12}}>
+                <div style={{display:"flex",height:10,borderRadius:99,overflow:"hidden",marginBottom:14,gap:2}}>
+                  {counts.map((c,i)=>(
+                    <div key={c.type} style={{flex:c.total,background:colors[i%colors.length],minWidth:4,transition:"flex .4s"}} title={`${c.type}: ${c.total}`}/>
+                  ))}
                 </div>
-              ))}
-            </div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {counts.map((c,i)=>(
+                    <div key={c.type} style={{display:"flex",alignItems:"center",gap:8}}>
+                      <div style={{width:8,height:8,borderRadius:"50%",background:colors[i%colors.length],flexShrink:0}}/>
+                      <span style={{fontSize:12,color:"var(--text2)",flex:1}}>{c.type}</span>
+                      <span style={{fontSize:12,fontWeight:600,color:"var(--primary)"}}>{c.done}/{c.total}</span>
+                      <div style={{width:60,height:5,borderRadius:99,background:"var(--surface2)",overflow:"hidden"}}>
+                        <div style={{height:"100%",borderRadius:99,background:colors[i%colors.length],width:`${Math.round((c.done/c.total)*100)}%`}}/>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        );
+      }
+      case "studysessions": {
+        const now3 = new Date();
+        const upcoming3 = studyEntries.filter(e=>e.start&&new Date(e.start)>=now3).sort((a,b)=>new Date(a.start)-new Date(b.start)).slice(0,6);
+        const fmtSession = d => { const dt=new Date(d); return dt.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})+" · "+dt.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",hour12:true}); };
+        return (
+          <>
+            <SectionTitle>Study Sessions</SectionTitle>
+            {upcoming3.length===0 ? (
+              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No upcoming study sessions.</div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:12,maxHeight:260,overflowY:"auto"}}>
+                {upcoming3.map((e,i)=>(
+                  <div key={i} style={{padding:"9px 14px",borderRadius:10,background:"var(--surface2)",borderLeft:"3px solid var(--primary)"}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"var(--primary)"}}>{e.task?.course||"Study"}{e.task?.title?` — ${e.task.title}`:""}</div>
+                    <div style={{fontSize:11,color:"var(--text2)",marginTop:2}}>{e.start?fmtSession(e.start):"Unscheduled"}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        );
+      }
+      case "gpasimulator": {
+        const LETTER_GRADES = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
+        const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
+        const semCourses4 = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.courseCode&&Number(c.credits)>0);
+        const totalCr = semCourses4.reduce((s,c)=>s+Number(c.credits),0);
+        const simPoints = semCourses4.reduce((s,c)=>{
+          const g = simGrades[c.courseCode] || c.grade?.trim().toUpperCase() || "";
+          return gradePoints[g]!==undefined ? s + gradePoints[g]*Number(c.credits) : s;
+        }, 0);
+        const gradedCr = semCourses4.filter(c=>{
+          const g = simGrades[c.courseCode] || c.grade?.trim().toUpperCase() || "";
+          return gradePoints[g]!==undefined;
+        }).reduce((s,c)=>s+Number(c.credits),0);
+        const projGPA = gradedCr>0 ? (simPoints/gradedCr).toFixed(2) : null;
+        return (
+          <>
+            <SectionTitle>GPA Simulator</SectionTitle>
+            {semCourses4.length===0 ? (
+              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No courses in selected semester.</div>
+            ) : (
+              <>
+                {projGPA && (
+                  <div style={{textAlign:"center",padding:"8px 0 12px"}}>
+                    <div style={{fontFamily:"'Fraunces',serif",fontSize:42,fontWeight:700,color:"var(--primary)",lineHeight:1}}>{projGPA}</div>
+                    <div style={{fontSize:11,color:"var(--text2)",marginTop:4}}>projected semester GPA · {gradedCr}/{totalCr} cr graded</div>
+                  </div>
+                )}
+                <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:220,overflowY:"auto"}}>
+                  {semCourses4.map(c=>{
+                    const val = simGrades[c.courseCode] || c.grade?.trim().toUpperCase() || "";
+                    const pts = gradePoints[val];
+                    return (
+                      <div key={c.courseCode} style={{display:"grid",gridTemplateColumns:"1fr auto 36px",gap:8,alignItems:"center",padding:"6px 10px",borderRadius:8,background:"var(--surface2)",borderLeft:`3px solid ${pts===undefined?"var(--border)":pts>=3.7?"#27ae60":pts>=2.7?"#e67e22":"var(--error)"}`}}>
+                        <span style={{fontSize:12,fontWeight:600,color:"var(--primary)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.courseCode}</span>
+                        <select value={val} onChange={e=>setSimGrades(p=>({...p,[c.courseCode]:e.target.value}))}
+                          style={{fontSize:11,padding:"2px 5px",borderRadius:6,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer",fontFamily:"inherit"}}>
+                          <option value="">—</option>
+                          {LETTER_GRADES.map(g=><option key={g} value={g}>{g}</option>)}
+                        </select>
+                        <span style={{fontSize:11,color:"var(--text3)",textAlign:"right"}}>{c.credits}cr</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {Object.keys(simGrades).length>0 && (
+                  <button onClick={()=>setSimGrades({})} style={{marginTop:8,fontSize:11,color:"var(--text3)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",display:"block",marginLeft:"auto"}}>Reset</button>
+                )}
+              </>
+            )}
+          </>
+        );
+      }
+      case "prioritytasks": {
+        const now4 = new Date();
+        const todayStr = now4.toISOString().slice(0,10);
+        const overdue = tasks.filter(t=>!t.done&&t.due&&new Date(t.due)<now4&&t.due.slice(0,10)!==todayStr).sort((a,b)=>new Date(a.due)-new Date(b.due));
+        const dueToday = tasks.filter(t=>!t.done&&t.due&&t.due.slice(0,10)===todayStr);
+        const all = [...overdue,...dueToday];
+        return (
+          <>
+            <SectionTitle>Priority Tasks</SectionTitle>
+            {all.length===0 ? (
+              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>Nothing urgent right now!</div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:12,maxHeight:280,overflowY:"auto"}}>
+                {overdue.length>0 && <div style={{fontSize:10,fontWeight:700,color:"var(--error)",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:2}}>Overdue</div>}
+                {overdue.map((t,i)=>(
+                  <div key={`o${i}`} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:"#fff0f0",borderLeft:"3px solid var(--error)"}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:600,color:"var(--error)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.title}</div>
+                      <div style={{fontSize:11,color:"var(--text2)",marginTop:1}}>{[t.course,t.type].filter(Boolean).join(" · ")}</div>
+                    </div>
+                    <span style={{fontSize:10,fontWeight:700,color:"var(--error)",whiteSpace:"nowrap"}}>{new Date(t.due).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
+                  </div>
+                ))}
+                {dueToday.length>0 && <div style={{fontSize:10,fontWeight:700,color:"#e67e22",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:2,marginTop:overdue.length?6:0}}>Due Today</div>}
+                {dueToday.map((t,i)=>(
+                  <div key={`d${i}`} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:"#fff8f0",borderLeft:"3px solid #e67e22"}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:600,color:"var(--primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.title}</div>
+                      <div style={{fontSize:11,color:"var(--text2)",marginTop:1}}>{[t.course,t.type].filter(Boolean).join(" · ")}</div>
+                    </div>
+                    <span style={{fontSize:10,fontWeight:700,color:"#e67e22",whiteSpace:"nowrap"}}>Today</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         );
       }
@@ -1435,18 +1648,6 @@ export default function Dashboard({ onLogout }) {
       </>
     ) : null;
 
-    if (wDef?.selfCard) {
-      return (
-        <div key={id} style={wrapStyle}
-          onDragOver={editMode && !isPinned ? e => onDragOver(e,id) : undefined}
-          onDrop={editMode && !isPinned ? () => onDrop(id) : undefined}
-          onDragEnd={editMode && !isPinned ? onDragEnd : undefined}>
-          {editOverlay}
-          {id==="courseGrades" && <CourseGradeSummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} footer={null}/>}
-          {id==="gpasummary"   && <GPASummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} onNavigate={setActivePage} footer={null}/>}
-        </div>
-      );
-    }
     return (
       <section key={id} className="card-anim"
         style={{ ...s.card, ...wrapStyle, display:"flex", flexDirection:"column" }}
@@ -1483,7 +1684,6 @@ export default function Dashboard({ onLogout }) {
         .add-btn { transition:background .15s; }
         .cal-day:hover { background:var(--surface3) !important; border-radius:6px; }
         .toggle-opt:hover { background:var(--surface3); }
-        label:has(input[type="color"]):hover { transform: scale(1.2); box-shadow: 0 3px 10px rgba(0,0,0,0.2) !important; }
       `}</style>
 
         <aside style={{ ...s.sidebar, width:sidebarOpen ? 224 : 66 }}>
@@ -1497,12 +1697,12 @@ export default function Dashboard({ onLogout }) {
                   display:"flex", alignItems:"center", padding:"10px 16px", margin:"2px 8px", borderRadius:10,
                   justifyContent:sidebarOpen?"flex-start":"center",
                   background:activePage===item.id?"rgba(255,255,255,0.15)":"transparent",
-                  color:activePage===item.id?"#ffffff":"var(--text3)",
+                  color:activePage===item.id?"#ffffff":"rgba(255,255,255,0.60)",
                   fontWeight:activePage===item.id?600:400, userSelect:"none", position:"relative",
                 }}>
                   <span style={{fontSize:17,minWidth:22,textAlign:"center"}}>{item.icon}</span>
                   {sidebarOpen && <span style={{marginLeft:10,fontSize:14}}>{item.label}</span>}
-                  {sidebarOpen && activePage===item.id && <span style={{position:"absolute",right:14,width:6,height:6,borderRadius:"50%",background:"#7B5EA7"}} />}
+                  {sidebarOpen && activePage===item.id && <span style={{position:"absolute",right:14,width:6,height:6,borderRadius:"50%",background:"var(--primary)"}} />}
                 </div>
             ))}
           </nav>
@@ -1515,7 +1715,7 @@ export default function Dashboard({ onLogout }) {
             {sidebarOpen && (
                 <div style={{marginLeft:10,display:"flex",flexDirection:"column",lineHeight:1.3,overflow:"hidden"}}>
                   <span style={{fontSize:13,fontWeight:600,color:activePage==="profile"?"#ffffff":"#D9E1F1"}}>Student Profile</span>
-                  <span style={{fontSize:11,color:"var(--text3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{email}</span>
+                  <span style={{fontSize:11,color:"rgba(255,255,255,0.42)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{email}</span>
                 </div>
             )}
           </div>
@@ -1753,33 +1953,164 @@ export default function Dashboard({ onLogout }) {
           </div>
         )}
 
+
+        {/* Course Details Panel */}
+        {courseDetailsTarget && (() => {
+          const cn = courseDetailsTarget;
+          const courseEntry = semCourseList.find(c => c.name === cn);
+          const sec = courseEntry?.section;
+          const professor = courseData[cn]?.professor || courseSyllabi[cn]?.professor || sec?.professorName || null;
+          const oh = courseOfficeHours[cn] || [];
+          const syllabus = courseSyllabi[cn];
+          const color = "var(--primary)";
+          const fmtTime = t => { if (!t) return ""; const s = String(t); if (s.includes(":")) return s.slice(0,5); if (s.length===4) return `${s.slice(0,2)}:${s.slice(2)}`; return s; };
+          const scheduleLines = [];
+          if (sec?.days1 && sec?.beginTime1) scheduleLines.push(`${sec.days1}  ${fmtTime(sec.beginTime1)}–${fmtTime(sec.endTime1)}${sec.building1 ? `  ·  ${sec.building1}${sec.room1 ? " "+sec.room1 : ""}` : ""}`);
+          if (sec?.days2 && sec?.beginTime2) scheduleLines.push(`${sec.days2}  ${fmtTime(sec.beginTime2)}–${fmtTime(sec.endTime2)}${sec.building2 ? `  ·  ${sec.building2}${sec.room2 ? " "+sec.room2 : ""}` : ""}`);
+          return (
+            <div onClick={()=>setCourseDetailsTarget(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.35)",zIndex:8000,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px"}}>
+              <div onClick={e=>e.stopPropagation()} style={{background:"var(--surface)",borderRadius:18,width:"min(480px,96vw)",maxHeight:"88vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 40px rgba(49,72,122,0.22)",fontFamily:"'DM Sans',sans-serif",overflow:"hidden"}}>
+                {/* Header */}
+                <div style={{padding:"24px 24px 18px",borderBottom:"1px solid var(--border)",background:`linear-gradient(135deg,${color}18 0%,transparent 100%)`}}>
+                  <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12}}>
+                    <div>
+                      <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:22,color:color,letterSpacing:"-0.01em"}}>{cn}</div>
+                      {sec?.sectionNumber && <div style={{fontSize:12,color:"var(--text3)",marginTop:2}}>Section {sec.sectionNumber}{sec?.creditHours ? `  ·  ${sec.creditHours} cr` : (courseEntry?.credits ? `  ·  ${courseEntry.credits} cr` : "")}</div>}
+                    </div>
+                    <button onClick={()=>setCourseDetailsTarget(null)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--text3)",lineHeight:1,padding:"2px 4px",marginTop:2}}>✕</button>
+                  </div>
+                  {courseEntry?.grade && <div style={{display:"inline-block",marginTop:10,background:color+"22",color:color,fontWeight:700,fontSize:13,borderRadius:7,padding:"3px 10px"}}>{courseEntry.grade}</div>}
+                </div>
+
+                <div style={{padding:"18px 24px",display:"flex",flexDirection:"column",gap:16,overflowY:"auto",flex:1}}>
+                  {/* Professor */}
+                  {professor && (
+                    <div>
+                      <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:5}}>Professor</div>
+                      <div style={{fontSize:14,color:"var(--text)",fontWeight:500}}>{professor}</div>
+                    </div>
+                  )}
+
+                  {/* Schedule */}
+                  {scheduleLines.length > 0 && (
+                    <div>
+                      <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:5}}>Class Schedule</div>
+                      {scheduleLines.map((l,i)=>(
+                        <div key={i} style={{fontSize:13,color:"var(--text2)",lineHeight:1.7}}>{l}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Office Hours */}
+                  {syllabus && oh.length > 0 && (
+                    <div>
+                      <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:5}}>Office Hours</div>
+                      {oh.map((o,i)=>(
+                        <div key={i} style={{fontSize:13,color:"var(--text2)",lineHeight:1.7}}>{[o.day,o.time,o.location].filter(Boolean).join(" · ")}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Syllabus Assessments */}
+                  {syllabus?.assessments?.length > 0 && (
+                    <div>
+                      <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:8}}>Grade Breakdown</div>
+                      <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                        {(() => {
+                          const isFinalInList = syllabus.assessments.some(a => /final/i.test(a.name));
+                          return syllabus.assessments.map((a,i)=>(
+                            <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}>
+                              <span style={{color:"var(--text)"}}>{a.name}</span>
+                              <span style={{fontWeight:600,color:color}}>{a.weight}%</span>
+                            </div>
+                          )).concat(
+                            syllabus.finalExamWeight != null && !isFinalInList ? [
+                              <div key="final" style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13,paddingTop:5,borderTop:"1px solid var(--border)",marginTop:2}}>
+                                <span style={{color:"var(--text)"}}>Final Exam</span>
+                                <span style={{fontWeight:600,color:color}}>{syllabus.finalExamWeight}%</span>
+                              </div>
+                            ] : []
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* No syllabus placeholder */}
+                  {!syllabus && (
+                    <div style={{background:"var(--surface2)",borderRadius:10,padding:"14px 16px",fontSize:12,color:"var(--text3)",textAlign:"center"}}>
+                      No syllabus uploaded yet.<br/>Upload one to see grade breakdown & office hours.
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div style={{padding:"16px 24px",borderTop:"1px solid var(--border)",display:"flex",gap:8}}>
+                  <button onClick={()=>{setCourseDetailsTarget(null);setSyllabusTarget(cn);}} style={{flex:1,padding:"10px",borderRadius:9,border:`1px solid ${color}`,background:color,color:"white",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                    {syllabus ? "Edit Syllabus" : "+ Upload Syllabus"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {syllabusTarget && (
             <SyllabusModal
                 courseName={syllabusTarget}
+                existingData={courseSyllabi[syllabusTarget] ? {
+                  ...courseSyllabi[syllabusTarget],
+                  professor: courseData[syllabusTarget]?.professor || courseSyllabi[syllabusTarget]?.professor || "",
+                  officeHours: courseOfficeHours[syllabusTarget] || [],
+                } : null}
                 onClose={() => setSyllabusTarget(null)}
                 onApply={data => {
                   const name = syllabusTarget;
                   setSyllabusTarget(null);
                   if (data) {
                     if (data.officeHours?.length) saveCourseOfficeHours(name, data.officeHours);
-                    // Save syllabus extract for GradeCalculator to pick up
-                    if (data.assessments?.length || data.finalExamWeight || data.professor) {
-                      try {
-                        const all = JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}");
-                        const payload = { assessments: data.assessments || [], finalExamWeight: data.finalExamWeight ?? null, professor: data.professor || null };
-                        const next = { ...all, [name]: payload };
-                        localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
-                        setCourseSyllabi(next);
-                        fetch(`http://localhost:8080/api/user-syllabi/${encodeURIComponent(name)}`, {
-                          method: "PUT",
-                          headers: authHeaders(),
-                          body: JSON.stringify(payload),
-                        }).catch(() => {});
-                      } catch {}
-                    }
-                    if (data.assessments) {
-                      setSyllabusCalcData(data);
-                    }
+                    // Sync professor + assessments into kk_course_data (grade calculator reads from here)
+                    try {
+                      const dm = JSON.parse(localStorage.getItem("kk_course_data") || "{}");
+                      const existing = dm[name] || {};
+                      const updates = { ...existing };
+                      if (data.professor) updates.professor = data.professor;
+                      if (data.assessments?.length) {
+                        updates.components = data.assessments.map((a, i) => {
+                          const t = inferGCType(a.name);
+                          return {
+                            id: Date.now() + i,
+                            type: t,
+                            weight: parseFloat(a.weight) || 0,
+                            grade: existing.components?.find(c => c.type === t)?.grade ?? "",
+                            customType: t === "Other" ? (a.name || "") : "",
+                          };
+                        });
+                      }
+                      dm[name] = updates;
+                      localStorage.setItem("kk_course_data", JSON.stringify(dm));
+                      setCourseData(dm);
+                    } catch {}
+                    // Always save to kk_course_syllabus
+                    try {
+                      const all = JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}");
+                      const existing = all[name] || {};
+                      const payload = {
+                        ...existing,
+                        assessments: data.assessments ?? existing.assessments ?? [],
+                        finalExamWeight: data.finalExamWeight !== undefined ? data.finalExamWeight : (existing.finalExamWeight ?? null),
+                        professor: data.professor || existing.professor || null,
+                        uploaded: true,
+                      };
+                      const next = { ...all, [name]: payload };
+                      localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
+                      setCourseSyllabi(next);
+                      fetch(`http://localhost:8080/api/user-syllabi/${encodeURIComponent(name)}`, {
+                        method: "PUT",
+                        headers: authHeaders(),
+                        body: JSON.stringify(payload),
+                      }).catch(() => {});
+                    } catch {}
                   }
                 }}
             />
@@ -1790,7 +2121,7 @@ export default function Dashboard({ onLogout }) {
 
 const s = {
   root:         { display:"flex", minHeight:"100vh", background:"var(--bg)", fontFamily:"'DM Sans',sans-serif" },
-  sidebar:      { display:"flex", flexDirection:"column", background:"#31487A", height:"100vh", position:"sticky", top:0, transition:"width 0.25s ease", overflow:"hidden", flexShrink:0, zIndex:100 },
+  sidebar:      { display:"flex", flexDirection:"column", background:"var(--sidebar-bg)", height:"100vh", position:"sticky", top:0, transition:"width 0.25s ease", overflow:"hidden", flexShrink:0, zIndex:100 },
   sidebarTop:   { display:"flex", alignItems:"center", width:"100%", boxSizing:"border-box", padding:"20px 16px 16px", borderBottom:"1px solid rgba(255,255,255,0.1)" },
   logoMark:     { width:34, height:34, borderRadius:10, background:"#7B5EA7", color:"white", fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:18, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
   logoLabel:    { fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:18, color:"#ffffff", whiteSpace:"nowrap" },
@@ -1798,12 +2129,12 @@ const s = {
   avatar:       { width:32, height:32, borderRadius:"50%", background:"linear-gradient(135deg, #8FB3E2, #A59AC9)", color:"white", fontWeight:700, fontSize:14, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
   collapseBtn:  { margin:"8px auto", display:"block", background:"none", border:"1px solid rgba(255,255,255,0.2)", borderRadius:8, padding:"4px 10px", cursor:"pointer", color:"rgba(255,255,255,0.5)", fontSize:12 },
   main:         { flex:1, overflowY:"auto", minHeight:"100vh" },
-  topbar:       { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", background:"var(--bg)", backdropFilter:"blur(10px)", position:"sticky", top:0, zIndex:50, borderBottom:"1px solid var(--border)", gap:14, flexWrap:"wrap" },
+  topbar:       { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12.5px 28px", background:"var(--bg)", backdropFilter:"blur(10px)", position:"sticky", top:0, zIndex:50, borderBottom:"1px solid var(--border)", gap:14, flexWrap:"wrap" },
   greeting:     { fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:20, color:"var(--primary)" },
   bell:         { width:38, height:38, borderRadius:10, background:"var(--surface)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:16 },
   grid:         { display:"grid", gridTemplateColumns:"repeat(3,1fr)", gridAutoFlow:"dense", gap:20, padding:"24px 28px 40px" },
   card:         { background:"var(--surface)", borderRadius:18, padding:"20px 22px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid var(--border)" },
-  courseCard:   { background:"var(--bg)", borderRadius:12, padding:"12px 14px", minWidth:140, flex:"1 1 140px", boxShadow:"0 2px 8px rgba(49,72,122,0.08)" },
+  courseCard:   { background:"var(--surface)", borderRadius:12, padding:"12px 14px", minWidth:140, flex:"1 1 140px", boxShadow:"0 2px 12px rgba(49,72,122,0.10)" },
   progressTrack:{ height:10, background:"#D9E1F1", borderRadius:10, overflow:"hidden" },
   progressFill: { height:"100%", background:"linear-gradient(90deg, #31487A, #8FB3E2)", borderRadius:10, transition:"width 0.6s ease" },
   chip:         { flex:1, background:"var(--surface2)", borderRadius:10, padding:"8px 12px", textAlign:"center" },

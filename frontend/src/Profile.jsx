@@ -647,8 +647,8 @@ const refetchSemesters = () =>
   const createSemester = async () => {
     if (!newSemName.trim()) return;
     const courses = newSemCourses.filter(c => c.code.trim());
-    const missing = courses.filter(c => !c.sectioncrn);
-    if (missing.length > 0) { setSemErr(`Please pick a section for: ${missing.map(c => c.code || "empty course").join(", ")}`); return; }
+    const missingBE = courses.find(c => (c.components||[]).some(x => !x.sectioncrn));
+    if (missingBE) { setSemErr(`Please pick a lab/recitation section for ${missingBE.code}.`); return; }
     setSemErr("");
     setSemSaveLoad(true);
     try {
@@ -665,19 +665,20 @@ const refetchSemesters = () =>
 
   const saveEdit = async () => {
     const courses = editCourses.filter(c => c.code.trim());
-    const missing = courses.filter(c => !c.sectioncrn);
-    if (missing.length > 0) { setSemErr(`Please pick a section for: ${missing.map(c => c.code || "empty course").join(", ")}`); return; }
+    const missingBE = courses.find(c => (c.components||[]).some(x => !x.sectioncrn));
+    if (missingBE) { setSemErr(`Please pick a lab/recitation section for ${missingBE.code}.`); return; }
     setSemErr("");
     setSemSaveLoad(true);
     try {
-      await fetch(`${API}/api/grades/saved/${editingId}`, {
+      const res = await fetch(`${API}/api/grades/saved/${editingId}`, {
         method: "PUT",
         headers: semAuthHeaders(),
         body: JSON.stringify({ semesterName: editName.trim(), courses: courses.flatMap(c => [{ courseCode: c.code, grade: c.grade, credits: parseInt(c.credits) || 0, sectioncrn: c.sectioncrn || null }, ...(c.components||[]).filter(x=>x.sectioncrn).map(x => ({ courseCode: x.code, grade: "", credits: 0, sectioncrn: x.sectioncrn, componenttype: x.type }))]) }),
       });
+      if (!res.ok) { const err = await res.text().catch(() => ""); setSemErr(`Save failed (${res.status})${err ? ": " + err : ""}`); return; }
       await refetchSemesters();
       setEditingId(null);
-    } catch {}
+    } catch (e) { setSemErr("Save failed: " + e.message); }
     finally { setSemSaveLoad(false); }
   };
 
@@ -1472,7 +1473,7 @@ const refetchSemesters = () =>
                 {newSemCourses.map(c => (
                   <div key={c.id} style={{ marginBottom:6 }}>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6 }}>
-                      <StudentCourses value={c} onSelect={async data => { setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, courseId:data.courseId, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r)); if (data.courseId) { const secs = await fetch(`${API}/api/courses/${data.courseId}/sections`).then(r=>r.json()).catch(()=>[]); const hasLabRec = secs.some(s => /^[BE]/i.test(s.sectionNumber||"")); setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, hasLabRec} : r)); } }} />
+                      <StudentCourses value={c} onSelect={async data => { setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, courseId:data.courseId, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r)); if (data.courseId) { const secs = await fetch(`${API}/api/courses/${data.courseId}/sections`).then(r=>r.json()).catch(()=>[]); const hasLabRec = secs.some(s => /^[BE]/i.test(s.sectionNumber||"")); setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, hasLabRec, components: hasLabRec && !(r.components||[]).some(x=>x.sectioncrn) ? [{id:Date.now(), code:data.code, sectioncrn:null, type:"Lab"}] : (r.components||[])} : r)); } }} />
                       <input value={c.credits} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                       <select value={c.grade} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
                         {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}
@@ -1481,11 +1482,10 @@ const refetchSemesters = () =>
                     </div>
                     {(c.components||[]).map(comp => (
                       <div key={comp.id} style={{ display:"grid", gridTemplateColumns:"1fr 32px", gap:6, marginTop:4, paddingLeft:16 }}>
-                        <StudentCourses value={comp} lockedCourse={c.courseId ? { id:c.courseId, courseCode:c.code } : null} onSelect={data => { const type = /^B/i.test(data.sectionNumber||"") ? "Lab" : "Recitation"; setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, components: r.components.map(x => x.id===comp.id ? {...x, code:data.code, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, type} : x)} : r)); }} filterPrefix={["B","E"]} />
+                        <StudentCourses value={comp} lockedCourse={c.courseId ? { id:c.courseId, courseCode:c.code } : null} onSelect={data => { const sec = (data.sectionNumber||"").toUpperCase(); const type = sec.startsWith("BL") ? "Lab Lecture" : sec.startsWith("B") ? "Lab" : "Recitation"; setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, components: r.components.map(x => x.id===comp.id ? {...x, code:data.code, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, type} : x)} : r)); }} filterPrefix={["B","E"]} autoOpen={!comp.sectioncrn} />
                         <button onClick={() => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, components: r.components.filter(x => x.id!==comp.id)} : r))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
                       </div>
                     ))}
-                    {c.hasLabRec && !(c.components||[]).some(x => x.sectioncrn) && <button onClick={() => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, components:[...(r.components||[]), {id:Date.now(), code:r.code, sectioncrn:null, type:"Lab"}]} : r))} style={{ fontSize:11, color:"var(--text2)", background:"none", border:"none", cursor:"pointer", padding:"2px 0 0 16px", fontWeight:600 }}>+ Add Lab or Recitation</button>}
                   </div>
                 ))}
                 <button onClick={() => setNewSemCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"", components:[] }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
@@ -1530,12 +1530,6 @@ const refetchSemesters = () =>
                             <span style={{ fontWeight:600, minWidth:100 }}>{c.courseCode}</span>
                             <span style={{ color:"var(--text2)" }}>{c.credits} cr</span>
                             <span style={{ color:"var(--accent)", fontWeight:600 }}>{c.grade}</span>
-                            {syllabi[c.courseCode] && (
-                              <span style={{ display:"flex", alignItems:"center", gap:4, marginLeft:"auto" }}>
-                                <span style={{ fontSize:11, color:"var(--success-text, var(--accent))", fontWeight:500 }}>Syllabus uploaded</span>
-                                <button onClick={() => removeSyllabus(c.courseCode)} style={{ fontSize:11, color:"var(--error)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>✕</button>
-                              </span>
-                            )}
                           </div>
                           {c.components.map((comp,ci) => (
                             <div key={ci} style={{ display:"flex", gap:8, fontSize:12, color:"var(--text2)", alignItems:"center", paddingLeft:16, marginTop:2 }}>
@@ -1563,7 +1557,7 @@ const refetchSemesters = () =>
                     {editCourses.map(c => (
                       <div key={c.id} style={{ marginBottom:6 }}>
                         <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom: syllabi[c.code] ? 4 : 0 }}>
-                          <StudentCourses value={c} onSelect={async data => { setEditCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, courseId:data.courseId, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r)); if (data.courseId) { const secs = await fetch(`${API}/api/courses/${data.courseId}/sections`).then(r=>r.json()).catch(()=>[]); const hasLabRec = secs.some(s => /^[BE]/i.test(s.sectionNumber||"")); setEditCourses(p => p.map(r => r.id===c.id ? {...r, hasLabRec} : r)); } }} />
+                          <StudentCourses value={c} onSelect={async data => { setEditCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, courseId:data.courseId, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r)); if (data.courseId) { const secs = await fetch(`${API}/api/courses/${data.courseId}/sections`).then(r=>r.json()).catch(()=>[]); const hasLabRec = secs.some(s => /^[BE]/i.test(s.sectionNumber||"")); setEditCourses(p => p.map(r => r.id===c.id ? {...r, hasLabRec, components: hasLabRec && !(r.components||[]).some(x=>x.sectioncrn) ? [{id:Date.now(), code:data.code, sectioncrn:null, type:"Lab"}] : (r.components||[])} : r)); } }} />
                           <input value={c.credits} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                           <select value={c.grade} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
                             {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}
@@ -1579,15 +1573,15 @@ const refetchSemesters = () =>
                               setSyllabusEditOH(oh.length ? oh : []);
                               setSyllabusEditCourse(c.code);
                             }} style={{ fontSize:11, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>Edit syllabus info</button>
+                            <button onClick={() => removeSyllabus(c.code)} style={{ fontSize:11, color:"var(--error)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600, marginLeft:8 }}>Remove syllabus</button>
                           </div>
                         )}
                         {(c.components||[]).map(comp => (
                           <div key={comp.id} style={{ display:"grid", gridTemplateColumns:"1fr 32px", gap:6, marginTop:4, paddingLeft:16 }}>
-                            <StudentCourses value={comp} lockedCourse={c.courseId ? { id:c.courseId, courseCode:c.code } : null} onSelect={data => { const type = /^B/i.test(data.sectionNumber||"") ? "Lab" : "Recitation"; setEditCourses(p => p.map(r => r.id===c.id ? {...r, components: r.components.map(x => x.id===comp.id ? {...x, code:data.code, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, type} : x)} : r)); }} filterPrefix={["B","E"]} />
+                            <StudentCourses value={comp} lockedCourse={c.courseId ? { id:c.courseId, courseCode:c.code } : null} onSelect={data => { const sec = (data.sectionNumber||"").toUpperCase(); const type = sec.startsWith("BL") ? "Lab Lecture" : sec.startsWith("B") ? "Lab" : "Recitation"; setEditCourses(p => p.map(r => r.id===c.id ? {...r, components: r.components.map(x => x.id===comp.id ? {...x, code:data.code, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, type} : x)} : r)); }} filterPrefix={["B","E"]} autoOpen={!comp.sectioncrn} />
                             <button onClick={() => setEditCourses(p => p.map(r => r.id===c.id ? {...r, components: r.components.filter(x => x.id!==comp.id)} : r))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
                           </div>
                         ))}
-                        {c.hasLabRec && !(c.components||[]).some(x => x.sectioncrn) && <button onClick={() => setEditCourses(p => p.map(r => r.id===c.id ? {...r, components:[...(r.components||[]), {id:Date.now(), code:r.code, sectioncrn:null, type:"Lab"}]} : r))} style={{ fontSize:11, color:"var(--text2)", background:"none", border:"none", cursor:"pointer", padding:"2px 0 0 16px", fontWeight:600 }}>+ Add Lab or Recitation</button>}
                       </div>
                     ))}
                     <button onClick={() => setEditCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"", components:[] }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
