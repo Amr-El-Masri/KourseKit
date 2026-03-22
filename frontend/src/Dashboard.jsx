@@ -8,6 +8,7 @@ import StudyPlanner from "./StudyPlanner";
 import CourseDetails from "./CourseDetails";
 import SyllabusModal from "./SyllabusModal";
 import ThemeToggle from "./ThemeToggle";
+import { useTheme } from "./ThemeContext";
 import StudentDirectory from "./StudentDirectoryPanel";
 import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle, Settings as SettingsIcon } from 'lucide-react';
 
@@ -184,7 +185,7 @@ function CourseGradeSummaryWidget({ apiSemesters, selectedSemester, footer }) {
   const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
 
   const semObj = apiSemesters.find(s => s.semesterName === selectedSemester);
-  const courses = (semObj?.courses || []).filter(c => c.courseCode);
+  const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype && !/^[BE]/i.test(c.section?.sectionNumber || ""));
 
   const [selectedCourse, setSelectedCourse] = useState("");
 
@@ -377,7 +378,7 @@ function GPASummaryWidget({ apiSemesters, selectedSemester, onNavigate, footer }
   };
 
   const semObj = apiSemesters.find(s => s.semesterName === selectedSemester);
-  const courses = (semObj?.courses || []).filter(c => c.courseCode);
+  const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype && !/^[BE]/i.test(c.section?.sectionNumber || ""));
   const gradedCourses = courses.filter(c => c.grade && gradePoints[c.grade?.trim()?.toUpperCase()] !== undefined && Number(c.credits) > 0);
   const allGraded = courses.length > 0 && gradedCourses.length === courses.length;
 
@@ -500,6 +501,9 @@ function GPASummaryWidget({ apiSemesters, selectedSemester, onNavigate, footer }
 }
 
 export default function Dashboard({ onLogout }) {
+  const { isDark } = useTheme();
+  const [, forceUpdate] = useState(0);
+  useEffect(() => { forceUpdate(n => n + 1); }, [isDark]);
   const NAV_ITEMS = [
     { id:"dashboard", label:"Dashboard",        icon:<LayoutDashboard size={17}/> },
     { id:"tasks",     label:"Task Manager",     icon:<CheckSquare size={17}/> },
@@ -670,7 +674,7 @@ export default function Dashboard({ onLogout }) {
   const [newEvent, setNewEvent] = useState({ day:"Mon", label:"", time:"", type:"Class" });
 
   const selectedSem = apiSemesters.find(s => s.semesterName === semester) ?? { courses: [] };
-  const semCourseList = (selectedSem.courses || []).map(c => ({ id: c.id, name: c.courseCode }));
+  const semCourseList = (selectedSem.courses || []).filter(c => !c.componenttype && !/^[BE]/i.test(c.section?.sectionNumber || "")).map(c => ({ id: c.id, name: c.courseCode }));
 
   const addTodo = () => {
     if (!todoInput.trim()) { setTodoError(true); return; }
@@ -1093,58 +1097,110 @@ export default function Dashboard({ onLogout }) {
           {calTab === "schedule" ? (
             <>
               {(() => {
-                const weekStartDate = (() => { const d=new Date(); const diff=d.getDay()===0?-6:1-d.getDay(); d.setDate(d.getDate()+diff+schedWeekOffset*7); return d; })();
-                const weekEndDate = new Date(weekStartDate); weekEndDate.setDate(weekStartDate.getDate()+6);
-                const fmtDate = d=>d.toLocaleDateString("en-US",{month:"short",day:"numeric"});
-                return <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,background:"var(--surface2)",borderRadius:10,padding:"6px 10px"}}><button onClick={()=>setSchedWeekOffset(o=>o-1)} style={{background:"none",border:"1px solid var(--border)",borderRadius:7,width:26,height:26,cursor:"pointer",fontSize:14,color:"#8FB3E2",display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button><span style={{fontSize:12,fontWeight:600,color:"var(--primary)"}}>{schedWeekOffset===0?"This Week":schedWeekOffset===1?"Next Week":schedWeekOffset===-1?"Last Week":`${fmtDate(weekStartDate)} – ${fmtDate(weekEndDate)}`}<span style={{fontWeight:400,color:"var(--text2)",marginLeft:6}}>{fmtDate(weekStartDate)} – {fmtDate(weekEndDate)}</span></span><button onClick={()=>setSchedWeekOffset(o=>o+1)} style={{background:"none",border:"1px solid var(--border)",borderRadius:7,width:26,height:26,cursor:"pointer",fontSize:14,color:"#8FB3E2",display:"flex",alignItems:"center",justifyContent:"center"}}>›</button></div>;
-              })()}
-              <div style={{display:"flex",justifyContent:"flex-end",marginBottom:8}}><button onClick={()=>setActivePage("planner")} style={{fontSize:12,fontWeight:600,color:"var(--accent)",background:"none",border:"1px solid var(--border)",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontFamily:"inherit"}}>Open Planner →</button></div>
-              <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:220,overflowY:"auto"}}>
-                {(() => {
-                  const DAY_KEYS=["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"];
-                  const DAY_LABELS=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-                  const hasBlocks=DAY_KEYS.some(k=>(studyBlocks[k]||[]).length>0);
-                  const hasSlots=DAY_KEYS.some(k=>(studySlots[k]||[]).length>0);
-                  if (!hasBlocks&&!hasSlots) return <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"20px 0"}}>No schedule for this week — open the planner to generate one!</div>;
-                  const fmt=timeStr=>{if(!timeStr)return"";const parts=Array.isArray(timeStr)?timeStr:timeStr.split(":");return`${String(parts[0]).padStart(2,"0")}:${String(parts[1]||0).padStart(2,"0")}`;};
-                  const fmtH=h=>`${String(Math.floor(h)).padStart(2,"0")}:${String(Math.round((h%1)*60)).padStart(2,"0")}`;
-                  const PALETTE=["var(--accent2)","#31487A","#2d7a4a","#7a4a2d","#7a2d5a","#2d5a7a","#6b2d7a"];
-                  const entryLookup={};
-                  studyEntries.forEach((e,idx)=>{const entryIdStr=String(e.id);const course=e.task?.course||"";const title=e.task?.title||"Study";const label=course?`${course} — ${title}`:title;const color=schedColorMap[entryIdStr]||courseColors[course]||PALETTE[idx%PALETTE.length];entryLookup[entryIdStr]={label,color};});
-                  return DAY_KEYS.map((key,i)=>{
-                    const blocks=(studyBlocks[key]||[]).slice().sort((a,b)=>fmt(a.startTime).localeCompare(fmt(b.startTime)));
-                    const slots=studySlots[key]||[];
-                    if(!blocks.length&&!slots.length)return null;
-                    return (
-                      <div key={key} style={{marginBottom:2}}>
-                        <div style={{fontSize:11,fontWeight:700,color:"#8FB3E2",marginBottom:4,textTransform:"uppercase",letterSpacing:"0.06em"}}>{DAY_LABELS[i]}</div>
-                        {blocks.map((b,bi)=>{const startH=Array.isArray(b.startTime)?b.startTime[0]+b.startTime[1]/60:parseFloat(b.startTime?.split(":")[0]||0)+parseFloat(b.startTime?.split(":")[1]||0)/60;const endH=startH+(b.duration||1);const info=entryLookup[String(b.studyPlanEntryId)]||{};const color=info.color||"#7B5EA7";const label=info.label||"Study Block";return <div key={bi} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 10px",borderRadius:8,marginBottom:4,background:b.completed?"#f5f5f5":color+"18",borderLeft:`3px solid ${b.completed?"#ccc":color}`,opacity:b.completed?0.65:1}}><div style={{minWidth:0}}><span style={{fontSize:12,fontWeight:700,color:b.completed?"#aaa":color,display:"block",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{label}</span><span style={{fontSize:11,color:"var(--text3)"}}>{fmtH(startH)} – {fmtH(endH)} · {b.duration}h</span></div>{b.completed?<span style={{fontSize:10,background:"#eef7f0",color:"#2d7a4a",padding:"2px 6px",borderRadius:4,fontWeight:600,flexShrink:0}}>✓ Done</span>:<span style={{fontSize:10,background:color+"22",color,padding:"2px 6px",borderRadius:4,fontWeight:600,flexShrink:0}}>{b.duration}h</span>}</div>;})}
-                        {!blocks.length&&slots.map((slot,si)=>(
-                          <div key={si} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"6px 10px",borderRadius:8,marginBottom:4,background:"var(--blue2-bg)",borderLeft:"3px solid var(--border2)"}}><div><span style={{fontSize:12,fontWeight:600,color:"var(--primary)"}}>{fmt(slot.startTime)} – {fmt(slot.endTime)}</span><div style={{fontSize:11,color:"var(--text2)",marginTop:1}}>Available slot</div></div><span style={{fontSize:10,background:"var(--blue2-bg)",color:"var(--primary)",padding:"2px 6px",borderRadius:4,flexShrink:0}}>Free</span></div>
+                const SCH_START = 6.5, SCH_END = 20.5, SCH_H = 52;
+                const DAYS = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"];
+                const DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat"];
+                const totalH = (SCH_END - SCH_START) * SCH_H;
+
+                const parseT = t => {
+                  if (!t) return null;
+                  const parts = Array.isArray(t) ? t : String(t).replace(/[^0-9:]/g,"").split(":");
+                  if (parts.length === 1 && parts[0].length === 4) return parseInt(parts[0].slice(0,2)) + parseInt(parts[0].slice(2))/60;
+                  return parseFloat(parts[0]) + parseFloat(parts[1]||0)/60;
+                };
+
+                const parseDays = str => {
+                  if (!str) return [];
+                  const map = { M:"MONDAY", T:"TUESDAY", W:"WEDNESDAY", R:"THURSDAY", F:"FRIDAY", S:"SATURDAY", U:"SUNDAY" };
+                  return str.split("").map(c => map[c]).filter(Boolean);
+                };
+
+                const fmtHour = h => h === 12 ? "12pm" : h > 12 ? `${h-12}pm` : `${h}am`;
+                const fmtT = h => { const hr=Math.floor(h); const mn=Math.round((h-hr)*60); return `${hr%12||12}:${String(mn).padStart(2,"0")}${h>=12?"pm":"am"}`; };
+
+                const semCourses = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.section);
+                const mainCourses = semCourses.filter(c => !c.componenttype);
+                const courseColorMap = {};
+                mainCourses.forEach((c, ci) => { courseColorMap[c.courseCode] = ci % 7; });
+                const classByDay = {};
+                DAYS.forEach(d => { classByDay[d] = []; });
+                semCourses.forEach((c, ci) => {
+                  const colorIdx = c.componenttype ? (courseColorMap[c.courseCode] ?? ci % 7) : ci % 7;
+                  const sec = c.section;
+                  [[sec.days1, sec.beginTime1, sec.endTime1],[sec.days2, sec.beginTime2, sec.endTime2]].forEach(([days, start, end]) => {
+                    if (!days || !start) return;
+                    parseDays(days).forEach(day => {
+                      classByDay[day].push({ label: c.courseCode, startH: parseT(start), endH: parseT(end), colorIdx });
+                    });
+                  });
+                });
+
+                const entryLookup = {};
+                studyEntries.forEach((e, idx) => {
+                  const id = String(e.id);
+                  const course = e.task?.course||""; const title = e.task?.title||"Study";
+                  entryLookup[id] = { label: course ? `${course} — ${title}` : title, colorIdx: idx % 7 };
+                });
+
+                return (
+                  <div style={{ marginTop:4, border:"1px solid var(--border)", borderRadius:10, overflow:"hidden", height:348, overflowY:"auto", background:"var(--surface)" }}>
+                    <div style={{ display:"flex", minWidth:0 }}>
+                      <div style={{ width:38, flexShrink:0, position:"relative", height:totalH+24, background:"var(--surface2)", borderRight:"1px solid var(--border)" }}>
+                        <div style={{ position:"sticky", top:0, height:24, background:"var(--surface2)", zIndex:3 }} />
+                        {Array.from({ length: Math.ceil(SCH_END - 7) }, (_,i) => (
+                          <div key={i} style={{ position:"absolute", top: 24 + (i+0.5)*SCH_H - 6, right:4, fontSize:11, color:"var(--text3)", lineHeight:1, textAlign:"right" }}>
+                            {fmtHour(7+i)}
+                          </div>
                         ))}
                       </div>
-                    );
-                  });
-                })()}
-              </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ position:"sticky", top:0, display:"grid", gridTemplateColumns:"repeat(6,1fr)", background:"var(--surface2)", borderBottom:"1px solid var(--border)", zIndex:2 }}>
+                          {DAY_LABELS.map((label, di) => (
+                            <div key={label} style={{ fontSize:11, fontWeight:700, color:"var(--primary)", textAlign:"center", padding:"5px 0", borderLeft: di>0?"1px solid var(--divider)":"none" }}>
+                              {label}
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", position:"relative", height:totalH }}>
+                          {Array.from({ length: Math.ceil(SCH_END - 7) }, (_,i) => (
+                            <div key={i} style={{ position:"absolute", top:(i+0.5)*SCH_H, left:0, right:0, borderTop:"1px solid var(--divider)", zIndex:0 }} />
+                          ))}
+                          {DAYS.map((day, di) => (
+                            <div key={day} style={{ position:"relative", borderLeft: di>0?"1px solid var(--divider)":"none" }}>
+                              {(classByDay[day]||[]).map((cl,ci) => {
+                                if (!cl.startH || cl.startH >= SCH_END || cl.endH <= SCH_START) return null;
+                                const top = (Math.max(cl.startH, SCH_START) - SCH_START) * SCH_H;
+                                const height = (Math.min(cl.endH, SCH_END) - Math.max(cl.startH, SCH_START)) * SCH_H - 2;
+                                return <div key={`cl${ci}`} style={{ '--c':`var(--sched${cl.colorIdx+1})`, position:"absolute", top:top+1, left:1, right:1, height, background:"color-mix(in srgb, var(--c) 20%, transparent)", borderLeft:"2px solid var(--c)", borderRadius:3, overflow:"hidden", padding:"2px 6px", zIndex:2 }}>
+                                  <div style={{ fontSize:11, fontWeight:700, color:"var(--c)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{cl.label}</div>
+                                  <div style={{ fontSize:10, color:"var(--text3)" }}>{fmtT(cl.startH)}–{fmtT(cl.endH)}</div>
+                                </div>;
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+              <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}><button onClick={()=>setActivePage("planner")} style={{fontSize:12,fontWeight:600,color:"var(--accent)",background:"none",border:"1px solid var(--border)",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontFamily:"inherit"}}>Open Planner →</button></div>
             </>
           ) : (
             <>
-          <div style={{marginTop:14}}>
+          <div style={{marginTop:14, height:384, display:"flex", flexDirection:"column"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
               <button onClick={prevMonth} style={s.calNavBtn}>‹</button>
               <span style={{fontWeight:600,fontSize:14,color:"var(--primary)"}}>{monthName} {calYear}</span>
               <button onClick={nextMonth} style={s.calNavBtn}>›</button>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:4}}>
-              {["Mo","Tu","We","Th","Fr","Sa","Su"].map(d=><div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"var(--text3)",padding:"2px 0"}}>{d}</div>)}
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gridTemplateRows:"auto",gridAutoRows:"1fr",gap:4,flex:1}}>
+              {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d=><div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"var(--text3)",padding:"2px 0"}}>{d}</div>)}
               {calCells.map((d,i)=>{
                 const dayTasks = d?(tasksByDate[calKey(d)]||[]):[];
                 return (
-                  <div key={i} className={d?"cal-day":""} style={{display:"flex",flexDirection:"column",alignItems:"center",borderRadius:6,cursor:d?"pointer":"default",background:isToday(d)?"var(--primary)":"transparent",paddingBottom:dayTasks.length?3:0}}>
-                    <div style={{minHeight:28,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,width:"100%",color:isToday(d)?"#fff":d?"var(--text)":"transparent",fontWeight:isToday(d)?700:400}}>{d||""}</div>
+                  <div key={i} className={d?"cal-day":""} style={{display:"flex",flexDirection:"column",alignItems:"center",borderRadius:6,cursor:d?"pointer":"default",background:isToday(d)?"var(--primary)":"transparent",paddingBottom:dayTasks.length?3:0,height:"100%"}}>
+                    <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,width:"100%",color:isToday(d)?"#fff":d?"var(--text)":"transparent",fontWeight:isToday(d)?700:400}}>{d||""}</div>
                     {dayTasks.map((t,ti)=>{
                       const color = t.done?"#27ae60":new Date(t.due)<new Date()?"var(--error)":courseColors[t.course]||"var(--text2)";
                       return <div key={ti} onMouseEnter={e=>{const rect=e.target.getBoundingClientRect();const cardRect=e.target.closest("section").getBoundingClientRect();setHoveredTask({task:t,x:rect.left-cardRect.left,y:rect.bottom-cardRect.top+4});}} onMouseLeave={()=>setHoveredTask(null)} onClick={()=>{setEditingTask(t);setActivePage("tasks");}} style={{width:"90%",height:3,borderRadius:2,background:color,marginBottom:1,cursor:"pointer",transition:"height .1s"}} className="cal-task-line" />;
@@ -1425,7 +1481,7 @@ export default function Dashboard({ onLogout }) {
         .todo-row:hover { background:#D9E1F1 !important; }
         .add-btn:hover { background:#221866 !important; }
         .add-btn { transition:background .15s; }
-        .cal-day:hover { background:#D9E1F1 !important; border-radius:6px; }
+        .cal-day:hover { background:var(--surface3) !important; border-radius:6px; }
         .toggle-opt:hover { background:var(--surface3); }
         label:has(input[type="color"]):hover { transform: scale(1.2); box-shadow: 0 3px 10px rgba(0,0,0,0.2) !important; }
       `}</style>

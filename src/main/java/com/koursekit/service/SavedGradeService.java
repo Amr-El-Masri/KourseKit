@@ -105,6 +105,7 @@ public class SavedGradeService {
                     semester
             );
             course.setsectioncrn(courseDTO.getsectioncrn());
+            course.setcomponenttype(courseDTO.getcomponenttype());
 
             if (courseDTO.getAssessments() != null) {
                 for (SavedAssessmentDTO assessmentDTO : courseDTO.getAssessments()) {
@@ -135,6 +136,7 @@ public class SavedGradeService {
                             assessmentDTOs
                     );
                     dto.setsectioncrn(course.getsectioncrn());
+                    dto.setcomponenttype(course.getcomponenttype());
                     if (course.getsectioncrn() != null) {
                         Optional<Section> section = sectionRepository.findByCrn(course.getsectioncrn());
                         section.ifPresent(dto::setsection);
