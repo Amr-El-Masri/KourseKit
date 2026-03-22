@@ -73,7 +73,7 @@ public class StudyGroupService {
             if (studyGroupMemberRepo.existsByGroup_IdAndUser_Id(groupId, userId)) {
                 throw new IllegalStateException("You are already a member of this group."); }
 
-            int maxMemberCount = studyGroupMemberRepo.countByGroup_Id(groupId);
+            int maxMemberCount = studyGroupMemberRepo.countByStudyGroup_Id(groupId);
             if (group.getMaxMembers() != null && maxMemberCount >= group.getMaxMembers()) {
                 throw new IllegalArgumentException("This group is full, unable to join"); }
                
@@ -87,7 +87,7 @@ public class StudyGroupService {
             if (studyGroupMemberRepo.existsByGroup_IdAndUser_Id(g.getId(), userID)) {
                 throw new IllegalStateException("You are already a member of this group."); }
 
-            int maxMemberCount = studyGroupMemberRepo.countByGroup_Id(g.getId());
+            int maxMemberCount = studyGroupMemberRepo.countByStudyGroup_Id(g.getId());
             if (g.getMaxMembers() != null && maxMemberCount >= g.getMaxMembers()) {
                 throw new IllegalArgumentException("This group is full, unable to join"); }
 
@@ -132,6 +132,9 @@ public class StudyGroupService {
                 .map(group -> studyGroupMemberRepo.findByGroup_Id(groupId))
                 .orElseThrow(() -> new IllegalArgumentException("Group not found"));
         }
+
+        public int getMemberCount(Long groupId) {
+            return studyGroupMemberRepo.countByStudyGroup_Id(groupId); }
             
     }
 

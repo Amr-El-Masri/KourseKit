@@ -12,7 +12,7 @@ public interface StudyGroupMemberRepo extends JpaRepository<StudyGroupMember, Lo
     List<StudyGroupMember> findByUser_Id(Long userID);
     List<StudyGroupMember> findByGroup_IdAndUser_Id(Long groupId, Long userID);
     boolean existsByGroup_IdAndUser_Id(Long groupId, Long userID);
-    int countByGroup_Id(Long groupId);
+    int countByStudyGroup_Id(Long groupId);
 
     @Modifying
     @Query("DELETE FROM StudyGroupMember member WHERE member.studyGroup.id = :groupId AND member.user.id = :userId")
