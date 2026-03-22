@@ -47,18 +47,20 @@ public class StudyGroupController {
     public ResponseEntity<?> joinPublicGroup(@PathVariable Long groupId) {
         try {
             studyGroupService.joinPublicGroup(currentUserId(), groupId);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.noContent().build(); // 204 instead of 200
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage())); }
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     @PostMapping("/join/private")
     public ResponseEntity<?> joinPrivateGroup(@RequestParam String inviteCode) {
         try {
             studyGroupService.joinPrivateGroup(inviteCode, currentUserId());
-            return ResponseEntity.ok().build();
+            return ResponseEntity.noContent().build(); // 204 instead of 200
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage())); }
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     @DeleteMapping("/{groupId}/leave")

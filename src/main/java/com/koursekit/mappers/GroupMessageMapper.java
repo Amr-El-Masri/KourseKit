@@ -14,7 +14,8 @@ public class GroupMessageMapper {
             message.getSender().getLastName(),
             message.getContent(),
             message.getSentAt(),
-            message.getIsDeleted()
+            message.getIsDeleted(),
+            message.getReactionsJson() != null ? message.getReactionsJson() : "{}"
         );
 
     }

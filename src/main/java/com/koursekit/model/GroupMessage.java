@@ -34,6 +34,9 @@ public class GroupMessage {
     @Column(name = "is_deleted", nullable = false)
     private Boolean isDeleted = false;
 
+    @Column(name = "reactions_json", columnDefinition = "TEXT")
+    private String reactionsJson = "{}";
+
     public GroupMessage() {}
 
     public GroupMessage(StudyGroup studyGroup, User sender, String content) {
@@ -83,4 +86,10 @@ public class GroupMessage {
 
     public void setIsDeleted(Boolean isDeleted) {
         this.isDeleted = isDeleted; }
+
+    public String getReactionsJson() { 
+        return reactionsJson; }
+        
+    public void setReactionsJson(String reactionsJson) { 
+        this.reactionsJson = reactionsJson; }
 }

@@ -9,5 +9,6 @@ public record GroupMessageResponseDTO (
     String senderLastName,
     String content,
     LocalDateTime sentAt,
-    boolean isDeleted
+    boolean isDeleted,
+    String reactionsJson
 ) {}
