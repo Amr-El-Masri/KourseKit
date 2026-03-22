@@ -1123,7 +1123,7 @@ export default function Dashboard({ onLogout }) {
       );
       case "schedule": return (
         <>
-          <SectionTitle>Course Schedule</SectionTitle>
+          <div style={{marginBottom:12}}><SectionTitle>Course Schedule</SectionTitle></div>
           {(() => {
                 const SCH_START = 6.5, SCH_END = 20.5, SCH_H = 52;
                 const DAYS = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"];
@@ -1152,8 +1152,8 @@ export default function Dashboard({ onLogout }) {
                 mainCourses.forEach((c, ci) => { courseColorMap[c.courseCode] = ci % 7; });
                 const classByDay = {};
                 DAYS.forEach(d => { classByDay[d] = []; });
-                semCourses.forEach((c, ci) => {
-                  const colorIdx = c.componenttype ? (courseColorMap[c.courseCode] ?? ci % 7) : ci % 7;
+                semCourses.forEach((c) => {
+                  const colorIdx = courseColorMap[c.courseCode] ?? 0;
                   const sec = c.section;
                   [[sec.days1, sec.beginTime1, sec.endTime1],[sec.days2, sec.beginTime2, sec.endTime2]].forEach(([days, start, end]) => {
                     if (!days || !start) return;
@@ -1171,41 +1171,47 @@ export default function Dashboard({ onLogout }) {
                 });
 
                 return (
-                  <div style={{ marginTop:4, border:"1px solid var(--border)", borderRadius:10, overflow:"hidden", height:348, overflowY:"auto", background:"var(--surface)" }}>
-                    <div style={{ display:"flex", minWidth:0 }}>
-                      <div style={{ width:38, flexShrink:0, position:"relative", height:totalH+24, background:"var(--surface2)", borderRight:"1px solid var(--border)" }}>
-                        <div style={{ position:"sticky", top:0, height:24, background:"var(--surface2)", zIndex:3 }} />
-                        {Array.from({ length: Math.ceil(SCH_END - 7) }, (_,i) => (
-                          <div key={i} style={{ position:"absolute", top: 24 + (i+0.5)*SCH_H - 6, right:4, fontSize:11, color:"var(--text3)", lineHeight:1, textAlign:"right" }}>
-                            {fmtHour(7+i)}
+                  <div style={{ marginTop:4, border:"1px solid var(--border)", borderRadius:10, overflow:"hidden", background:"var(--surface)" }}>
+                    {/* Fixed header — never scrolls */}
+                    <div style={{ display:"flex", background:"var(--surface2)", borderBottom:"1px solid var(--border)" }}>
+                      <div style={{ width:38, flexShrink:0 }} />
+                      <div style={{ flex:1, display:"grid", gridTemplateColumns:"repeat(6,1fr)" }}>
+                        {DAY_LABELS.map((label, di) => (
+                          <div key={label} style={{ fontSize:11, fontWeight:700, color:"var(--primary)", textAlign:"center", padding:"5px 0", borderLeft: di>0?"1px solid var(--divider)":"none" }}>
+                            {label}
                           </div>
                         ))}
                       </div>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ position:"sticky", top:0, display:"grid", gridTemplateColumns:"repeat(6,1fr)", background:"var(--surface2)", borderBottom:"1px solid var(--border)", zIndex:2 }}>
-                          {DAY_LABELS.map((label, di) => (
-                            <div key={label} style={{ fontSize:11, fontWeight:700, color:"var(--primary)", textAlign:"center", padding:"5px 0", borderLeft: di>0?"1px solid var(--divider)":"none" }}>
-                              {label}
+                    </div>
+                    {/* Scrollable body */}
+                    <div style={{ height:324, overflowY:"auto" }}>
+                      <div style={{ display:"flex" }}>
+                        <div style={{ width:38, flexShrink:0, position:"relative", height:totalH, background:"var(--surface2)", borderRight:"1px solid var(--border)" }}>
+                          {Array.from({ length: Math.ceil(SCH_END - 7) }, (_,i) => (
+                            <div key={i} style={{ position:"absolute", top:(i+0.5)*SCH_H - 6, right:4, fontSize:11, color:"var(--text3)", lineHeight:1, textAlign:"right" }}>
+                              {fmtHour(7+i)}
                             </div>
                           ))}
                         </div>
-                        <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", position:"relative", height:totalH }}>
-                          {Array.from({ length: Math.ceil(SCH_END - 7) }, (_,i) => (
-                            <div key={i} style={{ position:"absolute", top:(i+0.5)*SCH_H, left:0, right:0, borderTop:"1px solid var(--divider)", zIndex:0 }} />
-                          ))}
-                          {DAYS.map((day, di) => (
-                            <div key={day} style={{ position:"relative", borderLeft: di>0?"1px solid var(--divider)":"none" }}>
-                              {(classByDay[day]||[]).map((cl,ci) => {
-                                if (!cl.startH || cl.startH >= SCH_END || cl.endH <= SCH_START) return null;
-                                const top = (Math.max(cl.startH, SCH_START) - SCH_START) * SCH_H;
-                                const height = (Math.min(cl.endH, SCH_END) - Math.max(cl.startH, SCH_START)) * SCH_H - 2;
-                                return <div key={`cl${ci}`} style={{ '--c':`var(--sched${cl.colorIdx+1})`, position:"absolute", top:top+1, left:1, right:1, height, background:"color-mix(in srgb, var(--c) 20%, transparent)", borderLeft:"2px solid var(--c)", borderRadius:3, overflow:"hidden", padding:"2px 6px", zIndex:2 }}>
-                                  <div style={{ fontSize:11, fontWeight:700, color:"var(--c)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{cl.label}</div>
-                                  <div style={{ fontSize:10, color:"var(--text3)" }}>{fmtT(cl.startH)}–{fmtT(cl.endH)}</div>
-                                </div>;
-                              })}
-                            </div>
-                          ))}
+                        <div style={{ flex:1 }}>
+                          <div style={{ display:"grid", gridTemplateColumns:"repeat(6,1fr)", position:"relative", height:totalH }}>
+                            {Array.from({ length: Math.ceil(SCH_END - 7) }, (_,i) => (
+                              <div key={i} style={{ position:"absolute", top:(i+0.5)*SCH_H, left:0, right:0, borderTop:"1px solid var(--divider)", zIndex:0 }} />
+                            ))}
+                            {DAYS.map((day, di) => (
+                              <div key={day} style={{ position:"relative", borderLeft: di>0?"1px solid var(--divider)":"none" }}>
+                                {(classByDay[day]||[]).map((cl,ci) => {
+                                  if (!cl.startH || cl.startH >= SCH_END || cl.endH <= SCH_START) return null;
+                                  const top = (Math.max(cl.startH, SCH_START) - SCH_START) * SCH_H;
+                                  const height = (Math.min(cl.endH, SCH_END) - Math.max(cl.startH, SCH_START)) * SCH_H - 2;
+                                  return <div key={`cl${ci}`} style={{ '--c':`var(--sched${cl.colorIdx+1})`, position:"absolute", top:top+1, left:1, right:1, height, background:"color-mix(in srgb, var(--c) 20%, transparent)", borderLeft:"2px solid var(--c)", borderRadius:3, overflow:"hidden", padding:"2px 6px", zIndex:2 }}>
+                                    <div style={{ fontSize:11, fontWeight:700, color:"var(--c)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{cl.label}</div>
+                                    <div style={{ fontSize:10, color:"var(--text3)" }}>{fmtT(cl.startH)}–{fmtT(cl.endH)}</div>
+                                  </div>;
+                                })}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>

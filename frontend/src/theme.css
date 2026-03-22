@@ -53,14 +53,14 @@
   /* backgrounds — warm purple-tinted dark, properly layered */
   --bg:            #1c1b22;
   --surface:       #252430;
-  --surface2:      #2e2c3a;
+  --surface2:      #323041;
   --surface3:      #2a2838;
 
   /* text — soft lavender-white, readable without eye strain */
   --text:          #dedad0;
   --text-body:     #b8b4c8;
   --text2:         #9490a8;
-  --text3:         #7a7590;
+  --text3:         #a6a2b8;
 
   --primary:       #9aafd6;
   --primary2:      #7d9fd4;
