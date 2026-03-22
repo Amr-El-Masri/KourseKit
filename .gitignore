@@ -48,4 +48,4 @@ build/
 # Spring Boot
 application-local.properties
 #ignore the environment
-.env
+.envnode_modules/
