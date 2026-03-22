@@ -20,8 +20,8 @@ function inferDeadlineType(name) {
   return "Assignment";
 }
 
-export default function SyllabusModal({ courseName, onClose, onApply }) {
-  const [step, setStep] = useState("upload"); // upload | confirm | done
+export default function SyllabusModal({ courseName, onClose, onApply, existingData }) {
+  const [step, setStep] = useState(existingData ? "confirm" : "upload");
   const [doneStats, setDoneStats] = useState({ tasks: 0, hasCalc: false, hasOfficeHours: false });
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -36,13 +36,18 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
     if (dropped) { setFile(dropped); setError(null); }
   };
 
-  // Editable extracted data
+  // Editable extracted data — pre-populated when viewing existing syllabus
   const [info, setInfo] = useState({
-    courseCode: "", credits: "", professor: "", finalExamWeight: "",
+    courseCode: existingData?.courseCode || courseName || "",
+    credits: existingData?.credits != null ? String(existingData.credits) : "",
+    professor: existingData?.professor || "",
+    finalExamWeight: existingData?.finalExamWeight != null ? String(existingData.finalExamWeight) : "",
   });
-  const [assessments, setAssessments] = useState([]);
+  const [assessments, setAssessments] = useState(
+    (existingData?.assessments || []).map((a, i) => ({ id: i, name: a.name || "", weight: String(a.weight ?? "") }))
+  );
   const [deadlines, setDeadlines] = useState([]);
-  const [officeHours, setOfficeHours] = useState([]);
+  const [officeHours, setOfficeHours] = useState(existingData?.officeHours || []);
 
   // Which sections to apply
   const [applyTasks,  setApplyTasks]  = useState(true);
@@ -190,7 +195,7 @@ export default function SyllabusModal({ courseName, onClose, onApply }) {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div>
             <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 20, color: "var(--primary)" }}>
-              Upload Syllabus
+              {existingData ? "Syllabus" : "Upload Syllabus"}
             </div>
             <div style={{ fontSize: 12, color: "var(--text2)", marginTop: 2 }}>{courseName}</div>
           </div>

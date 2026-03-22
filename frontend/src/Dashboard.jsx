@@ -45,7 +45,9 @@ const ALL_WIDGETS = [
   { id:"todayclasses",  label:"Today's Classes",         span:1 },
   { id:"officehours",   label:"Office Hours",            span:1 },
   { id:"taskbreakdown", label:"Task Breakdown",          span:1 },
-  { id:"studysessions", label:"Study Sessions",          span:1 },
+  { id:"studysessions",   label:"Study Sessions",          span:1 },
+  { id:"gpasimulator",   label:"GPA Simulator",           span:1 },
+  { id:"prioritytasks",  label:"Priority Tasks",          span:1 },
 ];
 
 
@@ -513,6 +515,8 @@ export default function Dashboard({ onLogout }) {
   ];
 
   const widgetSaveTimer = useRef(null);
+  const sylUndoTimerRef = useRef(null);
+  const [sylUndoToast, setSylUndoToast] = useState(null);
   const saveWidgetPrefsToBackend = (prefs) => {
     clearTimeout(widgetSaveTimer.current);
     widgetSaveTimer.current = setTimeout(() => {
@@ -569,7 +573,7 @@ export default function Dashboard({ onLogout }) {
   const defaultSizes   = () => Object.fromEntries(ALL_WIDGETS.map(w => [w.id, w.span]));
 
   const [visible, setVisible] = useState(() => {
-    try { const s = localStorage.getItem("kk_widgets"); return s ? JSON.parse(s) : defaultVisible(); } catch { return defaultVisible(); }
+    try { const s = localStorage.getItem("kk_widgets"); return s ? { ...defaultVisible(), ...JSON.parse(s) } : defaultVisible(); } catch { return defaultVisible(); }
   });
   const [widgetOrder, setWidgetOrder] = useState(() => {
     try {
@@ -717,10 +721,11 @@ export default function Dashboard({ onLogout }) {
       return saved ? JSON.parse(saved) : {};
     } catch { return {}; }
   });
-  const [expandedOH, setExpandedOH] = useState({});
-
   const [courseSyllabi, setCourseSyllabi] = useState(() => {
     try { return JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"); } catch { return {}; }
+  });
+  const [courseData, setCourseData] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("kk_course_data") || "{}"); } catch { return {}; }
   });
 
   const authHeaders = () => ({ "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("kk_token")}` });
@@ -739,7 +744,11 @@ export default function Dashboard({ onLogout }) {
 
   useEffect(() => {
     const refresh = () => {
-      try { setCourseSyllabi(JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}")); } catch {}
+      try {
+        setCourseSyllabi(JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"));
+        setCourseData(JSON.parse(localStorage.getItem("kk_course_data") || "{}"));
+        setCourseOfficeHours(JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}"));
+      } catch {}
     };
     window.addEventListener("kk_syllabus_changed", refresh);
     return () => window.removeEventListener("kk_syllabus_changed", refresh);
@@ -749,6 +758,44 @@ export default function Dashboard({ onLogout }) {
     const next = { ...courseOfficeHours, [courseName]: hours };
     setCourseOfficeHours(next);
     localStorage.setItem("kk_course_office_hours", JSON.stringify(next));
+  };
+
+  const removeSyllabusDash = (courseName) => {
+    const snapshot = courseSyllabi[courseName];
+    const ohMap = JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}");
+    const dataMap = JSON.parse(localStorage.getItem("kk_course_data") || "{}");
+    const ohSnapshot = ohMap[courseName];
+    const dataSnapshot = dataMap[courseName];
+    const next = { ...courseSyllabi }; delete next[courseName];
+    setCourseSyllabi(next); localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
+    delete ohMap[courseName]; localStorage.setItem("kk_course_office_hours", JSON.stringify(ohMap));
+    setCourseOfficeHours(oh => { const n={...oh}; delete n[courseName]; return n; });
+    delete dataMap[courseName]; localStorage.setItem("kk_course_data", JSON.stringify(dataMap));
+    window.dispatchEvent(new Event("kk_syllabus_changed"));
+    setSylUndoToast({ courseName, snapshot, ohSnapshot, dataSnapshot });
+    if (sylUndoTimerRef.current) clearTimeout(sylUndoTimerRef.current);
+    sylUndoTimerRef.current = setTimeout(async () => {
+      const token = localStorage.getItem("kk_token");
+      const raw = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "{}");
+      const map = Array.isArray(raw) ? {} : raw;
+      const ids = [...(map[courseName] || [])];
+      if (token && ids.length > 0) await Promise.all(ids.map(id => fetch(`http://localhost:8080/api/tasks/delete/${id}`, { method:"DELETE", headers:{ Authorization:`Bearer ${token}` } }).catch(()=>{})));
+      delete map[courseName]; localStorage.setItem("kk_syllabus_task_ids", JSON.stringify(map));
+      if (token) fetch(`http://localhost:8080/api/user-syllabi/${encodeURIComponent(courseName)}`, { method:"DELETE", headers:{ Authorization:`Bearer ${token}` } }).catch(()=>{});
+      setSylUndoToast(null);
+    }, 5000);
+  };
+
+  const undoRemoveSyllabusDash = () => {
+    if (!sylUndoToast) return;
+    if (sylUndoTimerRef.current) clearTimeout(sylUndoTimerRef.current);
+    const { courseName, snapshot, ohSnapshot, dataSnapshot } = sylUndoToast;
+    const next = { ...courseSyllabi, [courseName]: snapshot };
+    setCourseSyllabi(next); localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
+    if (ohSnapshot) { const ohMap = JSON.parse(localStorage.getItem("kk_course_office_hours")||"{}"); ohMap[courseName]=ohSnapshot; localStorage.setItem("kk_course_office_hours", JSON.stringify(ohMap)); setCourseOfficeHours(oh=>({...oh,[courseName]:ohSnapshot})); }
+    if (dataSnapshot) { const dataMap = JSON.parse(localStorage.getItem("kk_course_data")||"{}"); dataMap[courseName]=dataSnapshot; localStorage.setItem("kk_course_data", JSON.stringify(dataMap)); }
+    window.dispatchEvent(new Event("kk_syllabus_changed"));
+    setSylUndoToast(null);
   };
 
   const getAuthInfo = () => {
@@ -844,6 +891,7 @@ export default function Dashboard({ onLogout }) {
   });
   const [editingCreditsGoal, setEditingCreditsGoal] = useState(false);
   const [creditsGoalInput, setCreditsGoalInput] = useState("");
+  const [simGrades, setSimGrades] = useState({});
 
   useEffect(() => {
     try {
@@ -1018,29 +1066,28 @@ export default function Dashboard({ onLogout }) {
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <div>
                       <div style={{fontWeight:700,fontSize:15,color:"var(--primary)"}}>{c.name}</div>
-                      {courseSyllabi[c.name]?.professor && (
-                        <div style={{fontSize:11,color:"var(--text2)",marginTop:2,fontWeight:500}}>{courseSyllabi[c.name].professor}</div>
+                      {(courseData[c.name]?.professor || courseSyllabi[c.name]?.professor) && (
+                        <div style={{fontSize:11,color:"var(--text2)",marginTop:2,fontWeight:500}}>{courseData[c.name]?.professor || courseSyllabi[c.name]?.professor}</div>
                       )}
                     </div>
                     <label style={{width:20,height:20,borderRadius:"50%",background:courseColors[c.name]||"var(--text2)",cursor:"pointer",flexShrink:0,boxShadow:"0 1px 4px rgba(0,0,0,0.15)",border:"2px solid white",display:"inline-block",transition:"transform .15s, box-shadow .15s ease"}}>
                       <input type="color" value={courseColors[c.name]||"var(--text2)"} onChange={e=>{e.stopPropagation();saveCourseColor(c.name,e.target.value);}} style={{opacity:0,width:0,height:0,position:"absolute"}} />
                     </label>
                   </div>
-                  {!courseSyllabi[c.name] && (
-                    <button onClick={e=>{e.stopPropagation();setSyllabusTarget(c.name);}} style={{marginTop:8,fontSize:11,color:"var(--accent)",background:"none",border:"1px solid var(--border)",borderRadius:6,padding:"3px 8px",cursor:"pointer",width:"100%",textAlign:"left"}}>+ Upload Syllabus</button>
-                  )}
+                  <div style={{display:"flex",gap:4,marginTop:8}}>
+                    <button onClick={e=>{e.stopPropagation();setSyllabusTarget(c.name);}} style={{flex:1,fontSize:11,color:"var(--accent)",background:"none",border:"1px solid var(--border)",borderRadius:6,padding:"3px 8px",cursor:"pointer",textAlign:"left"}}>
+                      {courseSyllabi[c.name] ? "View Syllabus" : "+ Upload Syllabus"}
+                    </button>
+                    {courseSyllabi[c.name] && (
+                      <button onClick={e=>{e.stopPropagation();removeSyllabusDash(c.name);}} style={{fontSize:11,color:"var(--error)",background:"none",border:"1px solid var(--border)",borderRadius:6,padding:"3px 8px",cursor:"pointer",flexShrink:0}} title="Remove syllabus">✕</button>
+                    )}
+                  </div>
                   {courseOfficeHours[c.name]?.length > 0 && (
-                    <div style={{marginTop:6}}>
-                      <button onClick={e=>{e.stopPropagation();setExpandedOH(p=>({...p,[c.name]:!p[c.name]}));}} style={{fontSize:11,color:"var(--accent2)",background:"none",border:"none",padding:0,cursor:"pointer",display:"flex",alignItems:"center",gap:3}}>
-                        <span style={{fontSize:9}}>{expandedOH[c.name]?"▼":"▶"}</span> Office Hours
-                      </button>
-                      {expandedOH[c.name] && (
-                        <div style={{marginTop:4,paddingLeft:4}}>
-                          {courseOfficeHours[c.name].map((oh,i)=>(
-                            <div key={i} style={{fontSize:11,color:"var(--text)",lineHeight:1.5}}>{[oh.day,oh.time,oh.location].filter(Boolean).join(" · ")}</div>
-                          ))}
-                        </div>
-                      )}
+                    <div style={{marginTop:6,paddingTop:6,borderTop:"1px solid var(--border)"}}>
+                      <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>Office Hours</div>
+                      {courseOfficeHours[c.name].map((oh,i)=>(
+                        <div key={i} style={{fontSize:11,color:"var(--text2)",lineHeight:1.6}}>{[oh.day,oh.time,oh.location].filter(Boolean).join(" · ")}</div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -1524,6 +1571,96 @@ export default function Dashboard({ onLogout }) {
           </>
         );
       }
+      case "gpasimulator": {
+        const LETTER_GRADES = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
+        const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
+        const semCourses4 = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.courseCode&&Number(c.credits)>0);
+        const totalCr = semCourses4.reduce((s,c)=>s+Number(c.credits),0);
+        const simPoints = semCourses4.reduce((s,c)=>{
+          const g = simGrades[c.courseCode] || c.grade?.trim().toUpperCase() || "";
+          return gradePoints[g]!==undefined ? s + gradePoints[g]*Number(c.credits) : s;
+        }, 0);
+        const gradedCr = semCourses4.filter(c=>{
+          const g = simGrades[c.courseCode] || c.grade?.trim().toUpperCase() || "";
+          return gradePoints[g]!==undefined;
+        }).reduce((s,c)=>s+Number(c.credits),0);
+        const projGPA = gradedCr>0 ? (simPoints/gradedCr).toFixed(2) : null;
+        return (
+          <>
+            <SectionTitle>GPA Simulator</SectionTitle>
+            {semCourses4.length===0 ? (
+              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No courses in selected semester.</div>
+            ) : (
+              <>
+                {projGPA && (
+                  <div style={{textAlign:"center",padding:"8px 0 12px"}}>
+                    <div style={{fontFamily:"'Fraunces',serif",fontSize:42,fontWeight:700,color:"var(--primary)",lineHeight:1}}>{projGPA}</div>
+                    <div style={{fontSize:11,color:"var(--text2)",marginTop:4}}>projected semester GPA · {gradedCr}/{totalCr} cr graded</div>
+                  </div>
+                )}
+                <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:220,overflowY:"auto"}}>
+                  {semCourses4.map(c=>{
+                    const val = simGrades[c.courseCode] || c.grade?.trim().toUpperCase() || "";
+                    const pts = gradePoints[val];
+                    return (
+                      <div key={c.courseCode} style={{display:"grid",gridTemplateColumns:"1fr auto 36px",gap:8,alignItems:"center",padding:"6px 10px",borderRadius:8,background:"var(--surface2)",borderLeft:`3px solid ${pts===undefined?"var(--border)":pts>=3.7?"#27ae60":pts>=2.7?"#e67e22":"var(--error)"}`}}>
+                        <span style={{fontSize:12,fontWeight:600,color:"var(--primary)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.courseCode}</span>
+                        <select value={val} onChange={e=>setSimGrades(p=>({...p,[c.courseCode]:e.target.value}))}
+                          style={{fontSize:11,padding:"2px 5px",borderRadius:6,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer",fontFamily:"inherit"}}>
+                          <option value="">—</option>
+                          {LETTER_GRADES.map(g=><option key={g} value={g}>{g}</option>)}
+                        </select>
+                        <span style={{fontSize:11,color:"var(--text3)",textAlign:"right"}}>{c.credits}cr</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {Object.keys(simGrades).length>0 && (
+                  <button onClick={()=>setSimGrades({})} style={{marginTop:8,fontSize:11,color:"var(--text3)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",display:"block",marginLeft:"auto"}}>Reset</button>
+                )}
+              </>
+            )}
+          </>
+        );
+      }
+      case "prioritytasks": {
+        const now4 = new Date();
+        const todayStr = now4.toISOString().slice(0,10);
+        const overdue = tasks.filter(t=>!t.done&&t.due&&new Date(t.due)<now4&&t.due.slice(0,10)!==todayStr).sort((a,b)=>new Date(a.due)-new Date(b.due));
+        const dueToday = tasks.filter(t=>!t.done&&t.due&&t.due.slice(0,10)===todayStr);
+        const all = [...overdue,...dueToday];
+        return (
+          <>
+            <SectionTitle>Priority Tasks</SectionTitle>
+            {all.length===0 ? (
+              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>Nothing urgent right now!</div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:12,maxHeight:280,overflowY:"auto"}}>
+                {overdue.length>0 && <div style={{fontSize:10,fontWeight:700,color:"var(--error)",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:2}}>Overdue</div>}
+                {overdue.map((t,i)=>(
+                  <div key={`o${i}`} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:"#fff0f0",borderLeft:"3px solid var(--error)"}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:600,color:"var(--error)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.title}</div>
+                      <div style={{fontSize:11,color:"var(--text2)",marginTop:1}}>{[t.course,t.type].filter(Boolean).join(" · ")}</div>
+                    </div>
+                    <span style={{fontSize:10,fontWeight:700,color:"var(--error)",whiteSpace:"nowrap"}}>{new Date(t.due).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
+                  </div>
+                ))}
+                {dueToday.length>0 && <div style={{fontSize:10,fontWeight:700,color:"#e67e22",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:2,marginTop:overdue.length?6:0}}>Due Today</div>}
+                {dueToday.map((t,i)=>(
+                  <div key={`d${i}`} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:"#fff8f0",borderLeft:"3px solid #e67e22"}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:12,fontWeight:600,color:"var(--primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.title}</div>
+                      <div style={{fontSize:11,color:"var(--text2)",marginTop:1}}>{[t.course,t.type].filter(Boolean).join(" · ")}</div>
+                    </div>
+                    <span style={{fontSize:10,fontWeight:700,color:"#e67e22",whiteSpace:"nowrap"}}>Today</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        );
+      }
       default: return null;
     }
   };
@@ -1860,30 +1997,53 @@ export default function Dashboard({ onLogout }) {
           </div>
         )}
 
+        {sylUndoToast && (
+          <div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",background:"var(--primary)",color:"white",borderRadius:12,padding:"12px 20px",display:"flex",alignItems:"center",gap:14,zIndex:9999,boxShadow:"0 4px 24px rgba(49,72,122,0.25)",fontSize:13,fontWeight:500,whiteSpace:"nowrap"}}>
+            <span>Syllabus for <strong>{sylUndoToast.courseName}</strong> removed.</span>
+            <button onClick={undoRemoveSyllabusDash} style={{background:"white",color:"var(--primary)",border:"none",borderRadius:7,padding:"4px 12px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Undo</button>
+          </div>
+        )}
+
         {syllabusTarget && (
             <SyllabusModal
                 courseName={syllabusTarget}
+                existingData={courseSyllabi[syllabusTarget] ? {
+                  ...courseSyllabi[syllabusTarget],
+                  professor: courseData[syllabusTarget]?.professor || courseSyllabi[syllabusTarget]?.professor || "",
+                  officeHours: courseOfficeHours[syllabusTarget] || [],
+                } : null}
                 onClose={() => setSyllabusTarget(null)}
                 onApply={data => {
                   const name = syllabusTarget;
                   setSyllabusTarget(null);
                   if (data) {
                     if (data.officeHours?.length) saveCourseOfficeHours(name, data.officeHours);
-                    // Save syllabus extract for GradeCalculator to pick up
-                    if (data.assessments?.length || data.finalExamWeight || data.professor) {
+                    if (data.professor) {
                       try {
-                        const all = JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}");
-                        const payload = { assessments: data.assessments || [], finalExamWeight: data.finalExamWeight ?? null, professor: data.professor || null };
-                        const next = { ...all, [name]: payload };
-                        localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
-                        setCourseSyllabi(next);
-                        fetch(`http://localhost:8080/api/user-syllabi/${encodeURIComponent(name)}`, {
-                          method: "PUT",
-                          headers: authHeaders(),
-                          body: JSON.stringify(payload),
-                        }).catch(() => {});
+                        const dm = JSON.parse(localStorage.getItem("kk_course_data") || "{}");
+                        dm[name] = { ...(dm[name] || {}), professor: data.professor };
+                        localStorage.setItem("kk_course_data", JSON.stringify(dm));
+                        setCourseData(dm);
                       } catch {}
                     }
+                    // Always save to kk_course_syllabus so the card shows "View Syllabus"
+                    try {
+                      const all = JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}");
+                      const payload = {
+                        assessments: data.assessments || [],
+                        finalExamWeight: data.finalExamWeight ?? null,
+                        professor: data.professor || null,
+                        uploaded: true,
+                      };
+                      const next = { ...all, [name]: payload };
+                      localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
+                      setCourseSyllabi(next);
+                      fetch(`http://localhost:8080/api/user-syllabi/${encodeURIComponent(name)}`, {
+                        method: "PUT",
+                        headers: authHeaders(),
+                        body: JSON.stringify(payload),
+                      }).catch(() => {});
+                    } catch {}
                     if (data.assessments) {
                       setSyllabusCalcData(data);
                     }
