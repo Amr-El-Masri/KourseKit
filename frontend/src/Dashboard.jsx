@@ -1172,7 +1172,6 @@ export default function Dashboard({ onLogout }) {
 
                 return (
                   <div style={{ marginTop:4, border:"1px solid var(--border)", borderRadius:10, overflow:"hidden", background:"var(--surface)" }}>
-                    {/* Fixed header — never scrolls */}
                     <div style={{ display:"flex", background:"var(--surface2)", borderBottom:"1px solid var(--border)" }}>
                       <div style={{ width:38, flexShrink:0 }} />
                       <div style={{ flex:1, display:"grid", gridTemplateColumns:"repeat(6,1fr)" }}>
@@ -1183,7 +1182,6 @@ export default function Dashboard({ onLogout }) {
                         ))}
                       </div>
                     </div>
-                    {/* Scrollable body */}
                     <div style={{ height:324, overflowY:"auto" }}>
                       <div style={{ display:"flex" }}>
                         <div style={{ width:38, flexShrink:0, position:"relative", height:totalH, background:"var(--surface2)", borderRight:"1px solid var(--border)" }}>
