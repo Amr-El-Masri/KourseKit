@@ -1054,7 +1054,7 @@ export default function StudyPlanner() {
 
         /* ── Header ── */
         .sp-header {
-          min-height: 64px;
+          min-height: 71px;
           display: flex;
           align-items: center;
           justify-content: space-between;

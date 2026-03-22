@@ -2129,7 +2129,7 @@ const s = {
   avatar:       { width:32, height:32, borderRadius:"50%", background:"linear-gradient(135deg, #8FB3E2, #A59AC9)", color:"white", fontWeight:700, fontSize:14, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 },
   collapseBtn:  { margin:"8px auto", display:"block", background:"none", border:"1px solid rgba(255,255,255,0.2)", borderRadius:8, padding:"4px 10px", cursor:"pointer", color:"rgba(255,255,255,0.5)", fontSize:12 },
   main:         { flex:1, overflowY:"auto", minHeight:"100vh" },
-  topbar:       { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", background:"var(--bg)", backdropFilter:"blur(10px)", position:"sticky", top:0, zIndex:50, borderBottom:"1px solid var(--border)", gap:14, flexWrap:"wrap" },
+  topbar:       { display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12.5px 28px", background:"var(--bg)", backdropFilter:"blur(10px)", position:"sticky", top:0, zIndex:50, borderBottom:"1px solid var(--border)", gap:14, flexWrap:"wrap" },
   greeting:     { fontFamily:"'DM Sans',sans-serif", fontWeight:600, fontSize:20, color:"var(--primary)" },
   bell:         { width:38, height:38, borderRadius:10, background:"var(--surface)", border:"1px solid var(--border)", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontSize:16 },
   grid:         { display:"grid", gridTemplateColumns:"repeat(3,1fr)", gridAutoFlow:"dense", gap:20, padding:"24px 28px 40px" },
