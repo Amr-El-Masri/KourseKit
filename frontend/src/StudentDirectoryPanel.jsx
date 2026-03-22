@@ -22,7 +22,7 @@ function AvatarIcon({ avatarId, size = 38 }) {
   );
 }
 
-function StudentProfileView({ student, onBack, isFriend, onFriendToggle }) {
+export function StudentProfileView({ student, onBack, isFriend, onFriendToggle }) {
   const fullName = [student.firstName, student.lastName].filter(Boolean).join(" ") || "Student";
   return (
     <div>

@@ -20,9 +20,10 @@ async function apiFetch(path, options = {}) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.message || `HTTP ${res.status}`);
     }
-    if (res.status === 204) return null;
-    return res.json();
-  } catch (e) {
+    const text = await res.text();
+    if (!text) return null;
+    return JSON.parse(text);
+    } catch (e) {
     throw e;
   }
 }
