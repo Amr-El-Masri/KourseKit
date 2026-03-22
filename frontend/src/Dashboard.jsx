@@ -34,18 +34,14 @@ const EVENT_TYPES  = [
 const ALL_WIDGETS = [
   { id:"courses",       label:"My Courses",          span:3, pinned:true },
   { id:"progress",      label:"Semester Progress",   span:1, pinned:true },
-  { id:"deadlines",     label:"Upcoming Deadlines",  span:2 },
   { id:"todo",          label:"To-Do List",          span:1 },
   { id:"pomodoro",      label:"Pomodoro Timer",      span:1 },
-  { id:"calendar",      label:"Calendar & Schedule", span:1 },
-  { id:"courseGrades",  label:"Course Grades",       span:1, selfCard:true },
-  { id:"gpasummary",    label:"GPA Overview",        span:1, selfCard:true },
-  { id:"goals",         label:"Grade Goals",         span:1 },
-  { id:"credits",       label:"Credits Progress",    span:1 },
+  { id:"calendar",      label:"Calendar",            span:1 },
+  { id:"schedule",      label:"Course Schedule",     span:1 },
+  { id:"grades",        label:"Grades",              span:1 },
   { id:"streak",        label:"Study Streak",        span:1 },
   { id:"notepad",       label:"Quick Notes",         span:1 },
   { id:"examcountdown", label:"Exam Countdown",      span:1 },
-  { id:"weekglance",    label:"Week at a Glance",    span:3 },
 ];
 
 
@@ -830,6 +826,8 @@ export default function Dashboard({ onLogout }) {
   });
   const [schedWeekOffset, setSchedWeekOffset] = useState(0);
   const [calTab, setCalTab] = useState("calendar");
+  const [gradesTab, setGradesTab] = useState("grades");
+  const [progressTab, setProgressTab] = useState("semester");
 
   const [quickNote, setQuickNote] = useState(() => {
     try { return localStorage.getItem("kk_quick_note") || ""; } catch { return ""; }
@@ -1047,16 +1045,53 @@ export default function Dashboard({ onLogout }) {
           }
         </>
       );
-      case "progress": return (
-        <>
-          <SectionTitle>Semester Progress</SectionTitle>
-          <div style={{marginTop:18,display:"flex",gap:10}}>
-            {[{label:"Courses",val:semCourseList.length||"—"},{label:"To-Do",val:todos.filter(t=>!t.done).length},{label:"Due Today",val:tasks.filter(t=>!t.done&&t.due?.slice(0,10)===new Date().toISOString().slice(0,10)).length}].map(chip=>(
-              <div key={chip.label} style={s.chip}><div style={{fontSize:11,color:"var(--text2)"}}>{chip.label}</div><div style={{fontWeight:600,fontSize:13,color:"var(--primary)"}}>{chip.val}</div></div>
-            ))}
-          </div>
-        </>
-      );
+      case "progress": {
+        const gradePoints2 = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
+        const earnedCr = apiSemesters.flatMap(s=>s.courses||[]).filter(c=>c.grade&&c.grade.trim().toUpperCase()!=="F"&&gradePoints2[c.grade.trim().toUpperCase()]!==undefined&&Number(c.credits)>0).reduce((sum,c)=>sum+Number(c.credits),0);
+        const pct2 = Math.min(100,Math.round((earnedCr/creditsGoal)*100));
+        const remaining2 = Math.max(0,creditsGoal-earnedCr);
+        const tabs2 = [{id:"semester",label:"Semester"},{id:"credits",label:"Credits"}];
+        return (
+          <>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+              <SectionTitle>{progressTab==="semester"?"Semester Progress":"Credits Progress"}</SectionTitle>
+              <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:7,padding:2}}>
+                {tabs2.map(t=><button key={t.id} onClick={()=>setProgressTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:progressTab===t.id?"var(--primary)":"transparent",color:progressTab===t.id?"#fff":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
+              </div>
+            </div>
+            {progressTab==="semester" ? (
+              <div style={{marginTop:6,display:"flex",gap:10}}>
+                {[{label:"Courses",val:semCourseList.length||"—"},{label:"To-Do",val:todos.filter(t=>!t.done).length},{label:"Due Today",val:tasks.filter(t=>!t.done&&t.due?.slice(0,10)===new Date().toISOString().slice(0,10)).length}].map(chip=>(
+                  <div key={chip.label} style={s.chip}><div style={{fontSize:11,color:"var(--text2)"}}>{chip.label}</div><div style={{fontWeight:600,fontSize:13,color:"var(--primary)"}}>{chip.val}</div></div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div style={{textAlign:"center",padding:"16px 0 10px"}}>
+                  <div style={{fontFamily:"'Fraunces',serif",fontSize:46,fontWeight:700,color:"var(--primary)",lineHeight:1}}>{earnedCr}</div>
+                  <div style={{fontSize:12,color:"var(--text2)",marginTop:4}}>of {creditsGoal} credits completed</div>
+                </div>
+                <div style={{background:"var(--surface2)",borderRadius:99,height:10,overflow:"hidden",marginBottom:10}}>
+                  <div style={{height:"100%",borderRadius:99,background:"linear-gradient(90deg,var(--accent),var(--primary))",width:`${pct2}%`,transition:"width .5s"}}/>
+                </div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span style={{fontSize:11,color:"var(--text2)"}}>{pct2}% · {remaining2} cr remaining</span>
+                  {editingCreditsGoal ? (
+                    <div style={{display:"flex",gap:4,alignItems:"center"}}>
+                      <input type="number" value={creditsGoalInput} autoFocus onChange={e=>setCreditsGoalInput(e.target.value)}
+                        onKeyDown={e=>{if(e.key==="Enter"){const v=parseInt(creditsGoalInput);if(v>0){setCreditsGoal(v);localStorage.setItem("kk_credits_goal",v);}setEditingCreditsGoal(false);}if(e.key==="Escape")setEditingCreditsGoal(false);}}
+                        style={{width:54,fontSize:12,padding:"2px 6px",border:"1px solid var(--border)",borderRadius:6,background:"var(--surface)",color:"var(--text)",fontFamily:"inherit"}}/>
+                      <button onClick={()=>{const v=parseInt(creditsGoalInput);if(v>0){setCreditsGoal(v);localStorage.setItem("kk_credits_goal",v);}setEditingCreditsGoal(false);}} style={{fontSize:11,padding:"2px 8px",borderRadius:6,border:"none",background:"var(--primary)",color:"white",cursor:"pointer"}}>✓</button>
+                    </div>
+                  ) : (
+                    <button onClick={()=>{setCreditsGoalInput(String(creditsGoal));setEditingCreditsGoal(true);}} style={{fontSize:11,color:"var(--accent)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit"}}>Edit goal</button>
+                  )}
+                </div>
+              </>
+            )}
+          </>
+        );
+      }
       case "todo": return (
         <>
           <SectionTitle>To-Do List</SectionTitle>
@@ -1082,21 +1117,10 @@ export default function Dashboard({ onLogout }) {
           <PomodoroTimer />
         </>
       );
-      case "calendar": return (
+      case "schedule": return (
         <>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-            <SectionTitle>Calendar & Schedule</SectionTitle>
-            <div style={{ display:"flex", gap:4, background:"var(--surface2)", borderRadius:8, padding:2 }}>
-              {["calendar","schedule"].map(tab => (
-                <button key={tab} onClick={() => setCalTab(tab)} style={{ padding:"4px 12px", borderRadius:6, border:"none", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit", background: calTab===tab ? "var(--primary)" : "transparent", color: calTab===tab ? "#fff" : "var(--text2)", transition:"all .15s" }}>
-                  {tab === "calendar" ? "Calendar" : "Schedule"}
-                </button>
-              ))}
-            </div>
-          </div>
-          {calTab === "schedule" ? (
-            <>
-              {(() => {
+          <SectionTitle>Course Schedule</SectionTitle>
+          {(() => {
                 const SCH_START = 6.5, SCH_END = 20.5, SCH_H = 52;
                 const DAYS = ["MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"];
                 const DAY_LABELS = ["Mon","Tue","Wed","Thu","Fri","Sat"];
@@ -1184,11 +1208,62 @@ export default function Dashboard({ onLogout }) {
                   </div>
                 );
               })()}
-              <div style={{display:"flex",justifyContent:"flex-end",marginTop:8}}><button onClick={()=>setActivePage("planner")} style={{fontSize:12,fontWeight:600,color:"var(--accent)",background:"none",border:"1px solid var(--border)",borderRadius:7,padding:"4px 10px",cursor:"pointer",fontFamily:"inherit"}}>Open Planner →</button></div>
-            </>
+        </>
+      );
+      case "calendar": {
+        const weekStart2=(()=>{const d=new Date();d.setHours(0,0,0,0);const day=d.getDay();d.setDate(d.getDate()-(day===0?6:day-1));return d;})();
+        const weekEnd2=new Date(weekStart2);weekEnd2.setDate(weekStart2.getDate()+7);
+        const weekTasks2=tasks.filter(t=>t.due&&new Date(t.due)>=weekStart2&&new Date(t.due)<weekEnd2);
+        const calTabs=[{id:"calendar",label:"Calendar"},{id:"deadlines",label:"Deadlines"},{id:"week",label:"Week"}];
+        return (
+        <>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+            <SectionTitle>{calTab==="calendar"?"Calendar":calTab==="deadlines"?"Upcoming Deadlines":"Week at a Glance"}</SectionTitle>
+            <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:7,padding:2}}>
+              {calTabs.map(t=><button key={t.id} onClick={()=>setCalTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:calTab===t.id?"var(--primary)":"transparent",color:calTab===t.id?"#fff":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
+            </div>
+          </div>
+          {calTab==="deadlines" ? (() => {
+            const now2 = new Date();
+            const upcoming = tasks.filter(t => !t.done && t.due).sort((a,b) => new Date(a.due)-new Date(b.due)).slice(0,8);
+            const urgencyColor = due => { const d=(new Date(due)-now2)/86400000; return d<0?"var(--error)":d<1?"var(--error)":d<3?"#e67e22":"#27ae60"; };
+            const urgencyLabel = due => { const d=(new Date(due)-now2)/86400000; return d<0?"Overdue":d<1?"Today":d<2?"Tomorrow":new Date(due).toLocaleDateString("en-US",{month:"short",day:"numeric"}); };
+            return upcoming.length===0 ? (
+              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No upcoming deadlines!</div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:4,maxHeight:280,overflowY:"auto"}}>
+                {upcoming.map((t,i) => {
+                  const color = urgencyColor(t.due);
+                  return (
+                    <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:"var(--surface2)",borderLeft:`3px solid ${color}`}}>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:12,fontWeight:600,color:"var(--primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.title}</div>
+                        <div style={{fontSize:11,color:"var(--text2)",marginTop:1}}>{[t.course,t.type].filter(Boolean).join(" · ")}</div>
+                      </div>
+                      <span style={{fontSize:11,fontWeight:700,color,background:color+"18",padding:"2px 8px",borderRadius:6,flexShrink:0,whiteSpace:"nowrap"}}>{urgencyLabel(t.due)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })() : calTab==="week" ? (
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginTop:4}}>
+              {[
+                {label:"Due this week",val:weekTasks2.filter(t=>!t.done).length,color:"var(--primary)"},
+                {label:"Completed",val:weekTasks2.filter(t=>t.done).length,color:"#27ae60"},
+                {label:"Due today",val:tasks.filter(t=>!t.done&&t.due&&new Date(t.due).toISOString().slice(0,10)===new Date().toISOString().slice(0,10)).length,color:"#e67e22"},
+                {label:"Overdue",val:tasks.filter(t=>!t.done&&t.due&&new Date(t.due)<new Date()).length,color:"var(--error)"},
+                {label:"Total tasks",val:tasks.length,color:"var(--accent2)"},
+                {label:"Pending todos",val:todos.filter(t=>!t.done).length,color:"var(--text2)"},
+              ].map(chip=>(
+                <div key={chip.label} style={{background:"var(--surface2)",borderRadius:10,padding:"12px 14px",border:"1px solid var(--border)"}}>
+                  <div style={{fontFamily:"'Fraunces',serif",fontSize:28,fontWeight:700,color:chip.color,lineHeight:1}}>{chip.val}</div>
+                  <div style={{fontSize:11,color:"var(--text2)",marginTop:4,lineHeight:1.3}}>{chip.label}</div>
+                </div>
+              ))}
+            </div>
           ) : (
-            <>
-          <div style={{marginTop:14, height:384, display:"flex", flexDirection:"column"}}>
+          <div style={{marginTop:6, height:384, display:"flex", flexDirection:"column"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
               <button onClick={prevMonth} style={s.calNavBtn}>‹</button>
               <span style={{fontWeight:600,fontSize:14,color:"var(--primary)"}}>{monthName} {calYear}</span>
@@ -1211,7 +1286,8 @@ export default function Dashboard({ onLogout }) {
             </div>
             <div style={{marginTop:10,fontSize:11,color:"var(--text3)",textAlign:"center"}}>Today is {today.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</div>
           </div>
-          {hoveredTask && (
+          )}
+          {calTab==="calendar" && hoveredTask && (
             <div style={{position:"absolute",left:Math.min(hoveredTask.x,220),top:hoveredTask.y,background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"9px 13px",boxShadow:"0 6px 24px rgba(49,72,122,0.13)",zIndex:300,minWidth:170,maxWidth:220,pointerEvents:"none"}}>
               <div style={{fontSize:11,fontWeight:700,color:"var(--text2)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>{hoveredTask.task.type} · {hoveredTask.task.course}</div>
               <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4,lineHeight:1.3}}>{hoveredTask.task.title}</div>
@@ -1220,103 +1296,52 @@ export default function Dashboard({ onLogout }) {
               {!hoveredTask.task.done && new Date(hoveredTask.task.due)<new Date() && <div style={{fontSize:11,color:"var(--error)",fontWeight:600,marginTop:4}}>Overdue</div>}
             </div>
           )}
-          </>
-          )}
         </>
-      );
-      case "deadlines": {
-        const now = new Date();
-        const upcoming = tasks.filter(t => !t.done && t.due).sort((a,b) => new Date(a.due)-new Date(b.due)).slice(0,8);
-        const urgencyColor = due => { const d=(new Date(due)-now)/86400000; return d<0?"var(--error)":d<1?"var(--error)":d<3?"#e67e22":"#27ae60"; };
-        const urgencyLabel = due => { const d=(new Date(due)-now)/86400000; return d<0?"Overdue":d<1?"Today":d<2?"Tomorrow":new Date(due).toLocaleDateString("en-US",{month:"short",day:"numeric"}); };
-        return (
-          <>
-            <SectionTitle>Upcoming Deadlines</SectionTitle>
-            {upcoming.length===0 ? (
-              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No upcoming deadlines!</div>
-            ) : (
-              <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:12,maxHeight:220,overflowY:"auto"}}>
-                {upcoming.map((t,i) => {
-                  const color = urgencyColor(t.due);
-                  return (
-                    <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:"var(--surface2)",borderLeft:`3px solid ${color}`}}>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:12,fontWeight:600,color:"var(--primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.title}</div>
-                        <div style={{fontSize:11,color:"var(--text2)",marginTop:1}}>{[t.course,t.type].filter(Boolean).join(" · ")}</div>
-                      </div>
-                      <span style={{fontSize:11,fontWeight:700,color,background:color+"18",padding:"2px 8px",borderRadius:6,flexShrink:0,whiteSpace:"nowrap"}}>{urgencyLabel(t.due)}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </>
         );
       }
-      case "goals": {
+      case "grades": {
         const LETTER_GRADES = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
         const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
         const semCourses = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.courseCode);
+        const gradeTabs = [{id:"grades",label:"Grades"},{id:"gpa",label:"GPA"},{id:"goals",label:"Goals"}];
         return (
           <>
-            <SectionTitle>Grade Goals</SectionTitle>
-            {semCourses.length===0 ? (
-              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>Select a semester with courses to set goals.</div>
-            ) : (
-              <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:12}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 90px 44px",gap:8,padding:"0 10px",marginBottom:2}}>
-                  {["Course","Target","Actual"].map(h=><span key={h} style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.05em"}}>{h}</span>)}
-                </div>
-                {semCourses.map(c => {
-                  const goal = gradeGoals[c.courseCode]||"";
-                  const actual = c.grade||null;
-                  const goalPts = gradePoints[goal]; const actualPts = gradePoints[actual?.trim()?.toUpperCase()];
-                  const status = goal&&actual&&actualPts!==undefined ? (actualPts>=goalPts?"on-track":"behind") : null;
-                  return (
-                    <div key={c.courseCode} style={{display:"grid",gridTemplateColumns:"1fr 90px 44px",gap:8,alignItems:"center",padding:"7px 10px",borderRadius:9,background:"var(--surface2)",borderLeft:`3px solid ${status==="on-track"?"#27ae60":status==="behind"?"var(--error)":"var(--border)"}`}}>
-                      <span style={{fontSize:12,fontWeight:600,color:"var(--primary)"}}>{c.courseCode}</span>
-                      <select value={goal} onChange={e=>{const next={...gradeGoals,[c.courseCode]:e.target.value};setGradeGoals(next);localStorage.setItem("kk_grade_goals",JSON.stringify(next));}}
-                        style={{fontSize:11,padding:"3px 6px",borderRadius:6,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer",fontFamily:"inherit"}}>
-                        <option value="">Set goal…</option>
-                        {LETTER_GRADES.map(g=><option key={g} value={g}>{g}</option>)}
-                      </select>
-                      <span style={{fontSize:13,fontWeight:700,fontFamily:"'Fraunces',serif",textAlign:"right",color:status==="on-track"?"#27ae60":status==="behind"?"var(--error)":actual?"var(--text2)":"var(--text3)"}}>{actual||"—"}</span>
-                    </div>
-                  );
-                })}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+              <SectionTitle>{gradesTab==="grades"?"Course Grades":gradesTab==="gpa"?"GPA Overview":"Grade Goals"}</SectionTitle>
+              <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:7,padding:2}}>
+                {gradeTabs.map(t=><button key={t.id} onClick={()=>setGradesTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:gradesTab===t.id?"var(--primary)":"transparent",color:gradesTab===t.id?"#fff":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
               </div>
-            )}
-          </>
-        );
-      }
-      case "credits": {
-        const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
-        const earned = apiSemesters.flatMap(s=>s.courses||[]).filter(c=>c.grade&&c.grade.trim().toUpperCase()!=="F"&&gradePoints[c.grade.trim().toUpperCase()]!==undefined&&Number(c.credits)>0).reduce((sum,c)=>sum+Number(c.credits),0);
-        const pct = Math.min(100,Math.round((earned/creditsGoal)*100));
-        const remaining = Math.max(0, creditsGoal-earned);
-        return (
-          <>
-            <SectionTitle>Credits Progress</SectionTitle>
-            <div style={{textAlign:"center",padding:"16px 0 10px"}}>
-              <div style={{fontFamily:"'Fraunces',serif",fontSize:46,fontWeight:700,color:"var(--primary)",lineHeight:1}}>{earned}</div>
-              <div style={{fontSize:12,color:"var(--text2)",marginTop:4}}>of {creditsGoal} credits completed</div>
             </div>
-            <div style={{background:"var(--surface2)",borderRadius:99,height:10,overflow:"hidden",marginBottom:10}}>
-              <div style={{height:"100%",borderRadius:99,background:"linear-gradient(90deg,var(--accent),var(--primary))",width:`${pct}%`,transition:"width .5s"}}/>
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <span style={{fontSize:11,color:"var(--text2)"}}>{pct}% · {remaining} cr remaining</span>
-              {editingCreditsGoal ? (
-                <div style={{display:"flex",gap:4,alignItems:"center"}}>
-                  <input type="number" value={creditsGoalInput} autoFocus onChange={e=>setCreditsGoalInput(e.target.value)}
-                    onKeyDown={e=>{if(e.key==="Enter"){const v=parseInt(creditsGoalInput);if(v>0){setCreditsGoal(v);localStorage.setItem("kk_credits_goal",v);}setEditingCreditsGoal(false);}if(e.key==="Escape")setEditingCreditsGoal(false);}}
-                    style={{width:54,fontSize:12,padding:"2px 6px",border:"1px solid var(--border)",borderRadius:6,background:"var(--surface)",color:"var(--text)",fontFamily:"inherit"}}/>
-                  <button onClick={()=>{const v=parseInt(creditsGoalInput);if(v>0){setCreditsGoal(v);localStorage.setItem("kk_credits_goal",v);}setEditingCreditsGoal(false);}} style={{fontSize:11,padding:"2px 8px",borderRadius:6,border:"none",background:"var(--primary)",color:"white",cursor:"pointer"}}>✓</button>
-                </div>
+            {gradesTab==="grades" && <CourseGradeSummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} footer={null}/>}
+            {gradesTab==="gpa"    && <GPASummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} onNavigate={setActivePage} footer={null}/>}
+            {gradesTab==="goals"  && (
+              semCourses.length===0 ? (
+                <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>Select a semester with courses to set goals.</div>
               ) : (
-                <button onClick={()=>{setCreditsGoalInput(String(creditsGoal));setEditingCreditsGoal(true);}} style={{fontSize:11,color:"var(--accent)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit"}}>Edit goal</button>
-              )}
-            </div>
+                <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:4}}>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 90px 44px",gap:8,padding:"0 10px",marginBottom:2}}>
+                    {["Course","Target","Actual"].map(h=><span key={h} style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.05em"}}>{h}</span>)}
+                  </div>
+                  {semCourses.map(c => {
+                    const goal = gradeGoals[c.courseCode]||"";
+                    const actual = c.grade||null;
+                    const goalPts = gradePoints[goal]; const actualPts = gradePoints[actual?.trim()?.toUpperCase()];
+                    const status = goal&&actual&&actualPts!==undefined ? (actualPts>=goalPts?"on-track":"behind") : null;
+                    return (
+                      <div key={c.courseCode} style={{display:"grid",gridTemplateColumns:"1fr 90px 44px",gap:8,alignItems:"center",padding:"7px 10px",borderRadius:9,background:"var(--surface2)",borderLeft:`3px solid ${status==="on-track"?"#27ae60":status==="behind"?"var(--error)":"var(--border)"}`}}>
+                        <span style={{fontSize:12,fontWeight:600,color:"var(--primary)"}}>{c.courseCode}</span>
+                        <select value={goal} onChange={e=>{const next={...gradeGoals,[c.courseCode]:e.target.value};setGradeGoals(next);localStorage.setItem("kk_grade_goals",JSON.stringify(next));}}
+                          style={{fontSize:11,padding:"3px 6px",borderRadius:6,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer",fontFamily:"inherit"}}>
+                          <option value="">Set goal…</option>
+                          {LETTER_GRADES.map(g=><option key={g} value={g}>{g}</option>)}
+                        </select>
+                        <span style={{fontSize:13,fontWeight:700,fontFamily:"'Fraunces',serif",textAlign:"right",color:status==="on-track"?"#27ae60":status==="behind"?"var(--error)":actual?"var(--text2)":"var(--text3)"}}>{actual||"—"}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )
+            )}
           </>
         );
       }
@@ -1375,36 +1400,6 @@ export default function Dashboard({ onLogout }) {
           </>
         );
       }
-      case "weekglance": {
-        const weekStart = (()=>{const d=new Date();d.setHours(0,0,0,0);const day=d.getDay();d.setDate(d.getDate()-(day===0?6:day-1));return d;})();
-        const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate()+7);
-        const weekTasks = tasks.filter(t=>t.due&&new Date(t.due)>=weekStart&&new Date(t.due)<weekEnd);
-        const dueThisWeek = weekTasks.filter(t=>!t.done).length;
-        const doneThisWeek = weekTasks.filter(t=>t.done).length;
-        const overdue = tasks.filter(t=>!t.done&&t.due&&new Date(t.due)<new Date()).length;
-        const todayCount = tasks.filter(t=>!t.done&&t.due&&new Date(t.due).toISOString().slice(0,10)===new Date().toISOString().slice(0,10)).length;
-        const chips = [
-          {label:"Due this week",val:dueThisWeek,color:"var(--primary)"},
-          {label:"Completed",val:doneThisWeek,color:"#27ae60"},
-          {label:"Due today",val:todayCount,color:todayCount>0?"#e67e22":"var(--text2)"},
-          {label:"Overdue",val:overdue,color:overdue>0?"var(--error)":"var(--text2)"},
-          {label:"Total tasks",val:tasks.length,color:"var(--accent2)"},
-          {label:"Pending todos",val:todos.filter(t=>!t.done).length,color:"var(--text2)"},
-        ];
-        return (
-          <>
-            <SectionTitle>Week at a Glance</SectionTitle>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginTop:12}}>
-              {chips.map(chip=>(
-                <div key={chip.label} style={{background:"var(--surface2)",borderRadius:10,padding:"12px 14px",border:"1px solid var(--border)"}}>
-                  <div style={{fontFamily:"'Fraunces',serif",fontSize:28,fontWeight:700,color:chip.color,lineHeight:1}}>{chip.val}</div>
-                  <div style={{fontSize:11,color:"var(--text2)",marginTop:4,lineHeight:1.3}}>{chip.label}</div>
-                </div>
-              ))}
-            </div>
-          </>
-        );
-      }
       default: return null;
     }
   };
@@ -1435,18 +1430,6 @@ export default function Dashboard({ onLogout }) {
       </>
     ) : null;
 
-    if (wDef?.selfCard) {
-      return (
-        <div key={id} style={wrapStyle}
-          onDragOver={editMode && !isPinned ? e => onDragOver(e,id) : undefined}
-          onDrop={editMode && !isPinned ? () => onDrop(id) : undefined}
-          onDragEnd={editMode && !isPinned ? onDragEnd : undefined}>
-          {editOverlay}
-          {id==="courseGrades" && <CourseGradeSummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} footer={null}/>}
-          {id==="gpasummary"   && <GPASummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} onNavigate={setActivePage} footer={null}/>}
-        </div>
-      );
-    }
     return (
       <section key={id} className="card-anim"
         style={{ ...s.card, ...wrapStyle, display:"flex", flexDirection:"column" }}
