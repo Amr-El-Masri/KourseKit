@@ -1702,7 +1702,7 @@ export default function Dashboard({ onLogout }) {
                 }}>
                   <span style={{fontSize:17,minWidth:22,textAlign:"center"}}>{item.icon}</span>
                   {sidebarOpen && <span style={{marginLeft:10,fontSize:14}}>{item.label}</span>}
-                  {sidebarOpen && activePage===item.id && <span style={{position:"absolute",right:14,width:6,height:6,borderRadius:"50%",background:"#7B5EA7"}} />}
+                  {sidebarOpen && activePage===item.id && <span style={{position:"absolute",right:14,width:6,height:6,borderRadius:"50%",background:"var(--primary)"}} />}
                 </div>
             ))}
           </nav>
