@@ -647,6 +647,8 @@ const refetchSemesters = () =>
   const createSemester = async () => {
     if (!newSemName.trim()) return;
     const courses = newSemCourses.filter(c => c.code.trim());
+    const missingBE = courses.find(c => (c.components||[]).some(x => !x.sectioncrn));
+    if (missingBE) { setSemErr(`Please pick a lab/recitation section for ${missingBE.code}.`); return; }
     setSemErr("");
     setSemSaveLoad(true);
     try {
@@ -663,6 +665,8 @@ const refetchSemesters = () =>
 
   const saveEdit = async () => {
     const courses = editCourses.filter(c => c.code.trim());
+    const missingBE = courses.find(c => (c.components||[]).some(x => !x.sectioncrn));
+    if (missingBE) { setSemErr(`Please pick a lab/recitation section for ${missingBE.code}.`); return; }
     setSemErr("");
     setSemSaveLoad(true);
     try {
