@@ -32,16 +32,20 @@ const EVENT_TYPES  = [
 ];
 
 const ALL_WIDGETS = [
-  { id:"courses",       label:"My Courses",          span:3, pinned:true },
-  { id:"progress",      label:"Semester Progress",   span:1, pinned:true },
-  { id:"todo",          label:"To-Do List",          span:1 },
-  { id:"pomodoro",      label:"Pomodoro Timer",      span:1 },
-  { id:"calendar",      label:"Calendar",            span:1 },
-  { id:"schedule",      label:"Course Schedule",     span:1 },
-  { id:"grades",        label:"Grades",              span:1 },
-  { id:"streak",        label:"Study Streak",        span:1 },
-  { id:"notepad",       label:"Quick Notes",         span:1 },
-  { id:"examcountdown", label:"Exam Countdown",      span:1 },
+  { id:"courses",       label:"My Courses",              span:3, pinned:true },
+  { id:"progress",      label:"Semester Overview",       span:1, pinned:true },
+  { id:"todo",          label:"To-Do List",              span:1 },
+  { id:"pomodoro",      label:"Pomodoro Timer",          span:1 },
+  { id:"calendar",      label:"Calendar & Deadlines",    span:1 },
+  { id:"schedule",      label:"Course Schedule",         span:1 },
+  { id:"grades",        label:"Academic Performance",    span:1 },
+  { id:"streak",        label:"Streak",                  span:1 },
+  { id:"notepad",       label:"Notepad",                 span:1 },
+  { id:"examcountdown", label:"Exam Countdown",          span:1 },
+  { id:"todayclasses",  label:"Today's Classes",         span:1 },
+  { id:"officehours",   label:"Office Hours",            span:1 },
+  { id:"taskbreakdown", label:"Task Breakdown",          span:1 },
+  { id:"studysessions", label:"Study Sessions",          span:1 },
 ];
 
 
@@ -1054,7 +1058,7 @@ export default function Dashboard({ onLogout }) {
         return (
           <>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-              <SectionTitle>{progressTab==="semester"?"Semester Progress":"Credits Progress"}</SectionTitle>
+              <SectionTitle>{progressTab==="semester"?"Semester Overview":"Credits Progress"}</SectionTitle>
               <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:7,padding:2}}>
                 {tabs2.map(t=><button key={t.id} onClick={()=>setProgressTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:progressTab===t.id?"var(--primary)":"transparent",color:progressTab===t.id?"#fff":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
               </div>
@@ -1307,7 +1311,7 @@ export default function Dashboard({ onLogout }) {
         return (
           <>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-              <SectionTitle>{gradesTab==="grades"?"Course Grades":gradesTab==="gpa"?"GPA Overview":"Grade Goals"}</SectionTitle>
+              <SectionTitle>{gradesTab==="grades"?"Course Grades":gradesTab==="gpa"?"GPA":"Goals"}</SectionTitle>
               <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:7,padding:2}}>
                 {gradeTabs.map(t=><button key={t.id} onClick={()=>setGradesTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:gradesTab===t.id?"var(--primary)":"transparent",color:gradesTab===t.id?"#fff":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
               </div>
@@ -1397,6 +1401,126 @@ export default function Dashboard({ onLogout }) {
               : <div style={{fontFamily:"'Fraunces',serif",fontSize:52,fontWeight:700,color:countColor,lineHeight:1}}>{diffDays}<div style={{fontSize:13,color:"var(--text2)",fontFamily:"'DM Sans',sans-serif",fontWeight:400,marginTop:4}}>days away</div></div>}
             </div>
             {upcomingExams.length>1&&<div style={{marginTop:8,padding:"6px 10px",background:"var(--surface2)",borderRadius:8,fontSize:11,color:"var(--text2)",textAlign:"center"}}>+{upcomingExams.length-1} more exam{upcomingExams.length>2?"s":""} upcoming</div>}
+          </>
+        );
+      }
+      case "todayclasses": {
+        const DAY_MAP = {0:"SUNDAY",1:"MONDAY",2:"TUESDAY",3:"WEDNESDAY",4:"THURSDAY",5:"FRIDAY",6:"SATURDAY"};
+        const today3 = DAY_MAP[new Date().getDay()];
+        const parseDays3 = str => { if(!str) return []; const m={M:"MONDAY",T:"TUESDAY",W:"WEDNESDAY",R:"THURSDAY",F:"FRIDAY",S:"SATURDAY",U:"SUNDAY"}; return str.split("").map(c=>m[c]).filter(Boolean); };
+        const parseT3 = t => { if(!t) return null; const p=Array.isArray(t)?t:String(t).replace(/[^0-9:]/g,"").split(":"); if(p.length===1&&p[0].length===4) return parseInt(p[0].slice(0,2))+parseInt(p[0].slice(2))/60; return parseFloat(p[0])+parseFloat(p[1]||0)/60; };
+        const fmtT3 = h => { const hr=Math.floor(h); const mn=Math.round((h-hr)*60); return `${hr%12||12}:${String(mn).padStart(2,"0")}${h>=12?"pm":"am"}`; };
+        const semCourses3 = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.section);
+        const todayClasses = [];
+        semCourses3.forEach(c => {
+          const sec = c.section;
+          [[sec.days1,sec.beginTime1,sec.endTime1],[sec.days2,sec.beginTime2,sec.endTime2]].forEach(([days,start,end])=>{
+            if(!days||!start) return;
+            if(parseDays3(days).includes(today3)) todayClasses.push({code:c.courseCode,start:parseT3(start),end:parseT3(end),label:`${fmtT3(parseT3(start))} – ${fmtT3(parseT3(end))}`});
+          });
+        });
+        todayClasses.sort((a,b)=>a.start-b.start);
+        return (
+          <>
+            <SectionTitle>Today's Classes</SectionTitle>
+            {todayClasses.length===0 ? (
+              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No classes today!</div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:12}}>
+                {todayClasses.map((cl,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:10,background:"var(--surface2)",borderLeft:"3px solid var(--accent)"}}>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"var(--primary)"}}>{cl.code}</div>
+                      <div style={{fontSize:11,color:"var(--text2)",marginTop:2}}>{cl.label}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        );
+      }
+      case "officehours": {
+        const ohData = (() => { try { return JSON.parse(localStorage.getItem("kk_course_office_hours")||"{}"); } catch { return {}; } })();
+        const courseData = (() => { try { return JSON.parse(localStorage.getItem("kk_course_data")||"{}"); } catch { return {}; } })();
+        const semCodes = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).map(c=>c.courseCode);
+        const entries = semCodes.map(code=>({ code, prof: courseData[code]?.professor||"", oh: ohData[code]||[] })).filter(e=>e.prof||e.oh.length>0);
+        return (
+          <>
+            <SectionTitle>Office Hours</SectionTitle>
+            {entries.length===0 ? (
+              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No office hours uploaded yet.</div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:12,maxHeight:280,overflowY:"auto"}}>
+                {entries.map(e=>(
+                  <div key={e.code} style={{padding:"10px 14px",borderRadius:10,background:"var(--surface2)"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                      <span style={{fontSize:13,fontWeight:700,color:"var(--primary)"}}>{e.code}</span>
+                      {e.prof && <span style={{fontSize:11,color:"var(--text2)"}}>{e.prof}</span>}
+                    </div>
+                    {e.oh.length>0 ? e.oh.map((oh,i)=>(
+                      <div key={i} style={{fontSize:11,color:"var(--text2)",marginTop:2}}>{oh.day} · {oh.time}{oh.location?` · ${oh.location}`:""}</div>
+                    )) : <div style={{fontSize:11,color:"var(--text3)"}}>No office hours listed</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        );
+      }
+      case "taskbreakdown": {
+        const types = ["Assignment","Quiz","Exam","Project","Lab","Other"];
+        const counts = types.map(type=>({ type, total: tasks.filter(t=>(t.type||"Other")===type).length, done: tasks.filter(t=>(t.type||"Other")===type&&t.done).length })).filter(c=>c.total>0);
+        const colors = ["var(--accent)","#e67e22","var(--error)","var(--primary)","#27ae60","var(--text3)"];
+        const total = tasks.length;
+        return (
+          <>
+            <SectionTitle>Task Breakdown</SectionTitle>
+            {total===0 ? (
+              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No tasks yet.</div>
+            ) : (
+              <div style={{marginTop:12}}>
+                <div style={{display:"flex",height:10,borderRadius:99,overflow:"hidden",marginBottom:14,gap:2}}>
+                  {counts.map((c,i)=>(
+                    <div key={c.type} style={{flex:c.total,background:colors[i%colors.length],minWidth:4,transition:"flex .4s"}} title={`${c.type}: ${c.total}`}/>
+                  ))}
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {counts.map((c,i)=>(
+                    <div key={c.type} style={{display:"flex",alignItems:"center",gap:8}}>
+                      <div style={{width:8,height:8,borderRadius:"50%",background:colors[i%colors.length],flexShrink:0}}/>
+                      <span style={{fontSize:12,color:"var(--text2)",flex:1}}>{c.type}</span>
+                      <span style={{fontSize:12,fontWeight:600,color:"var(--primary)"}}>{c.done}/{c.total}</span>
+                      <div style={{width:60,height:5,borderRadius:99,background:"var(--surface2)",overflow:"hidden"}}>
+                        <div style={{height:"100%",borderRadius:99,background:colors[i%colors.length],width:`${Math.round((c.done/c.total)*100)}%`}}/>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        );
+      }
+      case "studysessions": {
+        const now3 = new Date();
+        const upcoming3 = studyEntries.filter(e=>e.start&&new Date(e.start)>=now3).sort((a,b)=>new Date(a.start)-new Date(b.start)).slice(0,6);
+        const fmtSession = d => { const dt=new Date(d); return dt.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})+" · "+dt.toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit",hour12:true}); };
+        return (
+          <>
+            <SectionTitle>Study Sessions</SectionTitle>
+            {upcoming3.length===0 ? (
+              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No upcoming study sessions.</div>
+            ) : (
+              <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:12,maxHeight:260,overflowY:"auto"}}>
+                {upcoming3.map((e,i)=>(
+                  <div key={i} style={{padding:"9px 14px",borderRadius:10,background:"var(--surface2)",borderLeft:"3px solid var(--primary)"}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"var(--primary)"}}>{e.task?.course||"Study"}{e.task?.title?` — ${e.task.title}`:""}</div>
+                    <div style={{fontSize:11,color:"var(--text2)",marginTop:2}}>{e.start?fmtSession(e.start):"Unscheduled"}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         );
       }
