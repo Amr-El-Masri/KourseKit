@@ -50,46 +50,52 @@
 }
 
 [data-theme="dark"] {
-  --bg:            #232425;
-  --surface:       #1c1c1f;
-  --surface2:      #3a3a45;
-  --surface3:      #2a2535;
+  /* backgrounds — warm purple-tinted dark, properly layered */
+  --bg:            #1c1b22;
+  --surface:       #252430;
+  --surface2:      #2e2c3a;
+  --surface3:      #2a2838;
 
-  --text:          #cbd1d8;
-  --text-body:     #85808e;
-  --text2:         #c3bfcf;
-  --text3:         #B8A9C9;
+  /* text — soft lavender-white, readable without eye strain */
+  --text:          #dedad0;
+  --text-body:     #b8b4c8;
+  --text2:         #9490a8;
+  --text3:         #7a7590;
 
-  --primary:       #a4b1d0;
-  --primary2:      #8aa5e0;
-  --accent:        #a791ca;
-  --accent2:       #bcb8c3;
+  --primary:       #9aafd6;
+  --primary2:      #7d9fd4;
+  --accent:        #b09ed4;
+  --accent2:       #c4b8d8;
 
-  --border:        #484857;
-  --border2:       #e3e6ed;
-  --divider:       #332d3b;
+  /* borders — subtle, not jarring */
+  --border:        #3d3b4d;
+  --border2:       #4e5a78;
+  --divider:       #2d2b3a;
 
-  --success:       #699e7f;
-  --success-bg:    #122a1e;
-  --error:         #a85353;
-  --error-bg:      #2a1616;
-  --error-border:  #5a2e2e;
-  --warn:          #e09a3a;
-  --warn1:         #d08a30;
-  --warn-bg:       #2a1e0a;
-  --star:          #f5a623;
-  --blue-light-bg: #283042;
-  --blue-border:   #696c72;
+  /* status */
+  --success:       #72b08a;
+  --success-bg:    #1a2e24;
+  --error:         #c47878;
+  --error-bg:      #2e1c1c;
+  --error-border:  #5e3232;
+  --warn:          #d4a050;
+  --warn1:         #c49040;
+  --warn-bg:       #2a2012;
+  --star:          #e8a830;
+  --blue-light-bg: #242840;
+  --blue-border:   #464e68;
 
-  --sp-bg1:   #242432;
-  --sp-bg2:   rgba(40,40,55,0.85);
-  --button:   #7b96c8;
+  /* study planner */
+  --sp-bg1:   #201f2a;
+  --sp-bg2:   rgba(30,28,40,0.88);
+  --button:   #7d96c4;
 
-  --sched1: #a8c8f5;
-  --sched2: #a1e0be;
-  --sched3: #d6c1aa;
-  --sched4: #f5a0cc;
-  --sched5: #df9aaa;
-  --sched6: #c8a8f5;
-  --sched7: #f5e890;
+  /* schedule widget — muted but distinct */
+  --sched1: #7eb8e8;
+  --sched2: #78c8a4;
+  --sched3: #c8a87a;
+  --sched4: #d890b4;
+  --sched5: #8aacd8;
+  --sched6: #b090e0;
+  --sched7: #d4c468;
 }

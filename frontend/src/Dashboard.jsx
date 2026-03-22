@@ -715,18 +715,6 @@ export default function Dashboard({ onLogout }) {
   };
 
   const [tasks, setTasks] = useState([]);
-  const [courseColors, setCourseColors] = useState({});
-
-  const saveCourseColor = (courseName, color) => {
-    const next = { ...courseColors, [courseName]: color };
-    setCourseColors(next);
-    const t = localStorage.getItem("kk_token");
-    if (t) fetch("http://localhost:8080/api/profile/colors", {
-      method: "PUT",
-      headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
-      body: JSON.stringify(next),
-    }).catch(() => {});
-  };
 
   const [courseOfficeHours, setCourseOfficeHours] = useState(() => {
     try {
@@ -1009,9 +997,7 @@ export default function Dashboard({ onLogout }) {
     fetch("http://localhost:8080/api/profile", {
       headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
     }).then(r => r.ok ? r.json() : null).then(data => { if (data) setProfile(data); }).catch(() => {});
-    fetch("http://localhost:8080/api/profile/colors", {
-      headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
-    }).then(r => r.ok ? r.json() : null).then(data => { if (data) setCourseColors(data); }).catch(() => {});
+
   }, []);
 
   // Courses from all saved semesters (deduplicated) for Grade Calculator dropdown
@@ -1025,12 +1011,7 @@ export default function Dashboard({ onLogout }) {
     switch (id) {
       case "courses": return (
         <>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-            <SectionTitle>My Courses — {semester}</SectionTitle>
-            {Object.keys(courseColors).length > 0 && (
-              <button onClick={() => { setCourseColors({}); const t = localStorage.getItem("kk_token"); if (t) fetch("http://localhost:8080/api/profile/colors", { method:"PUT", headers:{ "Authorization":"Bearer "+t, "Content-Type":"application/json" }, body:JSON.stringify({}) }).catch(()=>{}); }} style={{ fontSize:11, color:"var(--text3)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:500 }}>Reset colors</button>
-            )}
-          </div>
+          <SectionTitle>My Courses — {semester}</SectionTitle>
           {semCourseList.length === 0
             ? <div style={{marginTop:16,textAlign:"center",padding:"20px 0"}}>
                 <div style={{fontSize:13,color:"var(--text3)",marginBottom:10}}>No courses registered for this semester yet.</div>
@@ -1038,7 +1019,7 @@ export default function Dashboard({ onLogout }) {
               </div>
             : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
               {semCourseList.map(c => (
-                <div key={c.id} className="course-card" onClick={()=>setCourseDetailsTarget(c.name)} style={{...s.courseCard, border:`2px solid ${courseColors[c.name]||"var(--text2)"}`, cursor:"pointer"}}>
+                <div key={c.id} className="course-card" onClick={()=>setCourseDetailsTarget(c.name)} style={{...s.courseCard, border:"2px solid var(--border)", cursor:"pointer"}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <div>
                       <div style={{fontWeight:700,fontSize:15,color:"var(--primary)"}}>{c.name}</div>
@@ -1046,9 +1027,6 @@ export default function Dashboard({ onLogout }) {
                         <div style={{fontSize:11,color:"var(--text2)",marginTop:2,fontWeight:500}}>{courseData[c.name]?.professor || courseSyllabi[c.name]?.professor}</div>
                       )}
                     </div>
-                    <label style={{width:20,height:20,borderRadius:"50%",background:courseColors[c.name]||"var(--text2)",cursor:"pointer",flexShrink:0,boxShadow:"0 1px 4px rgba(0,0,0,0.15)",border:"2px solid white",display:"inline-block",transition:"transform .15s, box-shadow .15s ease"}}>
-                      <input type="color" value={courseColors[c.name]||"var(--text2)"} onChange={e=>{e.stopPropagation();saveCourseColor(c.name,e.target.value);}} style={{opacity:0,width:0,height:0,position:"absolute"}} />
-                    </label>
                   </div>
                   {!courseSyllabi[c.name] && (
                     <div style={{marginTop:8}}>
@@ -1303,7 +1281,7 @@ export default function Dashboard({ onLogout }) {
                   <div key={i} className={d?"cal-day":""} style={{display:"flex",flexDirection:"column",alignItems:"center",borderRadius:6,cursor:d?"pointer":"default",background:isToday(d)?"var(--primary)":"transparent",paddingBottom:dayTasks.length?3:0,height:"100%"}}>
                     <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,width:"100%",color:isToday(d)?"#fff":d?"var(--text)":"transparent",fontWeight:isToday(d)?700:400}}>{d||""}</div>
                     {dayTasks.map((t,ti)=>{
-                      const color = t.done?"#27ae60":new Date(t.due)<new Date()?"var(--error)":courseColors[t.course]||"var(--text2)";
+                      const color = t.done?"#27ae60":new Date(t.due)<new Date()?"var(--error)":"var(--text2)";
                       return <div key={ti} onMouseEnter={e=>{const rect=e.target.getBoundingClientRect();const cardRect=e.target.closest("section").getBoundingClientRect();setHoveredTask({task:t,x:rect.left-cardRect.left,y:rect.bottom-cardRect.top+4});}} onMouseLeave={()=>setHoveredTask(null)} onClick={()=>{setEditingTask(t);setActivePage("tasks");}} style={{width:"90%",height:3,borderRadius:2,background:color,marginBottom:1,cursor:"pointer",transition:"height .1s"}} className="cal-task-line" />;
                     })}
                   </div>
@@ -1702,7 +1680,6 @@ export default function Dashboard({ onLogout }) {
         .add-btn { transition:background .15s; }
         .cal-day:hover { background:var(--surface3) !important; border-radius:6px; }
         .toggle-opt:hover { background:var(--surface3); }
-        label:has(input[type="color"]):hover { transform: scale(1.2); box-shadow: 0 3px 10px rgba(0,0,0,0.2) !important; }
       `}</style>
 
         <aside style={{ ...s.sidebar, width:sidebarOpen ? 224 : 66 }}>
@@ -1981,7 +1958,7 @@ export default function Dashboard({ onLogout }) {
           const professor = courseData[cn]?.professor || courseSyllabi[cn]?.professor || sec?.professorName || null;
           const oh = courseOfficeHours[cn] || [];
           const syllabus = courseSyllabi[cn];
-          const color = courseColors[cn] || "var(--primary)";
+          const color = "var(--primary)";
           const fmtTime = t => { if (!t) return ""; const s = String(t); if (s.includes(":")) return s.slice(0,5); if (s.length===4) return `${s.slice(0,2)}:${s.slice(2)}`; return s; };
           const scheduleLines = [];
           if (sec?.days1 && sec?.beginTime1) scheduleLines.push(`${sec.days1}  ${fmtTime(sec.beginTime1)}–${fmtTime(sec.endTime1)}${sec.building1 ? `  ·  ${sec.building1}${sec.room1 ? " "+sec.room1 : ""}` : ""}`);
