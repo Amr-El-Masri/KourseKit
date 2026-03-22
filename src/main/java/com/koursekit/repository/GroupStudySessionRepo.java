@@ -12,7 +12,7 @@ import java.util.List;
 public interface GroupStudySessionRepo extends JpaRepository<GroupStudySession, Long> {
     List<GroupStudySession> findByStudyGroup_Id(Long groupId);
     List<GroupStudySession> findByStudyGroup_IdAndIsSynced(Long groupId, boolean isSynced);
-    List<GroupStudySession> findByStudyGroup_IdAndDatesBetween(Long groupId, LocalDate startDate, LocalDate endDate);
+    List<GroupStudySession> findByStudyGroup_IdAndDateBetween(Long groupId, LocalDate startDate, LocalDate endDate);
 
     @Modifying
     @Query("UPDATE GroupStudySession session SET session.isSynced = true WHERE session.id IN :ids")

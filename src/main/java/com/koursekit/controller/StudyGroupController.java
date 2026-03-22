@@ -36,7 +36,7 @@ public class StudyGroupController {
     @PostMapping("/create")
     public ResponseEntity<?> createGroup(@RequestBody StudyGroupRequestDTO dto) {
         try {
-            StudyGroup saved = studyGroupService.createGroup(currentUserId(), dto.name(), dto.courseId(), dto.isPrivate(), dto.maxMembers());
+            StudyGroup saved = studyGroupService.createGroup(currentUserId(), dto.name(), dto.courseCode(), dto.isPrivate(), dto.maxMembers());
             StudyGroupResponseDTO response = studyGroupMapper.toResponseDTO(saved, 1, true);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (RuntimeException e) {
@@ -70,28 +70,39 @@ public class StudyGroupController {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage())); }
     }
 
-    @GetMapping("/course/{courseId}")
-    public ResponseEntity<?> groupsForCourse(@PathVariable Long courseId) {
+    @GetMapping("/course/{courseCode}")
+    public ResponseEntity<?> groupsForCourse(@PathVariable String courseCode) {
         try {
-            List<StudyGroupResponseDTO> response = studyGroupService.getGroupsForCourse(courseId)
-                .stream()
-                .map(g -> studyGroupMapper.toResponseDTO(g, studyGroupService.getMemberCount(g.getId()), false))
+            List<StudyGroup> groups = studyGroupService.getGroupsForCourse(courseCode);
+            List<Long> ids = groups.stream().map(StudyGroup::getId).toList();
+            Map<Long, Integer> counts = studyGroupService.getMemberCounts(ids);
+            List<StudyGroupResponseDTO> response = groups.stream()
+                .map(g -> studyGroupMapper.toResponseDTO(g, counts.getOrDefault(g.getId(), 0), false))
                 .toList();
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage())); }
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     @GetMapping("/my-groups")
     public ResponseEntity<?> myGroups() {
         try {
-            List<StudyGroupResponseDTO> response = studyGroupService.getGroupsForUser(currentUserId())
-                .stream()
-                .map(g -> studyGroupMapper.toResponseDTO(g, studyGroupService.getMemberCount(g.getId()), false))
+            Long userId = currentUserId();
+            List<StudyGroup> groups = studyGroupService.getGroupsForUser(userId);
+            List<Long> ids = groups.stream().map(StudyGroup::getId).toList();
+            Map<Long, Integer> counts = studyGroupService.getMemberCounts(ids);
+            List<StudyGroupResponseDTO> response = groups.stream()
+                .map(g -> studyGroupMapper.toResponseDTO(
+                    g,
+                    counts.getOrDefault(g.getId(), 0),
+                    g.getHost().getId().equals(userId)
+                ))
                 .toList();
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage())); }
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     @GetMapping("/{groupId}/members")

@@ -8,10 +8,10 @@ import java.util.List;
 import com.koursekit.model.StudyGroupMember;
 
 public interface StudyGroupMemberRepo extends JpaRepository<StudyGroupMember, Long>{
-    List<StudyGroupMember> findByGroup_Id(Long groupId);
+    List<StudyGroupMember> findByStudyGroup_Id(Long groupId);
     List<StudyGroupMember> findByUser_Id(Long userID);
-    List<StudyGroupMember> findByGroup_IdAndUser_Id(Long groupId, Long userID);
-    boolean existsByGroup_IdAndUser_Id(Long groupId, Long userID);
+    List<StudyGroupMember> findByStudyGroup_IdAndUser_Id(Long groupId, Long userID);
+    boolean existsByStudyGroup_IdAndUser_Id(Long groupId, Long userID);
     int countByStudyGroup_Id(Long groupId);
 
     @Modifying
@@ -21,4 +21,7 @@ public interface StudyGroupMemberRepo extends JpaRepository<StudyGroupMember, Lo
     @Modifying
     @Query("DELETE FROM StudyGroupMember member WHERE member.studyGroup.id = :groupId")
     void deleteAll_byStudyGroupId(@Param("groupId") Long groupId);
+
+    @Query("SELECT member.studyGroup.id, COUNT(member) FROM StudyGroupMember member WHERE member.studyGroup.id IN :groupIds GROUP BY member.studyGroup.id")
+    List<Object[]> countMembersByGroupIds(@Param("groupIds") List<Long> groupIds);
 }

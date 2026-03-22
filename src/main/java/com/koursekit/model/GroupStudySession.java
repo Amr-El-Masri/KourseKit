@@ -41,7 +41,7 @@ public class GroupStudySession {
         this.date = date;
         this.startTime = startTime;
         this.duration = duration;
-        this.endTime = startTime.plusMinutes((long)duration*60);
+        this.endTime = startTime.plusMinutes((long)(duration*60));
     }
 
     public Long getId() {

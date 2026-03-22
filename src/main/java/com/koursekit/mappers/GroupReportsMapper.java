@@ -16,7 +16,7 @@ public class GroupReportsMapper {
             report.getReportedUser().getId(),
             report.getReportedUser().getFirstName(),
             report.getReportedUser().getLastName(),
-            report.getMessage().getId(),
+            report.getMessage() != null ? report.getMessage().getId() : null,
             report.getReason(),
             report.getStatus(),
             report.getCreatedAt()

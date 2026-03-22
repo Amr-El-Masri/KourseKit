@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Min;
 
 public record StudyGroupRequestDTO (
     @NotBlank String name,
-    @NotNull Long courseId,
+    @NotNull String courseCode,
     @NotNull Boolean isPrivate,
     @Min(2) int maxMembers
 

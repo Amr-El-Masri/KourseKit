@@ -9,7 +9,8 @@ import CourseDetails from "./CourseDetails";
 import SyllabusModal from "./SyllabusModal";
 import ThemeToggle from "./ThemeToggle";
 import StudentDirectory from "./StudentDirectoryPanel";
-import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle, Settings as SettingsIcon } from 'lucide-react';
+import StudyGroupFinder from "./StudyGroupFinder";
+import { LayoutDashboard, Calculator, CheckSquare, Star, User, Users, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle, Settings as SettingsIcon } from 'lucide-react';
 
 const AVATAR_ICONS = [
   { id:"Banana", icon: Banana },
@@ -528,6 +529,7 @@ export default function Dashboard({ onLogout }) {
     { id:"planner",   label:"Study Planner",    icon:<BookOpen size={17}/> },
     { id:"grades",    label:"Grade Calculator", icon:<Calculator size={17}/> },
     { id:"reviews",   label:"Reviews",          icon:<Star size={17}/> },
+    { id: "studygroups", label: "Study Groups", icon: <Users size={17}/>},
   ];
 
   const widgetSaveTimer = useRef(null);
@@ -709,8 +711,8 @@ export default function Dashboard({ onLogout }) {
   const [newEvent, setNewEvent] = useState({ day:"Mon", label:"", time:"", type:"Class" });
 
   const selectedSem = apiSemesters.find(s => s.semesterName === semester) ?? { courses: [] };
-  const semCourseList = (selectedSem.courses || []).map(c => ({ id: c.id, name: c.courseCode }));
-
+  console.log("course object sample:", selectedSem.courses?.[0]);
+  const semCourseList = (selectedSem.courses || []).map(c => ({ id: c.courseCode, name: c.courseCode }));
   const addTodo = () => {
     if (!todoInput.trim()) { setTodoError(true); return; }
     setTodoError(false);
@@ -1705,6 +1707,8 @@ export default function Dashboard({ onLogout }) {
                   onBack={() => setActivePage("dashboard")}
               />
           )}
+
+          {activePage === "studygroups" && <StudyGroupFinder courses={semCourseList} />}
 
         </main>
 

@@ -7,6 +7,6 @@ import java.time.LocalTime;
 public record GroupStudySessionRequestDTO (
     @NotNull LocalDate date,
     @NotNull LocalTime startTime,
-    @NotNull double duration,
+    @NotNull Double duration,
     @NotNull LocalTime endTime
 ) {}

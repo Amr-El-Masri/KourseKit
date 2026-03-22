@@ -73,7 +73,7 @@ public class ScraperService {
                         String fullCode = subject + " " + crseNum;
 
                         // Save Course logic
-                        Course course = courseRepo.findByCourseCode(fullCode)
+                        Course course = courseRepo.findByCourseCodeIgnoreCase(fullCode)
                                 .orElseGet(() -> courseRepo.save(new Course(fullCode, title)));
 
                         // Save Section logic
