@@ -39,14 +39,18 @@ export default function SyllabusModal({ courseName, onClose, onApply, existingDa
   // Editable extracted data — pre-populated when viewing existing syllabus
   const [info, setInfo] = useState({
     courseCode: existingData?.courseCode || courseName || "",
-    credits: existingData?.credits != null ? String(existingData.credits) : "",
     professor: existingData?.professor || "",
     finalExamWeight: existingData?.finalExamWeight != null ? String(existingData.finalExamWeight) : "",
   });
   const [assessments, setAssessments] = useState(
     (existingData?.assessments || []).map((a, i) => ({ id: i, name: a.name || "", weight: String(a.weight ?? "") }))
   );
-  const [deadlines, setDeadlines] = useState([]);
+  const [deadlines, setDeadlines] = useState(() => {
+    if (!existingData?.assessments?.length) return [];
+    return existingData.assessments.map((a, i) => ({
+      id: i, title: a.name || "", date: "", type: inferDeadlineType(a.name || ""), include: false,
+    }));
+  });
   const [officeHours, setOfficeHours] = useState(existingData?.officeHours || []);
 
   // Which sections to apply
@@ -71,7 +75,6 @@ export default function SyllabusModal({ courseName, onClose, onApply, existingDa
       if (!res.ok) throw new Error(data.error || "Extraction failed.");
       setInfo({
         courseCode: data.courseCode || courseName || "",
-        credits: data.credits != null ? String(data.credits) : "",
         professor: data.professor || "",
         finalExamWeight: data.finalExamWeight != null ? String(data.finalExamWeight) : "",
       });
@@ -159,12 +162,10 @@ export default function SyllabusModal({ courseName, onClose, onApply, existingDa
       onApply({
         officeHours,
         professor: info.professor || null,
-        ...(applyCalc ? {
-          courseCode: info.courseCode || courseName,
-          credits: info.credits,
-          finalExamWeight: info.finalExamWeight,
-          assessments,
-        } : {}),
+        courseCode: info.courseCode || courseName,
+        finalExamWeight: info.finalExamWeight,
+        assessments,
+        applyCalc,
       });
       setDoneStats({ tasks: taskCount, hasCalc: applyCalc && assessments.length > 0, hasOfficeHours: officeHours.length > 0 });
       setStep("done");
@@ -230,14 +231,14 @@ export default function SyllabusModal({ courseName, onClose, onApply, existingDa
         {step === "confirm" && (
           <>
             <div style={{ fontSize: 12, color: "var(--text2)", background: "var(--surface2)", borderRadius: 8, padding: "8px 12px", marginBottom: 18 }}>
-              Extracted automatically from syllabus — review and edit before applying.
+              {existingData ? "Editing saved syllabus info. Upload the PDF again to re-extract dates." : "Extracted automatically from syllabus — review and edit before applying."}
             </div>
 
             {/* Course Info */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontWeight: 700, fontSize: 14, color: "var(--primary)", marginBottom: 12 }}>Course Info</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                {[["Course Code", "courseCode"], ["Credits", "credits"], ["Professor", "professor"], ["Final Exam Weight (%)", "finalExamWeight"]].map(([lbl, key]) => (
+                {[["Course Code", "courseCode"], ["Professor", "professor"], ["Final Exam Weight (%)", "finalExamWeight"]].map(([lbl, key]) => (
                   <div key={key}>
                     <span style={label}>{lbl}</span>
                     <input style={input} value={info[key]} onChange={e => setInfo(p => ({ ...p, [key]: e.target.value }))} />
@@ -263,40 +264,39 @@ export default function SyllabusModal({ courseName, onClose, onApply, existingDa
             )}
 
             {/* Deadlines → Tasks */}
-            {deadlines.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: "var(--primary)" }}>Tasks</div>
-                  <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--text2)", cursor: "pointer" }}>
-                    <input type="checkbox" checked={applyTasks} onChange={e => setApplyTasks(e.target.checked)} />
-                    Auto-create in Task Manager
-                  </label>
-                </div>
-                <div style={{ fontSize: 12, color: "var(--text2)", marginBottom: 10 }}>
-                  Check items and set a date to create them as tasks. Items without a date are skipped.
-                </div>
-                {deadlines.map((d, i) => (
-                  <div key={d.id} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "center", opacity: d.include ? 1 : 0.5 }}>
-                    <input
-                      type="checkbox"
-                      checked={d.include}
-                      onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, include: e.target.checked } : x))}
-                    />
-                    <input style={{ ...input, flex: 2 }} value={d.title} onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, title: e.target.value } : x))} placeholder="Title" />
-                    <input
-                      type="date"
-                      style={{ ...input, flex: 1, minWidth: 130, cursor: "pointer" }}
-                      value={d.date}
-                      onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, date: e.target.value, include: !!e.target.value } : x))}
-                    />
-                    <select style={{ ...input, flex: 1, maxWidth: 130, cursor: "pointer" }} value={d.type} onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, type: e.target.value } : x))}>
-                      {["Assignment","Project","Quiz","Midterm Exam","Final Exam","Lab","Reading","Presentation","Other"].map(t => <option key={t}>{t}</option>)}
-                    </select>
-                  </div>
-                ))}
-                <button onClick={() => setDeadlines(p => [...p, { id: Date.now(), title: "", date: "", type: "Assignment", include: false }])} style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}>+ Add task</button>
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: "var(--primary)" }}>Tasks</div>
+                <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--text2)", cursor: "pointer" }}>
+                  <input type="checkbox" checked={applyTasks} onChange={e => setApplyTasks(e.target.checked)} />
+                  Auto-create in Task Manager
+                </label>
               </div>
-            )}
+              <div style={{ fontSize: 12, color: "var(--text2)", marginBottom: 10 }}>
+                {deadlines.length > 0 ? "Check items and set a date to create them as tasks. Items without a date are skipped." : "No deadlines extracted — add tasks manually below."}
+              </div>
+              {deadlines.map((d, i) => (
+                <div key={d.id} style={{ display: "flex", gap: 8, marginBottom: 6, alignItems: "center", opacity: d.include ? 1 : 0.5 }}>
+                  <input
+                    type="checkbox"
+                    checked={d.include}
+                    onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, include: e.target.checked } : x))}
+                  />
+                  <input style={{ ...input, flex: 2 }} value={d.title} onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, title: e.target.value } : x))} placeholder="Title" />
+                  <input
+                    type="date"
+                    style={{ ...input, flex: 1, minWidth: 130, cursor: "pointer" }}
+                    value={d.date}
+                    onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, date: e.target.value, include: !!e.target.value } : x))}
+                  />
+                  <select style={{ ...input, flex: 1, maxWidth: 130, cursor: "pointer" }} value={d.type} onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, type: e.target.value } : x))}>
+                    {["Assignment","Project","Quiz","Midterm Exam","Final Exam","Lab","Reading","Presentation","Other"].map(t => <option key={t}>{t}</option>)}
+                  </select>
+                  <button onClick={() => setDeadlines(p => p.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", fontSize: 14, flexShrink: 0 }}>✕</button>
+                </div>
+              ))}
+              <button onClick={() => setDeadlines(p => [...p, { id: Date.now(), title: "", date: "", type: "Assignment", include: false }])} style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}>+ Add task</button>
+            </div>
 
             {/* Office Hours */}
             <div style={{ marginBottom: 20 }}>

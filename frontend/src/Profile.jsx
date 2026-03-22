@@ -647,8 +647,6 @@ const refetchSemesters = () =>
   const createSemester = async () => {
     if (!newSemName.trim()) return;
     const courses = newSemCourses.filter(c => c.code.trim());
-    const missing = courses.filter(c => !c.sectioncrn);
-    if (missing.length > 0) { setSemErr(`Please pick a section for: ${missing.map(c => c.code || "empty course").join(", ")}`); return; }
     setSemErr("");
     setSemSaveLoad(true);
     try {
@@ -665,19 +663,18 @@ const refetchSemesters = () =>
 
   const saveEdit = async () => {
     const courses = editCourses.filter(c => c.code.trim());
-    const missing = courses.filter(c => !c.sectioncrn);
-    if (missing.length > 0) { setSemErr(`Please pick a section for: ${missing.map(c => c.code || "empty course").join(", ")}`); return; }
     setSemErr("");
     setSemSaveLoad(true);
     try {
-      await fetch(`${API}/api/grades/saved/${editingId}`, {
+      const res = await fetch(`${API}/api/grades/saved/${editingId}`, {
         method: "PUT",
         headers: semAuthHeaders(),
         body: JSON.stringify({ semesterName: editName.trim(), courses: courses.flatMap(c => [{ courseCode: c.code, grade: c.grade, credits: parseInt(c.credits) || 0, sectioncrn: c.sectioncrn || null }, ...(c.components||[]).filter(x=>x.sectioncrn).map(x => ({ courseCode: x.code, grade: "", credits: 0, sectioncrn: x.sectioncrn, componenttype: x.type }))]) }),
       });
+      if (!res.ok) { const err = await res.text().catch(() => ""); setSemErr(`Save failed (${res.status})${err ? ": " + err : ""}`); return; }
       await refetchSemesters();
       setEditingId(null);
-    } catch {}
+    } catch (e) { setSemErr("Save failed: " + e.message); }
     finally { setSemSaveLoad(false); }
   };
 
@@ -1530,12 +1527,6 @@ const refetchSemesters = () =>
                             <span style={{ fontWeight:600, minWidth:100 }}>{c.courseCode}</span>
                             <span style={{ color:"var(--text2)" }}>{c.credits} cr</span>
                             <span style={{ color:"var(--accent)", fontWeight:600 }}>{c.grade}</span>
-                            {syllabi[c.courseCode] && (
-                              <span style={{ display:"flex", alignItems:"center", gap:4, marginLeft:"auto" }}>
-                                <span style={{ fontSize:11, color:"var(--success-text, var(--accent))", fontWeight:500 }}>Syllabus uploaded</span>
-                                <button onClick={() => removeSyllabus(c.courseCode)} style={{ fontSize:11, color:"var(--error)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>✕</button>
-                              </span>
-                            )}
                           </div>
                           {c.components.map((comp,ci) => (
                             <div key={ci} style={{ display:"flex", gap:8, fontSize:12, color:"var(--text2)", alignItems:"center", paddingLeft:16, marginTop:2 }}>
@@ -1579,6 +1570,7 @@ const refetchSemesters = () =>
                               setSyllabusEditOH(oh.length ? oh : []);
                               setSyllabusEditCourse(c.code);
                             }} style={{ fontSize:11, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>Edit syllabus info</button>
+                            <button onClick={() => removeSyllabus(c.code)} style={{ fontSize:11, color:"var(--error)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600, marginLeft:8 }}>Remove syllabus</button>
                           </div>
                         )}
                         {(c.components||[]).map(comp => (

@@ -23,6 +23,22 @@ const AVATAR_ICONS = [
 ];
 
 const DAYS_OF_WEEK = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+const GC_COMP_TYPES = ["Midterm Exam","Final Exam","Assignment","Project","Quiz","Lab","Presentation","Attendance","Participation","Other"];
+function inferGCType(name) {
+  const n = (name || "").toLowerCase();
+  if (/midterm/.test(n)) return "Midterm Exam";
+  if (/final/.test(n)) return "Final Exam";
+  if (/quiz/.test(n)) return "Quiz";
+  if (/project/.test(n)) return "Project";
+  if (/lab/.test(n)) return "Lab";
+  if (/presentation/.test(n)) return "Presentation";
+  if (/^attendance$/.test(n)) return "Attendance";
+  if (/^participation$/.test(n)) return "Participation";
+  const exact = GC_COMP_TYPES.find(t => t.toLowerCase() === n);
+  if (exact) return exact;
+  return "Other";
+}
 const EVENT_TYPES  = [
   { label:"Class",   color:"var(--primary)",  bg:"var(--blue-light-bg)" },
   { label:"Gym",     color:"var(--success)",  bg:"var(--success-bg)" },
@@ -515,8 +531,6 @@ export default function Dashboard({ onLogout }) {
   ];
 
   const widgetSaveTimer = useRef(null);
-  const sylUndoTimerRef = useRef(null);
-  const [sylUndoToast, setSylUndoToast] = useState(null);
   const saveWidgetPrefsToBackend = (prefs) => {
     clearTimeout(widgetSaveTimer.current);
     widgetSaveTimer.current = setTimeout(() => {
@@ -533,7 +547,6 @@ export default function Dashboard({ onLogout }) {
   const [editingTask, setEditingTask] = useState(null);
   const [courseDetailsTarget, setCourseDetailsTarget] = useState(null);
   const [syllabusTarget, setSyllabusTarget] = useState(null); // course name for syllabus modal
-  const [syllabusCalcData, setSyllabusCalcData] = useState(null); // pre-fill data for calculator
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifPanel, setShowNotifPanel] = useState(false);
@@ -562,7 +575,7 @@ export default function Dashboard({ onLogout }) {
   }, []);
   useEffect(() => {
     localStorage.setItem("kk_activePage", activePage);
-    if (activePage === "grades") fetchSemesters();
+    if (activePage === "grades" || activePage === "dashboard" || activePage === "profile") fetchSemesters();
   }, [activePage]);
   const [semester,       setSemester]      = useState("");
   const [apiSemesters,   setApiSemesters]  = useState([]);
@@ -678,7 +691,7 @@ export default function Dashboard({ onLogout }) {
   const [newEvent, setNewEvent] = useState({ day:"Mon", label:"", time:"", type:"Class" });
 
   const selectedSem = apiSemesters.find(s => s.semesterName === semester) ?? { courses: [] };
-  const semCourseList = (selectedSem.courses || []).filter(c => !c.componenttype && !/^[BE]/i.test(c.section?.sectionNumber || "")).map(c => ({ id: c.id, name: c.courseCode }));
+  const semCourseList = (selectedSem.courses || []).filter(c => !c.componenttype && !/^[BE]/i.test(c.section?.sectionNumber || "")).map(c => ({ id: c.id, name: c.courseCode, section: c.section, grade: c.grade, credits: c.credits }));
 
   const addTodo = () => {
     if (!todoInput.trim()) { setTodoError(true); return; }
@@ -760,43 +773,6 @@ export default function Dashboard({ onLogout }) {
     localStorage.setItem("kk_course_office_hours", JSON.stringify(next));
   };
 
-  const removeSyllabusDash = (courseName) => {
-    const snapshot = courseSyllabi[courseName];
-    const ohMap = JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}");
-    const dataMap = JSON.parse(localStorage.getItem("kk_course_data") || "{}");
-    const ohSnapshot = ohMap[courseName];
-    const dataSnapshot = dataMap[courseName];
-    const next = { ...courseSyllabi }; delete next[courseName];
-    setCourseSyllabi(next); localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
-    delete ohMap[courseName]; localStorage.setItem("kk_course_office_hours", JSON.stringify(ohMap));
-    setCourseOfficeHours(oh => { const n={...oh}; delete n[courseName]; return n; });
-    delete dataMap[courseName]; localStorage.setItem("kk_course_data", JSON.stringify(dataMap));
-    window.dispatchEvent(new Event("kk_syllabus_changed"));
-    setSylUndoToast({ courseName, snapshot, ohSnapshot, dataSnapshot });
-    if (sylUndoTimerRef.current) clearTimeout(sylUndoTimerRef.current);
-    sylUndoTimerRef.current = setTimeout(async () => {
-      const token = localStorage.getItem("kk_token");
-      const raw = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "{}");
-      const map = Array.isArray(raw) ? {} : raw;
-      const ids = [...(map[courseName] || [])];
-      if (token && ids.length > 0) await Promise.all(ids.map(id => fetch(`http://localhost:8080/api/tasks/delete/${id}`, { method:"DELETE", headers:{ Authorization:`Bearer ${token}` } }).catch(()=>{})));
-      delete map[courseName]; localStorage.setItem("kk_syllabus_task_ids", JSON.stringify(map));
-      if (token) fetch(`http://localhost:8080/api/user-syllabi/${encodeURIComponent(courseName)}`, { method:"DELETE", headers:{ Authorization:`Bearer ${token}` } }).catch(()=>{});
-      setSylUndoToast(null);
-    }, 5000);
-  };
-
-  const undoRemoveSyllabusDash = () => {
-    if (!sylUndoToast) return;
-    if (sylUndoTimerRef.current) clearTimeout(sylUndoTimerRef.current);
-    const { courseName, snapshot, ohSnapshot, dataSnapshot } = sylUndoToast;
-    const next = { ...courseSyllabi, [courseName]: snapshot };
-    setCourseSyllabi(next); localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
-    if (ohSnapshot) { const ohMap = JSON.parse(localStorage.getItem("kk_course_office_hours")||"{}"); ohMap[courseName]=ohSnapshot; localStorage.setItem("kk_course_office_hours", JSON.stringify(ohMap)); setCourseOfficeHours(oh=>({...oh,[courseName]:ohSnapshot})); }
-    if (dataSnapshot) { const dataMap = JSON.parse(localStorage.getItem("kk_course_data")||"{}"); dataMap[courseName]=dataSnapshot; localStorage.setItem("kk_course_data", JSON.stringify(dataMap)); }
-    window.dispatchEvent(new Event("kk_syllabus_changed"));
-    setSylUndoToast(null);
-  };
 
   const getAuthInfo = () => {
     const token = localStorage.getItem("kk_token");
@@ -1062,7 +1038,7 @@ export default function Dashboard({ onLogout }) {
               </div>
             : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
               {semCourseList.map(c => (
-                <div key={c.id} className="course-card" style={{...s.courseCard, border:`2px solid ${courseColors[c.name]||"var(--text2)"}`}}>
+                <div key={c.id} className="course-card" onClick={()=>setCourseDetailsTarget(c.name)} style={{...s.courseCard, border:`2px solid ${courseColors[c.name]||"var(--text2)"}`, cursor:"pointer"}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <div>
                       <div style={{fontWeight:700,fontSize:15,color:"var(--primary)"}}>{c.name}</div>
@@ -1074,15 +1050,14 @@ export default function Dashboard({ onLogout }) {
                       <input type="color" value={courseColors[c.name]||"var(--text2)"} onChange={e=>{e.stopPropagation();saveCourseColor(c.name,e.target.value);}} style={{opacity:0,width:0,height:0,position:"absolute"}} />
                     </label>
                   </div>
-                  <div style={{display:"flex",gap:4,marginTop:8}}>
-                    <button onClick={e=>{e.stopPropagation();setSyllabusTarget(c.name);}} style={{flex:1,fontSize:11,color:"var(--accent)",background:"none",border:"1px solid var(--border)",borderRadius:6,padding:"3px 8px",cursor:"pointer",textAlign:"left"}}>
-                      {courseSyllabi[c.name] ? "View Syllabus" : "+ Upload Syllabus"}
-                    </button>
-                    {courseSyllabi[c.name] && (
-                      <button onClick={e=>{e.stopPropagation();removeSyllabusDash(c.name);}} style={{fontSize:11,color:"var(--error)",background:"none",border:"1px solid var(--border)",borderRadius:6,padding:"3px 8px",cursor:"pointer",flexShrink:0}} title="Remove syllabus">✕</button>
-                    )}
-                  </div>
-                  {courseOfficeHours[c.name]?.length > 0 && (
+                  {!courseSyllabi[c.name] && (
+                    <div style={{marginTop:8}}>
+                      <button onClick={e=>{e.stopPropagation();setSyllabusTarget(c.name);}} style={{fontSize:11,color:"var(--accent)",background:"none",border:"1px solid var(--border)",borderRadius:6,padding:"3px 8px",cursor:"pointer"}}>
+                        + Upload Syllabus
+                      </button>
+                    </div>
+                  )}
+                  {courseSyllabi[c.name] && courseOfficeHours[c.name]?.length > 0 && (
                     <div style={{marginTop:6,paddingTop:6,borderTop:"1px solid var(--border)"}}>
                       <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>Office Hours</div>
                       {courseOfficeHours[c.name].map((oh,i)=>(
@@ -1997,12 +1972,107 @@ export default function Dashboard({ onLogout }) {
           </div>
         )}
 
-        {sylUndoToast && (
-          <div style={{position:"fixed",bottom:28,left:"50%",transform:"translateX(-50%)",background:"var(--primary)",color:"white",borderRadius:12,padding:"12px 20px",display:"flex",alignItems:"center",gap:14,zIndex:9999,boxShadow:"0 4px 24px rgba(49,72,122,0.25)",fontSize:13,fontWeight:500,whiteSpace:"nowrap"}}>
-            <span>Syllabus for <strong>{sylUndoToast.courseName}</strong> removed.</span>
-            <button onClick={undoRemoveSyllabusDash} style={{background:"white",color:"var(--primary)",border:"none",borderRadius:7,padding:"4px 12px",fontWeight:700,fontSize:12,cursor:"pointer",fontFamily:"inherit"}}>Undo</button>
-          </div>
-        )}
+
+        {/* Course Details Panel */}
+        {courseDetailsTarget && (() => {
+          const cn = courseDetailsTarget;
+          const courseEntry = semCourseList.find(c => c.name === cn);
+          const sec = courseEntry?.section;
+          const professor = courseData[cn]?.professor || courseSyllabi[cn]?.professor || sec?.professorName || null;
+          const oh = courseOfficeHours[cn] || [];
+          const syllabus = courseSyllabi[cn];
+          const color = courseColors[cn] || "var(--primary)";
+          const fmtTime = t => { if (!t) return ""; const s = String(t); if (s.includes(":")) return s.slice(0,5); if (s.length===4) return `${s.slice(0,2)}:${s.slice(2)}`; return s; };
+          const scheduleLines = [];
+          if (sec?.days1 && sec?.beginTime1) scheduleLines.push(`${sec.days1}  ${fmtTime(sec.beginTime1)}–${fmtTime(sec.endTime1)}${sec.building1 ? `  ·  ${sec.building1}${sec.room1 ? " "+sec.room1 : ""}` : ""}`);
+          if (sec?.days2 && sec?.beginTime2) scheduleLines.push(`${sec.days2}  ${fmtTime(sec.beginTime2)}–${fmtTime(sec.endTime2)}${sec.building2 ? `  ·  ${sec.building2}${sec.room2 ? " "+sec.room2 : ""}` : ""}`);
+          return (
+            <div onClick={()=>setCourseDetailsTarget(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.35)",zIndex:8000,display:"flex",alignItems:"center",justifyContent:"center",padding:"16px"}}>
+              <div onClick={e=>e.stopPropagation()} style={{background:"var(--surface)",borderRadius:18,width:"min(480px,96vw)",maxHeight:"88vh",display:"flex",flexDirection:"column",boxShadow:"0 8px 40px rgba(49,72,122,0.22)",fontFamily:"'DM Sans',sans-serif",overflow:"hidden"}}>
+                {/* Header */}
+                <div style={{padding:"24px 24px 18px",borderBottom:"1px solid var(--border)",background:`linear-gradient(135deg,${color}18 0%,transparent 100%)`}}>
+                  <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12}}>
+                    <div>
+                      <div style={{fontFamily:"'Fraunces',serif",fontWeight:700,fontSize:22,color:color,letterSpacing:"-0.01em"}}>{cn}</div>
+                      {sec?.sectionNumber && <div style={{fontSize:12,color:"var(--text3)",marginTop:2}}>Section {sec.sectionNumber}{sec?.creditHours ? `  ·  ${sec.creditHours} cr` : (courseEntry?.credits ? `  ·  ${courseEntry.credits} cr` : "")}</div>}
+                    </div>
+                    <button onClick={()=>setCourseDetailsTarget(null)} style={{background:"none",border:"none",fontSize:20,cursor:"pointer",color:"var(--text3)",lineHeight:1,padding:"2px 4px",marginTop:2}}>✕</button>
+                  </div>
+                  {courseEntry?.grade && <div style={{display:"inline-block",marginTop:10,background:color+"22",color:color,fontWeight:700,fontSize:13,borderRadius:7,padding:"3px 10px"}}>{courseEntry.grade}</div>}
+                </div>
+
+                <div style={{padding:"18px 24px",display:"flex",flexDirection:"column",gap:16,overflowY:"auto",flex:1}}>
+                  {/* Professor */}
+                  {professor && (
+                    <div>
+                      <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:5}}>Professor</div>
+                      <div style={{fontSize:14,color:"var(--text)",fontWeight:500}}>{professor}</div>
+                    </div>
+                  )}
+
+                  {/* Schedule */}
+                  {scheduleLines.length > 0 && (
+                    <div>
+                      <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:5}}>Class Schedule</div>
+                      {scheduleLines.map((l,i)=>(
+                        <div key={i} style={{fontSize:13,color:"var(--text2)",lineHeight:1.7}}>{l}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Office Hours */}
+                  {syllabus && oh.length > 0 && (
+                    <div>
+                      <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:5}}>Office Hours</div>
+                      {oh.map((o,i)=>(
+                        <div key={i} style={{fontSize:13,color:"var(--text2)",lineHeight:1.7}}>{[o.day,o.time,o.location].filter(Boolean).join(" · ")}</div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Syllabus Assessments */}
+                  {syllabus?.assessments?.length > 0 && (
+                    <div>
+                      <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:8}}>Grade Breakdown</div>
+                      <div style={{display:"flex",flexDirection:"column",gap:5}}>
+                        {(() => {
+                          const isFinalInList = syllabus.assessments.some(a => /final/i.test(a.name));
+                          return syllabus.assessments.map((a,i)=>(
+                            <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13}}>
+                              <span style={{color:"var(--text)"}}>{a.name}</span>
+                              <span style={{fontWeight:600,color:color}}>{a.weight}%</span>
+                            </div>
+                          )).concat(
+                            syllabus.finalExamWeight != null && !isFinalInList ? [
+                              <div key="final" style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:13,paddingTop:5,borderTop:"1px solid var(--border)",marginTop:2}}>
+                                <span style={{color:"var(--text)"}}>Final Exam</span>
+                                <span style={{fontWeight:600,color:color}}>{syllabus.finalExamWeight}%</span>
+                              </div>
+                            ] : []
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* No syllabus placeholder */}
+                  {!syllabus && (
+                    <div style={{background:"var(--surface2)",borderRadius:10,padding:"14px 16px",fontSize:12,color:"var(--text3)",textAlign:"center"}}>
+                      No syllabus uploaded yet.<br/>Upload one to see grade breakdown & office hours.
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div style={{padding:"16px 24px",borderTop:"1px solid var(--border)",display:"flex",gap:8}}>
+                  <button onClick={()=>{setCourseDetailsTarget(null);setSyllabusTarget(cn);}} style={{flex:1,padding:"10px",borderRadius:9,border:`1px solid ${color}`,background:color,color:"white",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                    {syllabus ? "Edit Syllabus" : "+ Upload Syllabus"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {syllabusTarget && (
             <SyllabusModal
@@ -2018,21 +2088,37 @@ export default function Dashboard({ onLogout }) {
                   setSyllabusTarget(null);
                   if (data) {
                     if (data.officeHours?.length) saveCourseOfficeHours(name, data.officeHours);
-                    if (data.professor) {
-                      try {
-                        const dm = JSON.parse(localStorage.getItem("kk_course_data") || "{}");
-                        dm[name] = { ...(dm[name] || {}), professor: data.professor };
-                        localStorage.setItem("kk_course_data", JSON.stringify(dm));
-                        setCourseData(dm);
-                      } catch {}
-                    }
-                    // Always save to kk_course_syllabus so the card shows "View Syllabus"
+                    // Sync professor + assessments into kk_course_data (grade calculator reads from here)
+                    try {
+                      const dm = JSON.parse(localStorage.getItem("kk_course_data") || "{}");
+                      const existing = dm[name] || {};
+                      const updates = { ...existing };
+                      if (data.professor) updates.professor = data.professor;
+                      if (data.assessments?.length) {
+                        updates.components = data.assessments.map((a, i) => {
+                          const t = inferGCType(a.name);
+                          return {
+                            id: Date.now() + i,
+                            type: t,
+                            weight: parseFloat(a.weight) || 0,
+                            grade: existing.components?.find(c => c.type === t)?.grade ?? "",
+                            customType: t === "Other" ? (a.name || "") : "",
+                          };
+                        });
+                      }
+                      dm[name] = updates;
+                      localStorage.setItem("kk_course_data", JSON.stringify(dm));
+                      setCourseData(dm);
+                    } catch {}
+                    // Always save to kk_course_syllabus
                     try {
                       const all = JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}");
+                      const existing = all[name] || {};
                       const payload = {
-                        assessments: data.assessments || [],
-                        finalExamWeight: data.finalExamWeight ?? null,
-                        professor: data.professor || null,
+                        ...existing,
+                        assessments: data.assessments ?? existing.assessments ?? [],
+                        finalExamWeight: data.finalExamWeight !== undefined ? data.finalExamWeight : (existing.finalExamWeight ?? null),
+                        professor: data.professor || existing.professor || null,
                         uploaded: true,
                       };
                       const next = { ...all, [name]: payload };
@@ -2044,9 +2130,6 @@ export default function Dashboard({ onLogout }) {
                         body: JSON.stringify(payload),
                       }).catch(() => {});
                     } catch {}
-                    if (data.assessments) {
-                      setSyllabusCalcData(data);
-                    }
                   }
                 }}
             />
