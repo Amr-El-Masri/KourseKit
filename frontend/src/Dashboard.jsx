@@ -203,7 +203,7 @@ function CourseGradeSummaryWidget({ apiSemesters, selectedSemester, footer }) {
   const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
 
   const semObj = apiSemesters.find(s => s.semesterName === selectedSemester);
-  const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype && !/^[BE]/i.test(c.section?.sectionNumber || ""));
+  const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype && !(/^B(?!L)/i.test(c.section?.sectionNumber || "") || /^E/i.test(c.section?.sectionNumber || "")));
 
   const [selectedCourse, setSelectedCourse] = useState("");
 
@@ -396,7 +396,7 @@ function GPASummaryWidget({ apiSemesters, selectedSemester, onNavigate, footer }
   };
 
   const semObj = apiSemesters.find(s => s.semesterName === selectedSemester);
-  const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype && !/^[BE]/i.test(c.section?.sectionNumber || ""));
+  const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype && !(/^B(?!L)/i.test(c.section?.sectionNumber || "") || /^E/i.test(c.section?.sectionNumber || "")));
   const gradedCourses = courses.filter(c => c.grade && gradePoints[c.grade?.trim()?.toUpperCase()] !== undefined && Number(c.credits) > 0);
   const allGraded = courses.length > 0 && gradedCourses.length === courses.length;
 
@@ -691,7 +691,7 @@ export default function Dashboard({ onLogout }) {
   const [newEvent, setNewEvent] = useState({ day:"Mon", label:"", time:"", type:"Class" });
 
   const selectedSem = apiSemesters.find(s => s.semesterName === semester) ?? { courses: [] };
-  const semCourseList = (selectedSem.courses || []).filter(c => !c.componenttype && !/^[BE]/i.test(c.section?.sectionNumber || "")).map(c => ({ id: c.id, name: c.courseCode, section: c.section, grade: c.grade, credits: c.credits }));
+  const semCourseList = (selectedSem.courses || []).filter(c => !c.componenttype && !(/^B(?!L)/i.test(c.section?.sectionNumber || "") || /^E/i.test(c.section?.sectionNumber || ""))).map(c => ({ id: c.id, name: c.courseCode, section: c.section, grade: c.grade, credits: c.credits }));
 
   const addTodo = () => {
     if (!todoInput.trim()) { setTodoError(true); return; }

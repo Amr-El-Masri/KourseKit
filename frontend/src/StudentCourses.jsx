@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const API = "http://localhost:8080";
 
@@ -16,7 +16,7 @@ function calcDropPos(inputEl, dropHeight = 260, minWidth = 340) {
   return { top, left: r.left, width: Math.max(r.width, minWidth) };
 }
 
-export default function StudentCourses({ value, onSelect, inputStyle = {}, filterPrefix = null, lockedCourse = null }) {
+export default function StudentCourses({ value, onSelect, inputStyle = {}, filterPrefix = null, lockedCourse = null, autoOpen = false }) {
   const hasSection = !!value?.sectioncrn;
 
   const [query, setQuery] = useState(value?.code || "");
@@ -36,6 +36,24 @@ export default function StudentCourses({ value, onSelect, inputStyle = {}, filte
   const openDrop = (height = 260) => {
     if (inputRef.current) setDropPos(calcDropPos(inputRef.current, height));
   };
+
+  useEffect(() => {
+    if (!autoOpen || !lockedCourse || hasSection) return;
+    const load = async () => {
+      setSelectedCourse(lockedCourse);
+      setShowSections(true);
+      setLoadingSections(true);
+      openDrop(260);
+      const secs = await fetch(`${API}/api/courses/${lockedCourse.id}/sections`)
+        .then(r => r.json())
+        .catch(() => []);
+      setSections(secs);
+      setLoadingSections(false);
+      openDrop(260);
+    };
+    const t = setTimeout(load, 50);
+    return () => clearTimeout(t);
+  }, [autoOpen, lockedCourse?.id]);
 
   const handleQueryChange = (e) => {
     const q = e.target.value;
@@ -115,8 +133,17 @@ export default function StudentCourses({ value, onSelect, inputStyle = {}, filte
   };
 
   const displaySections = filterPrefix
-    ? sections.filter(s => filterPrefix.some(p => s.sectionNumber?.toUpperCase().startsWith(p.toUpperCase())))
-    : sections.filter(s => !["B","E"].some(p => s.sectionNumber?.toUpperCase().startsWith(p)));
+    ? sections.filter(s => {
+        const sec = s.sectionNumber?.toUpperCase() || "";
+        if (sec.startsWith("BL")) return false;
+        return filterPrefix.some(p => sec.startsWith(p.toUpperCase()));
+      })
+    : sections.filter(s => {
+        const sec = s.sectionNumber?.toUpperCase() || "";
+        if (sec.startsWith("E")) return false;
+        if (sec.startsWith("B") && !sec.startsWith("BL")) return false;
+        return true;
+      });
 
   const displayValue = lockedCourse
     ? hasSection ? `${value.sectionNumber || value.sectioncrn}` : lockedCourse.courseCode
