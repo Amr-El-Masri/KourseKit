@@ -631,10 +631,11 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       )}
 
       {/* Tab bar */}
-      <div style={{ 
-        display:"flex", 
-        background:"var(--surface)", 
-        border:"1px solid var(--border)", 
+      <div style={{
+        display:"flex",
+        background:"var(--surface)",
+        border:"1px solid var(--border)",
+        marginTop:24,
         borderRadius:14, 
         padding:5, 
         width:"fit-content", 
@@ -660,7 +661,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
       {/* Semester GPA */}
       {activeTab==="semester" && (
-        <div style={gc.card}>
+        <div style={{ ...gc.card, marginTop:24 }}>
           <SectionTitle>Semester GPA</SectionTitle>
           <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:18 }}>
             Enter each course, your grade (letter or GPA point), and its credit hours.
@@ -792,7 +793,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
       {/* Cumulative GPA */}
       {activeTab==="cumulative" && (
-        <div style={gc.card}>
+        <div style={{ ...gc.card, marginTop:24 }}>
           <SectionTitle>Cumulative GPA</SectionTitle>
           <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:18 }}>
             Enter your GPA and credit hours for each completed semester.
@@ -952,7 +953,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
       {/* Course Grade */}
       {activeTab==="course" && (
-        <div style={gc.card}>
+        <div style={{ ...gc.card, marginTop:24 }}>
           <SectionTitle>Course Grade (So Far)</SectionTitle>
           <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:18 }}>
             Enter each graded component, its weight, and your grade to see your current standing.
@@ -1029,7 +1030,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
       {/* Target Grade */}
       {activeTab==="target" && (
-        <div style={gc.card}>
+        <div style={{ ...gc.card, marginTop:24 }}>
           <SectionTitle>Target Course Grade</SectionTitle>
           <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:18 }}>
             Enter your graded components, your final exam weight, and your target — find out what you need.
@@ -1117,7 +1118,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
       {/* Grade Simulator */}
       {activeTab==="simulator" && (
-        <div style={gc.card}>
+        <div style={{ ...gc.card, marginTop:24 }}>
           <SectionTitle>Grade Simulator</SectionTitle>
           <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:18 }}>
             Enter your grades so far, then simulate a future component to see how it impacts your final grade.
