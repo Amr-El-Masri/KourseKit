@@ -340,18 +340,18 @@ export default function AdminDashboard({ token }) {
       {/* tab bar */}
       <div style={{ display:"flex", gap:4, background:"var(--surface)", padding:5, borderRadius:14, marginBottom:24, width:"fit-content", alignItems:"center", border:"1px solid var(--border)" }}>
         <button onClick={() => { setErr(""); setTab("users"); setReviewDropdownOpen(false); }} style={{
-          padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer",
+          padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
           background: tab === "users" ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
           color:      tab === "users" ? "var(--primary)" : "var(--text2)",
         }}>Users</button>
 
         <div style={{ position:"relative" }}>
           <button onClick={() => { setErr(""); setReviewDropdownOpen(o => !o); if (tab !== "reviews") setTab("reviews"); }} style={{
-            padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6,
+            padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6,
             background: tab === "reviews" ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
             color:      tab === "reviews" ? "var(--primary)" : "var(--text2)",
           }}>
-            Reviews <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+            Reviews <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: reviewDropdownOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
           </button>
           {reviewDropdownOpen && (
             <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:140 }}>
@@ -380,7 +380,7 @@ export default function AdminDashboard({ token }) {
           <div style={{ display:"flex", gap:4, background:"var(--surface)", padding:5, borderRadius:14, marginBottom:20, width:"fit-content", border:"1px solid var(--border)" }}>
             {[{id:"all",label:"All"},{id:"flagged",label:"Flagged"}].map(t => (
               <button key={t.id} onClick={() => setUserSubTab(t.id)} style={{
-                padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer",
+                padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
                 background: userSubTab === t.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
                 color:      userSubTab === t.id ? "var(--primary)" : "var(--text2)",
               }}>{t.label}</button>
@@ -397,11 +397,11 @@ export default function AdminDashboard({ token }) {
                 </div>
                 <div style={{ position:"relative" }}>
                   <button onClick={() => { setRoleDropOpen(o => !o); setStatusDropOpen(false); }} style={{
-                    padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6,
+                    padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6,
                     background:"var(--surface)", border:"1px solid var(--border)", color:"var(--text2)",
                   }}>
                     {{ all:"Role", STUDENT:"Student", ADMIN:"Admin" }[roleFilter]}
-                    <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+                    <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: roleDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
                   </button>
                   {roleDropOpen && (
                     <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:130 }}>
@@ -418,11 +418,11 @@ export default function AdminDashboard({ token }) {
                 </div>
                 <div style={{ position:"relative" }}>
                   <button onClick={() => { setStatusDropOpen(o => !o); setRoleDropOpen(false); }} style={{
-                    padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6,
+                    padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6,
                     background:"var(--surface)", border:"1px solid var(--border)", color:"var(--text2)",
                   }}>
                     {{ all:"Status", active:"Active", deactivated:"Deactivated" }[statusFilter]}
-                    <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+                    <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: statusDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
                   </button>
                   {statusDropOpen && (
                     <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:150 }}>
@@ -607,7 +607,7 @@ export default function AdminDashboard({ token }) {
           <div style={{ display:"flex", gap:4, background:"var(--surface)", padding:5, borderRadius:14, marginBottom:20, width:"fit-content", border:"1px solid var(--border)" }}>
             {[{id:"all",label:"All"},{id:"flagged",label:"Flagged"},{id:"reported",label:"Reported"}].map(t => (
               <button key={t.id} onClick={() => { setReviewStatus(t.id); setExpandedId(null); setConfirmAction(null); }} style={{
-                padding:"6px 20px", border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer",
+                padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
                 background: reviewStatus === t.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
                 color:      reviewStatus === t.id ? "var(--primary)" : "var(--text2)",
               }}>{t.label}</button>

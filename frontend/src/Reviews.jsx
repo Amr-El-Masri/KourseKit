@@ -358,7 +358,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
               {selectedSection
                 ? (() => { const s = sections.find(s => String(s.id) === String(selectedSection)); return s ? `Section ${s.sectionNumber} — ${s.professorName}` : "— pick a section —"; })()
                 : "— pick a section —"}
-              <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+              <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: sectionDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
             </button>
             {sectionDropOpen && (
               <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, maxHeight:220, overflowY:"auto" }}>
@@ -444,29 +444,29 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
     return <CourseDetails course={detailsCourse} onBack={() => setDetailsCourse(null)} />;
   }
   return (
-    <div style={{ padding:"28px 28px 60px", maxWidth:860, fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{ padding:"28px 28px 60px", fontFamily:"'DM Sans',sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; }
       `}</style>
 
-      <div style={{ marginBottom:24 }}>
-        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:12 }}>Reviews</div>
-        <div style={{ display:"flex", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:14, padding:5, width:"fit-content", gap:4 }}>
-          {[
-            { id:"course",    icon:"", label:"Course Reviews"    },
-            { id:"professor", icon:"", label:"Professor Reviews" },
-          ].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
-              padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600,
-              cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
-              background: tab===t.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
-              color:       tab===t.id ? "var(--primary)" : "var(--text2)",
-            }}>
-              {t.icon} {t.label}
-            </button>
-          ))}
-        </div>
+      <div>
+        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:8}}>Reviews</div>
+      </div>
+      <div style={{ display:"flex", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:14, padding:5, width:"fit-content", gap:4, marginBottom:24 }}>
+        {[
+          { id:"course",    icon:"", label:"Course Reviews"    },
+          { id:"professor", icon:"", label:"Professor Reviews" },
+        ].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600,
+            cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
+            background: tab===t.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+            color:       tab===t.id ? "var(--primary)" : "var(--text2)",
+          }}>
+            {t.icon} {t.label}
+          </button>
+        ))}
       </div>
 
       {tab === "professor" && <ProfessorReviewsTab token={token} userEmail={userEmail} onNavigateToForum={onNavigateToForum} />}

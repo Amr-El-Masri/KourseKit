@@ -172,7 +172,7 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
                     fontFamily:"'DM Sans',sans-serif",
                   }}>
                     {form.course || "Select course…"}
-                    <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+                    <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: formCourseDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
                   </button>
                   {formCourseDropOpen && (
                     <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
@@ -203,7 +203,7 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
                 fontFamily:"'DM Sans',sans-serif",
               }}>
                 {form.type || "Select type…"}
-                <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+                <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: formTypeDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
               </button>
               {formTypeDropOpen && (
                 <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
@@ -483,9 +483,9 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
             { label:"Overdue", val:counts.overdue, filter:"Overdue", warn:counts.overdue>0 },
           ].map(c => (
               <button key={c.filter} onClick={() => setFilter(c.filter)} style={{
-                padding:"7px 16px",
+                padding:"9px 22px",
                 border:"none",
-                borderRadius:8,
+                borderRadius:10,
                 fontSize:13,
                 fontWeight:600,
                 cursor:"pointer",
@@ -514,7 +514,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
               fontFamily:"'DM Sans',sans-serif",
             }}>
               {courseFilter || "All Courses"}
-              <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+              <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: courseFilterDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
             </button>
             {courseFilterDropOpen && (
               <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>

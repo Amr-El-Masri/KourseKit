@@ -577,10 +577,10 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
-            padding:"9px 16px", 
-            border:"none", 
-            borderRadius:10, 
-            fontSize:13, 
+            padding:"9px 22px",
+            border:"none",
+            borderRadius:10,
+            fontSize:13,
             fontWeight:600,
             cursor:"pointer", 
             fontFamily:"'DM Sans',sans-serif", 
@@ -643,7 +643,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                     fontFamily:"'DM Sans',sans-serif",
                   }}>
                     {c.name || "Select course"}
-                    <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+                    <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `${c.id}-semcourse` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
                   </button>
                   {openDropId === `${c.id}-semcourse` && (
                     <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
@@ -667,7 +667,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                     fontFamily:"'DM Sans',sans-serif",
                   }}>
                     {c.name || "Select course"}
-                    <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+                    <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `${c.id}-semcourse` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
                   </button>
                   {openDropId === `${c.id}-semcourse` && (
                     <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
@@ -693,7 +693,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                   fontFamily:"'DM Sans',sans-serif",
                 }}>
                   {c.grade || "Grade"}
-                  <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+                  <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `${c.id}-grade` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
                 </button>
                 {openDropId === `${c.id}-grade` && (
                   <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
@@ -831,7 +831,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                   fontFamily:"'DM Sans',sans-serif",
                 }}>
                   {c.name || "Select semester"}
-                  <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+                  <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `${c.id}-sem` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
                 </button>
                 {openDropId === `${c.id}-sem` && (
                   <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
@@ -992,7 +992,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                   fontFamily:"'DM Sans',sans-serif",
                 }}>
                   {c.type || "Select type…"}
-                  <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+                  <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `${c.id}-type` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
                 </button>
                 {openDropId === `${c.id}-type` && (
                   <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
@@ -1198,7 +1198,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                       fontFamily:"'DM Sans',sans-serif",
                     }}>
                       {c.type || "Select type…"}
-                      <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+                      <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `sim-${c.id}-type` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
                     </button>
                     {openDropId === `sim-${c.id}-type` && (
                       <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
@@ -1322,7 +1322,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 // Styles
 const gc = {
   tabBar:    { display:"flex", gap:4, background:"var(--surface)", padding:5, borderRadius:14, border:"1px solid var(--border)", marginBottom:24, flexWrap:"wrap" },
-  tab:       { padding:"9px 16px", border:"none", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s, color .15s", display:"flex", alignItems:"center" },
+  tab:       { padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s, color .15s", display:"flex", alignItems:"center" },
   card:      { background:"var(--surface)", borderRadius:18, padding:"24px 26px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid var(--border)" },
   headerRow: { display:"flex", gap:12, marginBottom:8, paddingBottom:8, borderBottom:"1px solid var(--border)" },
   colHead:   { fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", flex:1 },

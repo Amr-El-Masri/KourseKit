@@ -597,6 +597,9 @@ export default function Profile({ onProfileSave, onSemestersUpdated }) {
   const [semesters,    setSemesters]    = useState([]);
   const [creating,     setCreating]     = useState(false);
   const [newSemName,   setNewSemName]   = useState("");
+  const [newSemDrop,   setNewSemDrop]   = useState(false);
+  const [editSemDrop,  setEditSemDrop]  = useState(false);
+  const [openGradeDrop, setOpenGradeDrop] = useState(null);
   const [newSemCourses, setNewSemCourses] = useState([{ id:1, code:"", credits:"", grade:"", components:[] }]);
   const [editingId,    setEditingId]    = useState(null);
   const [editName,     setEditName]     = useState("");
@@ -951,10 +954,10 @@ const refetchSemesters = () =>
         }}>
           {[{ id:"profile", label:"My Profile" }, { id:"admin", label:"Admin" }].map(t => (
             <button key={t.id} onClick={() => setSection(t.id)} style={{
-              padding:"6px 20px", 
-              border:"none", 
-              borderRadius:8, 
-              fontSize:13, 
+              padding:"9px 22px",
+              border:"none",
+              borderRadius:10,
+              fontSize:13,
               fontWeight:600,  
               cursor:"pointer",
               fontFamily:"'DM Sans',sans-serif",
@@ -1521,7 +1524,7 @@ const refetchSemesters = () =>
                     Upload Transcript
                   </button>
                 )}
-                <button onClick={() => { setCreating(true); setEditingId(null); }} style={{ background:"var(--primary)", color:"white", border:"none", borderRadius:10, padding:"6px 14px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                <button onClick={() => { setCreating(true); setEditingId(null); }} style={{ background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, padding:"6px 14px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
                   + New Semester
                 </button>
               </div>
@@ -1535,10 +1538,19 @@ const refetchSemesters = () =>
             {/* Create form */}
             {creating && (
               <div style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:12, padding:"16px 18px", marginBottom:16 }}>
-                <select value={newSemName} onChange={e => setNewSemName(e.target.value)} style={{ ...pf.input, marginBottom:12, cursor:"pointer" }}>
-                  <option value="">Select semester…</option>
-                  {AUB_SEMESTERS.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <div style={{ position:"relative", marginBottom:12 }}>
+                  <button type="button" onClick={() => setNewSemDrop(o => !o)} style={{ width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, background:"var(--surface2)", color: newSemName ? "var(--text)" : "var(--text3)", fontSize:13, fontFamily:"'DM Sans',sans-serif", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                    {newSemName || "Select semester…"}<span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: newSemDrop ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+                  </button>
+                  {newSemDrop && (
+                    <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, maxHeight:220, overflowY:"auto" }}>
+                      <div onClick={() => { setNewSemName(""); setNewSemDrop(false); }} style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, background: !newSemName ? "var(--divider)" : "transparent", color: !newSemName ? "var(--accent)" : "var(--primary)" }}>Select semester…</div>
+                      {AUB_SEMESTERS.map(s => (
+                        <div key={s} onClick={() => { setNewSemName(s); setNewSemDrop(false); }} style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, background: newSemName === s ? "var(--divider)" : "transparent", color: newSemName === s ? "var(--accent)" : "var(--primary)" }}>{s}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
                   <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Course Name</span>
                   <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Credits</span>
@@ -1550,9 +1562,18 @@ const refetchSemesters = () =>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6 }}>
                       <StudentCourses value={c} onSelect={async data => { setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, courseId:data.courseId, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r)); if (data.courseId) { const secs = await fetch(`${API}/api/courses/${data.courseId}/sections`).then(r=>r.json()).catch(()=>[]); const hasLabRec = secs.some(s => /^[BE]/i.test(s.sectionNumber||"")); setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, hasLabRec, components: hasLabRec && !(r.components||[]).some(x=>x.sectioncrn) ? [{id:Date.now(), code:data.code, sectioncrn:null, type:"Lab"}] : (r.components||[])} : r)); } }} />
                       <input value={c.credits} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
-                      <select value={c.grade} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
-                        {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}
-                      </select>
+                      <div style={{ position:"relative" }}>
+                        <button type="button" onClick={() => setOpenGradeDrop(openGradeDrop === `new-${c.id}` ? null : `new-${c.id}`)} style={{ width:"100%", padding:"9px 10px", border:"1px solid var(--border)", borderRadius:10, background:"var(--surface2)", color:"var(--text)", fontSize:13, fontFamily:"'DM Sans',sans-serif", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                          {c.grade || "—"}<span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openGradeDrop === `new-${c.id}` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+                        </button>
+                        {openGradeDrop === `new-${c.id}` && (
+                          <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:300, padding:4, maxHeight:200, overflowY:"auto" }}>
+                            {LETTER_GRADES.map(g => (
+                              <div key={g} onClick={() => { setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,grade:g} : r)); setOpenGradeDrop(null); }} style={{ padding:"7px 12px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600, background: c.grade === g ? "var(--divider)" : "transparent", color: c.grade === g ? "var(--accent)" : "var(--primary)" }}>{g === "" ? "—" : g}</div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       <button onClick={() => setNewSemCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
                     </div>
                     {(c.components||[]).map(comp => (
@@ -1619,10 +1640,19 @@ const refetchSemesters = () =>
 
                 {editingId === sem.id && (
                   <div style={{ padding:"14px 16px" }}>
-                    <select value={editName} onChange={e => setEditName(e.target.value)} style={{ ...pf.input, marginBottom:10, cursor:"pointer" }}>
-                      <option value="">Select semester…</option>
-                      {AUB_SEMESTERS.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                    <div style={{ position:"relative", marginBottom:10 }}>
+                      <button type="button" onClick={() => setEditSemDrop(o => !o)} style={{ width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, background:"var(--surface2)", color: editName ? "var(--text)" : "var(--text3)", fontSize:13, fontFamily:"'DM Sans',sans-serif", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                        {editName || "Select semester…"}<span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: editSemDrop ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+                      </button>
+                      {editSemDrop && (
+                        <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, maxHeight:220, overflowY:"auto" }}>
+                          <div onClick={() => { setEditName(""); setEditSemDrop(false); }} style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, background: !editName ? "var(--divider)" : "transparent", color: !editName ? "var(--accent)" : "var(--primary)" }}>Select semester…</div>
+                          {AUB_SEMESTERS.map(s => (
+                            <div key={s} onClick={() => { setEditName(s); setEditSemDrop(false); }} style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, background: editName === s ? "var(--divider)" : "transparent", color: editName === s ? "var(--accent)" : "var(--primary)" }}>{s}</div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
                       <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Course Name</span>
                       <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Credits</span>
@@ -1634,9 +1664,18 @@ const refetchSemesters = () =>
                         <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom: syllabi[c.code] ? 4 : 0 }}>
                           <StudentCourses value={c} onSelect={async data => { setEditCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, courseId:data.courseId, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r)); if (data.courseId) { const secs = await fetch(`${API}/api/courses/${data.courseId}/sections`).then(r=>r.json()).catch(()=>[]); const hasLabRec = secs.some(s => /^[BE]/i.test(s.sectionNumber||"")); setEditCourses(p => p.map(r => r.id===c.id ? {...r, hasLabRec, components: hasLabRec && !(r.components||[]).some(x=>x.sectioncrn) ? [{id:Date.now(), code:data.code, sectioncrn:null, type:"Lab"}] : (r.components||[])} : r)); } }} />
                           <input value={c.credits} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
-                          <select value={c.grade} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,grade:e.target.value} : r))} style={{ ...pf.input, marginBottom:0, fontSize:13, cursor:"pointer" }}>
-                            {LETTER_GRADES.map(g => <option key={g} value={g}>{g === "" ? "—" : g}</option>)}
-                          </select>
+                          <div style={{ position:"relative" }}>
+                            <button type="button" onClick={() => setOpenGradeDrop(openGradeDrop === `edit-${c.id}` ? null : `edit-${c.id}`)} style={{ width:"100%", padding:"9px 10px", border:"1px solid var(--border)", borderRadius:10, background:"var(--surface2)", color:"var(--text)", fontSize:13, fontFamily:"'DM Sans',sans-serif", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                              {c.grade || "—"}<span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openGradeDrop === `edit-${c.id}` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+                            </button>
+                            {openGradeDrop === `edit-${c.id}` && (
+                              <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:300, padding:4, maxHeight:200, overflowY:"auto" }}>
+                                {LETTER_GRADES.map(g => (
+                                  <div key={g} onClick={() => { setEditCourses(p => p.map(r => r.id===c.id ? {...r,grade:g} : r)); setOpenGradeDrop(null); }} style={{ padding:"7px 12px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600, background: c.grade === g ? "var(--divider)" : "transparent", color: c.grade === g ? "var(--accent)" : "var(--primary)" }}>{g === "" ? "—" : g}</div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                           <button onClick={() => setEditCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
                         </div>
                         {syllabi[c.code] && (

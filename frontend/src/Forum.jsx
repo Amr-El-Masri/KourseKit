@@ -203,7 +203,7 @@ function ReportButton({ targetId, type, token, userEmail }) {
           ))}
           {err && <div style={{ fontSize: 11, color: "var(--danger, #c0392b)", marginBottom: 6 }}>{err}</div>}
           <button onClick={submit} disabled={submitting}
-            style={{ marginTop: 4, padding: "6px 16px", background: "var(--accent)", color: "white", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+            style={{ marginTop: 4, padding: "6px 16px", background: "color-mix(in srgb, var(--accent) 15%, transparent)", color: "var(--accent)", border: "1px solid color-mix(in srgb, var(--accent) 30%, transparent)", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
             {submitting ? "Submitting…" : "Submit Report"}
           </button>
         </div>
@@ -293,7 +293,7 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
   const CatIcon = CATEGORIES.find(c => c.id === post.category)?.icon || MessageSquare;
 
   return (
-    <div style={{ padding: "28px 28px 60px", maxWidth: 780, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ padding: "28px 28px 60px", fontFamily: "'DM Sans', sans-serif" }}>
       <button onClick={onBack} style={f.backBtn}>
         <ArrowLeft size={14} /> Back to Forum
       </button>
@@ -471,8 +471,8 @@ function CreatePost({ token, userEmail, userId, displayName, onDone, initialCate
             <button key={c.id} onClick={() => { setCategory(c.id); setCourseTag(""); setProfTag(""); }} style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "7px 16px", borderRadius: 10, border: "1px solid var(--border)",
-              background: category === c.id ? "var(--primary)" : "var(--surface)",
-              color: category === c.id ? "white" : "var(--text2)",
+              background: category === c.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--surface)",
+              color: category === c.id ? "var(--primary)" : "var(--text2)",
               fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
             }}>
               <Icon size={13} /> {c.label}
@@ -743,7 +743,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
   }
 
   return (
-    <div style={{ padding: "28px 28px 60px", maxWidth: 860, fontFamily: "'DM Sans', sans-serif" }}>
+    <div style={{ padding: "28px 28px 60px", fontFamily: "'DM Sans', sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing: border-box; }
@@ -752,14 +752,14 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
       `}</style>
 
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 26, color: "var(--primary)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 26, color: "var(--primary)", marginBottom: 4 }}>
           Discussion Forum
         </div>
         {token && (
           <button onClick={() => setComposing(c => !c)}
             style={{ ...f.primaryBtn, display: "flex", alignItems: "center", gap: 8 }}>
-            <Plus size={15} /> {composing ? "Cancel" : "New Post"}
+            {composing ? "Cancel" : <><Plus size={15} /> New Post</>}
           </button>
         )}
       </div>
@@ -771,11 +771,11 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
           return (
             <button key={c.id} onClick={() => { setCategory(c.id); setComposing(false); }} style={{
               display: "flex", alignItems: "center", gap: 6,
-              padding: "8px 16px", border: "none", borderRadius: 10,
+              padding: "9px 22px", border: "none", borderRadius: 10,
               fontSize: 13, fontWeight: 600, cursor: "pointer",
               fontFamily: "'DM Sans', sans-serif", transition: "all .15s",
-              background: category === c.id ? "var(--primary)" : "transparent",
-              color:      category === c.id ? "white" : "var(--text2)",
+              background: category === c.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+              color:      category === c.id ? "var(--primary)" : "var(--text2)",
             }}>
               <Icon size={14} /> {c.label}
             </button>
@@ -807,8 +807,8 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
             <button key={s.id} onClick={() => setSort(s.id)} style={{
               padding: "6px 14px", border: "none", borderRadius: 8,
               fontSize: 12, fontWeight: 600, cursor: "pointer",
-              background: sort === s.id ? "var(--primary)" : "transparent",
-              color:      sort === s.id ? "white" : "var(--text2)",
+              background: sort === s.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+              color:      sort === s.id ? "var(--primary)" : "var(--text2)",
             }}>{s.label}</button>
           ))}
         </div>
@@ -908,8 +908,8 @@ const f = {
     fontSize: 13, transition: "background .1s",
   },
   primaryBtn: {
-    padding: "10px 22px", background: "var(--primary)", color: "white",
-    border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600,
+    padding: "10px 22px", background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)",
+    border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius: 10, fontSize: 13, fontWeight: 600,
     cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
   },
   cancelBtn: {

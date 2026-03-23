@@ -763,7 +763,7 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
                             {selectedTaskId
                                 ? (() => { const t = availableTasks.find(t => String(t.id) === String(selectedTaskId)); return t ? `${t.title} - ${t.course}` : "Pick a task"; })()
                                 : "Pick a task"}
-                            <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+                            <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: taskDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
                         </button>
                         {taskDropOpen && (
                             <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
