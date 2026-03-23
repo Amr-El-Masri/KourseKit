@@ -39,7 +39,6 @@ function inferGCType(name) {
   if (exact) return exact;
   return "Other";
 }
-}
 const EVENT_TYPES  = [
   { label:"Class",   color:"var(--primary)",  bg:"var(--blue-light-bg)" },
   { label:"Gym",     color:"var(--success)",  bg:"var(--success-bg)" },
@@ -703,7 +702,7 @@ export default function Dashboard({ onLogout }) {
   };
 
   const selectedSem = apiSemesters.find(s => s.semesterName === semester) ?? { courses: [] };
-<const semCourseList = (selectedSem.courses || [])
+  const semCourseList = (selectedSem.courses || [])
   .filter(c => !c.componenttype && !(/^B(?!L)/i.test(c.section?.sectionNumber || "") || /^E/i.test(c.section?.sectionNumber || "")))
   .map(c => ({ id: c.id, name: c.courseCode, section: c.section, grade: c.grade, credits: c.credits }));
 
@@ -1929,7 +1928,7 @@ export default function Dashboard({ onLogout }) {
               />
           )}
           {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
-          {activePage === "planner" && <StudyPlanner enrolledSections={enrolledSections} />}
+          {activePage === "planner" && <StudyPlanner enrolledSections={semCourseList.map(c => ({ crn: c.id, courseCode: c.name, section: c.section }))} />}
           {activePage === "students" && <StudentDirectory />}
           {activePage === "profile" && (
               <Profile onProfileSave={p => setProfile(p)} onSemestersUpdated={fetchSemesters} />
