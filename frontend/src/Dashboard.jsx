@@ -10,7 +10,8 @@ import SyllabusModal from "./SyllabusModal";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./ThemeContext";
 import StudentDirectory from "./StudentDirectoryPanel";
-import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle, Settings as SettingsIcon } from 'lucide-react';
+import Forum from "./Forum";
+import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle, Settings as SettingsIcon, MessageSquare } from 'lucide-react';
 
 const AVATAR_ICONS = [
   { id:"Banana", icon: Banana },
@@ -23,8 +24,8 @@ const AVATAR_ICONS = [
 ];
 
 const DAYS_OF_WEEK = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-
 const GC_COMP_TYPES = ["Midterm Exam","Final Exam","Assignment","Project","Quiz","Lab","Presentation","Attendance","Participation","Other"];
+
 function inferGCType(name) {
   const n = (name || "").toLowerCase();
   if (/midterm/.test(n)) return "Midterm Exam";
@@ -112,8 +113,8 @@ function SemesterSelect({ value, onChange, semesters }) {
 function PomodoroTimer() {
   const MODES = [
     { label:"Focus",      duration:25*60, color:"var(--primary)", bg:"#eef2fb" },
-    { label:"Short Break",duration:5*60,  color:"var(--accent)", bg:"#eef7f0" },
-    { label:"Long Break", duration:15*60, color:"var(--accent2)", bg:"#F0EEF7" },
+    { label:"Short Break",duration:5*60,  color:"var(--accent2)", bg:"#eef7f0" },
+    { label:"Long Break", duration:15*60, color:"var(--text2)", bg:"#F0EEF7" },
   ];
   const [modeIdx,   setModeIdx]   = useState(0);
   const [timeLeft,  setTimeLeft]  = useState(MODES[0].duration);
@@ -162,8 +163,8 @@ function PomodoroTimer() {
               <button key={m.label} onClick={() => switchMode(i)} style={{
                 flex:1, padding:"6px 0", border:"none", borderRadius:8, fontSize:11, fontWeight:600,
                 cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
-                background: modeIdx===i ? m.color : "transparent",
-                color: modeIdx===i ? "#fff" : "var(--text2)",
+                background: modeIdx===i ? `color-mix(in srgb, ${m.color} 15%, transparent)` : "transparent",
+                color: modeIdx===i ? m.color : "var(--text2)",
               }}>{m.label}</button>
           ))}
         </div>
@@ -184,8 +185,8 @@ function PomodoroTimer() {
         <div style={{display:"flex",gap:10}}>
           <button onClick={reset} style={{padding:"7px 14px",background:"var(--surface2)",border:"1px solid var(--border)",borderRadius:9,fontSize:12,cursor:"pointer",color:"var(--text2)",fontFamily:"'DM Sans',sans-serif"}}>↺ Reset</button>
           <button onClick={() => setRunning(r => !r)} style={{
-            padding:"7px 22px", background:running?"#e07070":mode.color, color:"white",
-            border:"none", borderRadius:9, fontSize:13, fontWeight:600, cursor:"pointer",
+            padding:"7px 22px", background:running?"color-mix(in srgb, #e07070 15%, transparent)":`color-mix(in srgb, ${mode.color} 15%, transparent)`, color:running?"#e07070":mode.color,
+            border:`1px solid color-mix(in srgb, ${running?"#e07070":mode.color} 30%, transparent)`, borderRadius:9, fontSize:13, fontWeight:600, cursor:"pointer",
             fontFamily:"'DM Sans',sans-serif", transition:"background .15s",
           }}>{running ? <><Pause size={13} style={{verticalAlign:"middle",marginRight:4}}/>Pause</> : <><Play size={13} style={{verticalAlign:"middle",marginRight:4}}/>Start</>}</button>
         </div>
@@ -295,8 +296,8 @@ function CourseGradeSummaryWidget({ apiSemesters, selectedSemester, footer }) {
                         style={{
                           padding:"5px 12px", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
                           fontFamily:"'DM Sans',sans-serif", border:"1px solid var(--border)",
-                          background: selectedCourse === c.courseCode ? "var(--primary)" : "var(--surface2)",
-                          color: selectedCourse === c.courseCode ? "white" : "var(--text)",
+                          background: selectedCourse === c.courseCode ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--surface2)",
+                          color: selectedCourse === c.courseCode ? "var(--primary)" : "var(--text)",
                           transition:"all .15s",
                         }}
                     >
@@ -528,6 +529,7 @@ export default function Dashboard({ onLogout }) {
     { id:"planner",   label:"Study Planner",    icon:<BookOpen size={17}/> },
     { id:"grades",    label:"Grade Calculator", icon:<Calculator size={17}/> },
     { id:"reviews",   label:"Reviews",          icon:<Star size={17}/> },
+    { id:"forum",     label:"Forum",            icon:<MessageSquare size={17}/> },
   ];
 
   const widgetSaveTimer = useRef(null);
@@ -546,6 +548,8 @@ export default function Dashboard({ onLogout }) {
 
   const [editingTask, setEditingTask] = useState(null);
   const [courseDetailsTarget, setCourseDetailsTarget] = useState(null);
+  const [forumCourseTag, setForumCourseTag] = useState("");
+  const [forumProfTag,   setForumProfTag]   = useState("");
   const [syllabusTarget, setSyllabusTarget] = useState(null); // course name for syllabus modal
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -690,8 +694,21 @@ export default function Dashboard({ onLogout }) {
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [newEvent, setNewEvent] = useState({ day:"Mon", label:"", time:"", type:"Class" });
 
+  const [dismissedSections, setDismissedSections] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("kk_dismissed_sections") || "[]")); } catch { return new Set(); }
+  });
+  const dismissSection = (dateStr, crn) => {
+    const key = `${dateStr}_${crn}`;
+    const next = new Set(dismissedSections);
+    next.add(key);
+    setDismissedSections(next);
+    localStorage.setItem("kk_dismissed_sections", JSON.stringify([...next]));
+  };
+
   const selectedSem = apiSemesters.find(s => s.semesterName === semester) ?? { courses: [] };
-  const semCourseList = (selectedSem.courses || []).filter(c => !c.componenttype && !(/^B(?!L)/i.test(c.section?.sectionNumber || "") || /^E/i.test(c.section?.sectionNumber || ""))).map(c => ({ id: c.id, name: c.courseCode, section: c.section, grade: c.grade, credits: c.credits }));
+  const semCourseList = (selectedSem.courses || [])
+  .filter(c => !c.componenttype && !(/^B(?!L)/i.test(c.section?.sectionNumber || "") || /^E/i.test(c.section?.sectionNumber || "")))
+  .map(c => ({ id: c.sectioncrn, name: c.courseCode, section: c.section, grade: c.grade, credits: c.credits, sectioncrn: c.sectioncrn }));
 
   const addTodo = () => {
     if (!todoInput.trim()) { setTodoError(true); return; }
@@ -856,6 +873,7 @@ export default function Dashboard({ onLogout }) {
   const [editingCreditsGoal, setEditingCreditsGoal] = useState(false);
   const [creditsGoalInput, setCreditsGoalInput] = useState("");
   const [simGrades, setSimGrades] = useState({});
+  const [dashDropId, setDashDropId] = useState("");
 
   useEffect(() => {
     try {
@@ -953,6 +971,12 @@ export default function Dashboard({ onLogout }) {
     return `${calYear}-${mm}-${dd}`;};
 
   const handleLogout = () => { Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); onLogout(); };
+
+  const navigateToForum = (courseTag, profTag) => {
+    setForumCourseTag(courseTag || "");
+    setForumProfTag(profTag || "");
+    setActivePage("forum");
+  };
 
   const fetchSemesters = () => {
     const token = localStorage.getItem("kk_token");
@@ -1060,7 +1084,7 @@ export default function Dashboard({ onLogout }) {
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
               <SectionTitle>{progressTab==="semester"?"Semester Overview":"Credits Progress"}</SectionTitle>
               <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:7,padding:2}}>
-                {tabs2.map(t=><button key={t.id} onClick={()=>setProgressTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:progressTab===t.id?"var(--primary)":"transparent",color:progressTab===t.id?"#fff":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
+                {tabs2.map(t=><button key={t.id} onClick={()=>setProgressTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:progressTab===t.id?"color-mix(in srgb, var(--primary) 15%, transparent)":"transparent",color:progressTab===t.id?"var(--primary)":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
               </div>
             </div>
             {progressTab==="semester" ? (
@@ -1228,25 +1252,25 @@ export default function Dashboard({ onLogout }) {
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
             <SectionTitle>{calTab==="calendar"?"Calendar":calTab==="deadlines"?"Upcoming Deadlines":"Week at a Glance"}</SectionTitle>
             <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:7,padding:2}}>
-              {calTabs.map(t=><button key={t.id} onClick={()=>setCalTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:calTab===t.id?"var(--primary)":"transparent",color:calTab===t.id?"#fff":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
+              {calTabs.map(t=><button key={t.id} onClick={()=>setCalTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:calTab===t.id?"color-mix(in srgb, var(--primary) 15%, transparent)":"transparent",color:calTab===t.id?"var(--primary)":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
             </div>
           </div>
-          {calTab==="deadlines" ? (() => {
-            const now2 = new Date();
-            const upcoming = tasks.filter(t => !t.done && t.due).sort((a,b) => new Date(a.due)-new Date(b.due)).slice(0,8);
-            const urgencyColor = due => { const d=(new Date(due)-now2)/86400000; return d<0?"var(--error)":d<1?"var(--error)":d<3?"#e67e22":"#27ae60"; };
-            const urgencyLabel = due => { const d=(new Date(due)-now2)/86400000; return d<0?"Overdue":d<1?"Today":d<2?"Tomorrow":new Date(due).toLocaleDateString("en-US",{month:"short",day:"numeric"}); };
-            return upcoming.length===0 ? (
-              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No upcoming deadlines!</div>
-            ) : (
-              <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:4,maxHeight:280,overflowY:"auto"}}>
-                {upcoming.map((t,i) => {
-                  const color = urgencyColor(t.due);
-                  return (
-                    <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:"var(--surface2)",borderLeft:`3px solid ${color}`}}>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:12,fontWeight:600,color:"var(--primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.title}</div>
-                        <div style={{fontSize:11,color:"var(--text2)",marginTop:1}}>{[t.course,t.type].filter(Boolean).join(" · ")}</div>
+{calTab==="deadlines" ? (() => {
+  const now2 = new Date();
+  const upcoming = tasks.filter(t => !t.done && t.due).sort((a,b) => new Date(a.due)-new Date(b.due)).slice(0,8);
+  const urgencyColor = due => { const d=(new Date(due)-now2)/86400000; return d<0?"var(--error)":d<1?"var(--error)":d<3?"#e67e22":"#27ae60"; };
+  const urgencyLabel = due => { const d=(new Date(due)-now2)/86400000; return d<0?"Overdue":d<1?"Today":d<2?"Tomorrow":new Date(due).toLocaleDateString("en-US",{month:"short",day:"numeric"}); };
+  return upcoming.length===0 ? (
+    <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No upcoming deadlines!</div>
+  ) : (
+    <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:4,maxHeight:280,overflowY:"auto"}}>
+      {upcoming.map((t,i) => {
+        const color = urgencyColor(t.due);
+        return (
+          <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:"var(--surface2)",borderLeft:`3px solid ${color}`}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:12,fontWeight:600,color:"var(--primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.title}</div>
+              <div style={{fontSize:11,color:"var(--text2)",marginTop:1}}>{[t.course,t.type].filter(Boolean).join(" · ")}</div>
                       </div>
                       <span style={{fontSize:11,fontWeight:700,color,background:color+"18",padding:"2px 8px",borderRadius:6,flexShrink:0,whiteSpace:"nowrap"}}>{urgencyLabel(t.due)}</span>
                     </div>
@@ -1310,14 +1334,14 @@ export default function Dashboard({ onLogout }) {
       case "grades": {
         const LETTER_GRADES = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
         const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
-        const semCourses = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.courseCode);
+        const semCourses = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.courseCode&&(!c.section?.sectionNumber||!((/^B(?!L)/i.test(c.section.sectionNumber))||/^E/i.test(c.section.sectionNumber))));
         const gradeTabs = [{id:"grades",label:"Grades"},{id:"gpa",label:"GPA"},{id:"goals",label:"Goals"}];
         return (
           <>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
               <SectionTitle>{gradesTab==="grades"?"Course Grades":gradesTab==="gpa"?"GPA":"Goals"}</SectionTitle>
               <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:7,padding:2}}>
-                {gradeTabs.map(t=><button key={t.id} onClick={()=>setGradesTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:gradesTab===t.id?"var(--primary)":"transparent",color:gradesTab===t.id?"#fff":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
+                {gradeTabs.map(t=><button key={t.id} onClick={()=>setGradesTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:gradesTab===t.id?"color-mix(in srgb, var(--primary) 15%, transparent)":"transparent",color:gradesTab===t.id?"var(--primary)":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
               </div>
             </div>
             {gradesTab==="grades" && <CourseGradeSummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} footer={null}/>}
@@ -1336,13 +1360,23 @@ export default function Dashboard({ onLogout }) {
                     const goalPts = gradePoints[goal]; const actualPts = gradePoints[actual?.trim()?.toUpperCase()];
                     const status = goal&&actual&&actualPts!==undefined ? (actualPts>=goalPts?"on-track":"behind") : null;
                     return (
-                      <div key={c.courseCode} style={{display:"grid",gridTemplateColumns:"1fr 90px 44px",gap:8,alignItems:"center",padding:"7px 10px",borderRadius:9,background:"var(--surface2)",borderLeft:`3px solid ${status==="on-track"?"#27ae60":status==="behind"?"var(--error)":"var(--border)"}`}}>
+                      <div key={c.courseCode} style={{display:"grid",gridTemplateColumns:"1fr 90px 44px",gap:8,alignItems:"center",padding:"7px 10px",borderRadius:9,background:"var(--surface2)",borderLeft:`3px solid ${status==="on-track"?"#27ae60":status==="behind"?"var(--error)":"var(--border)"}`,position:"relative",overflow:"visible"}}>
                         <span style={{fontSize:12,fontWeight:600,color:"var(--primary)"}}>{c.courseCode}</span>
-                        <select value={goal} onChange={e=>{const next={...gradeGoals,[c.courseCode]:e.target.value};setGradeGoals(next);localStorage.setItem("kk_grade_goals",JSON.stringify(next));}}
-                          style={{fontSize:11,padding:"3px 6px",borderRadius:6,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer",fontFamily:"inherit"}}>
-                          <option value="">Set goal…</option>
-                          {LETTER_GRADES.map(g=><option key={g} value={g}>{g}</option>)}
-                        </select>
+                        <div style={{position:"relative"}}>
+                          <button onClick={(e)=>{e.stopPropagation();const k="goal-"+c.courseCode;setDashDropId(dashDropId===k?"":k);}} style={{width:"100%",padding:"3px 8px",borderRadius:6,border:"1px solid var(--border)",background:"var(--surface)",color:goal?"var(--text)":"var(--text3)",cursor:"pointer",fontFamily:"inherit",fontSize:11,display:"flex",alignItems:"center",justifyContent:"space-between",gap:4}}>
+                            {goal||"Set goal…"}<span style={{fontSize:8,opacity:0.6}}>▾</span>
+                          </button>
+                          {dashDropId==="goal-"+c.courseCode && (
+                            <div onWheel={e=>e.stopPropagation()} style={{position:"absolute",top:"calc(100% + 4px)",left:0,background:"var(--surface)",borderRadius:10,boxShadow:"0 8px 32px rgba(49,72,122,0.15)",border:"1px solid var(--border)",zIndex:300,padding:4,minWidth:"100%",maxHeight:180,overflowY:"auto"}}>
+                              <div onClick={()=>{const next={...gradeGoals,[c.courseCode]:""};setGradeGoals(next);localStorage.setItem("kk_grade_goals",JSON.stringify(next));setDashDropId("");}} style={{padding:"7px 12px",borderRadius:7,cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--text3)"}}>Set goal…</div>
+                              {LETTER_GRADES.map(g=>(
+                                <div key={g} onClick={()=>{const next={...gradeGoals,[c.courseCode]:g};setGradeGoals(next);localStorage.setItem("kk_grade_goals",JSON.stringify(next));setDashDropId("");}} style={{padding:"7px 12px",borderRadius:7,cursor:"pointer",fontSize:12,fontWeight:600,background:goal===g?"var(--divider)":"transparent",color:goal===g?"var(--accent)":"var(--primary)"}}>
+                                  {g}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <span style={{fontSize:13,fontWeight:700,fontFamily:"'Fraunces',serif",textAlign:"right",color:status==="on-track"?"#27ae60":status==="behind"?"var(--error)":actual?"var(--text2)":"var(--text3)"}}>{actual||"—"}</span>
                       </div>
                     );
@@ -1376,7 +1410,7 @@ export default function Dashboard({ onLogout }) {
           <SectionTitle>Quick Notes</SectionTitle>
           <textarea value={quickNote} onChange={e=>{setQuickNote(e.target.value);localStorage.setItem("kk_quick_note",e.target.value);}}
             placeholder="Jot down anything…"
-            style={{width:"100%",marginTop:10,minHeight:150,padding:"10px 12px",border:"1px solid var(--border)",borderRadius:10,fontSize:13,fontFamily:"'DM Sans',sans-serif",background:"var(--surface2)",color:"var(--text)",resize:"vertical",outline:"none",lineHeight:1.5}}/>
+            style={{width:"100%",marginTop:14,minHeight:150,padding:"10px 12px",border:"1px solid var(--border)",borderRadius:10,fontSize:13,fontFamily:"'DM Sans',sans-serif",background:"var(--surface2)",color:"var(--text)",resize:"vertical",outline:"none",lineHeight:1.5}}/>
           {quickNote&&<div style={{display:"flex",justifyContent:"flex-end",marginTop:4}}><button onClick={()=>{setQuickNote("");localStorage.removeItem("kk_quick_note");}} style={{fontSize:11,color:"var(--text3)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit"}}>Clear</button></div>}
         </>
       );
@@ -1414,7 +1448,7 @@ export default function Dashboard({ onLogout }) {
         const parseDays3 = str => { if(!str) return []; const m={M:"MONDAY",T:"TUESDAY",W:"WEDNESDAY",R:"THURSDAY",F:"FRIDAY",S:"SATURDAY",U:"SUNDAY"}; return str.split("").map(c=>m[c]).filter(Boolean); };
         const parseT3 = t => { if(!t) return null; const p=Array.isArray(t)?t:String(t).replace(/[^0-9:]/g,"").split(":"); if(p.length===1&&p[0].length===4) return parseInt(p[0].slice(0,2))+parseInt(p[0].slice(2))/60; return parseFloat(p[0])+parseFloat(p[1]||0)/60; };
         const fmtT3 = h => { const hr=Math.floor(h); const mn=Math.round((h-hr)*60); return `${hr%12||12}:${String(mn).padStart(2,"0")}${h>=12?"pm":"am"}`; };
-        const semCourses3 = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.section);
+        const semCourses3 = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.section&&(!c.section?.sectionNumber||!((/^B(?!L)/i.test(c.section.sectionNumber))||/^E/i.test(c.section.sectionNumber))));
         const todayClasses = [];
         semCourses3.forEach(c => {
           const sec = c.section;
@@ -1430,7 +1464,7 @@ export default function Dashboard({ onLogout }) {
             {todayClasses.length===0 ? (
               <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No classes today!</div>
             ) : (
-              <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:12}}>
+              <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:14}}>
                 {todayClasses.map((cl,i)=>(
                   <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",borderRadius:10,background:"var(--surface2)",borderLeft:"3px solid var(--accent)"}}>
                     <div style={{flex:1}}>
@@ -1447,7 +1481,7 @@ export default function Dashboard({ onLogout }) {
       case "officehours": {
         const ohData = (() => { try { return JSON.parse(localStorage.getItem("kk_course_office_hours")||"{}"); } catch { return {}; } })();
         const courseData = (() => { try { return JSON.parse(localStorage.getItem("kk_course_data")||"{}"); } catch { return {}; } })();
-        const semCodes = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).map(c=>c.courseCode);
+        const semCodes = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>!c.section?.sectionNumber||(!((/^B(?!L)/i.test(c.section.sectionNumber))||/^E/i.test(c.section.sectionNumber)))).map(c=>c.courseCode);
         const entries = semCodes.map(code=>({ code, prof: courseData[code]?.professor||"", oh: ohData[code]||[] })).filter(e=>e.prof||e.oh.length>0);
         return (
           <>
@@ -1455,7 +1489,7 @@ export default function Dashboard({ onLogout }) {
             {entries.length===0 ? (
               <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No office hours uploaded yet.</div>
             ) : (
-              <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:12,maxHeight:280,overflowY:"auto"}}>
+              <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:14,maxHeight:280,overflowY:"auto"}}>
                 {entries.map(e=>(
                   <div key={e.code} style={{padding:"10px 14px",borderRadius:10,background:"var(--surface2)"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
@@ -1483,7 +1517,7 @@ export default function Dashboard({ onLogout }) {
             {total===0 ? (
               <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No tasks yet.</div>
             ) : (
-              <div style={{marginTop:12}}>
+              <div style={{marginTop:14}}>
                 <div style={{display:"flex",height:10,borderRadius:99,overflow:"hidden",marginBottom:14,gap:2}}>
                   {counts.map((c,i)=>(
                     <div key={c.type} style={{flex:c.total,background:colors[i%colors.length],minWidth:4,transition:"flex .4s"}} title={`${c.type}: ${c.total}`}/>
@@ -1516,7 +1550,7 @@ export default function Dashboard({ onLogout }) {
             {upcoming3.length===0 ? (
               <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No upcoming study sessions.</div>
             ) : (
-              <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:12,maxHeight:260,overflowY:"auto"}}>
+              <div style={{display:"flex",flexDirection:"column",gap:8,marginTop:14,maxHeight:260,overflowY:"auto"}}>
                 {upcoming3.map((e,i)=>(
                   <div key={i} style={{padding:"9px 14px",borderRadius:10,background:"var(--surface2)",borderLeft:"3px solid var(--primary)"}}>
                     <div style={{fontSize:12,fontWeight:700,color:"var(--primary)"}}>{e.task?.course||"Study"}{e.task?.title?` — ${e.task.title}`:""}</div>
@@ -1531,7 +1565,7 @@ export default function Dashboard({ onLogout }) {
       case "gpasimulator": {
         const LETTER_GRADES = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
         const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
-        const semCourses4 = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.courseCode&&Number(c.credits)>0);
+        const semCourses4 = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.courseCode&&Number(c.credits)>0&&(!c.section?.sectionNumber||!((/^B(?!L)/i.test(c.section.sectionNumber))||/^E/i.test(c.section.sectionNumber))));
         const totalCr = semCourses4.reduce((s,c)=>s+Number(c.credits),0);
         const simPoints = semCourses4.reduce((s,c)=>{
           const g = simGrades[c.courseCode] || c.grade?.trim().toUpperCase() || "";
@@ -1548,25 +1582,35 @@ export default function Dashboard({ onLogout }) {
             {semCourses4.length===0 ? (
               <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No courses in selected semester.</div>
             ) : (
-              <>
+              <div style={{marginTop:14}}>
                 {projGPA && (
-                  <div style={{textAlign:"center",padding:"8px 0 12px"}}>
+                  <div style={{textAlign:"center",padding:"0 0 12px"}}>
                     <div style={{fontFamily:"'Fraunces',serif",fontSize:42,fontWeight:700,color:"var(--primary)",lineHeight:1}}>{projGPA}</div>
                     <div style={{fontSize:11,color:"var(--text2)",marginTop:4}}>projected semester GPA · {gradedCr}/{totalCr} cr graded</div>
                   </div>
                 )}
-                <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:220,overflowY:"auto"}}>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
                   {semCourses4.map(c=>{
                     const val = simGrades[c.courseCode] || c.grade?.trim().toUpperCase() || "";
                     const pts = gradePoints[val];
                     return (
-                      <div key={c.courseCode} style={{display:"grid",gridTemplateColumns:"1fr auto 36px",gap:8,alignItems:"center",padding:"6px 10px",borderRadius:8,background:"var(--surface2)",borderLeft:`3px solid ${pts===undefined?"var(--border)":pts>=3.7?"#27ae60":pts>=2.7?"#e67e22":"var(--error)"}`}}>
+                      <div key={c.courseCode} style={{display:"grid",gridTemplateColumns:"1fr auto 36px",gap:8,alignItems:"center",padding:"6px 10px",borderRadius:8,background:"var(--surface2)",borderLeft:`3px solid ${pts===undefined?"var(--border)":pts>=3.7?"#27ae60":pts>=2.7?"#e67e22":"var(--error)"}`,position:"relative",overflow:"visible"}}>
                         <span style={{fontSize:12,fontWeight:600,color:"var(--primary)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.courseCode}</span>
-                        <select value={val} onChange={e=>setSimGrades(p=>({...p,[c.courseCode]:e.target.value}))}
-                          style={{fontSize:11,padding:"2px 5px",borderRadius:6,border:"1px solid var(--border)",background:"var(--surface)",color:"var(--text)",cursor:"pointer",fontFamily:"inherit"}}>
-                          <option value="">—</option>
-                          {LETTER_GRADES.map(g=><option key={g} value={g}>{g}</option>)}
-                        </select>
+                        <div style={{position:"relative"}}>
+                          <button onClick={(e)=>{e.stopPropagation();const k="sim-"+c.courseCode;setDashDropId(dashDropId===k?"":k);}} style={{padding:"2px 8px",borderRadius:6,border:"1px solid var(--border)",background:"var(--surface)",color:val?"var(--text)":"var(--text3)",cursor:"pointer",fontFamily:"inherit",fontSize:11,display:"flex",alignItems:"center",gap:4}}>
+                            {val||"—"}<span style={{fontSize:8,opacity:0.6}}>▾</span>
+                          </button>
+                          {dashDropId==="sim-"+c.courseCode && (
+                            <div onWheel={e=>e.stopPropagation()} style={{position:"absolute",top:"calc(100% + 4px)",right:0,background:"var(--surface)",borderRadius:10,boxShadow:"0 8px 32px rgba(49,72,122,0.15)",border:"1px solid var(--border)",zIndex:300,padding:4,minWidth:70,maxHeight:180,overflowY:"auto"}}>
+                              <div onClick={()=>{setSimGrades(p=>({...p,[c.courseCode]:""}));setDashDropId("");}} style={{padding:"7px 12px",borderRadius:7,cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--text3)"}}>—</div>
+                              {LETTER_GRADES.map(g=>(
+                                <div key={g} onClick={()=>{setSimGrades(p=>({...p,[c.courseCode]:g}));setDashDropId("");}} style={{padding:"7px 12px",borderRadius:7,cursor:"pointer",fontSize:12,fontWeight:600,background:val===g?"var(--divider)":"transparent",color:val===g?"var(--accent)":"var(--primary)"}}>
+                                  {g}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <span style={{fontSize:11,color:"var(--text3)",textAlign:"right"}}>{c.credits}cr</span>
                       </div>
                     );
@@ -1575,7 +1619,7 @@ export default function Dashboard({ onLogout }) {
                 {Object.keys(simGrades).length>0 && (
                   <button onClick={()=>setSimGrades({})} style={{marginTop:8,fontSize:11,color:"var(--text3)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit",display:"block",marginLeft:"auto"}}>Reset</button>
                 )}
-              </>
+              </div>
             )}
           </>
         );
@@ -1592,10 +1636,10 @@ export default function Dashboard({ onLogout }) {
             {all.length===0 ? (
               <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>Nothing urgent right now!</div>
             ) : (
-              <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:12,maxHeight:280,overflowY:"auto"}}>
+              <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:14,maxHeight:280,overflowY:"auto"}}>
                 {overdue.length>0 && <div style={{fontSize:10,fontWeight:700,color:"var(--error)",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:2}}>Overdue</div>}
                 {overdue.map((t,i)=>(
-                  <div key={`o${i}`} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:"#fff0f0",borderLeft:"3px solid var(--error)"}}>
+                  <div key={`o${i}`} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:"var(--error-bg)",borderLeft:"3px solid var(--error)"}}>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12,fontWeight:600,color:"var(--error)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.title}</div>
                       <div style={{fontSize:11,color:"var(--text2)",marginTop:1}}>{[t.course,t.type].filter(Boolean).join(" · ")}</div>
@@ -1603,14 +1647,14 @@ export default function Dashboard({ onLogout }) {
                     <span style={{fontSize:10,fontWeight:700,color:"var(--error)",whiteSpace:"nowrap"}}>{new Date(t.due).toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
                   </div>
                 ))}
-                {dueToday.length>0 && <div style={{fontSize:10,fontWeight:700,color:"#e67e22",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:2,marginTop:overdue.length?6:0}}>Due Today</div>}
+                {dueToday.length>0 && <div style={{fontSize:10,fontWeight:700,color:"var(--warn1)",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:2,marginTop:overdue.length?6:0}}>Due Today</div>}
                 {dueToday.map((t,i)=>(
-                  <div key={`d${i}`} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:"#fff8f0",borderLeft:"3px solid #e67e22"}}>
+                  <div key={`d${i}`} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:"var(--warn-bg)",borderLeft:"3px solid var(--warn1)"}}>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:12,fontWeight:600,color:"var(--primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.title}</div>
                       <div style={{fontSize:11,color:"var(--text2)",marginTop:1}}>{[t.course,t.type].filter(Boolean).join(" · ")}</div>
                     </div>
-                    <span style={{fontSize:10,fontWeight:700,color:"#e67e22",whiteSpace:"nowrap"}}>Today</span>
+                    <span style={{fontSize:10,fontWeight:700,color:"var(--warn1)",whiteSpace:"nowrap"}}>Today</span>
                   </div>
                 ))}
               </div>
@@ -1627,7 +1671,8 @@ export default function Dashboard({ onLogout }) {
     const span = widgetSizes[id] ?? (wDef?.span || 1);
     const isDragging = dragId === id;
     const isTarget  = dragOverId === id && dragId !== id;
-    const wrapStyle = { gridColumn:`span ${span}`, opacity: isDragging ? 0.4 : 1, outline: isTarget ? "2px solid var(--primary)" : "none", borderRadius:18, transition:"opacity .15s", position:"relative" };
+    const hasOpenDrop = (id === "grades" && dashDropId.startsWith("goal-")) || (id === "gpasimulator" && dashDropId.startsWith("sim-"));
+    const wrapStyle = { gridColumn:`span ${span}`, opacity: isDragging ? 0.4 : 1, outline: isTarget ? "2px solid var(--primary)" : "none", borderRadius:18, transition:"opacity .15s", position:"relative", ...(hasOpenDrop ? {zIndex:10} : {}) };
 
     const editOverlay = editMode && !isPinned ? (
       <>
@@ -1915,7 +1960,8 @@ export default function Dashboard({ onLogout }) {
               />
           )}
           {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
-          {activePage === "planner" && <StudyPlanner />}
+          {activePage === "forum" && <Forum initialCourseTag={forumCourseTag} initialProfTag={forumProfTag} />}
+          {activePage === "planner" && <StudyPlanner enrolledSections={semCourseList.map(c => ({ crn: c.id, courseCode: c.name, section: c.section }))} />}
           {activePage === "students" && <StudentDirectory />}
           {activePage === "profile" && (
               <Profile onProfileSave={p => setProfile(p)} onSemestersUpdated={fetchSemesters} />
@@ -1926,6 +1972,7 @@ export default function Dashboard({ onLogout }) {
               <CourseDetails
                   course={courseDetailsTarget}
                   onBack={() => setActivePage("dashboard")}
+                  onNavigateToForum={navigateToForum}
               />
           )}
 
@@ -2139,7 +2186,7 @@ const s = {
   progressFill: { height:"100%", background:"linear-gradient(90deg, #31487A, #8FB3E2)", borderRadius:10, transition:"width 0.6s ease" },
   chip:         { flex:1, background:"var(--surface2)", borderRadius:10, padding:"8px 12px", textAlign:"center" },
   todoInput:    { flex:1, padding:"9px 12px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:"none", background:"var(--surface2)", color:"var(--text)" },
-  addBtn:       { padding:"9px 16px", background:"var(--primary)", color:"white", border:"none", borderRadius:10, fontSize:18, cursor:"pointer", lineHeight:1 },
+  addBtn:       { padding:"9px 16px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:18, cursor:"pointer", lineHeight:1 },
   todoRow:      { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 10px", borderRadius:8, background:"var(--surface2)" },
   reviewCard:   { flex:"1 1 260px", background:"var(--bg)", borderRadius:12, padding:"14px 16px" },
   calNavBtn:    { background:"none", border:"1px solid var(--border)", borderRadius:8, width:28, height:28, cursor:"pointer", fontSize:16, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center" },

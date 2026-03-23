@@ -65,7 +65,7 @@ public class GlobalExceptionHandle {
                 .body(Map.of(
                         "timestamp", LocalDateTime.now(),
                         "status", 400,
-                        "error", "Bad request: " + ex.getMessage() // Show real message
+                        "message", "Bad request: " + ex.getMessage()
                 ));
     }
 }

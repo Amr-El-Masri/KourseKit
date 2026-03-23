@@ -29,7 +29,7 @@ public class Task {
     private boolean completed = false;
 
     @Column(name = "from_syllabus")
-    private boolean fromSyllabus = false;
+    private Boolean fromSyllabus = false;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -91,8 +91,8 @@ public class Task {
     public String getType() { return type; }
     public String getNotes() { return notes; }
     public boolean isCompleted() { return completed; }
-    public boolean isFromSyllabus() { return fromSyllabus; }
-    public void setFromSyllabus(boolean fromSyllabus) { this.fromSyllabus = fromSyllabus; }
+    public boolean isFromSyllabus() { return Boolean.TRUE.equals(fromSyllabus); }
+    public void setFromSyllabus(Boolean fromSyllabus) { this.fromSyllabus = fromSyllabus; }
     public Long getUserId() { return user.getId(); }
 
     @Override

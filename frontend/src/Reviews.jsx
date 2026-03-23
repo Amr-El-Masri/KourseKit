@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Pen, Search, Inbox, CheckCircle, Clock } from "lucide-react";
+import { Pen, Search, Inbox, CheckCircle, Hourglass } from "lucide-react";
 import CourseDetails from "./CourseDetails";
 
 const API = "http://localhost:8080";
@@ -21,6 +21,39 @@ const timeAgo = ts => {
   if (s < 3600)  return `${Math.floor(s/60)}m ago`;
   if (s < 86400) return `${Math.floor(s/3600)}h ago`;
   return `${Math.floor(s/86400)}d ago`;
+};
+
+//fuzzy search algo
+const stem = word => word
+  .replace(/(ing|tion|ations|ation|ed|ly|er|est|ess|ness|ies|es|s)$/, "")
+  .toLowerCase();
+
+const fuzzyMatch = (a, b) => {
+  if (a === b) return true;
+  if (a.startsWith(b) || b.startsWith(a)) return true;
+  // Only allow 1 edit difference, and only for words longer than 5 chars
+  if (a.length < 5 || b.length < 5) return false;
+  if (Math.abs(a.length - b.length) > 2) return false;
+  let row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = i;
+    for (let j = 1; j <= b.length; j++) {
+      const val = a[i-1] === b[j-1] ? row[j-1] : 1 + Math.min(row[j-1], row[j], prev);
+      row[j-1] = prev;
+      prev = val;
+    }
+    row[b.length] = prev;
+  }
+  return row[b.length] <= 1;
+};
+
+const fuzzySearch = (text, query) => {
+  if (!text || !query) return false;
+  const textWords  = text.toLowerCase().split(/\s+/).map(stem);
+  const queryWords = query.toLowerCase().trim().split(/\s+/).map(stem);
+  return queryWords.every(qw =>
+    qw.length >= 2 && textWords.some(tw => fuzzyMatch(tw, qw))
+  );
 };
 
 function Stars({ count, interactive, onSet }) {
@@ -143,8 +176,8 @@ function ReviewCard({ review, token, userEmail, reviewType = "course" }) {
             <button
               onClick={submitReport} disabled={submitting}
               style={{
-                padding:"7px 20px", background:"var(--warn)", color:"white",
-                border:"none", borderRadius:8, fontSize:12, fontWeight:600,
+                padding:"7px 20px", background:"color-mix(in srgb, var(--warn) 15%, transparent)", color:"var(--warn)",
+                border:"1px solid color-mix(in srgb, var(--warn) 30%, transparent)", borderRadius:8, fontSize:12, fontWeight:600,
                 cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
               }}
             >
@@ -218,6 +251,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
   const [err,             setErr]             = useState("");
   const [submitting,      setSubmitting]       = useState(false);
   const [success,         setSuccess]         = useState(false);
+  const [sectionDropOpen, setSectionDropOpen] = useState(false);
 
   useEffect(() => {
     if (preselectedCourse) {
@@ -271,7 +305,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
    <div style={{ ...rv.composeCard, textAlign:"center", padding:40 }}>
     {success === "PENDING" ? (
     <>
-      <div style={{ marginBottom:12 }}>⏳</div>
+      <div style={{ marginBottom:12 }}><Hourglass size={40} color="var(--primary)" /></div>
       <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>
         Review submitted for moderation
       </div>
@@ -309,20 +343,42 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
 
       {selectedCourse && (
         <>
-          <div style={{ background:"var(--surface2)", borderRadius:10, padding:"10px 14px", marginBottom:16, fontSize:13 }}>
-            Selected: <strong style={{ color:"var(--primary)" }}>{selectedCourse.courseCode}</strong> — {selectedCourse.title}
+          <div style={{ background:"color-mix(in srgb, var(--accent) 10%, transparent)", border:"1px solid color-mix(in srgb, var(--accent) 25%, transparent)", borderRadius:10, padding:"10px 14px", marginBottom:16, fontSize:13, color:"var(--text2)" }}>
+            Selected: <strong style={{ color:"var(--accent)" }}>{selectedCourse.courseCode}</strong> — {selectedCourse.title}
           </div>
 
           <label style={rv.label}>Select Section</label>
-          <select value={selectedSection} onChange={e => setSelectedSection(e.target.value)}
-            style={{ ...rv.input, cursor:"pointer" }}>
-            <option value="">— pick a section —</option>
-            {sections.map(s => (
-              <option key={s.id} value={s.id}>
-                Section {s.sectionNumber} — {s.professorName}
-              </option>
-            ))}
-          </select>
+          <div style={{ position:"relative", marginBottom:16 }}>
+            <button type="button" onClick={() => setSectionDropOpen(o => !o)} style={{
+              width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10,
+              background:"var(--surface2)", color: selectedSection ? "var(--text)" : "var(--text3)",
+              fontSize:13, fontFamily:"'DM Sans',sans-serif", cursor:"pointer",
+              textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between",
+            }}>
+              {selectedSection
+                ? (() => { const s = sections.find(s => String(s.id) === String(selectedSection)); return s ? `Section ${s.sectionNumber} — ${s.professorName}` : "— pick a section —"; })()
+                : "— pick a section —"}
+              <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: sectionDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+            </button>
+            {sectionDropOpen && (
+              <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, maxHeight:220, overflowY:"auto" }}>
+                <div onClick={() => { setSelectedSection(""); setSectionDropOpen(false); }}
+                  style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                    background: !selectedSection ? "var(--divider)" : "transparent",
+                    color: !selectedSection ? "var(--accent)" : "var(--primary)" }}>
+                  — pick a section —
+                </div>
+                {sections.map(s => (
+                  <div key={s.id} onClick={() => { setSelectedSection(s.id); setSectionDropOpen(false); }}
+                    style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                      background: String(selectedSection) === String(s.id) ? "var(--divider)" : "transparent",
+                      color: String(selectedSection) === String(s.id) ? "var(--accent)" : "var(--primary)" }}>
+                    Section {s.sectionNumber} — {s.professorName}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           <label style={rv.label}>Rating</label>
           <div style={{ marginBottom:16 }}>
@@ -350,7 +406,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
   );
 }
 
-export default function Reviews() {
+export default function Reviews({ initialCourse, onNavigateToForum }) {
   const token = localStorage.getItem("kk_token");
   const userEmail = localStorage.getItem("kk_email");
   const [detailsCourse, setDetailsCourse] = useState(null);
@@ -379,7 +435,7 @@ export default function Reviews() {
   };
 
   let displayed = reviews
-    .filter(r => !search || r.comment?.toLowerCase().includes(search.toLowerCase()));
+    .filter(r => !search || fuzzySearch(r.comment, search));
   displayed = sort === "top"
     ? [...displayed].sort((a,b) => b.rating - a.rating)
     : [...displayed].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -388,37 +444,37 @@ export default function Reviews() {
     return <CourseDetails course={detailsCourse} onBack={() => setDetailsCourse(null)} />;
   }
   return (
-    <div style={{ padding:"28px 28px 60px", maxWidth:860, fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{ padding:"28px 28px 60px", fontFamily:"'DM Sans',sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; }
       `}</style>
 
-      <div style={{ marginBottom:24 }}>
-        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:12 }}>Reviews</div>
-        <div style={{ display:"flex", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:14, padding:5, width:"fit-content", gap:4 }}>
-          {[
-            { id:"course",    icon:"", label:"Course Reviews"    },
-            { id:"professor", icon:"", label:"Professor Reviews" },
-          ].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
-              padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600,
-              cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
-              background: tab===t.id ? "var(--primary)" : "transparent",
-              color:       tab===t.id ? "#ffffff" : "var(--text2)",
-            }}>
-              {t.icon} {t.label}
-            </button>
-          ))}
-        </div>
+      <div>
+        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:8}}>Reviews</div>
+      </div>
+      <div style={{ display:"flex", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:14, padding:5, width:"fit-content", gap:4, marginBottom:24 }}>
+        {[
+          { id:"course",    icon:"", label:"Course Reviews"    },
+          { id:"professor", icon:"", label:"Professor Reviews" },
+        ].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{
+            padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600,
+            cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
+            background: tab===t.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+            color:       tab===t.id ? "var(--primary)" : "var(--text2)",
+          }}>
+            {t.icon} {t.label}
+          </button>
+        ))}
       </div>
 
-      {tab === "professor" && <ProfessorReviewsTab token={token} userEmail={userEmail} />}
+      {tab === "professor" && <ProfessorReviewsTab token={token} userEmail={userEmail} onNavigateToForum={onNavigateToForum} />}
 
       {tab === "course" && <>
       {/* Course search to browse reviews */}
       <div style={{ marginBottom:20 }}>
-        <label style={rv.label}>Browse reviews by course</label>
+        <label style={{ ...rv.label, fontSize:13, fontWeight:400, color:"var(--text2)" }}>Browse reviews by course</label>
         <CourseSearch onSelect={selectCourse} />
       </div>
 
@@ -432,13 +488,26 @@ export default function Reviews() {
                 <button
                   onClick={() => setDetailsCourse(activeCourse)}
                   style={{
-                    padding:"7px 16px", background:"var(--primary)", color:"#ffffff",
+                    padding:"7px 16px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)",
                     border:"none", borderRadius:10, fontSize:12,
                     fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
                   }}
                 >
                   View Course Details
                 </button>
+
+                {onNavigateToForum && (
+                  <button
+                    onClick={() => onNavigateToForum(activeCourse.courseCode, "")}
+                    style={{
+                      padding:"7px 16px", background:"var(--accent2)", color:"white",
+                      border:"none", borderRadius:10, fontSize:12,
+                      fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                    }}
+                  >
+                    Discuss this Course
+                  </button>
+                )}
               </div>
             <div style={{ display:"flex", gap:8 }}>
               <div style={{ 
@@ -452,15 +521,15 @@ export default function Reviews() {
                 {[{id:"top",label:"Top"},{id:"new",label:"New"}].map(s => (
                   <button key={s.id} onClick={() => setSort(s.id)} style={{
                     padding:"6px 14px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
-                    background: sort===s.id ? "var(--primary)" : "transparent",
-                    color:      sort===s.id ? "#ffffff" : "var(--text2)",
+                    background: sort===s.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+                    color:      sort===s.id ? "var(--primary)" : "var(--text2)",
                 }}>{s.label}</button>
               ))}
             </div>
               {token && (
                 <button onClick={() => setComposing(c => !c)} style={{
-                  padding:"9px 20px 9px 12px", background:"var(--accent)", color:"white",
-                  border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer",
+                  padding:"9px 20px 9px 12px", background:"color-mix(in srgb, var(--accent) 15%, transparent)", color:"var(--accent)",
+                  border:"1px solid color-mix(in srgb, var(--accent) 30%, transparent)", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer",
                 }}><Pen size={14} style={{ marginRight: 6, verticalAlign: "middle" }} /> Write a Review</button>
               )}
             </div>
@@ -590,7 +659,7 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
       {success === "PENDING" ? (
         <>
         <div style={{ marginBottom:12 }}>
-          <Clock size={40} color="var(--primary)" />
+          <Hourglass size={40} color="var(--primary)" />
         </div>
         <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>
         Review submitted for moderation
@@ -637,7 +706,7 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
   );
 }
 
-function ProfessorReviewsTab({ token, userEmail }) {
+function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
   const [selected,  setSelected]  = useState(null);
   const [reviews,   setReviews]   = useState([]);
   const [loading,   setLoading]   = useState(false);
@@ -658,7 +727,7 @@ function ProfessorReviewsTab({ token, userEmail }) {
   };
 
   let displayed = reviews
-    .filter(r => !search || r.comment?.toLowerCase().includes(search.toLowerCase()));
+    .filter(r => !search || fuzzySearch(r.comment, search));
   displayed = sort === "top"
     ? [...displayed].sort((a,b) => b.rating - a.rating)
     : [...displayed].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -666,7 +735,7 @@ function ProfessorReviewsTab({ token, userEmail }) {
   return (
     <div>
       <div style={{ marginBottom:20 }}>
-        <label style={rv.label}>Browse reviews by professor</label>
+        <label style={{ ...rv.label, fontSize:13, fontWeight:400, color:"var(--text2)" }}>Browse reviews by professor</label>
         <ProfessorSearch onSelect={selectProfessor} />
       </div>
 
@@ -674,20 +743,32 @@ function ProfessorReviewsTab({ token, userEmail }) {
         <>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, marginBottom:18 }}>
             <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}> {selected}</div>
+            {onNavigateToForum && (
+              <button
+                onClick={() => onNavigateToForum("", selected)}
+                style={{
+                  padding:"7px 16px", background:"var(--accent2)", color:"white",
+                  border:"none", borderRadius:10, fontSize:12,
+                  fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                }}
+              >
+                Discuss this Professor
+              </button>
+            )}
             <div style={{ display:"flex", gap:8 }}>
               <div style={{ display:"flex", gap:4, background:"var(--bg)", padding:4, borderRadius:10 }}>
                 {[{id:"top",label:"Top"},{id:"new",label:"New"}].map(s => (
                   <button key={s.id} onClick={() => setSort(s.id)} style={{
                     padding:"6px 14px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
-                    background: sort===s.id ? "var(--primary)" : "transparent",
-                    color:      sort===s.id ? "#ffffff" : "var(--text2)",
+                    background: sort===s.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+                    color:      sort===s.id ? "var(--primary)" : "var(--text2)",
                   }}>{s.label}</button>
                 ))}
               </div>
               {token && (
                 <button onClick={() => setComposing(c => !c)} style={{
-                  padding:"9px 20px 9px 12px", background:"var(--accent)", color:"white",
-                  border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer",
+                  padding:"9px 20px 9px 12px", background:"color-mix(in srgb, var(--accent) 15%, transparent)", color:"var(--accent)",
+                  border:"1px solid color-mix(in srgb, var(--accent) 30%, transparent)", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer",
                 }}><Pen size={14} style={{ marginRight:6, verticalAlign:"middle" }} />Write a Review</button>
               )}
             </div>
@@ -753,6 +834,6 @@ const rv = {
   },
   label:     { display:"block", fontSize:12, fontWeight:600, color:"var(--text)", marginBottom:6 },
   input:     { width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", marginBottom:16, display:"block" },
-  submitBtn: { padding:"10px 24px", background:"var(--primary)", color:"white", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  submitBtn: { padding:"10px 24px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
   cancelBtn: { padding:"10px 18px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
 };

@@ -47,10 +47,10 @@ public class ReviewService {
     }
 
     public List<Review> getApprovedReviewsForCourse(Long courseId) {
-        return reviewRepo.findBySectionCourseIdAndStatus(courseId, ReviewStatus.APPROVED);
+        return reviewRepo.findBySectionCourseIdAndStatusIn(courseId, List.of(ReviewStatus.APPROVED, ReviewStatus.PENDING));
     }
 
     public List<Review> getApprovedReviewsForSection(Long sectionId) {
-        return reviewRepo.findBySectionIdAndStatus(sectionId, ReviewStatus.APPROVED);
+        return reviewRepo.findBySectionIdAndStatusIn(sectionId, List.of(ReviewStatus.APPROVED, ReviewStatus.PENDING));
     }
 }

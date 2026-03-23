@@ -135,6 +135,8 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
 function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
   const [form, setForm] = useState(initial || EMPTY);
   const [err,  setErr]  = useState("");
+  const [formCourseDropOpen, setFormCourseDropOpen] = useState(false);
+  const [formTypeDropOpen,   setFormTypeDropOpen]   = useState(false);
   const set = (k, v) => { setForm(p => ({ ...p, [k]:v })); setErr(""); };
 
   const save = () => {
@@ -162,10 +164,29 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
           <div style={{ flex:1, minWidth:140 }}>
             <label style={tm.label}>Course</label>
             {courses.length > 0 ? (
-                <select value={form.course} onChange={e=>set("course",e.target.value)} style={{ ...tm.input, cursor:"pointer" }}>
-                  <option value="">Select course…</option>
-                  {courses.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <div style={{ position:"relative", marginBottom:14 }}>
+                  <button onClick={() => setFormCourseDropOpen(o => !o)} style={{
+                    padding:"10px 14px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
+                    display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
+                    background:"var(--surface2)", border:"1px solid var(--border)", color: form.course ? "var(--text)" : "var(--text3)",
+                    fontFamily:"'DM Sans',sans-serif",
+                  }}>
+                    {form.course || "Select course…"}
+                    <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: formCourseDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+                  </button>
+                  {formCourseDropOpen && (
+                    <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
+                      {courses.map(c => (
+                        <div key={c} onClick={() => { set("course", c); setFormCourseDropOpen(false); }}
+                          style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                            background: form.course === c ? "var(--divider)" : "transparent",
+                            color:      form.course === c ? "var(--accent)"  : "var(--primary)" }}>
+                          {c}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
             ) : (
                 <input value={form.course} onChange={e=>set("course",e.target.value)}
                        placeholder="e.g. CMPS 271"
@@ -174,10 +195,29 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
           </div>
           <div style={{ flex:1, minWidth:140 }}>
             <label style={tm.label}>Type</label>
-            <select value={form.type} onChange={e=>set("type",e.target.value)} style={{ ...tm.input, cursor:"pointer" }}>
-              <option value="">Select type…</option>
-              {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
+            <div style={{ position:"relative", marginBottom:14 }}>
+              <button onClick={() => setFormTypeDropOpen(o => !o)} style={{
+                padding:"10px 14px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
+                display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
+                background:"var(--surface2)", border:"1px solid var(--border)", color: form.type ? "var(--text)" : "var(--text3)",
+                fontFamily:"'DM Sans',sans-serif",
+              }}>
+                {form.type || "Select type…"}
+                <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: formTypeDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+              </button>
+              {formTypeDropOpen && (
+                <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
+                  {TYPES.map(t => (
+                    <div key={t} onClick={() => { set("type", t); setFormTypeDropOpen(false); }}
+                      style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                        background: form.type === t ? "var(--divider)" : "transparent",
+                        color:      form.type === t ? "var(--accent)"  : "var(--primary)" }}>
+                      {t}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             {form.type === "Other" && (
                 <input value={form.customType||""} onChange={e=>set("customType",e.target.value)}
                        placeholder="Specify (optional)" style={{ ...tm.input, marginTop:6, fontSize:12 }} className="tm-input" />
@@ -217,6 +257,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
   const [courseFilter, setCourseFilter] = useState("");
   const [composing,    setComposing]    = useState(false);
   const [editing,      setEditing]      = useState(initialEditTask || null);
+  const [courseFilterDropOpen, setCourseFilterDropOpen] = useState(false);
 
   const USER_ID = getUserId();
 
@@ -409,7 +450,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
           {onNavigate && (
               <button
                   onClick={() => onNavigate("planner")}
-                  style={{ flexShrink:0, background:"var(--accent)", color:"#fff", border:"none", borderRadius:9, padding:"7px 16px", fontSize:13, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" }}
+                  style={{ flexShrink:0, background:"var(--divider)", color:"var(--accent)", border:"none", borderRadius:9, padding:"7px 16px", fontSize:13, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" }}
               >
                 Go to Study Planner →
               </button>
@@ -442,16 +483,16 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
             { label:"Overdue", val:counts.overdue, filter:"Overdue", warn:counts.overdue>0 },
           ].map(c => (
               <button key={c.filter} onClick={() => setFilter(c.filter)} style={{
-                padding:"7px 16px",
+                padding:"9px 22px",
                 border:"none",
-                borderRadius:8,
+                borderRadius:10,
                 fontSize:13,
                 fontWeight:600,
                 cursor:"pointer",
                 fontFamily:"'DM Sans',sans-serif",
                 transition:"all .15s",
-                background: filter === c.filter ? "var(--primary)" : "transparent",
-                color: filter === c.filter ? "#ffffff" : c.warn ? "var(--error)" : "var(--text2)",
+                background: filter === c.filter ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+                color: filter === c.filter ? "var(--primary)" : c.warn ? "var(--error)" : "var(--text2)",
               }}>
                 {c.label} <span style={{ opacity:.7 }}>{c.val}</span>
               </button>
@@ -465,14 +506,34 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
                    className="tm-input"
                    style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"var(--text)", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
           </div>
-          <div style={{ display:"flex", alignItems:"center", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"8px 14px", flex:"1 1 160px", maxWidth:200 }}>
-            <select value={courseFilter} onChange={e => { setSearch(""); setCourseFilter(e.target.value); }}
-                    style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color: courseFilter ? "var(--text)" : "var(--text3)", width:"100%", fontFamily:"'DM Sans',sans-serif", cursor:"pointer" }}>
-              <option value="">All Courses</option>
-              {allCourses.map(c => (
-                  <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
+          <div style={{ position:"relative", flex:"1 1 160px", maxWidth:200 }}>
+            <button onClick={() => setCourseFilterDropOpen(o => !o)} style={{
+              padding:"8px 14px", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer",
+              display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
+              background:"var(--surface)", border:"1px solid var(--border)", color: courseFilter ? "var(--text)" : "var(--text3)",
+              fontFamily:"'DM Sans',sans-serif",
+            }}>
+              {courseFilter || "All Courses"}
+              <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: courseFilterDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+            </button>
+            {courseFilterDropOpen && (
+              <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
+                <div onClick={() => { setSearch(""); setCourseFilter(""); setCourseFilterDropOpen(false); }}
+                  style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                    background: !courseFilter ? "var(--divider)" : "transparent",
+                    color:      !courseFilter ? "var(--accent)"  : "var(--primary)" }}>
+                  All Courses
+                </div>
+                {allCourses.map(c => (
+                  <div key={c} onClick={() => { setSearch(""); setCourseFilter(c); setCourseFilterDropOpen(false); }}
+                    style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                      background: courseFilter === c ? "var(--divider)" : "transparent",
+                      color:      courseFilter === c ? "var(--accent)"  : "var(--primary)" }}>
+                    {c}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
         </div>
@@ -537,9 +598,9 @@ const tm = {
   formCard:  { background:"var(--surface)", borderRadius:18, padding:"24px 26px", border:"1px solid var(--border)", boxShadow:"0 4px 20px rgba(49,72,122,0.09)", marginBottom:0 },
   label:     { display:"block", fontSize:12, fontWeight:600, color:"var(--text)", marginBottom:6 },
   input:     { width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", marginBottom:14, display:"block", transition:"border-color .15s", outline:"none" },
-  saveBtn:   { padding:"10px 24px", background:"var(--primary)", color:"white", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  saveBtn:   { padding:"10px 24px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
   cancelBtn: { padding:"10px 18px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
-  newBtn:    { padding:"10px 20px", background:"var(--accent)", color:"white", border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  newBtn:    { padding:"10px 20px", background:"var(--divider)", color:"var(--accent)", border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
   iconBtn:   { background:"none", border:"none", cursor:"pointer", fontSize:15, borderRadius:6, padding:"3px 5px", transition:"background .15s" },
   badge:     (color, bg) => ({ fontSize:11, fontWeight:600, padding:"2px 8px", borderRadius:6, color, background:bg, flexShrink:0 }),
 };

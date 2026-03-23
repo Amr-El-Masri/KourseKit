@@ -19,4 +19,8 @@ public interface StudyPlanRepository extends JpaRepository<StudyPlanEntry, Long>
 
     @Query("SELECT COUNT(e) > 0 FROM StudyPlanEntry e WHERE e.user.id = :userId AND e.task.id = :taskId AND e.weekStart = :weekStart")
     boolean existsByUserIdAndTaskIdAndWeekStart(@Param("userId") Long userId, @Param("taskId") Long taskId, @Param("weekStart") LocalDate weekStart);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("UPDATE StudyPlanEntry e SET e.completedHours = 0 WHERE e.id IN :ids")
+    void resetCompletedHoursByIds(@Param("ids") List<Long> ids);
 }

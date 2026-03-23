@@ -392,6 +392,9 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
   // Grade Simulator
   const [simPast,         setSimPast]         = useState([{ id:1, type:"", weight:"", grade:"", customType:"" }]);
 
+  // Single open-dropdown tracker for all row-level dropdowns
+  const [openDropId, setOpenDropId] = useState("");
+
   // Confirm states for Clear all and row deletes
   const [confirmClearSem,    setConfirmClearSem]    = useState(false);
   const [confirmClearCum,    setConfirmClearCum]    = useState(false);
@@ -545,8 +548,8 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
               <button key={c.name} onClick={() => switchCourse(selectedCourse === c.name ? "" : c.name)} style={{
                 fontSize:12, fontWeight:600, padding:"5px 14px", borderRadius:20,
                 border: selectedCourse === c.name ? "none" : "1px solid var(--border)",
-                background: selectedCourse === c.name ? "var(--primary)" : "var(--bg)",
-                color: selectedCourse === c.name ? "#fff" : "var(--accent2)",
+                background: selectedCourse === c.name ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--bg)",
+                color: selectedCourse === c.name ? "var(--primary)" : "var(--accent2)",
                 cursor:"pointer", transition:"all .15s",
               }}>
                 {c.name}
@@ -574,16 +577,16 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
-            padding:"9px 16px", 
-            border:"none", 
-            borderRadius:10, 
-            fontSize:13, 
+            padding:"9px 22px",
+            border:"none",
+            borderRadius:10,
+            fontSize:13,
             fontWeight:600,
             cursor:"pointer", 
             fontFamily:"'DM Sans',sans-serif", 
             transition:"all .15s",
-            background: activeTab === t.id ? "var(--primary)" : "transparent",
-            color: activeTab === t.id ? "#ffffff" : "var(--text2)",
+            background: activeTab === t.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+            color: activeTab === t.id ? "var(--primary)" : "var(--text2)",
           }}>
             {t.label}
           </button>
@@ -611,8 +614,8 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                   style={{
                     fontSize:12, fontWeight:600, padding:"5px 14px", borderRadius:20,
                     border: String(semToLoad) === String(s.id) ? "none" : "1px solid var(--border)",
-                    background: String(semToLoad) === String(s.id) ? "var(--primary)" : "var(--bg)",
-                    color: String(semToLoad) === String(s.id) ? "#fff" : "var(--accent2)",
+                    background: String(semToLoad) === String(s.id) ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--bg)",
+                    color: String(semToLoad) === String(s.id) ? "var(--primary)" : "var(--accent2)",
                     cursor:"pointer", transition:"all .15s",
                   }}
                 >
@@ -630,24 +633,81 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             <span style={{ width:28 }} />
           </div>
           {semCourses.map(c => (
-            <div key={c.id} style={gc.row}>
+            <div key={c.id} style={{ ...gc.row, position:"relative", overflow:"visible" }}>
               {semToLoad ? (
-                <select className="gc-input" value={c.name} onChange={e=>updateRow(setSemCourses,c.id,"name",e.target.value)} style={{ ...gc.input, cursor:"pointer" }}>
-                  <option value="">Select course</option>
-                  {(savedSemesters.find(s => String(s.id) === String(semToLoad))?.courses || []).filter(x => x.courseCode).map(x => <option key={x.courseCode} value={x.courseCode}>{x.courseCode}</option>)}
-                </select>
+                <div style={{ position:"relative", flex:1 }}>
+                  <button onClick={() => setOpenDropId(openDropId === `${c.id}-semcourse` ? "" : `${c.id}-semcourse`)} style={{
+                    padding:"9px 12px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
+                    display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
+                    background:"var(--surface2)", border:"1px solid var(--border)", color: c.name ? "var(--text)" : "var(--text3)",
+                    fontFamily:"'DM Sans',sans-serif",
+                  }}>
+                    {c.name || "Select course"}
+                    <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `${c.id}-semcourse` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+                  </button>
+                  {openDropId === `${c.id}-semcourse` && (
+                    <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
+                      {(savedSemesters.find(s => String(s.id) === String(semToLoad))?.courses || []).filter(x => x.courseCode).map(x => (
+                        <div key={x.courseCode} onClick={() => { updateRow(setSemCourses, c.id, "name", x.courseCode); setOpenDropId(""); }}
+                          style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                            background: c.name === x.courseCode ? "var(--divider)" : "transparent",
+                            color:      c.name === x.courseCode ? "var(--accent)"  : "var(--primary)" }}>
+                          {x.courseCode}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ) : dashboardCourses.length > 0 ? (
-                <select className="gc-input" value={c.name} onChange={e=>updateRow(setSemCourses,c.id,"name",e.target.value)} style={{ ...gc.input, cursor:"pointer" }}>
-                  <option value="">Select course</option>
-                  {dashboardCourses.map(dc => <option key={dc.id} value={dc.name}>{dc.name}</option>)}
-                </select>
+                <div style={{ position:"relative", flex:1 }}>
+                  <button onClick={() => setOpenDropId(openDropId === `${c.id}-semcourse` ? "" : `${c.id}-semcourse`)} style={{
+                    padding:"9px 12px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
+                    display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
+                    background:"var(--surface2)", border:"1px solid var(--border)", color: c.name ? "var(--text)" : "var(--text3)",
+                    fontFamily:"'DM Sans',sans-serif",
+                  }}>
+                    {c.name || "Select course"}
+                    <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `${c.id}-semcourse` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+                  </button>
+                  {openDropId === `${c.id}-semcourse` && (
+                    <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
+                      {dashboardCourses.map(dc => (
+                        <div key={dc.id} onClick={() => { updateRow(setSemCourses, c.id, "name", dc.name); setOpenDropId(""); }}
+                          style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                            background: c.name === dc.name ? "var(--divider)" : "transparent",
+                            color:      c.name === dc.name ? "var(--accent)"  : "var(--primary)" }}>
+                          {dc.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               ) : (
                 <input className="gc-input" value={c.name} onChange={e=>updateRow(setSemCourses,c.id,"name",e.target.value)} placeholder="e.g. CMPS 271" style={gc.input} />
               )}
-              <select className="gc-input" value={c.grade} onChange={e=>updateRow(setSemCourses,c.id,"grade",e.target.value)} style={{ ...gc.input, maxWidth:150, cursor:"pointer" }}>
-                <option value="">Grade</option>
-                {LETTER_GRADES.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
+              <div style={{ position:"relative", flex:1, maxWidth:150 }}>
+                <button onClick={() => setOpenDropId(openDropId === `${c.id}-grade` ? "" : `${c.id}-grade`)} style={{
+                  padding:"9px 12px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
+                  display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
+                  background:"var(--surface2)", border:"1px solid var(--border)", color: c.grade ? "var(--text)" : "var(--text3)",
+                  fontFamily:"'DM Sans',sans-serif",
+                }}>
+                  {c.grade || "Grade"}
+                  <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `${c.id}-grade` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+                </button>
+                {openDropId === `${c.id}-grade` && (
+                  <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
+                    {LETTER_GRADES.map(g => (
+                      <div key={g} onClick={() => { updateRow(setSemCourses, c.id, "grade", g); setOpenDropId(""); }}
+                        style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                          background: c.grade === g ? "var(--divider)" : "transparent",
+                          color:      c.grade === g ? "var(--accent)"  : "var(--primary)" }}>
+                        {g}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <input className="gc-input" value={c.credits} onChange={e=>updateRow(setSemCourses,c.id,"credits",e.target.value)} placeholder="e.g. 3" type="number" style={{ ...gc.input, maxWidth:90 }} />
               {confirmDelSem === c.id ? (
                 <span style={{ display:"flex", alignItems:"center", gap:2 }}>
@@ -762,20 +822,37 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             <span style={{ width:28 }} />
           </div>
           {cumSems.map(c => (
-            <div key={c.id} style={gc.row}>
-              <select className="gc-input" value={c.name} onChange={e => {
-                const name = e.target.value;
-                const sem = savedSemesters.find(s => s.semesterName === name);
-                const autoGpa = sem ? computeSavedGPA(sem.courses) : null;
-                const autoCredits = sem ? (sem.courses || []).reduce((sum, sc) => sum + (Number(sc.credits) || 0), 0) : null;
-                setCumSems(p => p.map(r => r.id === c.id ? { ...r, name, gpa: autoGpa != null ? Number(autoGpa).toFixed(2) : r.gpa, credits: autoCredits != null && autoCredits > 0 ? String(autoCredits) : r.credits } : r));
-              }} style={{ ...gc.input, cursor:"pointer" }}>
-                <option value="">Select semester</option>
-                {savedSemesters.length > 0
-                  ? savedSemesters.map(s => <option key={s.id} value={s.semesterName}>{s.semesterName}</option>)
-                  : SEMESTER_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)
-                }
-              </select>
+            <div key={c.id} style={{ ...gc.row, position:"relative", overflow:"visible" }}>
+              <div style={{ position:"relative", flex:1 }}>
+                <button onClick={() => setOpenDropId(openDropId === `${c.id}-sem` ? "" : `${c.id}-sem`)} style={{
+                  padding:"9px 12px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
+                  display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
+                  background:"var(--surface2)", border:"1px solid var(--border)", color: c.name ? "var(--text)" : "var(--text3)",
+                  fontFamily:"'DM Sans',sans-serif",
+                }}>
+                  {c.name || "Select semester"}
+                  <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `${c.id}-sem` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+                </button>
+                {openDropId === `${c.id}-sem` && (
+                  <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
+                    {(savedSemesters.length > 0 ? savedSemesters.map(s => ({ key: String(s.id), value: s.semesterName })) : SEMESTER_OPTIONS.map(s => ({ key: s, value: s }))).map(opt => (
+                      <div key={opt.key} onClick={() => {
+                        const name = opt.value;
+                        const sem = savedSemesters.find(s => s.semesterName === name);
+                        const autoGpa = sem ? computeSavedGPA(sem.courses) : null;
+                        const autoCredits = sem ? (sem.courses || []).reduce((sum, sc) => sum + (Number(sc.credits) || 0), 0) : null;
+                        setCumSems(p => p.map(r => r.id === c.id ? { ...r, name, gpa: autoGpa != null ? Number(autoGpa).toFixed(2) : r.gpa, credits: autoCredits != null && autoCredits > 0 ? String(autoCredits) : r.credits } : r));
+                        setOpenDropId("");
+                      }}
+                        style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                          background: c.name === opt.value ? "var(--divider)" : "transparent",
+                          color:      c.name === opt.value ? "var(--accent)"  : "var(--primary)" }}>
+                        {opt.value}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <input className="gc-input" value={c.gpa}     onChange={e=>updateRow(setCumSems,c.id,"gpa",e.target.value)}     placeholder="e.g. 3.67" type="number" step="0.01" style={{ ...gc.input, maxWidth:120 }} />
               <input className="gc-input" value={c.credits} onChange={e=>updateRow(setCumSems,c.id,"credits",e.target.value)} placeholder="e.g. 15"   type="number" style={{ ...gc.input, maxWidth:90 }} />
               {confirmDelCum === c.id ? (
@@ -906,12 +983,29 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             <span style={{ width:28 }} />
           </div>
           {components.map(c => (
-            <div key={c.id} style={{ ...gc.row, alignItems: c.type === "Other" ? "flex-start" : "center" }}>
-              <div style={{ flex:1, maxWidth:140 }}>
-                <select className="gc-input" value={c.type} onChange={e=>updateRow(setComponents,c.id,"type",e.target.value)} style={{ ...gc.input, width:"100%", cursor:"pointer" }}>
-                  <option value="">Select type…</option>
-                  {COMP_TYPES.map(t=><option key={t}>{t}</option>)}
-                </select>
+            <div key={c.id} style={{ ...gc.row, alignItems: c.type === "Other" ? "flex-start" : "center", position:"relative", overflow:"visible" }}>
+              <div style={{ flex:1, maxWidth:140, position:"relative" }}>
+                <button onClick={() => setOpenDropId(openDropId === `${c.id}-type` ? "" : `${c.id}-type`)} style={{
+                  padding:"9px 12px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
+                  display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
+                  background:"var(--surface2)", border:"1px solid var(--border)", color: c.type ? "var(--text)" : "var(--text3)",
+                  fontFamily:"'DM Sans',sans-serif",
+                }}>
+                  {c.type || "Select type…"}
+                  <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `${c.id}-type` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+                </button>
+                {openDropId === `${c.id}-type` && (
+                  <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
+                    {COMP_TYPES.map(t => (
+                      <div key={t} onClick={() => { updateRow(setComponents, c.id, "type", t); setOpenDropId(""); }}
+                        style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                          background: c.type === t ? "var(--divider)" : "transparent",
+                          color:      c.type === t ? "var(--accent)"  : "var(--primary)" }}>
+                        {t}
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {c.type === "Other" && (
                   <input className="gc-input" value={c.customType||""} onChange={e=>updateRow(setComponents,c.id,"customType",e.target.value)} placeholder="Specify (optional)" style={{ ...gc.input, width:"100%", marginTop:4, fontSize:12 }} />
                 )}
@@ -1096,11 +1190,28 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                     {!hasGrade && <span style={{ fontSize:11, color:"var(--text3)", fontWeight:400, marginLeft:6 }}>← enter a grade to include</span>}
                   </span>
                 ) : (
-                  <div style={{ flex:2 }}>
-                    <select className="gc-input" value={c.type} onChange={e=>updateRow(setSimPast,c.id,"type",e.target.value)} style={{ ...gc.input, width:"100%", cursor:"pointer" }}>
-                      <option value="">Select type…</option>
-                      {COMP_TYPES.map(t=><option key={t}>{t}</option>)}
-                    </select>
+                  <div style={{ flex:2, position:"relative" }}>
+                    <button onClick={() => setOpenDropId(openDropId === `sim-${c.id}-type` ? "" : `sim-${c.id}-type`)} style={{
+                      padding:"9px 12px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
+                      display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
+                      background:"var(--surface2)", border:"1px solid var(--border)", color: c.type ? "var(--text)" : "var(--text3)",
+                      fontFamily:"'DM Sans',sans-serif",
+                    }}>
+                      {c.type || "Select type…"}
+                      <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `sim-${c.id}-type` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+                    </button>
+                    {openDropId === `sim-${c.id}-type` && (
+                      <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
+                        {COMP_TYPES.map(t => (
+                          <div key={t} onClick={() => { updateRow(setSimPast, c.id, "type", t); setOpenDropId(""); }}
+                            style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                              background: c.type === t ? "var(--divider)" : "transparent",
+                              color:      c.type === t ? "var(--accent)"  : "var(--primary)" }}>
+                            {t}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
                 {selectedCourse ? (
@@ -1211,7 +1322,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 // Styles
 const gc = {
   tabBar:    { display:"flex", gap:4, background:"var(--surface)", padding:5, borderRadius:14, border:"1px solid var(--border)", marginBottom:24, flexWrap:"wrap" },
-  tab:       { padding:"9px 16px", border:"none", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s, color .15s", display:"flex", alignItems:"center" },
+  tab:       { padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s, color .15s", display:"flex", alignItems:"center" },
   card:      { background:"var(--surface)", borderRadius:18, padding:"24px 26px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid var(--border)" },
   headerRow: { display:"flex", gap:12, marginBottom:8, paddingBottom:8, borderBottom:"1px solid var(--border)" },
   colHead:   { fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", flex:1 },
@@ -1219,6 +1330,6 @@ const gc = {
   input:     { flex:1, padding:"9px 12px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", outline:"none", transition:"border-color .15s" },
   removeBtn: { width:28, height:28, border:"none", background:"none", color:"var(--text3)", cursor:"pointer", fontSize:14, borderRadius:6, flexShrink:0 },
   addRowBtn: { padding:"7px 14px", background:"var(--divider)", color:"var(--accent)", border:"1px solid var(--border)", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", marginTop:4, transition:"background .15s" },
-  calcBtn:   { padding:"10px 22px", background:"var(--primary)", color:"white", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s" },
+  calcBtn:   { padding:"10px 22px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s" },
   clearBtn:  { padding:"9px 16px", background:"var(--bg)", color:"var(--error)", border:"1px solid var(--error-border)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s" },
 };

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ArrowLeft, Clock, MapPin, Users, BookOpen, Building2, Calendar } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, Users, BookOpen, Building2, Calendar, MessageSquare } from "lucide-react";
 
 const API = "http://localhost:8080";
 
@@ -219,7 +219,7 @@ function SectionCard({ section, index }) {
   );
 }
 
-export default function CourseDetails({ course, onBack }) {
+export default function CourseDetails({ course, onBack, onNavigateToForum }) {
   const [data,    setData]    = useState(null);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState("");
@@ -305,6 +305,18 @@ export default function CourseDetails({ course, onBack }) {
             )}
           </div>
         )}
+
+        <button
+                    onClick={() => onNavigateToForum(data?.courseCode || course.courseCode, "")}
+                    style={{
+                      marginTop: 14, display: "flex", alignItems: "center", gap: 8,
+                      padding: "9px 18px", background: "var(--primary)", color: "white",
+                      border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600,
+                      cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  >
+                    <MessageSquare size={14} /> Discuss this Course
+                  </button>
       </div>
 
       {/* Sections */}

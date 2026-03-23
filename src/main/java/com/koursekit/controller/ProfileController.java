@@ -193,6 +193,7 @@ public class ProfileController {
         m.put("github",              user.getGithub()         != null ? user.getGithub()          : "");
         m.put("openToStudyGroups",   user.isOpenToStudyGroups());
         m.put("interests",           user.getInterests()      != null ? user.getInterests()       : "");
+        m.put("strikeCount",         user.getStrikeCount());
         return m;
     }
 
