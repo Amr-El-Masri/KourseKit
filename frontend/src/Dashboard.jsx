@@ -23,8 +23,8 @@ const AVATAR_ICONS = [
 ];
 
 const DAYS_OF_WEEK = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-
 const GC_COMP_TYPES = ["Midterm Exam","Final Exam","Assignment","Project","Quiz","Lab","Presentation","Attendance","Participation","Other"];
+
 function inferGCType(name) {
   const n = (name || "").toLowerCase();
   if (/midterm/.test(n)) return "Midterm Exam";
@@ -38,6 +38,7 @@ function inferGCType(name) {
   const exact = GC_COMP_TYPES.find(t => t.toLowerCase() === n);
   if (exact) return exact;
   return "Other";
+}
 }
 const EVENT_TYPES  = [
   { label:"Class",   color:"var(--primary)",  bg:"var(--blue-light-bg)" },
@@ -690,8 +691,21 @@ export default function Dashboard({ onLogout }) {
   const [showAddEvent, setShowAddEvent] = useState(false);
   const [newEvent, setNewEvent] = useState({ day:"Mon", label:"", time:"", type:"Class" });
 
+  const [dismissedSections, setDismissedSections] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("kk_dismissed_sections") || "[]")); } catch { return new Set(); }
+  });
+  const dismissSection = (dateStr, crn) => {
+    const key = `${dateStr}_${crn}`;
+    const next = new Set(dismissedSections);
+    next.add(key);
+    setDismissedSections(next);
+    localStorage.setItem("kk_dismissed_sections", JSON.stringify([...next]));
+  };
+
   const selectedSem = apiSemesters.find(s => s.semesterName === semester) ?? { courses: [] };
-  const semCourseList = (selectedSem.courses || []).filter(c => !c.componenttype && !(/^B(?!L)/i.test(c.section?.sectionNumber || "") || /^E/i.test(c.section?.sectionNumber || ""))).map(c => ({ id: c.id, name: c.courseCode, section: c.section, grade: c.grade, credits: c.credits }));
+<const semCourseList = (selectedSem.courses || [])
+  .filter(c => !c.componenttype && !(/^B(?!L)/i.test(c.section?.sectionNumber || "") || /^E/i.test(c.section?.sectionNumber || "")))
+  .map(c => ({ id: c.id, name: c.courseCode, section: c.section, grade: c.grade, credits: c.credits }));
 
   const addTodo = () => {
     if (!todoInput.trim()) { setTodoError(true); return; }
@@ -1231,22 +1245,22 @@ export default function Dashboard({ onLogout }) {
               {calTabs.map(t=><button key={t.id} onClick={()=>setCalTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:calTab===t.id?"var(--primary)":"transparent",color:calTab===t.id?"#fff":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
             </div>
           </div>
-          {calTab==="deadlines" ? (() => {
-            const now2 = new Date();
-            const upcoming = tasks.filter(t => !t.done && t.due).sort((a,b) => new Date(a.due)-new Date(b.due)).slice(0,8);
-            const urgencyColor = due => { const d=(new Date(due)-now2)/86400000; return d<0?"var(--error)":d<1?"var(--error)":d<3?"#e67e22":"#27ae60"; };
-            const urgencyLabel = due => { const d=(new Date(due)-now2)/86400000; return d<0?"Overdue":d<1?"Today":d<2?"Tomorrow":new Date(due).toLocaleDateString("en-US",{month:"short",day:"numeric"}); };
-            return upcoming.length===0 ? (
-              <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No upcoming deadlines!</div>
-            ) : (
-              <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:4,maxHeight:280,overflowY:"auto"}}>
-                {upcoming.map((t,i) => {
-                  const color = urgencyColor(t.due);
-                  return (
-                    <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:"var(--surface2)",borderLeft:`3px solid ${color}`}}>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontSize:12,fontWeight:600,color:"var(--primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.title}</div>
-                        <div style={{fontSize:11,color:"var(--text2)",marginTop:1}}>{[t.course,t.type].filter(Boolean).join(" · ")}</div>
+{calTab==="deadlines" ? (() => {
+  const now2 = new Date();
+  const upcoming = tasks.filter(t => !t.done && t.due).sort((a,b) => new Date(a.due)-new Date(b.due)).slice(0,8);
+  const urgencyColor = due => { const d=(new Date(due)-now2)/86400000; return d<0?"var(--error)":d<1?"var(--error)":d<3?"#e67e22":"#27ae60"; };
+  const urgencyLabel = due => { const d=(new Date(due)-now2)/86400000; return d<0?"Overdue":d<1?"Today":d<2?"Tomorrow":new Date(due).toLocaleDateString("en-US",{month:"short",day:"numeric"}); };
+  return upcoming.length===0 ? (
+    <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No upcoming deadlines!</div>
+  ) : (
+    <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:4,maxHeight:280,overflowY:"auto"}}>
+      {upcoming.map((t,i) => {
+        const color = urgencyColor(t.due);
+        return (
+          <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:"var(--surface2)",borderLeft:`3px solid ${color}`}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:12,fontWeight:600,color:"var(--primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.title}</div>
+              <div style={{fontSize:11,color:"var(--text2)",marginTop:1}}>{[t.course,t.type].filter(Boolean).join(" · ")}</div>
                       </div>
                       <span style={{fontSize:11,fontWeight:700,color,background:color+"18",padding:"2px 8px",borderRadius:6,flexShrink:0,whiteSpace:"nowrap"}}>{urgencyLabel(t.due)}</span>
                     </div>
@@ -1915,7 +1929,7 @@ export default function Dashboard({ onLogout }) {
               />
           )}
           {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
-          {activePage === "planner" && <StudyPlanner />}
+          {activePage === "planner" && <StudyPlanner enrolledSections={enrolledSections} />}
           {activePage === "students" && <StudentDirectory />}
           {activePage === "profile" && (
               <Profile onProfileSave={p => setProfile(p)} onSemestersUpdated={fetchSemesters} />
