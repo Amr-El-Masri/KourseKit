@@ -1794,13 +1794,13 @@ export default function StudyPlanner({ enrolledSections = [] }) {
 
         /* ── Header ── */
         .sp-header {
-          min-height: 64px;
+          min-height: 71px;
           display: flex;
           align-items: center;
           justify-content: space-between;
           padding: 8px 16px;
           border-bottom: 1px solid var(--border);
-          background: var(--surface);
+          background: var(--bg);
           flex-shrink: 0;
           gap: 10px;
           flex-wrap: wrap;
@@ -1884,7 +1884,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
           width: 240px;
           min-width: 180px;
           flex-shrink: 1;
-          background: var(--surface);
+          background: var(--bg);
           border-right: 1px solid var(--border);
           display: flex;
           flex-direction: column;
@@ -2197,7 +2197,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
           display: flex;
           flex-shrink: 0;
           border-bottom: 1px solid var(--border);
-          background: var(--surface);
+          background: var(--bg);
         }
 
         .sp-gutter-spacer {
@@ -2255,7 +2255,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
           position: relative;
           height: ${TOTAL_HOURS * HOUR_HEIGHT + 20}px;
           border-right: 1px solid var(--border);
-          background: var(--surface);
+          background: var(--bg);
         }
 
         .sp-time-label {
@@ -2282,7 +2282,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
           border-right: 1px solid var(--border);
           cursor: default;
           user-select: none;
-          background: var(--surface);
+          background: var(--bg);
         }
         .sp-day-column:last-child { border-right: none; }
         .sp-day-column.avail-mode { cursor: crosshair; }

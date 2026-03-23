@@ -34,45 +34,74 @@
   --blue-light-bg: #eef2fb;
   --blue-border:   #c5d4ef;
 
+  /* sidebar */
+  --sidebar-bg: #31487A;
+
   /* study planner */
   --sp-bg1:   #FDFBFF;
   --sp-bg2:   rgba(255,255,255,0.85);
   --button:   #253a63;
+
+  /* schedule widget */
+  --sched1: #4d7fa8;
+  --sched2: #3d8f6a;
+  --sched3: #a06840;
+  --sched4: #a04878;
+  --sched5: #3d6fa0;
+  --sched6: #7048a0;
+  --sched7: #8a7830;
 }
 
 [data-theme="dark"] {
-  --bg:            #232425;
-  --surface:       #1c1c1f;
-  --surface2:      #3a3a45;
-  --surface3:      #2a2535;
+  /* backgrounds — deep cool blue-gray */
+  --bg:            #0d1117;
+  --surface:       #141a24;
+  --surface2:      #1a2232;
+  --surface3:      #172030;
 
-  --text:          #cbd1d8;
-  --text-body:     #85808e;
-  --text2:         #c3bfcf;
-  --text3:         #B8A9C9;
+  /* text — cool blue-white */
+  --text:          #dce2ee;
+  --text-body:     #96a0ba;
+  --text2:         #66708a;
+  --text3:         #74809a;
 
-  --primary:       #a4b1d0;
-  --primary2:      #8aa5e0;
-  --accent:        #a791ca;
-  --accent2:       #bcb8c3;
+  --primary:       #5a80b8;
+  --primary2:      #4a70a8;
+  --accent:        #6070a8;
+  --accent2:       #7888b8;
 
-  --border:        #484857;
-  --border2:       #e3e6ed;
-  --divider:       #3b304d;
+  /* borders */
+  --border:        #1e2838;
+  --border2:       #2e4060;
+  --divider:       #182438;
 
-  --success:       #699e7f;
-  --success-bg:    #122a1e;
-  --error:         #a85353;
-  --error-bg:      #2a1616;
-  --error-border:  #5a2e2e;
-  --warn:          #e09a3a;
-  --warn1:         #d08a30;
-  --warn-bg:       #2a1e0a;
-  --star:          #f5a623;
-  --blue-light-bg: #283042;
-  --blue-border:   #696c72;
+  /* status */
+  --success:       #52986e;
+  --success-bg:    #0a1e14;
+  --error:         #b06060;
+  --error-bg:      #1e0c0c;
+  --error-border:  #3e1c1c;
+  --warn:          #c09030;
+  --warn1:         #b08020;
+  --warn-bg:       #1a1408;
+  --star:          #cc9a20;
+  --blue-light-bg: #101828;
+  --blue-border:   #263850;
 
-  --sp-bg1:   #242432;
-  --sp-bg2:   rgba(40,40,55,0.85);
-  --button:   #7b96c8;
+  /* sidebar */
+  --sidebar-bg: #1e2535;
+
+  /* study planner */
+  --sp-bg1:   #101620;
+  --sp-bg2:   rgba(12,16,24,0.92);
+  --button:   #6488c0;
+
+  /* schedule widget — cool, distinct */
+  --sched1: #5aa0d0;
+  --sched2: #50a882;
+  --sched3: #b09060;
+  --sched4: #b87098;
+  --sched5: #6888c0;
+  --sched6: #8068b8;
+  --sched7: #b0a838;
 }

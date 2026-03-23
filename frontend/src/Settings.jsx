@@ -145,7 +145,7 @@ export default function Settings({ onLogout }) {
   const eyeOn  = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
 
   return (
-    <div style={{ padding: "32px 36px", fontFamily: "'DM Sans', sans-serif", maxWidth: 860 }}>
+    <div style={{ padding: "32px 36px", fontFamily: "'DM Sans', sans-serif" }}>
       <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 24, color: "var(--primary)", marginBottom: 24 }}>
         Account Settings
       </div>
@@ -184,7 +184,7 @@ export default function Settings({ onLogout }) {
       </div>
 
       {/* Account */}
-      <div style={{ background: "var(--surface)", borderRadius: 16, border: "1px solid var(--border)", padding: "20px 24px" }}>
+      <div style={{ background: "var(--surface)", borderRadius: 16, border: "1px solid var(--border)", padding: "20px 24px", marginBottom: 20 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Account</div>
 
         <div style={row}>
@@ -278,6 +278,7 @@ export default function Settings({ onLogout }) {
             </button>
           </div>
         )}
+
       </div>
 
       {/* Account Deletion */}

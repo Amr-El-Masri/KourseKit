@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 
 const API = "http://localhost:8080";
 
@@ -16,7 +16,7 @@ function calcDropPos(inputEl, dropHeight = 260, minWidth = 340) {
   return { top, left: r.left, width: Math.max(r.width, minWidth) };
 }
 
-export default function StudentCourses({ value, onSelect, inputStyle = {} }) {
+export default function StudentCourses({ value, onSelect, inputStyle = {}, filterPrefix = null, lockedCourse = null, autoOpen = false }) {
   const hasSection = !!value?.sectioncrn;
 
   const [query, setQuery] = useState(value?.code || "");
@@ -36,6 +36,24 @@ export default function StudentCourses({ value, onSelect, inputStyle = {} }) {
   const openDrop = (height = 260) => {
     if (inputRef.current) setDropPos(calcDropPos(inputRef.current, height));
   };
+
+  useEffect(() => {
+    if (!autoOpen || !lockedCourse || hasSection) return;
+    const load = async () => {
+      setSelectedCourse(lockedCourse);
+      setShowSections(true);
+      setLoadingSections(true);
+      openDrop(260);
+      const secs = await fetch(`${API}/api/courses/${lockedCourse.id}/sections`)
+        .then(r => r.json())
+        .catch(() => []);
+      setSections(secs);
+      setLoadingSections(false);
+      openDrop(260);
+    };
+    const t = setTimeout(load, 50);
+    return () => clearTimeout(t);
+  }, [autoOpen, lockedCourse?.id]);
 
   const handleQueryChange = (e) => {
     const q = e.target.value;
@@ -72,7 +90,22 @@ export default function StudentCourses({ value, onSelect, inputStyle = {} }) {
       .catch(() => []);
     setSections(secs);
     setLoadingSections(false);
-    openDrop(260); 
+    openDrop(260);
+  };
+
+  const handleLockedClick = async () => {
+    if (hasSection || showSections || !lockedCourse) return;
+    setSelectedCourse(lockedCourse);
+    setShowSections(true);
+    setLoadingSections(true);
+    openDrop(260);
+
+    const secs = await fetch(`${API}/api/courses/${lockedCourse.id}/sections`)
+      .then(r => r.json())
+      .catch(() => []);
+    setSections(secs);
+    setLoadingSections(false);
+    openDrop(260);
   };
 
   const handleSectionSelect = (section) => {
@@ -80,9 +113,10 @@ export default function StudentCourses({ value, onSelect, inputStyle = {} }) {
     setDropPos(null);
     onSelect({
       code: selectedCourse.courseCode,
+      courseId: selectedCourse.id,
       credits: section.creditHours || 0,
       sectioncrn: section.crn,
-      sectionno: section.sectionNumber,
+      sectionNumber: section.sectionNumber,
       profname: section.professorName,
     });
   };
@@ -95,12 +129,25 @@ export default function StudentCourses({ value, onSelect, inputStyle = {} }) {
     setSections([]);
     setShowSections(false);
     setDropPos(null);
-    onSelect({ code: "", credits: 0, sectioncrn: null, sectionno: null, profname: null });
+    onSelect({ code: lockedCourse?.courseCode || "", credits: 0, sectioncrn: null, sectionNumber: null, profname: null });
   };
 
-  const displayValue = hasSection
-    ? `${value.code}  ·  ${value.sectionNumber || value.sectionno || value.sectioncrn}`
-    : query;
+  const displaySections = filterPrefix
+    ? sections.filter(s => {
+        const sec = s.sectionNumber?.toUpperCase() || "";
+        if (sec.startsWith("BL")) return false;
+        return filterPrefix.some(p => sec.startsWith(p.toUpperCase()));
+      })
+    : sections.filter(s => {
+        const sec = s.sectionNumber?.toUpperCase() || "";
+        if (sec.startsWith("E")) return false;
+        if (sec.startsWith("B") && !sec.startsWith("BL")) return false;
+        return true;
+      });
+
+  const displayValue = lockedCourse
+    ? hasSection ? `${value.sectionNumber || value.sectioncrn}` : lockedCourse.courseCode
+    : hasSection ? `${value.code}  ·  ${value.sectionNumber || value.sectioncrn}` : query;
 
   const base = {
     width: "100%",
@@ -113,7 +160,7 @@ export default function StudentCourses({ value, onSelect, inputStyle = {} }) {
     color: "var(--text)",
     background: hasSection ? "var(--surface3,#eef2fb)" : "var(--surface2)",
     outline: "none",
-    cursor: hasSection ? "default" : "text",
+    cursor: lockedCourse && !hasSection ? "pointer" : hasSection ? "default" : "text",
     ...inputStyle,
   };
 
@@ -122,9 +169,10 @@ export default function StudentCourses({ value, onSelect, inputStyle = {} }) {
       <input
         ref={inputRef}
         value={displayValue}
-        onChange={hasSection ? undefined : handleQueryChange}
-        readOnly={hasSection}
-        placeholder="Search course"
+        onChange={hasSection || lockedCourse ? undefined : handleQueryChange}
+        onClick={lockedCourse && !hasSection ? handleLockedClick : undefined}
+        readOnly={hasSection || !!lockedCourse}
+        placeholder={lockedCourse ? "Click to pick section" : "Search course"}
         style={base}
         onBlur={() => setTimeout(() => { setShowCourses(false); setShowSections(false); setDropPos(null); }, 200)}
       />
@@ -172,8 +220,8 @@ export default function StudentCourses({ value, onSelect, inputStyle = {} }) {
             Pick a section for {selectedCourse?.courseCode}
           </div>
           {loadingSections && <div style={{ padding: "10px 14px", fontSize: 12, color: "var(--text2)" }}>Loading sections…</div>}
-          {!loadingSections && sections.length === 0 && <div style={{ padding: "10px 14px", fontSize: 12, color: "var(--text2)" }}>No sections available.</div>}
-          {sections.map(s => (
+          {!loadingSections && displaySections.length === 0 && <div style={{ padding: "10px 14px", fontSize: 12, color: "var(--text2)" }}>No sections available.</div>}
+          {displaySections.map(s => (
             <div key={s.id}
               onMouseDown={e => { e.preventDefault(); handleSectionSelect(s); }}
               style={{ padding: "10px 14px", cursor: "pointer", borderBottom: "1px solid var(--divider)" }}

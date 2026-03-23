@@ -11,6 +11,7 @@ public class SavedCourseDTO {
     private List<SavedAssessmentDTO> assessments;
     private String sectioncrn;
     private Section section;
+    private String componenttype;
 
     public SavedCourseDTO() {}
 
@@ -53,4 +54,6 @@ public class SavedCourseDTO {
     public void setsectioncrn(String sectioncrn) { this.sectioncrn = sectioncrn; }
     public Section getsection() { return section; }
     public void setsection(Section section) { this.section = section; }
+    public String getcomponenttype() { return componenttype; }
+    public void setcomponenttype(String componenttype) { this.componenttype = componenttype; }
 }
