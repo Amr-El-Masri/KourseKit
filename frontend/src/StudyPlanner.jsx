@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Pencil, Zap, RotateCcw } from "lucide-react";
 
 const HOUR_HEIGHT = 80;
@@ -54,7 +54,7 @@ function fmtDeadline(iso) {
 }
 function pxToHour(px) { return px / HOUR_HEIGHT + START_HOUR; }
 function hourToPx(hour) { return (hour - START_HOUR) * HOUR_HEIGHT; }
-function snapToHalf(hour) { return Math.round(hour * 2) / 2; }
+function snapToQuarter(hour) { return Math.round(hour * 4) / 4; }
 function isToday(date) { return date.toDateString() === new Date().toDateString(); }
 
 function slotsOverlap(a, b) {
@@ -185,7 +185,7 @@ function TimeGutter() {
     );
 }
 
-function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUncomplete, onEdit, onResizeBlock, isPast, colIndex = 0, totalCols = 1 }) {
+function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUncomplete, onEdit, onResizeBlock, isPast, isAvailabilityMode, dayBlocks, courseBlocks, colIndex = 0, totalCols = 1 }) {
     const [showMenu, setShowMenu] = useState(false);
     const [liveStart, setLiveStart] = useState(null);
     const [liveDur, setLiveDur] = useState(null);
@@ -212,10 +212,17 @@ function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUnco
         if (block.completed) return;
         e.stopPropagation(); e.preventDefault();
         const origEnd = blockStartH + block.duration;
+        const others = (dayBlocks || []).filter(b => b.id !== block.id).map(b => {
+            const s = parseFloat(b.startTime.split(":")[0]) + parseFloat(b.startTime.split(":")[1]) / 60;
+            return { start: s, end: s + b.duration };
+        });
+        const courseObs = (courseBlocks || []).map(cb => ({ start: cb.startHour, end: cb.endHour }));
+        const allObs = [...others, ...courseObs];
+        const minStart = Math.max(START_HOUR, ...allObs.filter(o => o.end <= origEnd).map(o => o.end));
         topRef.current = { startY: e.clientY, origStartH: blockStartH, origEnd, curStart: blockStartH, curDur: block.duration };
         const onMove = (ev) => {
             const diff = (ev.clientY - topRef.current.startY) / HOUR_HEIGHT;
-            const newStart = snapToHalf(topRef.current.origStartH + diff);
+            const newStart = Math.max(snapToQuarter(topRef.current.origStartH + diff), minStart);
             const newDur = Math.max(0.5, topRef.current.origEnd - newStart);
             topRef.current.curStart = newStart;
             topRef.current.curDur = newDur;
@@ -241,10 +248,18 @@ function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUnco
     const handleBotResize = useCallback((e) => {
         if (block.completed) return;
         e.stopPropagation(); e.preventDefault();
+        const others = (dayBlocks || []).filter(b => b.id !== block.id).map(b => {
+            const s = parseFloat(b.startTime.split(":")[0]) + parseFloat(b.startTime.split(":")[1]) / 60;
+            return { start: s, end: s + b.duration };
+        });
+        const courseObs = (courseBlocks || []).map(cb => ({ start: cb.startHour, end: cb.endHour }));
+        const allObs = [...others, ...courseObs];
+        const maxEnd = Math.min(END_HOUR, ...allObs.filter(o => o.start >= blockStartH).map(o => o.start));
+        const maxDur = maxEnd - blockStartH;
         botRef.current = { startY: e.clientY, origDur: block.duration, curDur: block.duration };
         const onMove = (ev) => {
             const diff = (ev.clientY - botRef.current.startY) / HOUR_HEIGHT;
-            const newDur = Math.max(0.5, snapToHalf(botRef.current.origDur + diff));
+            const newDur = Math.min(Math.max(0.5, snapToQuarter(botRef.current.origDur + diff)), maxDur);
             botRef.current.curDur = newDur;
             setLiveDur(newDur);
         };
@@ -275,7 +290,7 @@ function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUnco
                 opacity: isPast ? 0.65 : 1,
             }}
             onMouseDown={e => e.stopPropagation()}
-            onClick={e => { e.stopPropagation(); if (!topRef.current && !botRef.current) setShowMenu(v => !v); }}
+            onClick={e => { e.stopPropagation(); if (!isAvailabilityMode && !topRef.current && !botRef.current) setShowMenu(v => !v); }}
         >
             {!block.completed && (
                 <div
@@ -290,15 +305,15 @@ function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUnco
             <div className="sp-block-time">
                 {formatTime(displayStart)} · {displayDur}h
             </div>
-            <div className="sp-block-actions">
+            {!isAvailabilityMode && <div className="sp-block-actions">
                 {!block.completed
                     ? <button className="sp-block-action-btn" title="Mark complete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onComplete(block.id); }}>✓</button>
                     : <button className="sp-block-action-btn" title="Undo complete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onUncomplete(block.id); }}>↩</button>
                 }
                 <button className="sp-block-action-btn" title="Edit" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onEdit(block); }}>✎</button>
                 <button className="sp-block-action-btn danger" title="Delete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(block.id); }}>✕</button>
-            </div>
-            {showMenu && (
+            </div>}
+            {!isAvailabilityMode && showMenu && (
                 <div className="sp-block-menu" onClick={e => e.stopPropagation()}>
                     {!block.completed
                         ? <button onClick={() => { onComplete(block.id); setShowMenu(false); }}>✓ Complete</button>
@@ -320,7 +335,7 @@ function StudyBlockEvent({ block, color, entryName, onComplete, onDelete, onUnco
     );
 }
 
-function EditBlockModal({ block, entries, dayBlocks, onClose, onSave }) {
+function EditBlockModal({ block, entries, dayBlocks, courseBlocks, onClose, onSave }) {
     const [startTime, setStartTime]   = useState(block.startTime.slice(0, 5));
     const [duration, setDuration]     = useState(String(block.duration));
     const [entryId, setEntryId]       = useState(String(block.studyPlanEntryId));
@@ -340,14 +355,17 @@ function EditBlockModal({ block, entries, dayBlocks, onClose, onSave }) {
         const newEnd   = newStart + dur;
 
         // Check overlap with other blocks on same day
-        const overlaps = (dayBlocks || []).some(b => {
+        const overlapsBlock = (dayBlocks || []).some(b => {
             if (b.id === block.id) return false;
             const bStart = parseFloat(b.startTime.split(":")[0]) + parseFloat(b.startTime.split(":")[1]) / 60;
             const bEnd   = bStart + b.duration;
             return newStart < bEnd && newEnd > bStart;
         });
+        if (overlapsBlock) { setError("This time overlaps with another block on the same day"); return; }
 
-        if (overlaps) { setError("This time overlaps with another block on the same day"); return; }
+        // Check overlap with course blocks
+        const overlapsCourse = (courseBlocks || []).some(cb => newStart < cb.endHour && newEnd > cb.startHour);
+        if (overlapsCourse) { setError("This time overlaps with a class"); return; }
 
         onSave(block.id, { startTime: startTime + ":00", duration: dur, studyPlanEntryId: parseInt(entryId) });
         onClose();
@@ -388,70 +406,115 @@ function AvailabilitySlot({ slot, dayKey, onDelete, onResize }) {
     const [liveEndHour, setLiveEndHour] = useState(null);
     const topDragRef = useRef(null);
     const botDragRef = useRef(null);
+    const moveDragRef = useRef(null);
+    const slotRef = useRef(null);
     const startHour = liveStartHour ?? slot.startHour;
     const endHour = liveEndHour ?? slot.endHour;
     const top = hourToPx(startHour);
     const height = Math.max((endHour - startHour) * HOUR_HEIGHT, 10);
 
+    const autoScroll = useCallback((ev) => {
+        const scrollEl = slotRef.current?.closest(".sp-cal-body");
+        if (!scrollEl) return;
+        const { top: st, bottom: sb } = scrollEl.getBoundingClientRect();
+        const ZONE = 80;
+        if (ev.clientY > sb - ZONE) scrollEl.scrollTop += Math.round((ZONE - (sb - ev.clientY)) / 4);
+        else if (ev.clientY < st + ZONE) scrollEl.scrollTop -= Math.round((ZONE - (ev.clientY - st)) / 4);
+    }, []);
+
     const handleTopResizeStart = useCallback((e) => {
         e.stopPropagation();
         e.preventDefault();
-        topDragRef.current = { startY: e.clientY, origStart: slot.startHour, curStart: slot.startHour };
+        const scrollEl = slotRef.current?.closest(".sp-cal-body");
+        topDragRef.current = { startY: e.clientY, startScroll: scrollEl?.scrollTop ?? 0, origStart: slot.startHour, curStart: slot.startHour };
         const onMove = (ev) => {
-            const diff = (ev.clientY - topDragRef.current.startY) / HOUR_HEIGHT;
-            const newStart = Math.min(snapToHalf(topDragRef.current.origStart + diff), slot.endHour - 0.5);
+            const scrollDelta = (scrollEl?.scrollTop ?? 0) - topDragRef.current.startScroll;
+            const diff = (ev.clientY - topDragRef.current.startY + scrollDelta) / HOUR_HEIGHT;
+            const newStart = Math.min(Math.max(snapToQuarter(topDragRef.current.origStart + diff), START_HOUR), slot.endHour - 0.25);
             topDragRef.current.curStart = newStart;
             setLiveStartHour(newStart);
+            autoScroll(ev);
         };
         const onUp = () => {
-            if (topDragRef.current) {
-                onResize(dayKey, slot.id, { startHour: topDragRef.current.curStart });
-                setLiveStartHour(null);
-            }
+            if (topDragRef.current) { onResize(dayKey, slot.id, { startHour: topDragRef.current.curStart }); setLiveStartHour(null); }
             topDragRef.current = null;
             window.removeEventListener("mousemove", onMove);
             window.removeEventListener("mouseup", onUp);
         };
         window.addEventListener("mousemove", onMove);
         window.addEventListener("mouseup", onUp);
-    }, [slot, dayKey, onResize]);
+    }, [slot, dayKey, onResize, autoScroll]);
 
     const handleBotResizeStart = useCallback((e) => {
         e.stopPropagation();
         e.preventDefault();
-        botDragRef.current = { startY: e.clientY, origEnd: slot.endHour, curEnd: slot.endHour };
+        const scrollEl = slotRef.current?.closest(".sp-cal-body");
+        botDragRef.current = { startY: e.clientY, startScroll: scrollEl?.scrollTop ?? 0, origEnd: slot.endHour, curEnd: slot.endHour };
         const onMove = (ev) => {
-            const diff = (ev.clientY - botDragRef.current.startY) / HOUR_HEIGHT;
-            const newEnd = Math.max(snapToHalf(botDragRef.current.origEnd + diff), slot.startHour + 0.5);
+            const scrollDelta = (scrollEl?.scrollTop ?? 0) - botDragRef.current.startScroll;
+            const diff = (ev.clientY - botDragRef.current.startY + scrollDelta) / HOUR_HEIGHT;
+            const newEnd = Math.max(snapToQuarter(botDragRef.current.origEnd + diff), slot.startHour + 0.25);
             botDragRef.current.curEnd = newEnd;
             setLiveEndHour(newEnd);
+            autoScroll(ev);
         };
         const onUp = () => {
-            if (botDragRef.current) {
-                onResize(dayKey, slot.id, { endHour: botDragRef.current.curEnd });
-                setLiveEndHour(null);
-            }
+            if (botDragRef.current) { onResize(dayKey, slot.id, { endHour: botDragRef.current.curEnd }); setLiveEndHour(null); }
             botDragRef.current = null;
             window.removeEventListener("mousemove", onMove);
             window.removeEventListener("mouseup", onUp);
         };
         window.addEventListener("mousemove", onMove);
         window.addEventListener("mouseup", onUp);
-    }, [slot, dayKey, onResize]);
+    }, [slot, dayKey, onResize, autoScroll]);
+
+    const handleMoveStart = useCallback((e) => {
+        if (e.target.closest("[data-resize]")) return;
+        e.stopPropagation();
+        e.preventDefault();
+        const scrollEl = slotRef.current?.closest(".sp-cal-body");
+        const dur = slot.endHour - slot.startHour;
+        moveDragRef.current = { startY: e.clientY, startScroll: scrollEl?.scrollTop ?? 0, origStart: slot.startHour, dur, curStart: null, curEnd: null };
+        const onMove = (ev) => {
+            if (!moveDragRef.current) return;
+            const scrollDelta = (scrollEl?.scrollTop ?? 0) - moveDragRef.current.startScroll;
+            const diff = (ev.clientY - moveDragRef.current.startY + scrollDelta) / HOUR_HEIGHT;
+            const newStart = Math.min(Math.max(snapToQuarter(moveDragRef.current.origStart + diff), START_HOUR), END_HOUR - moveDragRef.current.dur);
+            const newEnd = newStart + moveDragRef.current.dur;
+            moveDragRef.current.curStart = newStart;
+            moveDragRef.current.curEnd = newEnd;
+            setLiveStartHour(newStart);
+            setLiveEndHour(newEnd);
+            autoScroll(ev);
+        };
+        const onUp = () => {
+            if (moveDragRef.current?.curStart != null) {
+                onResize(dayKey, slot.id, { startHour: moveDragRef.current.curStart, endHour: moveDragRef.current.curEnd });
+            }
+            setLiveStartHour(null);
+            setLiveEndHour(null);
+            moveDragRef.current = null;
+            window.removeEventListener("mousemove", onMove);
+            window.removeEventListener("mouseup", onUp);
+        };
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+    }, [slot, dayKey, onResize, autoScroll]);
 
     return (
         <div
+            ref={slotRef}
             className="sp-avail-slot"
-            style={{ top: top + 2, height: Math.max(height - 4, 10) }}
+            style={{ top: top + 2, height: Math.max(height - 4, 10), cursor: "grab" }}
             title={`${formatTime(startHour)} – ${formatTime(endHour)}`}
-            onMouseDown={e => e.stopPropagation()}
+            onMouseDown={handleMoveStart}
         >
-            <div onMouseDown={handleTopResizeStart} style={{ position:"absolute", top:0, left:0, right:0, height:8, cursor:"n-resize", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <div data-resize="top" onMouseDown={handleTopResizeStart} style={{ position:"absolute", top:0, left:0, right:0, height:8, cursor:"n-resize", display:"flex", alignItems:"center", justifyContent:"center" }}>
                 <div style={{ width:24, height:3, borderRadius:2, background:"rgba(123,94,167,0.4)" }} />
             </div>
             <span className="sp-slot-time">{formatTime(startHour)}–{formatTime(endHour)}</span>
             <button className="sp-slot-delete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(dayKey, slot.id); }}>×</button>
-            <div onMouseDown={handleBotResizeStart} style={{ position:"absolute", bottom:0, left:0, right:0, height:8, cursor:"s-resize", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <div data-resize="bot" onMouseDown={handleBotResizeStart} style={{ position:"absolute", bottom:0, left:0, right:0, height:8, cursor:"s-resize", display:"flex", alignItems:"center", justifyContent:"center" }}>
                 <div style={{ width:24, height:3, borderRadius:2, background:"rgba(123,94,167,0.4)" }} />
             </div>
         </div>
@@ -482,7 +545,7 @@ function CourseBlock({ startHour, endHour, courseCode, sectionNumber, color, onD
 function DayColumn({
                        date, dayKey, blocks, colorMap, entries,
                        availabilitySlots, onCompleteBlock, onDeleteBlock, onUncompleteBlock,
-                       onAddSlot, onDeleteSlot, onResizeSlot, isAvailabilityMode, onEditBlock,
+                       onAddSlot, onDeleteSlot, onResizeSlot, isAvailabilityMode, showSlotOverlay, onEditBlock,
                        onResizeBlock, courseBlocks, onDismissCourse, nowTime,
                    }) {
     const columnRef = useRef(null);
@@ -491,22 +554,22 @@ function DayColumn({
 
     const getHourFromEvent = useCallback((e) => {
         const rect = columnRef.current.getBoundingClientRect();
-        return snapToHalf(pxToHour(e.clientY - rect.top));
+        return snapToQuarter(pxToHour(e.clientY - rect.top));
     }, []);
 
     const handleMouseDown = useCallback((e) => {
-        if (!isAvailabilityMode) return;
+        if (!isAvailabilityMode && !showSlotOverlay) return;
         if (e.target.closest(".sp-avail-slot") || e.target.closest(".sp-study-block")) return;
         e.preventDefault();
-        const startHour = Math.min(getHourFromEvent(e), END_HOUR - 0.5);
-        dragRef.current = { startHour, endHour: Math.min(startHour + 0.5, END_HOUR) };
-        setDragging({ startHour, endHour: Math.min(startHour + 0.5, END_HOUR) });
+        const startHour = Math.min(getHourFromEvent(e), END_HOUR - 0.25);
+        dragRef.current = { startHour, endHour: Math.min(startHour + 0.25, END_HOUR) };
+        setDragging({ startHour, endHour: Math.min(startHour + 0.25, END_HOUR) });
     }, [isAvailabilityMode, getHourFromEvent]);
 
     const handleMouseMove = useCallback((e) => {
         if (!dragRef.current) return;
         const currentHour = getHourFromEvent(e);
-        const endHour = Math.min(Math.max(snapToHalf(currentHour), dragRef.current.startHour + 0.5), END_HOUR);
+        const endHour = Math.min(Math.max(snapToQuarter(currentHour), dragRef.current.startHour + 0.25), END_HOUR);
         dragRef.current.endHour = endHour;
         setDragging({ startHour: dragRef.current.startHour, endHour });
         const scrollEl = columnRef.current?.closest(".sp-cal-body");
@@ -521,7 +584,7 @@ function DayColumn({
     const handleMouseUp = useCallback(() => {
         if (!dragRef.current) return;
         const { startHour, endHour } = dragRef.current;
-        if (endHour - startHour >= 0.5) {
+        if (endHour - startHour >= 0.25) {
             const overlapsCourse = (courseBlocks || []).some(cb => startHour < cb.endHour && endHour > cb.startHour);
             if (!overlapsCourse) onAddSlot(dayKey, { startHour, endHour, id: Date.now(), date });
         }
@@ -597,6 +660,9 @@ function DayColumn({
                             onEdit={onEditBlock}
                             onResizeBlock={onResizeBlock}
                             isPast={isPastDay}
+                            isAvailabilityMode={isAvailabilityMode}
+                            dayBlocks={blockList}
+                            courseBlocks={courseBlocks}
                             colIndex={colIdx}
                             totalCols={totalCols}
                         />
@@ -1014,7 +1080,10 @@ export default function StudyPlanner({ enrolledSections = [] }) {
     const clearUndo = useCallback(() => {
         if (undoPendingRef.current) {
             clearTimeout(undoPendingRef.current.timer);
+            const pending = undoPendingRef.current;
             undoPendingRef.current = null;
+            // Commit the pending action immediately so it isn't silently dropped
+            if (pending.commitFn) pending.commitFn().catch(() => {});
         }
         setUndoToast(null);
     }, []);
@@ -1082,6 +1151,18 @@ export default function StudyPlanner({ enrolledSections = [] }) {
 
     const weekDates = getWeekDates(currentDate);
     const weekStart = toLocalDateString(weekDates[0]);
+
+    const courseBlocksPerDay = useMemo(() => {
+        const map = {};
+        enrolledSections.forEach((es, idx) => {
+            const color = courseColorOverrides[es.crn] || COURSE_COLORS[idx % COURSE_COLORS.length];
+            getSectionTimeSlots(es.section).forEach(({ dayKey, startHour, endHour }) => {
+                if (!map[dayKey]) map[dayKey] = [];
+                map[dayKey].push({ startHour, endHour, courseCode: es.courseCode, sectionNumber: es.sectionNumber, color, crn: es.crn });
+            });
+        });
+        return map;
+    }, [enrolledSections, courseColorOverrides]);
 
     const showToast = useCallback((msg, type = "info") => {
         setToast({ msg, type });
@@ -1166,7 +1247,9 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                 apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`, { method: "POST", body: JSON.stringify(slots) }).catch(() => {});
             }
             setAvailability(map);
+            return map;
         }
+        return null;
     }, [weekStart]);
 
     // Restore per-week generated state when week changes
@@ -1236,6 +1319,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
 
     const handleDeleteBlock = useCallback((blockId) => {
         let deletedBlock = null, deletedDay = null;
+        let allGone = false;
         setWeekBlocks(prev => {
             const next = {};
             for (const [day, blocks] of Object.entries(prev)) {
@@ -1243,10 +1327,20 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                 if (found) { deletedBlock = found; deletedDay = day; }
                 next[day] = blocks.filter(b => String(b.id) !== String(blockId));
             }
+            allGone = Object.values(next).every(arr => arr.length === 0);
             return next;
         });
+        if (allGone) {
+            setHasGenerated(false);
+            setShowSlotOverlay(true);
+            localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
+        }
         clearUndo();
         setUndoToast({ msg: "Study block deleted" });
+        const commitFn = async () => {
+            try { await apiFetch(`/api/study-plan/blocks/${blockId}`, { method: "DELETE" }); } catch { /* may already be gone */ }
+            return await loadSlots();
+        };
         undoPendingRef.current = {
             restoreFn: () => {
                 if (deletedBlock && deletedDay) {
@@ -1255,30 +1349,40 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                         dayBlocks.sort((a, b) => a.startHour - b.startHour);
                         return { ...prev, [deletedDay]: dayBlocks };
                     });
+                    setHasGenerated(true);
+                    localStorage.setItem(`kk_hasGenerated_${weekStart}`, 'true');
                 }
             },
+            commitFn,
             timer: setTimeout(async () => {
                 undoPendingRef.current = null;
                 setUndoToast(null);
-                try { await apiFetch(`/api/study-plan/blocks/${blockId}`, { method: "DELETE" }); } catch { /* block may already be gone if rebalance ran */ }
-                await loadSlots();
+                await commitFn();
             }, 5000),
         };
-    }, [clearUndo, loadSlots]);
+    }, [clearUndo, loadSlots, weekStart]);
 
     const handleSaveEditedBlock = useCallback(async (blockId, changes) => {
+        // Optimistic update so the block visually moves immediately
+        setWeekBlocks(prev => {
+            const next = {};
+            for (const [day, blocks] of Object.entries(prev))
+                next[day] = blocks.map(b => String(b.id) === String(blockId) ? { ...b, ...changes } : b);
+            return next;
+        });
         try {
             await apiFetch(`/api/study-plan/blocks/${blockId}`, {
                 method: "PATCH",
                 body: JSON.stringify(changes),
             });
-            await loadWeeklyView();
-            await loadEntries(true);
+            await Promise.all([loadEntries(true), loadSlots()]);
             showToast("Block updated", "success");
         } catch (e) {
+            // Revert on failure
+            await loadWeeklyView();
             showToast(e.message || "Failed to update block", "error");
         }
-    }, [showToast, loadWeeklyView, loadEntries]);
+    }, [showToast, loadWeeklyView, loadEntries, loadSlots]);
 
     const handleAddSlot = useCallback((dayKey, newSlot) => {
         // Check if slot is in the past using the actual date
@@ -1308,6 +1412,9 @@ export default function StudyPlanner({ enrolledSections = [] }) {
             }
             const next = { ...prev, [dayKey]: [...existing, newSlot] };
             setTimeout(() => persistSlots(next), 0);
+            if (newSlot.endHour - newSlot.startHour < 0.5) {
+                showToast("Slot is under 30 min and won't be used for scheduling", "warning");
+            }
             return next;
         });
     }, [showToast, persistSlots]);
@@ -1320,6 +1427,9 @@ export default function StudyPlanner({ enrolledSections = [] }) {
         });
         clearUndo();
         setUndoToast({ msg: "Slot deleted" });
+        const commitFn = async () => {
+            setAvailability(prev => { persistSlots(prev); return prev; });
+        };
         undoPendingRef.current = {
             restoreFn: () => {
                 if (deletedSlot) {
@@ -1329,10 +1439,11 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                     });
                 }
             },
+            commitFn,
             timer: setTimeout(() => {
                 undoPendingRef.current = null;
                 setUndoToast(null);
-                setAvailability(prev => { persistSlots(prev); return prev; });
+                commitFn();
             }, 5000),
         };
     }, [clearUndo, persistSlots]);
@@ -1351,11 +1462,23 @@ export default function StudyPlanner({ enrolledSections = [] }) {
 
     const handleResizeSlot = useCallback((dayKey, slotId, update) => {
         setAvailability(prev => {
-            const next = { ...prev, [dayKey]: (prev[dayKey] || []).map(s => s.id === slotId ? { ...s, ...update } : s) };
+            const existing = prev[dayKey] || [];
+            const updatedSlot = { ...existing.find(s => s.id === slotId), ...update };
+            const otherSlots = existing.filter(s => s.id !== slotId);
+            if (otherSlots.some(s => slotsOverlap(s, updatedSlot))) {
+                showToast("Slots can't overlap", "error");
+                return prev;
+            }
+            const dayCourses = courseBlocksPerDay[dayKey] || [];
+            if (dayCourses.some(cb => updatedSlot.startHour < cb.endHour && updatedSlot.endHour > cb.startHour)) {
+                showToast("Slots can't overlap a class", "error");
+                return prev;
+            }
+            const next = { ...prev, [dayKey]: existing.map(s => s.id === slotId ? updatedSlot : s) };
             persistSlots(next);
             return next;
         });
-    }, [persistSlots]);
+    }, [persistSlots, showToast, courseBlocksPerDay]);
 
     const handleCarryOver = useCallback(async (incompleteEntries) => {
         const currentWeekStart = toLocalDateString(getWeekDates(new Date())[0]);
@@ -1404,7 +1527,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
     }, [showToast, loadEntries]);
 
     const handleDeleteEntry = useCallback((entryId) => {
-        let deletedEntry = null, deletedColor = null;
+        let deletedEntry = null, deletedColor = null, deletedBlocks = {};
         setEntries(prev => {
             deletedEntry = prev.find(e => e.id === entryId) || null;
             return prev.filter(e => e.id !== entryId);
@@ -1415,23 +1538,55 @@ export default function StudyPlanner({ enrolledSections = [] }) {
             delete next[String(entryId)];
             return next;
         });
+        let allGone = false;
+        setWeekBlocks(prev => {
+            const next = {};
+            for (const [day, blocks] of Object.entries(prev)) {
+                const removed = blocks.filter(b => String(b.studyPlanEntryId) === String(entryId));
+                if (removed.length) deletedBlocks[day] = removed;
+                next[day] = blocks.filter(b => String(b.studyPlanEntryId) !== String(entryId));
+            }
+            allGone = Object.values(next).every(arr => arr.length === 0);
+            return next;
+        });
+        if (allGone) {
+            setHasGenerated(false);
+            setShowSlotOverlay(true);
+            localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
+        }
         clearUndo();
         setUndoToast({ msg: "Entry removed" });
+        const commitFn = async () => {
+            try { await apiFetch(`/api/study-plan/entries/${entryId}`, { method: "DELETE" }); }
+            catch (e) { showToast(e.message || "Failed to remove entry", "error"); }
+            return null;
+        };
         undoPendingRef.current = {
             restoreFn: () => {
                 if (deletedEntry) {
                     setEntries(prev => [...prev, deletedEntry]);
                     if (deletedColor) setColorMap(prev => ({ ...prev, [String(entryId)]: deletedColor }));
+                    setWeekBlocks(prev => {
+                        const next = { ...prev };
+                        for (const [day, blocks] of Object.entries(deletedBlocks)) {
+                            next[day] = [...(prev[day] || []), ...blocks];
+                        }
+                        return next;
+                    });
+                    if (Object.keys(deletedBlocks).length > 0) {
+                        setHasGenerated(true);
+                        localStorage.setItem(`kk_hasGenerated_${weekStart}`, 'true');
+                    }
                 }
             },
+            commitFn,
             timer: setTimeout(async () => {
                 undoPendingRef.current = null;
                 setUndoToast(null);
-                try { await apiFetch(`/api/study-plan/entries/${entryId}`, { method: "DELETE" }); }
-                catch (e) { showToast(e.message || "Failed to remove entry", "error"); }
+                await commitFn();
             }, 5000),
         };
-    }, [clearUndo, showToast]);
+    }, [clearUndo, showToast, weekStart]);
 
     const handleUpdateEntryHours = useCallback(async (entryId, newHours) => {
         try {
@@ -1456,10 +1611,11 @@ export default function StudyPlanner({ enrolledSections = [] }) {
     }, []);
 
 
-    const buildSettingsPayload = useCallback(() => {
+    const buildSettingsPayload = useCallback((availOverride = null) => {
         // Subtract enrolled course times from availability so planner doesn't schedule during class
+        const avail = availOverride ?? availability;
         const adjusted = {};
-        for (const [dayKey, slots] of Object.entries(availability)) {
+        for (const [dayKey, slots] of Object.entries(avail)) {
             const busySlots = enrolledSections.flatMap(es => getSectionTimeSlots(es.section).filter(ts => ts.dayKey === dayKey));
             const free = subtractBusyFromSlots(slots, busySlots);
             if (free.length > 0) adjusted[dayKey] = free;
@@ -1484,7 +1640,8 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                 localStorage.setItem(`kk_hasGenerated_${weekStart}`, 'true');
                 setIsAvailabilityMode(false);
                 setShowSlotOverlay(false);
-                await loadEntries(true);
+                // Generate resets completedHours to 0 — update locally, no extra fetch needed
+                setEntries(prev => prev.map(e => ({ ...e, completedHours: 0 })));
                 const warns = (data.warnings || []).filter(w => (w.shortfall || 0) > 0.1);
                 setPostGenWarnings(warns);
                 if (warns.length > 0) {
@@ -1499,7 +1656,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
             showToast(e.message || "Failed to generate plan", "error");
         }
         setLoading(false);
-    }, [buildSettingsPayload, showToast, loadEntries, clearUndo]);
+    }, [buildSettingsPayload, showToast, clearUndo]);
 
     const handleMarkPastDone = useCallback(async () => {
         setLoading(true);
@@ -1510,8 +1667,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                 showToast("No past blocks to mark done", "info");
             } else {
                 showToast(`Marked ${count} block${count !== 1 ? "s" : ""} as done ✓`, "success");
-                await loadWeeklyView();
-                await loadEntries(true);
+                await Promise.all([loadWeeklyView(), loadEntries(true)]);
             }
         } catch (e) {
             showToast(e.message || "Failed to mark past blocks", "error");
@@ -1545,7 +1701,6 @@ export default function StudyPlanner({ enrolledSections = [] }) {
     }, [showToast, weekStart, loadSlots]);
 
     const handleRebalance = useCallback(async () => {
-        clearUndo();
         if (entries.length === 0) {
             showToast("No tasks to rebalance", "info");
             return;
@@ -1570,9 +1725,19 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                 .join("|");
         const beforePrint = scheduleFingerprint(weekBlocks);
 
+        // Flush any pending undo (block/entry deletion) before rebalancing so the backend is in sync
+        let freshAvail = null;
+        if (undoPendingRef.current?.commitFn) {
+            clearTimeout(undoPendingRef.current.timer);
+            const commit = undoPendingRef.current.commitFn;
+            undoPendingRef.current = null;
+            setUndoToast(null);
+            freshAvail = await commit();
+        }
+
         setLoading(true);
         try {
-            const payload = buildSettingsPayload();
+            const payload = buildSettingsPayload(freshAvail);
             const data = await apiFetch(`/api/study-plan/rebalance?weekStart=${weekStart}`, {
                 method: "POST",
                 body: JSON.stringify(payload),
@@ -1586,7 +1751,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                 setWeekBlocks(normalized);
                 setIsAvailabilityMode(false);
                 setShowSlotOverlay(false);
-                await loadEntries(true);
+                // Rebalance doesn't change entry data — skip the extra fetch
 
                 if (!changed) {
                     // keep existing warnings visible — nothing was fixed
@@ -1607,7 +1772,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
             showToast(e.message || "Failed to rebalance plan", "error");
         }
         setLoading(false);
-    }, [buildSettingsPayload, showToast, loadEntries, entries, availability, weekBlocks, clearUndo]);
+    }, [buildSettingsPayload, showToast, entries, availability, weekBlocks, clearUndo]);
 
     const slotCount = Object.values(availability).flat().length;
 
@@ -2282,8 +2447,8 @@ export default function StudyPlanner({ enrolledSections = [] }) {
         .sp-toast.error   { border-color: var(--error); color: var(--error); }
         .sp-toast.warning { border-color: #f59e0b; color: #92400e; background: #fffbeb; }
         .sp-undo-toast { bottom: 62px; display: flex; align-items: center; gap: 14px; min-width: 200px; }
-        .sp-undo-btn { background: none; color: var(--primary); border: none; font-size: 12px; font-weight: 700; cursor: pointer; padding: 0; }
-        .sp-undo-btn:hover { opacity: 0.75; }
+        .sp-undo-btn { background: var(--primary); color: #fff; border: none; font-size: 12px; font-weight: 700; cursor: pointer; padding: 5px 12px; border-radius: 6px; }
+        .sp-undo-btn:hover { opacity: 0.85; }
         .sp-undo-dismiss { background: none; border: none; color: var(--text3); font-size: 15px; cursor: pointer; padding: 0; line-height: 1; }
 
         @keyframes spFadeUp {
@@ -2557,14 +2722,6 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                                     <TimeGutter />
                                     <div className="sp-days-grid">
                                         {(() => {
-                                            const courseBlocksPerDay = {};
-                                            enrolledSections.forEach((es, idx) => {
-                                                const color = courseColorOverrides[es.crn] || COURSE_COLORS[idx % COURSE_COLORS.length];
-                                                getSectionTimeSlots(es.section).forEach(({ dayKey, startHour, endHour }) => {
-                                                    if (!courseBlocksPerDay[dayKey]) courseBlocksPerDay[dayKey] = [];
-                                                    courseBlocksPerDay[dayKey].push({ startHour, endHour, courseCode: es.courseCode, sectionNumber: es.sectionNumber, color, crn: es.crn });
-                                                });
-                                            });
                                             return weekDates.map((date, i) => {
                                                 const dayKey = DAY_KEYS[i];
                                                 const dateStr = toLocalDateString(date);
@@ -2589,6 +2746,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                                                         onDeleteSlot={handleDeleteSlot}
                                                         onResizeSlot={handleResizeSlot}
                                                         isAvailabilityMode={isAvailabilityMode}
+                                                        showSlotOverlay={showSlotOverlay}
                                                         onEditBlock={setEditingBlock}
                                                         onResizeBlock={handleSaveEditedBlock}
                                                         courseBlocks={visibleCourseBlocks}
@@ -2648,40 +2806,75 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                     } else if (noSlots) {
                         issues.push({ type: "error", msg: "No availability slots found. Drag on the calendar to add your free time first." });
                     }
-                    if (!noEntries && !noSlots) entries.forEach(e => {
-                        const needed = parseFloat(e.hoursPerWeek) || 0;
-                        if (needed <= 0) return;
-                        // Check 1: task requests more hours than total availability this week
-                        if (needed > totalAvailHours) {
-                            issues.push({
-                                type: "error",
-                                msg: `"${e.name}" needs ${needed}h but only ${totalAvailHours.toFixed(1)}h of slots exist this week, so it won't fully fit.`,
-                            });
-                        } else if (e.deadline) {
-                            // Check 2: deadline falls this week and not enough time before it
-                            const dl = toDateOnly(parseLocalDate(e.deadline));
-                            if (dl >= weekStart && dl <= weekEnd) {
-                                const dlDayIdx = DAY_KEYS.findIndex((_, i) => toDateOnly(weekDates[i]).getTime() === dl.getTime());
-                                if (dlDayIdx !== -1) {
-                                    const hoursBeforeDeadline = DAY_KEYS
-                                        .slice(0, dlDayIdx + 1)
-                                        .reduce((sum, dk) => sum + (availability[dk] || []).reduce((s, sl) => s + (sl.endHour - sl.startHour), 0), 0);
-                                    if (hoursBeforeDeadline < needed) {
-                                        issues.push({
-                                            type: "error",
-                                            msg: `"${e.name}" is due ${fmtDateOnly(e.deadline)} and needs ${needed}h, but only ${hoursBeforeDeadline.toFixed(1)}h of slots are available before then.`,
-                                        });
-                                    }
-                                }
+                    let hasCheck1Error = false;
+                    const erroredEntryIds = new Set();
+                    if (!noEntries && !noSlots) {
+                        // Check 1: individual task exceeds total week availability
+                        entries.forEach(e => {
+                            const needed = parseFloat(e.hoursPerWeek) || 0;
+                            if (needed <= 0) return;
+                            if (needed > totalAvailHours) {
+                                hasCheck1Error = true;
+                                erroredEntryIds.add(e.id);
+                                issues.push({
+                                    type: "error",
+                                    msg: `"${e.name}" needs ${needed}h but only ${totalAvailHours.toFixed(1)}h of slots exist this week, so it won't fully fit.`,
+                                });
                             }
-                        }
-                    });
-                    // Global: total requested > total available (only when no per-entry errors already cover it, and entries/slots exist)
-                    if (!noEntries && !noSlots && totalRequestedHours > totalAvailHours && issues.length === 0) {
-                        issues.push({
-                            type: "warning",
-                            msg: `${totalRequestedHours}h requested but only ${totalAvailHours.toFixed(1)}h of slots available, some tasks may be partially scheduled.`,
                         });
+
+                        // Check 2: deadline feasibility — cumulative per deadline day
+                        // Group tasks that have a deadline this week by their deadline day index
+                        const tasksByDeadlineDay = new Map();
+                        entries.forEach(e => {
+                            const needed = parseFloat(e.hoursPerWeek) || 0;
+                            if (!e.deadline || needed <= 0) return;
+                            const dl = toDateOnly(parseLocalDate(e.deadline));
+                            if (dl < weekStart || dl > weekEnd) return;
+                            const dlDayIdx = DAY_KEYS.findIndex((_, i) => toDateOnly(weekDates[i]).getTime() === dl.getTime());
+                            if (dlDayIdx === -1) return;
+                            if (!tasksByDeadlineDay.has(dlDayIdx)) tasksByDeadlineDay.set(dlDayIdx, []);
+                            tasksByDeadlineDay.get(dlDayIdx).push({ e, needed });
+                        });
+
+                        // For each deadline day (sorted ascending), check cumulative feasibility
+                        [...tasksByDeadlineDay.keys()].sort((a, b) => a - b).forEach(dayIdx => {
+                            const hoursAvailable = DAY_KEYS
+                                .slice(0, dayIdx + 1)
+                                .reduce((sum, dk) => sum + (availability[dk] || []).reduce((s, sl) => s + (sl.endHour - sl.startHour), 0), 0);
+                            // Sum of hours needed by ALL tasks due on or before this day
+                            const allByThen = [...tasksByDeadlineDay.entries()]
+                                .filter(([d]) => d <= dayIdx)
+                                .flatMap(([, ts]) => ts);
+                            const totalNeededByThen = allByThen.reduce((s, t) => s + t.needed, 0);
+                            const cumulativeShortfall = totalNeededByThen > hoursAvailable;
+                            // Report each task due ON this day that is individually infeasible or part of a cumulative shortfall
+                            tasksByDeadlineDay.get(dayIdx).forEach(({ e, needed }) => {
+                                if (erroredEntryIds.has(e.id)) return;
+                                const individualShortfall = hoursAvailable < needed;
+                                if (individualShortfall) {
+                                    erroredEntryIds.add(e.id);
+                                    issues.push({
+                                        type: "error",
+                                        msg: `"${e.name}" is due ${fmtDateOnly(e.deadline)} and needs ${needed}h, but only ${hoursAvailable.toFixed(1)}h of slots are available before then.`,
+                                    });
+                                } else if (cumulativeShortfall) {
+                                    erroredEntryIds.add(e.id);
+                                    issues.push({
+                                        type: "warning",
+                                        msg: `"${e.name}" is due ${fmtDateOnly(e.deadline)} and may not be fully scheduled: tasks due by then need ${totalNeededByThen.toFixed(1)}h combined but only ${hoursAvailable.toFixed(1)}h of slots are available.`,
+                                    });
+                                }
+                            });
+                        });
+
+                        // Global: total requested > total available — skip if a Check 1 error already covers it
+                        if (totalRequestedHours > totalAvailHours && !hasCheck1Error) {
+                            issues.push({
+                                type: "warning",
+                                msg: `${totalRequestedHours}h requested but only ${totalAvailHours.toFixed(1)}h of slots available, some tasks may be partially scheduled.`,
+                            });
+                        }
                     }
                     const hasErrors = issues.some(i => i.type === "error");
                     return (
@@ -2712,7 +2905,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                                 <div className="sp-modal-actions">
                                     <button className="sp-btn sp-btn-ghost" onClick={() => setShowGenerateModal(false)}>Cancel</button>
                                     {!noEntries && !noSlots && (
-                                        <button className="sp-btn sp-btn-primary" onClick={handleGenerate}>{hasErrors ? "Generate anyway" : "Generate"}</button>
+                                        <button className="sp-btn sp-btn-primary" onClick={handleGenerate}>{issues.length > 0 ? "Generate anyway" : "Generate"}</button>
                                     )}
                                 </div>
                             </div>
@@ -2743,6 +2936,10 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                         dayBlocks={(() => {
                             const entry = Object.entries(weekBlocks).find(([, blocks]) => blocks.some(b => b.id === editingBlock.id));
                             return entry ? entry[1] : [];
+                        })()}
+                        courseBlocks={(() => {
+                            const entry = Object.entries(weekBlocks).find(([, blocks]) => blocks.some(b => b.id === editingBlock.id));
+                            return entry ? (courseBlocksPerDay[entry[0]] || []) : [];
                         })()}
                         onClose={() => setEditingBlock(null)}
                         onSave={handleSaveEditedBlock}

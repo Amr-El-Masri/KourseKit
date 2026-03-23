@@ -167,7 +167,7 @@ const DS_DAY_SHORT      = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
 function dsHourToPx(h)  { return (h - DS_START) * DS_HOUR_H; }
 function dsPxToHour(px) { return px / DS_HOUR_H + DS_START; }
-function dsSnap(h)      { return Math.round(h * 2) / 2; }
+function dsSnap(h)      { return Math.round(h * 4) / 4; }
 
 const COURSE_COLORS = ["#2563EB","#16A34A","#EA580C","#7C3AED","#DC2626","#0891B2","#DB2777","#65A30D"];
 const DS_DAY_ABBR   = { M:"MONDAY", T:"TUESDAY", W:"WEDNESDAY", R:"THURSDAY", F:"FRIDAY", S:"SATURDAY", U:"SUNDAY" };
@@ -211,7 +211,7 @@ function DsMiniSlot({ slot, dayKey, onDelete, onResize, readonly }) {
     liveRef.current = slot.endHour;
     const onMove = (ev) => {
       const diff = (ev.clientY - dragRef.current.startY) / DS_HOUR_H;
-      const ne = Math.min(Math.max(dsSnap(dragRef.current.startEnd + diff), slot.startHour + 0.5), DS_END);
+      const ne = Math.min(Math.max(dsSnap(dragRef.current.startEnd + diff), slot.startHour + 0.25), DS_END);
       liveRef.current = ne;
       setLiveEnd(ne);
     };
@@ -251,7 +251,7 @@ function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scro
 
   const getHour = useCallback((e, allowEnd = false) => {
     const rect = colRef.current.getBoundingClientRect();
-    return Math.min(Math.max(dsSnap(dsPxToHour(e.clientY - rect.top)), DS_START), allowEnd ? DS_END : DS_END - 0.5);
+    return Math.min(Math.max(dsSnap(dsPxToHour(e.clientY - rect.top)), DS_START), allowEnd ? DS_END : DS_END - 0.25);
   }, []);
 
   const onDown = useCallback((e) => {
@@ -259,13 +259,13 @@ function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scro
     if (e.target.closest(".ds-slot")) return;
     e.preventDefault();
     const sh = getHour(e);
-    dragRef.current = { startHour: sh, endHour: sh + 0.5 };
-    setDragging({ startHour: sh, endHour: sh + 0.5 });
+    dragRef.current = { startHour: sh, endHour: sh + 0.25 };
+    setDragging({ startHour: sh, endHour: sh + 0.25 });
   }, [getHour, readonly]);
 
   const onMove = useCallback((e) => {
     if (!dragRef.current) return;
-    const eh = Math.min(Math.max(dsSnap(getHour(e, true)), dragRef.current.startHour + 0.5), DS_END);
+    const eh = Math.min(Math.max(dsSnap(getHour(e, true)), dragRef.current.startHour + 0.25), DS_END);
     dragRef.current.endHour = eh;
     setDragging({ startHour: dragRef.current.startHour, endHour: eh });
     const scrollEl = scrollRef?.current;
@@ -280,7 +280,7 @@ function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scro
   const onUp = useCallback(() => {
     if (!dragRef.current) return;
     const { startHour, endHour } = dragRef.current;
-    if (endHour - startHour >= 0.5) {
+    if (endHour - startHour >= 0.25) {
       const overlapsSlot = (slots || []).some(s => startHour < s.endHour && endHour > s.startHour);
       const overlapsCourse = (courseBlocks || []).some(cb => startHour < cb.endHour && endHour > cb.startHour);
       if (!overlapsSlot && !overlapsCourse) onAdd(dayKey, { startHour, endHour, id: Date.now() + Math.random() });
@@ -461,10 +461,7 @@ export function DefaultScheduleEditor({ token, onDone, extraAction }) {
       `}</style>
       <div style={{ padding: "20px 28px 24px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 15, color: "var(--text)", marginBottom: 3 }}>Default Weekly Schedule</div>
-            <div style={{ fontSize: 12, color: "var(--text2)" }}>Drag to mark your free time each week.</div>
-          </div>
+          <div style={{ fontSize: 12, color: "var(--text2)" }}>Drag to mark your free time each week.</div>
           {hasSaved && !isEditing && (
             <div style={{ display: "flex", gap: 8 }}>
               {!confirmDelete && (

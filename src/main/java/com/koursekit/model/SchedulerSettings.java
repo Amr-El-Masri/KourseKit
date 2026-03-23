@@ -33,13 +33,13 @@ public class SchedulerSettings {
     public Map<DayOfWeek, DaySchedule> getAvailability() { return availability; }
 
     public double getMinimumSessionHours() {
-        return 1.0; }
+        return 0.5; }
 
     public double getMaximumSessionHours() {
         return 3.0; }
 
     public int getDeadlineBufferDays() {
-        return 1; }
+        return 0; }
 
     public double getMaxHoursPerSubjectPerDay() {
         return 4.0; }

@@ -73,4 +73,18 @@ public interface StudyBlockRepository extends JpaRepository<StudyBlock, Long> {
     @Modifying
     @Query("UPDATE StudyBlock b SET b.completed = true WHERE b.id IN :ids")
     void markAllCompletedByIds(@Param("ids") List<Long> ids);
+
+    @Modifying
+    @Query("DELETE FROM StudyBlock b WHERE b.studyPlanEntry.id IN :entryIds AND b.completed = false AND b.day BETWEEN :from AND :to")
+    void deleteUncompletedByEntryIdsAndDayBetween(@Param("entryIds") List<Long> entryIds, @Param("from") LocalDate from, @Param("to") LocalDate to);
+
+    @Modifying
+    @Query("DELETE FROM StudyBlock b WHERE b.studyPlanEntry.id IN :entryIds AND b.completed = false AND b.pinned = false")
+    void deleteUncompletedUnpinnedByEntryIds(@Param("entryIds") List<Long> entryIds);
+
+    @Query("SELECT b FROM StudyBlock b WHERE b.studyPlanEntry.id IN :entryIds AND b.completed = true")
+    List<StudyBlock> findCompletedByEntryIds(@Param("entryIds") List<Long> entryIds);
+
+    @Query("SELECT b FROM StudyBlock b WHERE b.studyPlanEntry.id IN :entryIds AND b.pinned = true AND b.completed = false")
+    List<StudyBlock> findPinnedUncompletedByEntryIds(@Param("entryIds") List<Long> entryIds);
 }
