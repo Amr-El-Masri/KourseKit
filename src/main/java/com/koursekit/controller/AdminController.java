@@ -12,12 +12,14 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.koursekit.config.EmailConfig;
 import com.koursekit.dto.Admins;
+import com.koursekit.dto.MassRequest;
 import com.koursekit.model.ProfessorReview;
 import com.koursekit.model.Report;
 import com.koursekit.model.Review;
@@ -31,25 +33,55 @@ import com.koursekit.repository.UserRepo;
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
-    @Autowired
-    private UserRepo userrepo;
-    @Autowired
-    private EmailConfig emailconfig;
-    @Autowired
-    private ReviewRepository reviewrepo;
-    @Autowired
-    private ProfessorReviewRepository profReviewRepo;
-    @Autowired
-    private ReportRepository reportRepo;
+    @Autowired private UserRepo userrepo;
+    @Autowired private EmailConfig emailconfig;
+    @Autowired private ReviewRepository reviewrepo;
+    @Autowired private ProfessorReviewRepository profReviewRepo;
+    @Autowired private ReportRepository reportRepo;
+
+    private Admins toAdminsDto(User u) {
+        return new Admins(u.getId(), u.getEmail(), u.getRole(), u.isActive(), u.getCreatedAt(),
+                u.getReportCount(), u.isFlagged(), u.getFlagReason());
+    }
 
     @GetMapping("/users")
     public List<Admins> getUsers(@RequestParam(required = false) String search) {
         List<User> users = (search != null && !search.isBlank())
             ? userrepo.findByEmailContainingIgnoreCase(search)
             : userrepo.findAll();
-        return users.stream()
-            .map(u -> new Admins(u.getId(), u.getEmail(), u.getRole(), u.isActive(), u.getCreatedAt()))
-            .collect(Collectors.toList());
+        return users.stream().map(this::toAdminsDto).collect(Collectors.toList());
+    }
+
+    @PutMapping("/users/mass-status")
+    public ResponseEntity<?> massUpdateStatus(@RequestBody MassRequest request,
+                                              @AuthenticationPrincipal User currentUser) {
+        List<User> users = userrepo.findAllById(request.getUserIds());
+        for (User u : users) {
+            if (u.getId().equals(currentUser.getId())) continue;
+            u.setActive(request.isActive());
+            userrepo.save(u);
+            try {
+                if (request.isActive()) emailconfig.activationmail(u.getEmail());
+                else emailconfig.deactivationmail(u.getEmail());
+            } catch (Exception ignored) {}
+        }
+        return ResponseEntity.ok(Map.of("updated", users.size()));
+    }
+
+    @GetMapping("/users/flagged")
+    public List<Admins> getFlaggedUsers() {
+        return userrepo.findByFlagged(true).stream().map(this::toAdminsDto).collect(Collectors.toList());
+    }
+
+    @PutMapping("/users/{userid}/clear-flag")
+    public ResponseEntity<?> clearFlag(@PathVariable Long userid) {
+        User user = userrepo.findById(userid)
+            .orElseThrow(() -> new RuntimeException("User not found."));
+        user.setFlagged(false);
+        user.setReportCount(0);
+        user.setFlagReason(null);
+        userrepo.save(user);
+        return ResponseEntity.ok("User flag cleared.");
     }
 
     @PutMapping("/users/{userid}/deactivate")
@@ -102,10 +134,10 @@ public class AdminController {
             m.put("id", r.getId());
             m.put("comment", r.getComment());
             m.put("rating", r.getRating());
-            m.put("createdAt", r.getCreatedAt());
+            m.put("createdat", r.getCreatedAt());
             if (r.getSection() != null && r.getSection().getCourse() != null) {
-                m.put("courseCode",  r.getSection().getCourse().getCourseCode());
-                m.put("courseTitle", r.getSection().getCourse().getTitle());
+                m.put("coursecode",  r.getSection().getCourse().getCourseCode());
+                m.put("coursetitle", r.getSection().getCourse().getTitle());
             }
             return m;
         }).collect(Collectors.toList());
@@ -117,13 +149,31 @@ public class AdminController {
         m.put("id",        r.getId());
         m.put("comment",   r.getComment());
         m.put("rating",    r.getRating());
-        m.put("userId",    r.getUserId());
+        m.put("userid",    r.getUserId());
         m.put("status",    r.getStatus());
-        m.put("createdAt", r.getCreatedAt());
+        m.put("createdat", r.getCreatedAt());
         if (r.getSection() != null && r.getSection().getCourse() != null) {
-            m.put("courseCode",  r.getSection().getCourse().getCourseCode());
-            m.put("courseTitle", r.getSection().getCourse().getTitle());
+            m.put("coursecode",  r.getSection().getCourse().getCourseCode());
+            m.put("coursetitle", r.getSection().getCourse().getTitle());
         }
+        List<Report> reports = reportRepo.findByReviewId(r.getId());
+        m.put("reportcount",   reports.size());
+        m.put("reportreasons", reports.stream().map(Report::getReason).collect(Collectors.toList()));
+        return m;
+    }
+
+    private Map<String, Object> profReviewToMap(ProfessorReview r) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id",          r.getId());
+        m.put("comment",     r.getComment());
+        m.put("rating",      r.getRating());
+        m.put("userid",        r.getUserId());
+        m.put("status",        r.getStatus());
+        m.put("createdat",     r.getCreatedAt());
+        m.put("profname", r.getProfessorName());
+        List<Report> reports = reportRepo.findByProfessorReviewId(r.getId());
+        m.put("reportcount",   reports.size());
+        m.put("reportreasons", reports.stream().map(Report::getReason).collect(Collectors.toList()));
         return m;
     }
 
@@ -135,6 +185,30 @@ public class AdminController {
     @GetMapping("/reviews/flagged")
     public List<Map<String, Object>> getFlaggedReviews() {
         return reviewrepo.findByStatus(ReviewStatus.FLAGGED).stream().map(this::reviewToMap).collect(Collectors.toList());
+    }
+
+    @GetMapping("/reviews/reported")
+    public List<Map<String, Object>> getReportedReviews() {
+        return reviewrepo.findByStatus(ReviewStatus.REPORTED).stream()
+            .map(this::reviewToMap)
+            .sorted((a, b) -> Integer.compare((int) b.get("reportCount"), (int) a.get("reportCount")))
+            .collect(Collectors.toList());
+    }
+
+    @PutMapping("/reviews/{reviewid}/approve")
+    public ResponseEntity<?> approveReview(@PathVariable Long reviewid) {
+        Review r = reviewrepo.findById(reviewid).orElseThrow(() -> new RuntimeException("Review not found."));
+        r.setStatus(ReviewStatus.APPROVED);
+        reviewrepo.save(r);
+        return ResponseEntity.ok("Review approved.");
+    }
+
+    @PutMapping("/reviews/{reviewid}/warn")
+    public ResponseEntity<?> warnReview(@PathVariable Long reviewid) {
+        Review r = reviewrepo.findById(reviewid).orElseThrow(() -> new RuntimeException("Review not found."));
+        r.setStatus(ReviewStatus.PENDING);
+        reviewrepo.save(r);
+        return ResponseEntity.ok("Review set to pending.");
     }
 
     @DeleteMapping("/reviews/{reviewid}")
@@ -152,10 +226,38 @@ public class AdminController {
     }
 
     @GetMapping("/professor-reviews")
-    public List<ProfessorReview> getAllProfReviews() { return profReviewRepo.findAll(); }
+    public List<Map<String, Object>> getAllProfReviews() {
+        return profReviewRepo.findAll().stream().map(this::profReviewToMap).collect(Collectors.toList());
+    }
 
     @GetMapping("/professor-reviews/flagged")
-    public List<ProfessorReview> getFlaggedProfReviews() { return profReviewRepo.findByStatus(ReviewStatus.FLAGGED); }
+    public List<Map<String, Object>> getFlaggedProfReviews() {
+        return profReviewRepo.findByStatus(ReviewStatus.FLAGGED).stream().map(this::profReviewToMap).collect(Collectors.toList());
+    }
+
+    @GetMapping("/professor-reviews/reported")
+    public List<Map<String, Object>> getReportedProfReviews() {
+        return profReviewRepo.findByStatus(ReviewStatus.REPORTED).stream()
+            .map(this::profReviewToMap)
+            .sorted((a, b) -> Integer.compare((int) b.get("reportCount"), (int) a.get("reportCount")))
+            .collect(Collectors.toList());
+    }
+
+    @PutMapping("/professor-reviews/{reviewid}/approve")
+    public ResponseEntity<?> approveProfReview(@PathVariable Long reviewid) {
+        ProfessorReview r = profReviewRepo.findById(reviewid).orElseThrow(() -> new RuntimeException("Review not found."));
+        r.setStatus(ReviewStatus.APPROVED);
+        profReviewRepo.save(r);
+        return ResponseEntity.ok("Review approved.");
+    }
+
+    @PutMapping("/professor-reviews/{reviewid}/warn")
+    public ResponseEntity<?> warnProfReview(@PathVariable Long reviewid) {
+        ProfessorReview r = profReviewRepo.findById(reviewid).orElseThrow(() -> new RuntimeException("Review not found."));
+        r.setStatus(ReviewStatus.PENDING);
+        profReviewRepo.save(r);
+        return ResponseEntity.ok("Review set to pending.");
+    }
 
     @DeleteMapping("/professor-reviews/{reviewid}")
     public ResponseEntity<?> deleteProfReview(@PathVariable Long reviewid) {
@@ -169,11 +271,11 @@ public class AdminController {
         return reportRepo.findAll().stream().map(r -> {
             Map<String, Object> m = new HashMap<>();
             m.put("id",                r.getId());
-            m.put("userId",            r.getUserId());
-            m.put("reviewId",          r.getReviewId());
-            m.put("professorReviewId", r.getProfessorReviewId());
+            m.put("userid",            r.getUserId());
+            m.put("reviewid",          r.getReviewId());
+            m.put("profreviewid", r.getProfessorReviewId());
             m.put("reason",            r.getReason());
-            m.put("createdAt",         r.getCreatedAt());
+            m.put("createdat",         r.getCreatedAt());
             m.put("type",              r.getReviewId() != null ? "course" : "professor");
             return m;
         }).collect(Collectors.toList());

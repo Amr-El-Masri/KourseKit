@@ -86,6 +86,15 @@ public class User {
     @Column(name = "interests", columnDefinition = "TEXT")
     private String interests;
 
+    @Column(name = "report_count", nullable = false, columnDefinition = "INT DEFAULT 0")
+    private int reportCount = 0;
+
+    @Column(name = "is_flagged", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean flagged = false;
+
+    @Column(name = "flag_reason", columnDefinition = "TEXT")
+    private String flagReason;
+
     public User() {}
     public User(String email, String pass) {
         this.email = email;
@@ -199,4 +208,13 @@ public class User {
 
     public String getInterests() { return interests; }
     public void setInterests(String interests) { this.interests = interests; }
+
+    public int getReportCount() { return reportCount; }
+    public void setReportCount(int reportCount) { this.reportCount = reportCount; }
+
+    public boolean isFlagged() { return flagged; }
+    public void setFlagged(boolean flagged) { this.flagged = flagged; }
+
+    public String getFlagReason() { return flagReason; }
+    public void setFlagReason(String flagReason) { this.flagReason = flagReason; }
 }
