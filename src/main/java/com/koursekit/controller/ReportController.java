@@ -38,4 +38,30 @@ public class ReportController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @PostMapping("/forum-post/{postId}")
+    public ResponseEntity<?> reportForumPost(
+            @PathVariable Long postId,
+            @RequestParam String userId,
+            @RequestParam(required = false, defaultValue = "No reason provided") String reason) {
+        try {
+            reportService.reportForumPost(postId, userId, reason);
+            return ResponseEntity.ok("Post reported successfully.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/forum-comment/{commentId}")
+    public ResponseEntity<?> reportForumComment(
+            @PathVariable Long commentId,
+            @RequestParam String userId,
+            @RequestParam(required = false, defaultValue = "No reason provided") String reason) {
+        try {
+            reportService.reportForumComment(commentId, userId, reason);
+            return ResponseEntity.ok("Comment reported successfully.");
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

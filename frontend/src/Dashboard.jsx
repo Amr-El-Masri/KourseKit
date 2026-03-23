@@ -10,7 +10,8 @@ import SyllabusModal from "./SyllabusModal";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./ThemeContext";
 import StudentDirectory from "./StudentDirectoryPanel";
-import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle, Settings as SettingsIcon } from 'lucide-react';
+import Forum from "./Forum";
+import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle, Settings as SettingsIcon, MessageSquare } from 'lucide-react';
 
 const AVATAR_ICONS = [
   { id:"Banana", icon: Banana },
@@ -528,6 +529,7 @@ export default function Dashboard({ onLogout }) {
     { id:"planner",   label:"Study Planner",    icon:<BookOpen size={17}/> },
     { id:"grades",    label:"Grade Calculator", icon:<Calculator size={17}/> },
     { id:"reviews",   label:"Reviews",          icon:<Star size={17}/> },
+    { id:"forum",     label:"Forum",            icon:<MessageSquare size={17}/> },
   ];
 
   const widgetSaveTimer = useRef(null);
@@ -546,6 +548,8 @@ export default function Dashboard({ onLogout }) {
 
   const [editingTask, setEditingTask] = useState(null);
   const [courseDetailsTarget, setCourseDetailsTarget] = useState(null);
+  const [forumCourseTag, setForumCourseTag] = useState("");
+  const [forumProfTag,   setForumProfTag]   = useState("");
   const [syllabusTarget, setSyllabusTarget] = useState(null); // course name for syllabus modal
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -966,6 +970,12 @@ export default function Dashboard({ onLogout }) {
     return `${calYear}-${mm}-${dd}`;};
 
   const handleLogout = () => { Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); onLogout(); };
+
+  const navigateToForum = (courseTag, profTag) => {
+    setForumCourseTag(courseTag || "");
+    setForumProfTag(profTag || "");
+    setActivePage("forum");
+  };
 
   const fetchSemesters = () => {
     const token = localStorage.getItem("kk_token");
@@ -1928,6 +1938,7 @@ export default function Dashboard({ onLogout }) {
               />
           )}
           {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
+          {activePage === "forum" && <Forum initialCourseTag={forumCourseTag} initialProfTag={forumProfTag} />}
           {activePage === "planner" && <StudyPlanner enrolledSections={semCourseList.map(c => ({ crn: c.id, courseCode: c.name, section: c.section }))} />}
           {activePage === "students" && <StudentDirectory />}
           {activePage === "profile" && (
@@ -1939,6 +1950,7 @@ export default function Dashboard({ onLogout }) {
               <CourseDetails
                   course={courseDetailsTarget}
                   onBack={() => setActivePage("dashboard")}
+                  onNavigateToForum={navigateToForum}
               />
           )}
 

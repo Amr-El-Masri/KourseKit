@@ -23,6 +23,39 @@ const timeAgo = ts => {
   return `${Math.floor(s/86400)}d ago`;
 };
 
+//fuzzy search algo
+const stem = word => word
+  .replace(/(ing|tion|ations|ation|ed|ly|er|est|ess|ness|ies|es|s)$/, "")
+  .toLowerCase();
+
+const fuzzyMatch = (a, b) => {
+  if (a === b) return true;
+  if (a.startsWith(b) || b.startsWith(a)) return true;
+  // Only allow 1 edit difference, and only for words longer than 5 chars
+  if (a.length < 5 || b.length < 5) return false;
+  if (Math.abs(a.length - b.length) > 2) return false;
+  let row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = i;
+    for (let j = 1; j <= b.length; j++) {
+      const val = a[i-1] === b[j-1] ? row[j-1] : 1 + Math.min(row[j-1], row[j], prev);
+      row[j-1] = prev;
+      prev = val;
+    }
+    row[b.length] = prev;
+  }
+  return row[b.length] <= 1;
+};
+
+const fuzzySearch = (text, query) => {
+  if (!text || !query) return false;
+  const textWords  = text.toLowerCase().split(/\s+/).map(stem);
+  const queryWords = query.toLowerCase().trim().split(/\s+/).map(stem);
+  return queryWords.every(qw =>
+    qw.length >= 2 && textWords.some(tw => fuzzyMatch(tw, qw))
+  );
+};
+
 function Stars({ count, interactive, onSet }) {
   return (
     <span style={{ display:"inline-flex", gap:2 }}>
@@ -350,7 +383,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
   );
 }
 
-export default function Reviews() {
+export default function Reviews({ initialCourse, onNavigateToForum }) {
   const token = localStorage.getItem("kk_token");
   const userEmail = localStorage.getItem("kk_email");
   const [detailsCourse, setDetailsCourse] = useState(null);
@@ -379,7 +412,7 @@ export default function Reviews() {
   };
 
   let displayed = reviews
-    .filter(r => !search || r.comment?.toLowerCase().includes(search.toLowerCase()));
+    .filter(r => !search || fuzzySearch(r.comment, search));
   displayed = sort === "top"
     ? [...displayed].sort((a,b) => b.rating - a.rating)
     : [...displayed].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -413,7 +446,7 @@ export default function Reviews() {
         </div>
       </div>
 
-      {tab === "professor" && <ProfessorReviewsTab token={token} userEmail={userEmail} />}
+      {tab === "professor" && <ProfessorReviewsTab token={token} userEmail={userEmail} onNavigateToForum={onNavigateToForum} />}
 
       {tab === "course" && <>
       {/* Course search to browse reviews */}
@@ -439,6 +472,19 @@ export default function Reviews() {
                 >
                   View Course Details
                 </button>
+
+                {onNavigateToForum && (
+                  <button
+                    onClick={() => onNavigateToForum(activeCourse.courseCode, "")}
+                    style={{
+                      padding:"7px 16px", background:"var(--accent2)", color:"white",
+                      border:"none", borderRadius:10, fontSize:12,
+                      fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                    }}
+                  >
+                    Discuss this Course
+                  </button>
+                )}
               </div>
             <div style={{ display:"flex", gap:8 }}>
               <div style={{ 
@@ -637,7 +683,7 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
   );
 }
 
-function ProfessorReviewsTab({ token, userEmail }) {
+function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
   const [selected,  setSelected]  = useState(null);
   const [reviews,   setReviews]   = useState([]);
   const [loading,   setLoading]   = useState(false);
@@ -658,7 +704,7 @@ function ProfessorReviewsTab({ token, userEmail }) {
   };
 
   let displayed = reviews
-    .filter(r => !search || r.comment?.toLowerCase().includes(search.toLowerCase()));
+    .filter(r => !search || fuzzySearch(r.comment, search));
   displayed = sort === "top"
     ? [...displayed].sort((a,b) => b.rating - a.rating)
     : [...displayed].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -674,6 +720,18 @@ function ProfessorReviewsTab({ token, userEmail }) {
         <>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, marginBottom:18 }}>
             <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}> {selected}</div>
+            {onNavigateToForum && (
+              <button
+                onClick={() => onNavigateToForum("", selected)}
+                style={{
+                  padding:"7px 16px", background:"var(--accent2)", color:"white",
+                  border:"none", borderRadius:10, fontSize:12,
+                  fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                }}
+              >
+                Discuss this Professor
+              </button>
+            )}
             <div style={{ display:"flex", gap:8 }}>
               <div style={{ display:"flex", gap:4, background:"var(--bg)", padding:4, borderRadius:10 }}>
                 {[{id:"top",label:"Top"},{id:"new",label:"New"}].map(s => (

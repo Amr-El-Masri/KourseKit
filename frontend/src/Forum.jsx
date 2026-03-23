@@ -1,0 +1,933 @@
+import { useState, useEffect, useCallback } from "react";
+import { MessageSquare, Plus, ArrowLeft, Trash2, Flag, Search, ChevronUp, BookOpen, GraduationCap, LayoutGrid, Check } from "lucide-react";
+
+const API = "http://localhost:8080";
+
+const timeAgo = ts => {
+  const s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+  if (s < 60)    return "just now";
+  if (s < 3600)  return `${Math.floor(s/60)}m ago`;
+  if (s < 86400) return `${Math.floor(s/3600)}h ago`;
+  return `${Math.floor(s/86400)}d ago`;
+};
+
+//fuzzy search algo
+const stem = word => word
+  .replace(/(ing|tion|ations|ation|ed|ly|er|est|ess|ness|ies|es|s)$/, "")
+  .toLowerCase();
+
+const fuzzyMatch = (a, b) => {
+  if (a === b) return true;
+  if (a.startsWith(b) || b.startsWith(a)) return true;
+  // Only allow 1 edit difference, and only for words longer than 5 chars
+  if (a.length < 5 || b.length < 5) return false;
+  if (Math.abs(a.length - b.length) > 2) return false;
+  let row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = i;
+    for (let j = 1; j <= b.length; j++) {
+      const val = a[i-1] === b[j-1] ? row[j-1] : 1 + Math.min(row[j-1], row[j], prev);
+      row[j-1] = prev;
+      prev = val;
+    }
+    row[b.length] = prev;
+  }
+  return row[b.length] <= 1;
+};
+
+const fuzzySearch = (text, query) => {
+  if (!text || !query) return false;
+  const textWords  = text.toLowerCase().split(/\s+/).map(stem);
+  const queryWords = query.toLowerCase().trim().split(/\s+/).map(stem);
+  return queryWords.every(qw =>
+    qw.length >= 2 && textWords.some(tw => fuzzyMatch(tw, qw))
+  );
+};
+
+const CATEGORIES = [
+  { id: "ALL",       label: "All Posts",  icon: LayoutGrid    },
+  { id: "COURSE",    label: "Courses",    icon: BookOpen      },
+  { id: "PROFESSOR", label: "Professors", icon: GraduationCap },
+  { id: "GENERAL",   label: "General",    icon: MessageSquare },
+];
+
+const REPORT_REASONS = [
+  "Offensive or inappropriate language",
+  "Misleading or false information",
+  "Spam or repeated content",
+  "Not relevant to academic discussion",
+  "Other",
+];
+
+//Course search
+function CourseTagSearch({ onSelect, initialValue }) {
+  const [query,   setQuery]   = useState(initialValue || "");
+  const [results, setResults] = useState([]);
+
+  useEffect(() => {
+    if (query.trim().length < 2) { setResults([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const res  = await fetch(`${API}/api/courses/search?query=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        setResults(data);
+      } catch { setResults([]); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  return (
+    <div style={{ position: "relative" }}>
+      <input
+        value={query}
+        onChange={e => { setQuery(e.target.value); if (!e.target.value) onSelect(""); }}
+        placeholder="Search course code (e.g. CMPS 271)…"
+        style={f.input}
+      />
+      {results.length > 0 && (
+        <div style={f.dropdown}>
+          {results.map(c => (
+            <div key={c.id}
+              onClick={() => { onSelect(c.courseCode); setQuery(c.courseCode); setResults([]); }}
+              style={f.dropdownItem}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--surface2)"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              <strong style={{ color: "var(--primary)" }}>{c.courseCode}</strong>
+              <span style={{ color: "var(--text2)", fontSize: 12 }}> — {c.title}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+//Professor search
+function ProfTagSearch({ onSelect, initialValue }) {
+  const [query,   setQuery]   = useState(initialValue || "");
+  const [results, setResults] = useState([]);
+
+  useEffect(() => {
+    if (query.trim().length < 2) { setResults([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const res  = await fetch(`${API}/api/courses/professors?query=${encodeURIComponent(query)}`);
+        const data = await res.json();
+        setResults(data);
+      } catch { setResults([]); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  return (
+    <div style={{ position: "relative" }}>
+      <input
+        value={query}
+        onChange={e => { setQuery(e.target.value); if (!e.target.value) onSelect(""); }}
+        placeholder="Search professor name…"
+        style={f.input}
+      />
+      {results.length > 0 && (
+        <div style={f.dropdown}>
+          {results.map(name => (
+            <div key={name}
+              onClick={() => { onSelect(name); setQuery(name); setResults([]); }}
+              style={f.dropdownItem}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--surface2)"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              <strong style={{ color: "var(--primary)" }}>{name}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+//Report button
+function ReportButton({ targetId, type, token, userEmail }) {
+  const [open,       setOpen]       = useState(false);
+  const [reason,     setReason]     = useState("");
+  const [submitted,  setSubmitted]  = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [err,        setErr]        = useState("");
+
+  const submit = async () => {
+    if (!reason) { setErr("Please select a reason."); return; }
+    setSubmitting(true);
+    const endpoint = type === "post"
+      ? `${API}/api/reports/forum-post/${targetId}`
+      : `${API}/api/reports/forum-comment/${targetId}`;
+    try {
+      const res = await fetch(
+        `${endpoint}?userId=${encodeURIComponent(userEmail)}&reason=${encodeURIComponent(reason)}`,
+        { method: "POST", headers: { "Authorization": `Bearer ${token}` } }
+      );
+      if (res.ok) { setSubmitted(true); setOpen(false); }
+      else { const msg = await res.text(); setErr(msg || "Failed to report."); }
+    } catch { setErr("Network error."); }
+    finally { setSubmitting(false); }
+  };
+
+  if (submitted) return (
+    <span style={{ fontSize: 11, color: "var(--text3)", display: "flex", alignItems: "center", gap: 4 }}>
+      <Check size={11} /> Reported
+    </span>
+  );
+
+  return (
+    <div style={{ position: "relative" }}>
+      <button onClick={() => { setOpen(o => !o); setErr(""); setReason(""); }}
+        style={{ ...f.ghostBtn, color: open ? "var(--danger, #c0392b)" : "var(--text3)" }}>
+        <Flag size={12} /> {open ? "Cancel" : "Report"}
+      </button>
+      {open && (
+        <div style={{
+          position: "absolute", right: 0, top: "calc(100% + 6px)",
+          background: "var(--surface)", border: "1px solid var(--border)",
+          borderRadius: 12, padding: 14, zIndex: 9999, minWidth: 240,
+          boxShadow: "0 6px 24px rgba(0,0,0,0.12)",
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", marginBottom: 10 }}>
+            Why are you reporting this?
+          </div>
+          {REPORT_REASONS.map(r => (
+            <label key={r} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--text)", marginBottom: 6, cursor: "pointer" }}>
+              <input type="radio" name={`report-${type}-${targetId}`} value={r}
+                checked={reason === r} onChange={() => { setReason(r); setErr(""); }}
+                style={{ accentColor: "var(--accent)" }} />
+              {r}
+            </label>
+          ))}
+          {err && <div style={{ fontSize: 11, color: "var(--danger, #c0392b)", marginBottom: 6 }}>{err}</div>}
+          <button onClick={submit} disabled={submitting}
+            style={{ marginTop: 4, padding: "6px 16px", background: "var(--accent)", color: "white", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+            {submitting ? "Submitting…" : "Submit Report"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+//Single post view
+function PostView({ post, token, userEmail, userId, displayName, onBack, onDelete }) {
+  const [comments,    setComments]    = useState([]);
+  const [commentText, setCommentText] = useState("");
+  const [submitting,  setSubmitting]  = useState(false);
+  const [err,         setErr]         = useState("");
+  const [relateCount, setRelateCount] = useState(post.relateCount || 0);
+  const [related,     setRelated]     = useState(false);
+  const [relating,    setRelating]    = useState(false);
+
+  useEffect(() => {
+    if (!token || !userEmail) return;
+    fetch(`${API}/api/forum/posts/${post.id}/related?userId=${encodeURIComponent(userEmail)}`)
+      .then(r => r.json())
+      .then(data => { if (data.related) setRelated(true); })
+      .catch(() => {});
+  }, [post.id]);
+  useEffect(() => { loadComments(); }, [post.id]);
+
+  const loadComments = async () => {
+    try {
+      const res  = await fetch(`${API}/api/forum/posts/${post.id}/comments`);
+      const data = await res.json();
+      setComments(Array.isArray(data) ? data : []);
+    } catch { setComments([]); }
+  };
+
+  const submitComment = async () => {
+    if (commentText.trim().length < 5) { setErr("Comment must be at least 5 characters."); return; }
+    setSubmitting(true); setErr("");
+    try {
+      const res = await fetch(
+        `${API}/api/forum/posts/${post.id}/comments?displayName=${encodeURIComponent(displayName)}&body=${encodeURIComponent(commentText)}`,
+        { method: "POST", headers: { "Authorization": `Bearer ${token}` } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === "PENDING") {
+          setErr("Your comment is under review and will appear once approved.");
+        } else {
+          setCommentText("");
+          loadComments();
+        }
+      } else {
+        const msg = await res.text();
+        setErr(msg || "Failed to post comment.");
+      }
+    } catch { setErr("Network error."); }
+    finally { setSubmitting(false); }
+  };
+
+  const deleteComment = async (commentId) => {
+    if (!window.confirm("Delete this comment?")) return;
+    try {
+      await fetch(`${API}/api/forum/comments/${commentId}`,
+        { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } });
+      setComments(c => c.filter(x => x.id !== commentId));
+    } catch {}
+  };
+
+  const handleRelate = async () => {
+      if (!token || relating) return;
+      setRelating(true);
+      try {
+        const res = await fetch(
+            `${API}/api/forum/posts/${post.id}/relate`,
+            { method: "POST", headers: { "Authorization": `Bearer ${token}` } }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setRelateCount(data.relateCount ?? 0);
+          setRelated(r => !r);
+        }
+      } catch {}
+      finally { setRelating(false); }
+    };
+
+  const categoryColor = { COURSE: "var(--primary)", PROFESSOR: "var(--accent2)", GENERAL: "var(--accent)" };
+  const CatIcon = CATEGORIES.find(c => c.id === post.category)?.icon || MessageSquare;
+
+  return (
+    <div style={{ padding: "28px 28px 60px", maxWidth: 780, fontFamily: "'DM Sans', sans-serif" }}>
+      <button onClick={onBack} style={f.backBtn}>
+        <ArrowLeft size={14} /> Back to Forum
+      </button>
+
+      <div style={f.card}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+          <span style={{ ...f.chip, background: "var(--surface2)", color: categoryColor[post.category] || "var(--text2)" }}>
+            <CatIcon size={11} /> {post.category}
+          </span>
+          {post.courseTag    && <span style={{ ...f.chip, background: "var(--blue-light-bg, #eef2fb)", color: "var(--primary)" }}>{post.courseTag}</span>}
+          {post.professorTag && <span style={{ ...f.chip, background: "var(--surface3)", color: "var(--accent2)" }}>{post.professorTag}</span>}
+        </div>
+
+        <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 22, color: "var(--primary)", marginBottom: 10, lineHeight: 1.3 }}>
+          {post.title}
+        </div>
+
+        <p style={{ fontSize: 14, color: "var(--text)", lineHeight: 1.7, margin: "0 0 18px" }}>{post.body}</p>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={f.avatar}>{post.displayName?.[0]?.toUpperCase() || "?"}</div>
+            <div>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>{post.displayName}</span>
+              <span style={{ fontSize: 11, color: "var(--text3)", marginLeft: 8 }}>{timeAgo(post.createdAt)}</span>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button onClick={handleRelate} disabled={!token || relating}
+              title={!token ? "Log in to relate" : related ? "Click to unlike" : "Relate"}
+              style={{ ...f.ghostBtn, color: related ? "var(--accent2)" : "var(--text3)", fontWeight: related ? 700 : 400, opacity: !token ? 0.5 : 1 }}>
+              <ChevronUp size={14} /> {relateCount} Relate{relateCount !== 1 ? "s" : ""}
+            </button>
+            {token && <ReportButton targetId={post.id} type="post" token={token} userEmail={userEmail} />}
+            {userId === post.userId && (
+              <button onClick={() => onDelete(post.id)} style={{ ...f.ghostBtn, color: "var(--danger, #c0392b)" }}>
+                <Trash2 size={12} /> Delete
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Comments */}
+      <div style={{ marginTop: 24 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text3)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 14 }}>
+          {comments.length} Comment{comments.length !== 1 ? "s" : ""}
+        </div>
+
+        {comments.map(c => (
+          <div key={c.id} style={{ ...f.card, marginBottom: 10, padding: "14px 18px" }}>
+            <p style={{ fontSize: 14, color: "var(--text)", lineHeight: 1.65, margin: "0 0 10px" }}>{c.body}</p>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ ...f.avatar, width: 24, height: 24, fontSize: 10 }}>{c.displayName?.[0]?.toUpperCase() || "?"}</div>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--primary)" }}>{c.displayName}</span>
+                <span style={{ fontSize: 11, color: "var(--text3)" }}>{timeAgo(c.createdAt)}</span>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                {token && <ReportButton targetId={c.id} type="comment" token={token} userEmail={userEmail} />}
+                {userId === c.userId && (
+                  <button onClick={() => deleteComment(c.id)} style={{ ...f.ghostBtn, color: "var(--danger, #c0392b)" }}>
+                    <Trash2 size={12} /> Delete
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {comments.length === 0 && (
+          <div style={{ textAlign: "center", padding: "30px 0", color: "var(--text3)", fontSize: 13 }}>
+            No comments yet — be the first to reply!
+          </div>
+        )}
+
+        {/* FIX 1: Comment form — proper spacing so button doesn't overlap textarea */}
+        {token ? (
+          <div style={{ ...f.card, marginTop: 16 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", marginBottom: 10 }}>
+              Reply as <span style={{ color: "var(--primary)" }}>{displayName}</span>
+            </div>
+            <textarea
+              value={commentText}
+              onChange={e => { setCommentText(e.target.value); setErr(""); }}
+              placeholder="Write a comment…"
+              rows={4}
+              style={{ ...f.input, resize: "vertical", lineHeight: 1.6, marginBottom: 12 }}
+            />
+            {err && (
+              <div style={{ fontSize: 12, color: err.includes("review") ? "var(--accent2)" : "var(--danger, #c0392b)", marginBottom: 10 }}>
+                {err}
+              </div>
+            )}
+            <button onClick={submitComment} disabled={submitting} style={f.primaryBtn}>
+              {submitting ? "Posting…" : "Post Comment"}
+            </button>
+          </div>
+        ) : (
+          <div style={{ textAlign: "center", padding: 20, fontSize: 13, color: "var(--text3)" }}>
+            Log in to leave a comment.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+//Create post form
+function CreatePost({ token, userEmail, userId, displayName, onDone, initialCategory, initialCourseTag, initialProfTag }) {
+  const [title,      setTitle]      = useState("");
+  const [body,       setBody]       = useState("");
+  const [category,   setCategory]   = useState(initialCategory || "GENERAL");
+  //courseTag and profTag only count if selected from autocomplete
+  const [courseTag,  setCourseTag]  = useState("");
+  const [profTag,    setProfTag]    = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [err,        setErr]        = useState("");
+
+  const submit = async () => {
+    if (!title.trim())                        { setErr("Please add a title."); return; }
+    if (body.trim().length < 20)              { setErr("Post body must be at least 20 characters."); return; }
+    if (category === "COURSE" && !courseTag)  { setErr("Please select a course from the search results."); return; }
+    if (category === "PROFESSOR" && !profTag) { setErr("Please select a professor from the search results."); return; }
+
+    setSubmitting(true); setErr("");
+    const params = new URLSearchParams({
+      displayName, title, body, category,
+      ...(courseTag && { courseTag }),
+      ...(profTag   && { professorTag: profTag }),
+    });
+    try {
+      const res = await fetch(`${API}/api/forum/posts?${params}`,
+        { method: "POST", headers: { "Authorization": `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === "PENDING") {
+          setErr("Your post is under review and will appear once approved by a moderator.");
+          setTimeout(onDone, 3000);
+        } else {
+          onDone();
+        }
+      } else {
+        const msg = await res.text();
+        setErr(msg || "Failed to create post.");
+      }
+    } catch { setErr("Network error."); }
+    finally { setSubmitting(false); }
+  };
+
+  return (
+    <div style={{ ...f.card, marginBottom: 24 }}>
+      <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 17, color: "var(--primary)", marginBottom: 18 }}>
+        New Post
+      </div>
+
+      {err && (
+        <div style={{
+          background: err.includes("review") ? "var(--surface2)" : "#fef0f0",
+          border: `1px solid ${err.includes("review") ? "var(--border)" : "#f5c6c6"}`,
+          borderRadius: 10, padding: "9px 14px", fontSize: 13,
+          color: err.includes("review") ? "var(--accent2)" : "var(--danger, #c0392b)",
+          marginBottom: 14,
+        }}>
+          {err}
+        </div>
+      )}
+
+      {/* Category */}
+      <label style={f.label}>Category</label>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        {CATEGORIES.filter(c => c.id !== "ALL").map(c => {
+          const Icon = c.icon;
+          return (
+            <button key={c.id} onClick={() => { setCategory(c.id); setCourseTag(""); setProfTag(""); }} style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "7px 16px", borderRadius: 10, border: "1px solid var(--border)",
+              background: category === c.id ? "var(--primary)" : "var(--surface)",
+              color: category === c.id ? "white" : "var(--text2)",
+              fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+            }}>
+              <Icon size={13} /> {c.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Mandatory course tag, only shown when COURSE selected */}
+      {category === "COURSE" && (
+        <>
+          <label style={f.label}>
+            Tag a Course <span style={{ color: "var(--danger, #c0392b)" }}>*</span>
+            <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)", marginLeft: 6 }}>Select from the dropdown</span>
+          </label>
+          <div style={{ marginBottom: 16 }}>
+            <CourseTagSearch onSelect={setCourseTag} initialValue="" />
+            {courseTag
+              ? <div style={{ fontSize: 11, color: "var(--primary)", marginTop: 6, fontWeight: 600 }}>Tagged: {courseTag}</div>
+              : <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>No course selected yet</div>
+            }
+          </div>
+        </>
+      )}
+
+      {/* Mandatory professor tag, only shown when PROFESSOR selected */}
+      {category === "PROFESSOR" && (
+        <>
+          <label style={f.label}>
+            Tag a Professor <span style={{ color: "var(--danger, #c0392b)" }}>*</span>
+            <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)", marginLeft: 6 }}>Select from the dropdown</span>
+          </label>
+          <div style={{ marginBottom: 16 }}>
+            <ProfTagSearch onSelect={setProfTag} initialValue="" />
+            {profTag
+              ? <div style={{ fontSize: 11, color: "var(--accent2)", marginTop: 6, fontWeight: 600 }}>Tagged: {profTag}</div>
+              : <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>No professor selected yet</div>
+            }
+          </div>
+        </>
+      )}
+
+      {/* Title */}
+      <label style={f.label}>Title</label>
+      <input value={title} onChange={e => { setTitle(e.target.value); setErr(""); }}
+        placeholder="What's your post about?" style={{ ...f.input, marginBottom: 16 }} />
+
+      {/* Body */}
+      <label style={f.label}>Body</label>
+      <textarea value={body} onChange={e => { setBody(e.target.value); setErr(""); }}
+        placeholder="Share your thoughts, questions, or experiences…"
+        rows={5} style={{ ...f.input, resize: "vertical", lineHeight: 1.6, marginBottom: 6 }} />
+      <div style={{ fontSize: 11, color: "var(--text3)", marginBottom: 16 }}>{body.length} chars</div>
+
+      <div style={{ display: "flex", gap: 10 }}>
+        <button onClick={submit} disabled={submitting} style={f.primaryBtn}>
+          {submitting ? "Posting…" : "Post"}
+        </button>
+        <button onClick={onDone} style={f.cancelBtn}>Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+//Post card in the feed
+function PostCard({ post, onOpenComments, token, userEmail }) {
+  const categoryColor = { COURSE: "var(--primary)", PROFESSOR: "var(--accent2)", GENERAL: "var(--accent)" };
+  const CatIcon = CATEGORIES.find(c => c.id === post.category)?.icon || MessageSquare;
+
+  const [relateCount, setRelateCount] = useState(post.relateCount ?? 0);
+  const [related,     setRelated]     = useState(false);
+  const [relating,    setRelating]    = useState(false);
+
+  // Check on mount if this user has already liked this post
+  useEffect(() => {
+    if (!token || !userEmail) return;
+    fetch(`${API}/api/forum/posts/${post.id}/related`, {
+        headers: { "Authorization": `Bearer ${token}` }
+    })
+      .then(r => r.json())
+      .then(data => { if (data.related) setRelated(true); })
+      .catch(() => {});
+  }, [post.id]);
+
+  const handleRelate = async (e) => {
+    e.stopPropagation();
+    if (!token || relating) return;
+    setRelating(true);
+    try {
+      const res = await fetch(
+          `${API}/api/forum/posts/${post.id}/relate`,
+          { method: "POST", headers: { "Authorization": `Bearer ${token}` } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setRelateCount(data.relateCount ?? 0);
+        setRelated(r => !r);
+      }
+    } catch {}
+    finally { setRelating(false); }
+  };
+
+  return (
+    <div style={{ ...f.card, transition: "box-shadow 0.2s" }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 24px rgba(49,72,122,0.13)"; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 2px 10px rgba(49,72,122,0.06)"; }}
+    >
+      <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
+        <span style={{ ...f.chip, color: categoryColor[post.category] || "var(--text2)", background: "var(--surface2)" }}>
+          <CatIcon size={11} /> {post.category}
+        </span>
+        {post.courseTag    && <span style={{ ...f.chip, background: "var(--blue-light-bg, #eef2fb)", color: "var(--primary)" }}>{post.courseTag}</span>}
+        {post.professorTag && <span style={{ ...f.chip, background: "var(--surface3)", color: "var(--accent2)" }}>{post.professorTag}</span>}
+      </div>
+
+      <div onClick={onOpenComments} style={{ cursor: "pointer" }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: "var(--primary)", marginBottom: 6, lineHeight: 1.3 }}>
+          {post.title}
+        </div>
+        <p style={{
+          fontSize: 13, color: "var(--text2)", lineHeight: 1.6, margin: "0 0 14px",
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+        }}>
+          {post.body}
+        </p>
+      </div>
+
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={f.avatar}>{post.displayName?.[0]?.toUpperCase() || "?"}</div>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--primary)" }}>{post.displayName}</span>
+          <span style={{ fontSize: 11, color: "var(--text3)" }}>· {timeAgo(post.createdAt)}</span>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <button
+            onClick={handleRelate}
+            disabled={!token || relating}
+            title={!token ? "Log in to relate" : related ? "Click to unlike" : "Relate"}
+            style={{
+              ...f.ghostBtn,
+              color: related ? "var(--accent2)" : "var(--text3)",
+              fontWeight: related ? 700 : 400,
+              opacity: !token ? 0.5 : 1,
+              gap: 5,
+            }}
+          >
+            <ChevronUp size={14} /> {relateCount}
+          </button>
+
+          <button onClick={onOpenComments} style={{ ...f.ghostBtn, color: "var(--text3)", gap: 5 }}>
+            <MessageSquare size={13} /> {post.commentCount ?? 0} comment{(post.commentCount ?? 0) !== 1 ? "s" : ""}
+          </button>
+
+          {token && (
+            <div onClick={e => e.stopPropagation()}>
+              <ReportButton targetId={post.id} type="post" token={token} userEmail={userEmail} />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+//Main Forum page
+export default function Forum({ initialCourseTag, initialProfTag }) {
+  const token     = localStorage.getItem("kk_token");
+  const userEmail = localStorage.getItem("kk_email") || "";
+  const userId    = userEmail;
+
+  const [displayName, setDisplayName] = useState(() => {
+    try {
+      const p = JSON.parse(localStorage.getItem("kk_profile") || "{}");
+      return (p.firstName || p.lastName)
+        ? `${p.firstName || ""} ${p.lastName || ""}`.trim()
+        : (userEmail.split("@")[0] || "Student");
+    } catch { return userEmail.split("@")[0] || "Student"; }
+  });
+
+  useEffect(() => {
+    if (!token) return;
+    fetch("http://localhost:8080/api/profile", { headers: { "Authorization": "Bearer " + token } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          const name = (data.firstName || data.lastName)
+            ? `${data.firstName || ""} ${data.lastName || ""}`.trim()
+            : userEmail.split("@")[0];
+          setDisplayName(name);
+        }
+      }).catch(() => {});
+  }, []);
+
+  const initCat = initialCourseTag ? "COURSE" : initialProfTag ? "PROFESSOR" : "ALL";
+
+  const [posts,      setPosts]      = useState([]);
+  const [loading,    setLoading]    = useState(false);
+  const [category,   setCategory]   = useState(initCat);
+  const [sort,       setSort]       = useState("new");
+  const [search,     setSearch]     = useState("");
+  const [composing,  setComposing]  = useState(false);
+  const [activePost, setActivePost] = useState(null);
+
+  const loadPosts = useCallback(async (cat) => {
+      setLoading(true);
+      try {
+        const resolvedCat = cat ?? category;
+        let url;
+        if (initialCourseTag && resolvedCat === "COURSE") {
+          url = `${API}/api/forum/posts/course/${encodeURIComponent(initialCourseTag)}`;
+        } else if (initialProfTag && resolvedCat === "PROFESSOR") {
+          url = `${API}/api/forum/posts/professor/${encodeURIComponent(initialProfTag)}`;
+        } else if (resolvedCat === "ALL") {
+          url = `${API}/api/forum/posts`;
+        } else {
+          url = `${API}/api/forum/posts/category/${resolvedCat}`;
+        }
+      const res  = await fetch(url);
+      const data = await res.json();
+      setPosts(Array.isArray(data) ? data : []);
+    } catch { setPosts([]); }
+    finally { setLoading(false); }
+  }, [category]);
+
+  useEffect(() => { loadPosts(initCat); }, []);
+  useEffect(() => { loadPosts(category); }, [category]);
+
+  const deletePost = async (postId) => {
+      if (!window.confirm("Delete this post?")) return;
+      try {
+        const res = await fetch(`${API}/api/forum/posts/${postId}`,
+          { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } });
+        if (res.ok) {
+          setActivePost(null);
+          loadPosts(category);
+        } else {
+          const msg = await res.text();
+          alert("Delete failed: " + msg);
+        }
+      } catch (e) { alert("Network error: " + e.message); }
+  };
+
+  let displayed = posts.filter(p =>
+      !search ||
+      fuzzySearch(p.title, search) ||
+      fuzzySearch(p.body, search) ||
+      fuzzySearch(p.courseTag, search) ||
+      fuzzySearch(p.professorTag, search)
+  );
+
+  displayed = sort === "top"
+    ? [...displayed].sort((a, b) => b.relateCount - a.relateCount)
+    : [...displayed].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  if (activePost) {
+    return (
+      <PostView
+        post={activePost}
+        token={token}
+        userEmail={userEmail}
+        userId={userId}
+        displayName={displayName}
+        onBack={() => { setActivePost(null); loadPosts(category); }}
+        onDelete={async (id) => { await deletePost(id); }}
+      />
+    );
+  }
+
+  return (
+    <div style={{ padding: "28px 28px 60px", maxWidth: 860, fontFamily: "'DM Sans', sans-serif" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
+        * { box-sizing: border-box; }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        .post-anim { animation: fadeUp 0.3s ease both; }
+      `}</style>
+
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 26, color: "var(--primary)" }}>
+          Discussion Forum
+        </div>
+        {token && (
+          <button onClick={() => setComposing(c => !c)}
+            style={{ ...f.primaryBtn, display: "flex", alignItems: "center", gap: 8 }}>
+            <Plus size={15} /> {composing ? "Cancel" : "New Post"}
+          </button>
+        )}
+      </div>
+
+      {/* Category tabs */}
+      <div style={{ display: "flex", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: 5, width: "fit-content", gap: 4, marginBottom: 20, flexWrap: "wrap" }}>
+        {CATEGORIES.map(c => {
+          const Icon = c.icon;
+          return (
+            <button key={c.id} onClick={() => { setCategory(c.id); setComposing(false); }} style={{
+              display: "flex", alignItems: "center", gap: 6,
+              padding: "8px 16px", border: "none", borderRadius: 10,
+              fontSize: 13, fontWeight: 600, cursor: "pointer",
+              fontFamily: "'DM Sans', sans-serif", transition: "all .15s",
+              background: category === c.id ? "var(--primary)" : "transparent",
+              color:      category === c.id ? "white" : "var(--text2)",
+            }}>
+              <Icon size={14} /> {c.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Create post form */}
+      {composing && (
+        <CreatePost
+          token={token} userEmail={userEmail} userId={userId} displayName={displayName}
+          initialCategory={category !== "ALL" ? category : "GENERAL"}
+          initialCourseTag={initialCourseTag || ""}
+          initialProfTag={initialProfTag || ""}
+          onDone={() => { setComposing(false); loadPosts(category); }}
+        />
+      )}
+
+      {/* Search + sort bar */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "8px 14px", minWidth: 200 }}>
+          <Search size={14} style={{ color: "var(--text3)", marginRight: 8, flexShrink: 0 }} />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search posts…"
+            style={{ border: "none", outline: "none", background: "transparent", fontSize: 13, color: "var(--text)", width: "100%", fontFamily: "'DM Sans', sans-serif" }} />
+        </div>
+        <div style={{ display: "flex", gap: 4, background: "var(--surface2)", padding: 4, borderRadius: 10 }}>
+          {[{ id: "new", label: "New" }, { id: "top", label: "Top" }].map(s => (
+            <button key={s.id} onClick={() => setSort(s.id)} style={{
+              padding: "6px 14px", border: "none", borderRadius: 8,
+              fontSize: 12, fontWeight: 600, cursor: "pointer",
+              background: sort === s.id ? "var(--primary)" : "transparent",
+              color:      sort === s.id ? "white" : "var(--text2)",
+            }}>{s.label}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Context header when deep-linked */}
+        {initialCourseTag && (
+          <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 12 }}>
+            Showing posts tagged with <strong style={{ color: "var(--primary)" }}>{initialCourseTag}</strong>
+            <button onClick={() => loadPosts("ALL")}
+              style={{ marginLeft: 10, fontSize: 12, color: "var(--text3)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+              View all posts
+            </button>
+          </div>
+        )}
+        {initialProfTag && (
+          <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 12 }}>
+            Showing posts tagged with <strong style={{ color: "var(--accent2)" }}>{initialProfTag}</strong>
+          </div>
+      )}
+
+
+      {/* Posts feed */}
+      {loading && (
+        <div style={{ textAlign: "center", padding: 60, color: "var(--text3)", fontSize: 14 }}>
+          Loading posts…
+        </div>
+      )}
+
+      {!loading && displayed.length === 0 && (
+        <div style={{ textAlign: "center", padding: "60px 0", color: "var(--text3)" }}>
+          <MessageSquare size={40} color="var(--border)" style={{ marginBottom: 12 }} />
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: "var(--primary)", marginBottom: 6 }}>
+            No posts yet
+          </div>
+          <div style={{ fontSize: 13 }}>Be the first to start a discussion!</div>
+        </div>
+      )}
+
+      {!loading && displayed.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {displayed.map((p, i) => (
+            <div key={p.id} className="post-anim" style={{ animationDelay: `${i * 0.04}s`, position: "relative", zIndex: displayed.length - i }}>
+                <PostCard
+                post={p}
+                onOpenComments={() => setActivePost(p)}
+                token={token}
+                userEmail={userEmail}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+//Styles
+const f = {
+  card: {
+      background: "var(--surface)",
+      border: "1px solid var(--border)",
+      borderRadius: 16,
+      padding: "20px 22px",
+      boxShadow: "0 2px 10px rgba(49,72,122,0.06)",
+      overflow: "visible",
+      position: "relative",
+  },
+  chip: {
+    fontSize: 11, fontWeight: 700,
+    padding: "3px 10px", borderRadius: 6,
+    display: "inline-flex", alignItems: "center", gap: 4,
+  },
+  avatar: {
+    width: 30, height: 30, borderRadius: "50%",
+    background: "linear-gradient(135deg, var(--primary), var(--accent))",
+    color: "white", fontWeight: 700, fontSize: 13,
+    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+  },
+  label:  { display: "block", fontSize: 12, fontWeight: 600, color: "var(--text2)", marginBottom: 6 },
+  input: {
+    width: "100%", padding: "10px 14px",
+    border: "1px solid var(--border)", borderRadius: 10,
+    fontSize: 13, fontFamily: "'DM Sans', sans-serif",
+    color: "var(--text)", background: "var(--surface2)",
+    outline: "none", display: "block",
+  },
+  dropdown: {
+    position: "absolute", top: "100%", left: 0, right: 0,
+    background: "var(--surface)", border: "1px solid var(--border)",
+    borderRadius: 12, boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+    zIndex: 100, maxHeight: 200, overflowY: "auto", marginTop: 4,
+  },
+  dropdownItem: {
+    padding: "10px 14px", cursor: "pointer",
+    borderBottom: "1px solid var(--border)",
+    fontSize: 13, transition: "background .1s",
+  },
+  primaryBtn: {
+    padding: "10px 22px", background: "var(--primary)", color: "white",
+    border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600,
+    cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+  },
+  cancelBtn: {
+    padding: "10px 18px", background: "var(--surface2)", color: "var(--text2)",
+    border: "1px solid var(--border)", borderRadius: 10, fontSize: 13,
+    cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+  },
+  ghostBtn: {
+    display: "flex", alignItems: "center", gap: 4,
+    background: "none", border: "none", fontSize: 12,
+    cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+    padding: "4px 8px", borderRadius: 6,
+  },
+  backBtn: {
+    display: "flex", alignItems: "center", gap: 8,
+    background: "var(--surface2)", border: "1px solid var(--border)",
+    borderRadius: 10, padding: "8px 16px", cursor: "pointer",
+    fontSize: 13, fontWeight: 600, color: "var(--primary)",
+    fontFamily: "'DM Sans', sans-serif", marginBottom: 24,
+  },
+};

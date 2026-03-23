@@ -21,6 +21,10 @@ public class Report {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
+
+    private Long forumPostId;
+    private Long forumCommentId;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -38,4 +42,20 @@ public class Report {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public Long getForumPostId() {
+        return forumPostId;
+    }
+
+    public void setForumPostId(Long forumPostId) {
+        this.forumPostId = forumPostId;
+    }
+
+    public Long getForumCommentId() {
+        return forumCommentId;
+    }
+
+    public void setForumCommentId(Long forumCommentId) {
+        this.forumCommentId = forumCommentId;
+    }
 }
