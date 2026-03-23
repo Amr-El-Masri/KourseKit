@@ -149,7 +149,7 @@ export default function StudentDirectoryPanel({ onClose, friends, onFriendToggle
                         <div style={{ fontSize:11, color:"var(--text2)", marginTop:1 }}>{s.major || "—"} · {STATUS_LABELS[s.status] || s.status || "—"}</div>
                         {s.email && <div style={{ fontSize:11, color:"var(--text3)", marginTop:1 }}>{s.email}</div>}
                       </div>
-                       <button onClick={e => { e.stopPropagation(); onFriendToggle(s); }} style={{ padding:"5px 10px", borderRadius:8, border:"1px solid var(--border)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit", flexShrink:0, background:isFriend?"var(--primary)":"var(--surface2)", color:isFriend?"white":"var(--text2)" }}>
+                       <button onClick={e => { e.stopPropagation(); onFriendToggle(s); }} style={{ padding:"5px 10px", borderRadius:8, border:"1px solid var(--border)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit", flexShrink:0, background:isFriend?"color-mix(in srgb, var(--primary) 15%, transparent)":"var(--surface2)", color:isFriend?"var(--primary)":"var(--text2)" }}>
                         {isFriend ? "✓ Following" : "+ Follow"}
                       </button>
                     </div>

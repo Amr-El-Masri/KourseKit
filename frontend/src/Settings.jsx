@@ -145,8 +145,8 @@ export default function Settings({ onLogout }) {
   const eyeOn  = <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
 
   return (
-    <div style={{ padding: "32px 36px", fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 24, color: "var(--primary)", marginBottom: 24 }}>
+    <div style={{ padding: "28px 28px 60px", fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:10 }}>
         Account Settings
       </div>
 
@@ -269,7 +269,7 @@ export default function Settings({ onLogout }) {
               disabled={passloading}
               style={{
                 width: "100%", padding: "10px 0", borderRadius: 9, border: "none",
-                background: "var(--primary)", color: "#fff", fontSize: 13,
+                background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)", fontSize: 13,
                 fontWeight: 700, cursor: passloading ? "not-allowed" : "pointer",
                 fontFamily: "'DM Sans', sans-serif", opacity: passloading ? 0.7 : 1,
               }}

@@ -36,7 +36,7 @@ export default function ForgotPassword({ onGoToLogin }) {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'DM Sans', sans-serif; }
-        .fp-btn:hover { background: var(--primary2) !important; }
+        .fp-btn:hover { background: color-mix(in srgb, var(--primary) 25%, transparent) !important; }
         .fp-btn { transition: background 0.15s; }
         .fp-input:focus { border-color: var(--border2) !important; outline: none; }
       `}</style>
@@ -164,7 +164,7 @@ const s = {
     transition: "border-color 0.15s",
   },
   btn: {
-    width: "100%", padding: "13px", background: "var(--primary)", color: "white",
+    width: "100%", padding: "13px", background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)",
     border: "none", borderRadius: 10, fontSize: 15, fontWeight: 600,
     cursor: "pointer", fontFamily: "'DM Sans', sans-serif", marginTop: 4,
   },
