@@ -27,7 +27,9 @@ public class ForumPost {
     private String courseTag;
     private String professorTag;
 
-    private int relateCount = 0;  // upvote equivalent
+    private int relateCount = 0;  //like "liking a post"
+
+    private int commentCount = 0;
 
     @Enumerated(EnumType.STRING)
     private ReviewStatus status = ReviewStatus.APPROVED;
@@ -63,6 +65,9 @@ public class ForumPost {
 
     public ReviewStatus getStatus() { return status; }
     public void setStatus(ReviewStatus status) { this.status = status; }
+
+    public int getCommentCount() { return commentCount; }
+    public void setCommentCount(int commentCount) { this.commentCount = commentCount; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

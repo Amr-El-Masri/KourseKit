@@ -548,6 +548,8 @@ export default function Dashboard({ onLogout }) {
 
   const [editingTask, setEditingTask] = useState(null);
   const [courseDetailsTarget, setCourseDetailsTarget] = useState(null);
+  const [forumCourseTag, setForumCourseTag] = useState("");
+  const [forumProfTag,   setForumProfTag]   = useState("");
   const [syllabusTarget, setSyllabusTarget] = useState(null); // course name for syllabus modal
   const [syllabusCalcData, setSyllabusCalcData] = useState(null); // pre-fill data for calculator
   const [notifications, setNotifications] = useState([]);
@@ -968,6 +970,12 @@ export default function Dashboard({ onLogout }) {
     return `${calYear}-${mm}-${dd}`;};
 
   const handleLogout = () => { Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); onLogout(); };
+
+  const navigateToForum = (courseTag, profTag) => {
+    setForumCourseTag(courseTag || "");
+    setForumProfTag(profTag || "");
+    setActivePage("forum");
+  };
 
   const fetchSemesters = () => {
     const token = localStorage.getItem("kk_token");
@@ -1693,8 +1701,8 @@ export default function Dashboard({ onLogout }) {
                   onNavigate={setActivePage}
               />
           )}
-          {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
-          {activePage === "forum" && <Forum />}
+          {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} onNavigateToForum={navigateToForum} />}
+          {activePage === "forum" && <Forum initialCourseTag={forumCourseTag} initialProfTag={forumProfTag} />}
           {activePage === "planner" && <StudyPlanner />}
           {activePage === "students" && <StudentDirectory />}
           {activePage === "profile" && (
@@ -1706,6 +1714,7 @@ export default function Dashboard({ onLogout }) {
               <CourseDetails
                   course={courseDetailsTarget}
                   onBack={() => setActivePage("dashboard")}
+                  onNavigateToForum={navigateToForum}
               />
           )}
 

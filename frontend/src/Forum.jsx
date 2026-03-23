@@ -11,6 +11,39 @@ const timeAgo = ts => {
   return `${Math.floor(s/86400)}d ago`;
 };
 
+//fuzzy search algo
+const stem = word => word
+  .replace(/(ing|tion|ations|ation|ed|ly|er|est|ess|ness|ies|es|s)$/, "")
+  .toLowerCase();
+
+const fuzzyMatch = (a, b) => {
+  if (a === b) return true;
+  if (a.startsWith(b) || b.startsWith(a)) return true;
+  // Only allow 1 edit difference, and only for words longer than 5 chars
+  if (a.length < 5 || b.length < 5) return false;
+  if (Math.abs(a.length - b.length) > 2) return false;
+  let row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = i;
+    for (let j = 1; j <= b.length; j++) {
+      const val = a[i-1] === b[j-1] ? row[j-1] : 1 + Math.min(row[j-1], row[j], prev);
+      row[j-1] = prev;
+      prev = val;
+    }
+    row[b.length] = prev;
+  }
+  return row[b.length] <= 1;
+};
+
+const fuzzySearch = (text, query) => {
+  if (!text || !query) return false;
+  const textWords  = text.toLowerCase().split(/\s+/).map(stem);
+  const queryWords = query.toLowerCase().trim().split(/\s+/).map(stem);
+  return queryWords.every(qw =>
+    qw.length >= 2 && textWords.some(tw => fuzzyMatch(tw, qw))
+  );
+};
+
 const CATEGORIES = [
   { id: "ALL",       label: "All Posts",  icon: LayoutGrid    },
   { id: "COURSE",    label: "Courses",    icon: BookOpen      },
@@ -26,9 +59,9 @@ const REPORT_REASONS = [
   "Other",
 ];
 
-// ─── Course search (reuses existing backend) ─────────────────────────────────
-function CourseTagSearch({ onSelect }) {
-  const [query,   setQuery]   = useState("");
+//Course search
+function CourseTagSearch({ onSelect, initialValue }) {
+  const [query,   setQuery]   = useState(initialValue || "");
   const [results, setResults] = useState([]);
 
   useEffect(() => {
@@ -47,7 +80,7 @@ function CourseTagSearch({ onSelect }) {
     <div style={{ position: "relative" }}>
       <input
         value={query}
-        onChange={e => setQuery(e.target.value)}
+        onChange={e => { setQuery(e.target.value); if (!e.target.value) onSelect(""); }}
         placeholder="Search course code (e.g. CMPS 271)…"
         style={f.input}
       />
@@ -70,8 +103,9 @@ function CourseTagSearch({ onSelect }) {
   );
 }
 
-function ProfTagSearch({ onSelect }) {
-  const [query,   setQuery]   = useState("");
+//Professor search
+function ProfTagSearch({ onSelect, initialValue }) {
+  const [query,   setQuery]   = useState(initialValue || "");
   const [results, setResults] = useState([]);
 
   useEffect(() => {
@@ -90,7 +124,7 @@ function ProfTagSearch({ onSelect }) {
     <div style={{ position: "relative" }}>
       <input
         value={query}
-        onChange={e => setQuery(e.target.value)}
+        onChange={e => { setQuery(e.target.value); if (!e.target.value) onSelect(""); }}
         placeholder="Search professor name…"
         style={f.input}
       />
@@ -112,7 +146,7 @@ function ProfTagSearch({ onSelect }) {
   );
 }
 
-// ─── Report button (reusable for posts and comments) ─────────────────────────
+//Report button
 function ReportButton({ targetId, type, token, userEmail }) {
   const [open,       setOpen]       = useState(false);
   const [reason,     setReason]     = useState("");
@@ -153,7 +187,7 @@ function ReportButton({ targetId, type, token, userEmail }) {
         <div style={{
           position: "absolute", right: 0, top: "calc(100% + 6px)",
           background: "var(--surface)", border: "1px solid var(--border)",
-          borderRadius: 12, padding: 14, zIndex: 200, minWidth: 240,
+          borderRadius: 12, padding: 14, zIndex: 9999, minWidth: 240,
           boxShadow: "0 6px 24px rgba(0,0,0,0.12)",
         }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", marginBottom: 10 }}>
@@ -178,7 +212,7 @@ function ReportButton({ targetId, type, token, userEmail }) {
   );
 }
 
-// ─── Single post view ─────────────────────────────────────────────────────────
+//Single post view
 function PostView({ post, token, userEmail, userId, displayName, onBack, onDelete }) {
   const [comments,    setComments]    = useState([]);
   const [commentText, setCommentText] = useState("");
@@ -186,7 +220,15 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
   const [err,         setErr]         = useState("");
   const [relateCount, setRelateCount] = useState(post.relateCount || 0);
   const [related,     setRelated]     = useState(false);
+  const [relating,    setRelating]    = useState(false);
 
+  useEffect(() => {
+    if (!token || !userEmail) return;
+    fetch(`${API}/api/forum/posts/${post.id}/related?userId=${encodeURIComponent(userEmail)}`)
+      .then(r => r.json())
+      .then(data => { if (data.related) setRelated(true); })
+      .catch(() => {});
+  }, [post.id]);
   useEffect(() => { loadComments(); }, [post.id]);
 
   const loadComments = async () => {
@@ -202,7 +244,7 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
     setSubmitting(true); setErr("");
     try {
       const res = await fetch(
-        `${API}/api/forum/posts/${post.id}/comments?userId=${encodeURIComponent(userEmail)}&displayName=${encodeURIComponent(displayName)}&body=${encodeURIComponent(commentText)}`,
+        `${API}/api/forum/posts/${post.id}/comments?displayName=${encodeURIComponent(displayName)}&body=${encodeURIComponent(commentText)}`,
         { method: "POST", headers: { "Authorization": `Bearer ${token}` } }
       );
       if (res.ok) {
@@ -224,22 +266,28 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
   const deleteComment = async (commentId) => {
     if (!window.confirm("Delete this comment?")) return;
     try {
-      await fetch(`${API}/api/forum/comments/${commentId}?userId=${encodeURIComponent(userEmail)}`,
+      await fetch(`${API}/api/forum/comments/${commentId}`,
         { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } });
       setComments(c => c.filter(x => x.id !== commentId));
     } catch {}
   };
 
   const handleRelate = async () => {
-    if (related || !token) return;
-    try {
-      const res = await fetch(
-        `${API}/api/forum/posts/${post.id}/relate?userId=${encodeURIComponent(userEmail)}`,
-        { method: "POST", headers: { "Authorization": `Bearer ${token}` } }
-      );
-      if (res.ok) { setRelateCount(c => c + 1); setRelated(true); }
-    } catch {}
-  };
+      if (!token || relating) return;
+      setRelating(true);
+      try {
+        const res = await fetch(
+            `${API}/api/forum/posts/${post.id}/relate`,
+            { method: "POST", headers: { "Authorization": `Bearer ${token}` } }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setRelateCount(data.relateCount ?? 0);
+          setRelated(r => !r);
+        }
+      } catch {}
+      finally { setRelating(false); }
+    };
 
   const categoryColor = { COURSE: "var(--primary)", PROFESSOR: "var(--accent2)", GENERAL: "var(--accent)" };
   const CatIcon = CATEGORIES.find(c => c.id === post.category)?.icon || MessageSquare;
@@ -250,26 +298,21 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
         <ArrowLeft size={14} /> Back to Forum
       </button>
 
-      {/* Post card */}
       <div style={f.card}>
-        {/* Category + tag chips */}
         <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-          <span style={{ ...f.chip, background: "var(--surface2)", color: categoryColor[post.category] || "var(--text2)", display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ ...f.chip, background: "var(--surface2)", color: categoryColor[post.category] || "var(--text2)" }}>
             <CatIcon size={11} /> {post.category}
           </span>
           {post.courseTag    && <span style={{ ...f.chip, background: "var(--blue-light-bg, #eef2fb)", color: "var(--primary)" }}>{post.courseTag}</span>}
           {post.professorTag && <span style={{ ...f.chip, background: "var(--surface3)", color: "var(--accent2)" }}>{post.professorTag}</span>}
         </div>
 
-        {/* Title */}
         <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 22, color: "var(--primary)", marginBottom: 10, lineHeight: 1.3 }}>
           {post.title}
         </div>
 
-        {/* Body */}
         <p style={{ fontSize: 14, color: "var(--text)", lineHeight: 1.7, margin: "0 0 18px" }}>{post.body}</p>
 
-        {/* Footer */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={f.avatar}>{post.displayName?.[0]?.toUpperCase() || "?"}</div>
@@ -279,8 +322,9 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <button onClick={handleRelate} disabled={related || !token}
-              style={{ ...f.ghostBtn, color: related ? "var(--accent2)" : "var(--text3)", fontWeight: related ? 700 : 400 }}>
+            <button onClick={handleRelate} disabled={!token || relating}
+              title={!token ? "Log in to relate" : related ? "Click to unlike" : "Relate"}
+              style={{ ...f.ghostBtn, color: related ? "var(--accent2)" : "var(--text3)", fontWeight: related ? 700 : 400, opacity: !token ? 0.5 : 1 }}>
               <ChevronUp size={14} /> {relateCount} Relate{relateCount !== 1 ? "s" : ""}
             </button>
             {token && <ReportButton targetId={post.id} type="post" token={token} userEmail={userEmail} />}
@@ -326,7 +370,7 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
           </div>
         )}
 
-        {/* Comment form */}
+        {/* FIX 1: Comment form — proper spacing so button doesn't overlap textarea */}
         {token ? (
           <div style={{ ...f.card, marginTop: 16 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", marginBottom: 10 }}>
@@ -336,11 +380,11 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
               value={commentText}
               onChange={e => { setCommentText(e.target.value); setErr(""); }}
               placeholder="Write a comment…"
-              rows={3}
-              style={{ ...f.input, resize: "vertical", lineHeight: 1.6 }}
+              rows={4}
+              style={{ ...f.input, resize: "vertical", lineHeight: 1.6, marginBottom: 12 }}
             />
             {err && (
-              <div style={{ fontSize: 12, color: err.includes("review") ? "var(--accent2)" : "var(--danger, #c0392b)", marginBottom: 8 }}>
+              <div style={{ fontSize: 12, color: err.includes("review") ? "var(--accent2)" : "var(--danger, #c0392b)", marginBottom: 10 }}>
                 {err}
               </div>
             )}
@@ -358,27 +402,31 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
   );
 }
 
-// ─── Create post form ─────────────────────────────────────────────────────────
+//Create post form
 function CreatePost({ token, userEmail, userId, displayName, onDone, initialCategory, initialCourseTag, initialProfTag }) {
   const [title,      setTitle]      = useState("");
   const [body,       setBody]       = useState("");
   const [category,   setCategory]   = useState(initialCategory || "GENERAL");
-  const [courseTag,  setCourseTag]  = useState(initialCourseTag || "");
-  const [profTag,    setProfTag]    = useState(initialProfTag   || "");
+  //courseTag and profTag only count if selected from autocomplete
+  const [courseTag,  setCourseTag]  = useState("");
+  const [profTag,    setProfTag]    = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [err,        setErr]        = useState("");
 
   const submit = async () => {
-    if (!title.trim())           { setErr("Please add a title."); return; }
-    if (body.trim().length < 20) { setErr("Post body must be at least 20 characters."); return; }
+    if (!title.trim())                        { setErr("Please add a title."); return; }
+    if (body.trim().length < 20)              { setErr("Post body must be at least 20 characters."); return; }
+    if (category === "COURSE" && !courseTag)  { setErr("Please select a course from the search results."); return; }
+    if (category === "PROFESSOR" && !profTag) { setErr("Please select a professor from the search results."); return; }
+
     setSubmitting(true); setErr("");
     const params = new URLSearchParams({
-      userId, displayName, title, body, category,
+      displayName, title, body, category,
       ...(courseTag && { courseTag }),
       ...(profTag   && { professorTag: profTag }),
     });
     try {
-      const res  = await fetch(`${API}/api/forum/posts?${params}`,
+      const res = await fetch(`${API}/api/forum/posts?${params}`,
         { method: "POST", headers: { "Authorization": `Bearer ${token}` } });
       if (res.ok) {
         const data = await res.json();
@@ -420,7 +468,7 @@ function CreatePost({ token, userEmail, userId, displayName, onDone, initialCate
         {CATEGORIES.filter(c => c.id !== "ALL").map(c => {
           const Icon = c.icon;
           return (
-            <button key={c.id} onClick={() => setCategory(c.id)} style={{
+            <button key={c.id} onClick={() => { setCategory(c.id); setCourseTag(""); setProfTag(""); }} style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "7px 16px", borderRadius: 10, border: "1px solid var(--border)",
               background: category === c.id ? "var(--primary)" : "var(--surface)",
@@ -433,22 +481,36 @@ function CreatePost({ token, userEmail, userId, displayName, onDone, initialCate
         })}
       </div>
 
-      {/* Tag search */}
+      {/* Mandatory course tag, only shown when COURSE selected */}
       {category === "COURSE" && (
         <>
-          <label style={f.label}>Tag a Course (optional)</label>
+          <label style={f.label}>
+            Tag a Course <span style={{ color: "var(--danger, #c0392b)" }}>*</span>
+            <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)", marginLeft: 6 }}>Select from the dropdown</span>
+          </label>
           <div style={{ marginBottom: 16 }}>
-            <CourseTagSearch onSelect={setCourseTag} />
-            {courseTag && <div style={{ fontSize: 11, color: "var(--primary)", marginTop: 6 }}>Tagged: <strong>{courseTag}</strong></div>}
+            <CourseTagSearch onSelect={setCourseTag} initialValue="" />
+            {courseTag
+              ? <div style={{ fontSize: 11, color: "var(--primary)", marginTop: 6, fontWeight: 600 }}>Tagged: {courseTag}</div>
+              : <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>No course selected yet</div>
+            }
           </div>
         </>
       )}
+
+      {/* Mandatory professor tag, only shown when PROFESSOR selected */}
       {category === "PROFESSOR" && (
         <>
-          <label style={f.label}>Tag a Professor (optional)</label>
+          <label style={f.label}>
+            Tag a Professor <span style={{ color: "var(--danger, #c0392b)" }}>*</span>
+            <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)", marginLeft: 6 }}>Select from the dropdown</span>
+          </label>
           <div style={{ marginBottom: 16 }}>
-            <ProfTagSearch onSelect={setProfTag} />
-            {profTag && <div style={{ fontSize: 11, color: "var(--accent2)", marginTop: 6 }}>Tagged: <strong>{profTag}</strong></div>}
+            <ProfTagSearch onSelect={setProfTag} initialValue="" />
+            {profTag
+              ? <div style={{ fontSize: 11, color: "var(--accent2)", marginTop: 6, fontWeight: 600 }}>Tagged: {profTag}</div>
+              : <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 6 }}>No professor selected yet</div>
+            }
           </div>
         </>
       )}
@@ -475,59 +537,112 @@ function CreatePost({ token, userEmail, userId, displayName, onDone, initialCate
   );
 }
 
-// ─── Post card in the feed ────────────────────────────────────────────────────
-function PostCard({ post, onClick }) {
+//Post card in the feed
+function PostCard({ post, onOpenComments, token, userEmail }) {
   const categoryColor = { COURSE: "var(--primary)", PROFESSOR: "var(--accent2)", GENERAL: "var(--accent)" };
   const CatIcon = CATEGORIES.find(c => c.id === post.category)?.icon || MessageSquare;
 
+  const [relateCount, setRelateCount] = useState(post.relateCount ?? 0);
+  const [related,     setRelated]     = useState(false);
+  const [relating,    setRelating]    = useState(false);
+
+  // Check on mount if this user has already liked this post
+  useEffect(() => {
+    if (!token || !userEmail) return;
+    fetch(`${API}/api/forum/posts/${post.id}/related`, {
+        headers: { "Authorization": `Bearer ${token}` }
+    })
+      .then(r => r.json())
+      .then(data => { if (data.related) setRelated(true); })
+      .catch(() => {});
+  }, [post.id]);
+
+  const handleRelate = async (e) => {
+    e.stopPropagation();
+    if (!token || relating) return;
+    setRelating(true);
+    try {
+      const res = await fetch(
+          `${API}/api/forum/posts/${post.id}/relate`,
+          { method: "POST", headers: { "Authorization": `Bearer ${token}` } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setRelateCount(data.relateCount ?? 0);
+        setRelated(r => !r);
+      }
+    } catch {}
+    finally { setRelating(false); }
+  };
+
   return (
-    <div onClick={onClick}
-      style={{ ...f.card, cursor: "pointer", transition: "box-shadow 0.2s, transform 0.15s" }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 24px rgba(49,72,122,0.13)"; e.currentTarget.style.transform = "translateY(-2px)"; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 2px 10px rgba(49,72,122,0.06)"; e.currentTarget.style.transform = "translateY(0)"; }}
+    <div style={{ ...f.card, transition: "box-shadow 0.2s" }}
+      onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 24px rgba(49,72,122,0.13)"; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 2px 10px rgba(49,72,122,0.06)"; }}
     >
       <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-        <span style={{ ...f.chip, color: categoryColor[post.category] || "var(--text2)", background: "var(--surface2)", display: "flex", alignItems: "center", gap: 4 }}>
+        <span style={{ ...f.chip, color: categoryColor[post.category] || "var(--text2)", background: "var(--surface2)" }}>
           <CatIcon size={11} /> {post.category}
         </span>
         {post.courseTag    && <span style={{ ...f.chip, background: "var(--blue-light-bg, #eef2fb)", color: "var(--primary)" }}>{post.courseTag}</span>}
         {post.professorTag && <span style={{ ...f.chip, background: "var(--surface3)", color: "var(--accent2)" }}>{post.professorTag}</span>}
       </div>
 
-      <div style={{ fontWeight: 700, fontSize: 15, color: "var(--primary)", marginBottom: 6, lineHeight: 1.3 }}>
-        {post.title}
+      <div onClick={onOpenComments} style={{ cursor: "pointer" }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: "var(--primary)", marginBottom: 6, lineHeight: 1.3 }}>
+          {post.title}
+        </div>
+        <p style={{
+          fontSize: 13, color: "var(--text2)", lineHeight: 1.6, margin: "0 0 14px",
+          display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
+        }}>
+          {post.body}
+        </p>
       </div>
-      <p style={{
-        fontSize: 13, color: "var(--text2)", lineHeight: 1.6, margin: "0 0 14px",
-        display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
-      }}>
-        {post.body}
-      </p>
 
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div style={f.avatar}>{post.displayName?.[0]?.toUpperCase() || "?"}</div>
           <span style={{ fontSize: 12, fontWeight: 600, color: "var(--primary)" }}>{post.displayName}</span>
           <span style={{ fontSize: 11, color: "var(--text3)" }}>· {timeAgo(post.createdAt)}</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 12, color: "var(--text3)", display: "flex", alignItems: "center", gap: 4 }}>
-            <ChevronUp size={13} /> {post.relateCount}
-          </span>
-          <span style={{ fontSize: 12, color: "var(--text3)", display: "flex", alignItems: "center", gap: 4 }}>
-            <MessageSquare size={13} /> Reply
-          </span>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <button
+            onClick={handleRelate}
+            disabled={!token || relating}
+            title={!token ? "Log in to relate" : related ? "Click to unlike" : "Relate"}
+            style={{
+              ...f.ghostBtn,
+              color: related ? "var(--accent2)" : "var(--text3)",
+              fontWeight: related ? 700 : 400,
+              opacity: !token ? 0.5 : 1,
+              gap: 5,
+            }}
+          >
+            <ChevronUp size={14} /> {relateCount}
+          </button>
+
+          <button onClick={onOpenComments} style={{ ...f.ghostBtn, color: "var(--text3)", gap: 5 }}>
+            <MessageSquare size={13} /> {post.commentCount ?? 0} comment{(post.commentCount ?? 0) !== 1 ? "s" : ""}
+          </button>
+
+          {token && (
+            <div onClick={e => e.stopPropagation()}>
+              <ReportButton targetId={post.id} type="post" token={token} userEmail={userEmail} />
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Main Forum page ──────────────────────────────────────────────────────────
+//Main Forum page
 export default function Forum({ initialCourseTag, initialProfTag }) {
   const token     = localStorage.getItem("kk_token");
   const userEmail = localStorage.getItem("kk_email") || "";
-  const userId    = token ? (() => { try { return JSON.parse(atob(token.split(".")[1])).sub; } catch { return userEmail; } })() : "";
+  const userId    = userEmail;
 
   const [displayName, setDisplayName] = useState(() => {
     try {
@@ -552,23 +667,30 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
       }).catch(() => {});
   }, []);
 
+  const initCat = initialCourseTag ? "COURSE" : initialProfTag ? "PROFESSOR" : "ALL";
+
   const [posts,      setPosts]      = useState([]);
   const [loading,    setLoading]    = useState(false);
-  const [category,   setCategory]   = useState("ALL");
+  const [category,   setCategory]   = useState(initCat);
   const [sort,       setSort]       = useState("new");
   const [search,     setSearch]     = useState("");
   const [composing,  setComposing]  = useState(false);
   const [activePost, setActivePost] = useState(null);
 
-  const initCat = initialCourseTag ? "COURSE" : initialProfTag ? "PROFESSOR" : "ALL";
-  useEffect(() => { if (initCat !== "ALL") setCategory(initCat); }, []);
-
-  const loadPosts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const url = category === "ALL"
-        ? `${API}/api/forum/posts`
-        : `${API}/api/forum/posts/category/${category}`;
+  const loadPosts = useCallback(async (cat) => {
+      setLoading(true);
+      try {
+        const resolvedCat = cat ?? category;
+        let url;
+        if (initialCourseTag && resolvedCat === "COURSE") {
+          url = `${API}/api/forum/posts/course/${encodeURIComponent(initialCourseTag)}`;
+        } else if (initialProfTag && resolvedCat === "PROFESSOR") {
+          url = `${API}/api/forum/posts/professor/${encodeURIComponent(initialProfTag)}`;
+        } else if (resolvedCat === "ALL") {
+          url = `${API}/api/forum/posts`;
+        } else {
+          url = `${API}/api/forum/posts/category/${resolvedCat}`;
+        }
       const res  = await fetch(url);
       const data = await res.json();
       setPosts(Array.isArray(data) ? data : []);
@@ -576,25 +698,32 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
     finally { setLoading(false); }
   }, [category]);
 
-  useEffect(() => { loadPosts(); }, [loadPosts]);
+  useEffect(() => { loadPosts(initCat); }, []);
+  useEffect(() => { loadPosts(category); }, [category]);
 
   const deletePost = async (postId) => {
-    if (!window.confirm("Delete this post?")) return;
-    try {
-      await fetch(`${API}/api/forum/posts/${postId}?userId=${encodeURIComponent(userEmail)}`,
-        { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } });
-      setActivePost(null);
-      loadPosts();
-    } catch {}
+      if (!window.confirm("Delete this post?")) return;
+      try {
+        const res = await fetch(`${API}/api/forum/posts/${postId}`,
+          { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } });
+        if (res.ok) {
+          setActivePost(null);
+          loadPosts(category);
+        } else {
+          const msg = await res.text();
+          alert("Delete failed: " + msg);
+        }
+      } catch (e) { alert("Network error: " + e.message); }
   };
 
   let displayed = posts.filter(p =>
-    !search ||
-    p.title?.toLowerCase().includes(search.toLowerCase()) ||
-    p.body?.toLowerCase().includes(search.toLowerCase()) ||
-    p.courseTag?.toLowerCase().includes(search.toLowerCase()) ||
-    p.professorTag?.toLowerCase().includes(search.toLowerCase())
+      !search ||
+      fuzzySearch(p.title, search) ||
+      fuzzySearch(p.body, search) ||
+      fuzzySearch(p.courseTag, search) ||
+      fuzzySearch(p.professorTag, search)
   );
+
   displayed = sort === "top"
     ? [...displayed].sort((a, b) => b.relateCount - a.relateCount)
     : [...displayed].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -607,7 +736,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
         userEmail={userEmail}
         userId={userId}
         displayName={displayName}
-        onBack={() => setActivePost(null)}
+        onBack={() => { setActivePost(null); loadPosts(category); }}
         onDelete={async (id) => { await deletePost(id); }}
       />
     );
@@ -661,7 +790,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
           initialCategory={category !== "ALL" ? category : "GENERAL"}
           initialCourseTag={initialCourseTag || ""}
           initialProfTag={initialProfTag || ""}
-          onDone={() => { setComposing(false); loadPosts(); }}
+          onDone={() => { setComposing(false); loadPosts(category); }}
         />
       )}
 
@@ -685,6 +814,23 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
         </div>
       </div>
 
+      {/* Context header when deep-linked */}
+        {initialCourseTag && (
+          <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 12 }}>
+            Showing posts tagged with <strong style={{ color: "var(--primary)" }}>{initialCourseTag}</strong>
+            <button onClick={() => loadPosts("ALL")}
+              style={{ marginLeft: 10, fontSize: 12, color: "var(--text3)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+              View all posts
+            </button>
+          </div>
+        )}
+        {initialProfTag && (
+          <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 12 }}>
+            Showing posts tagged with <strong style={{ color: "var(--accent2)" }}>{initialProfTag}</strong>
+          </div>
+      )}
+
+
       {/* Posts feed */}
       {loading && (
         <div style={{ textAlign: "center", padding: 60, color: "var(--text3)", fontSize: 14 }}>
@@ -705,8 +851,13 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
       {!loading && displayed.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {displayed.map((p, i) => (
-            <div key={p.id} className="post-anim" style={{ animationDelay: `${i * 0.04}s` }}>
-              <PostCard post={p} onClick={() => setActivePost(p)} />
+            <div key={p.id} className="post-anim" style={{ animationDelay: `${i * 0.04}s`, position: "relative", zIndex: displayed.length - i }}>
+                <PostCard
+                post={p}
+                onOpenComments={() => setActivePost(p)}
+                token={token}
+                userEmail={userEmail}
+              />
             </div>
           ))}
         </div>
@@ -715,14 +866,16 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+//Styles
 const f = {
   card: {
-    background: "var(--surface)",
-    border: "1px solid var(--border)",
-    borderRadius: 16,
-    padding: "20px 22px",
-    boxShadow: "0 2px 10px rgba(49,72,122,0.06)",
+      background: "var(--surface)",
+      border: "1px solid var(--border)",
+      borderRadius: 16,
+      padding: "20px 22px",
+      boxShadow: "0 2px 10px rgba(49,72,122,0.06)",
+      overflow: "visible",
+      position: "relative",
   },
   chip: {
     fontSize: 11, fontWeight: 700,

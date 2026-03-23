@@ -2,12 +2,16 @@ package com.koursekit.controller;
 
 import com.koursekit.model.ForumComment;
 import com.koursekit.model.ForumPost;
+import com.koursekit.repository.ForumRelateRepository;
 import com.koursekit.service.ForumService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.transaction.annotation.Transactional;
+import com.koursekit.config.JWTutil;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 import java.util.Map;
@@ -17,6 +21,8 @@ import java.util.Map;
 public class ForumController {
 
     @Autowired private ForumService forumService;
+    @Autowired private ForumRelateRepository relateRepo;
+    @Autowired private JWTutil jwtutil;
 
     // ─── POSTS ───────────────────────────────────────────────
 
@@ -57,7 +63,7 @@ public class ForumController {
     // POST /api/forum/posts
     @PostMapping("/posts")
     public ResponseEntity<?> createPost(
-            @RequestParam String userId,
+            HttpServletRequest request,
             @RequestParam String displayName,
             @RequestParam String title,
             @RequestParam String body,
@@ -65,6 +71,7 @@ public class ForumController {
             @RequestParam(required = false) String courseTag,
             @RequestParam(required = false) String professorTag) {
         try {
+            String userId = getEmailFromRequest(request);
             ForumPost post = forumService.createPost(
                     userId, displayName, title, body, category, courseTag, professorTag);
             return ResponseEntity.ok(post);
@@ -76,8 +83,9 @@ public class ForumController {
     // POST /api/forum/posts/{postId}/relate
     @PostMapping("/posts/{postId}/relate")
     public ResponseEntity<?> relate(@PathVariable Long postId,
-                                    @RequestParam String userId) {
+                                    HttpServletRequest request) {
         try {
+            String userId = getEmailFromRequest(request);
             return ResponseEntity.ok(forumService.relate(postId, userId));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -87,11 +95,12 @@ public class ForumController {
     // DELETE /api/forum/posts/{postId}
     @DeleteMapping("/posts/{postId}")
     public ResponseEntity<?> deletePost(@PathVariable Long postId,
-                                        @RequestParam String userId,
+                                        HttpServletRequest request,
                                         Authentication auth) {
         try {
             boolean isAdmin = auth != null &&
                     auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
+            String userId = getEmailFromRequest(request);
             forumService.deletePost(postId, userId, isAdmin);
             return ResponseEntity.ok("Post deleted.");
         } catch (RuntimeException e) {
@@ -111,10 +120,11 @@ public class ForumController {
     @PostMapping("/posts/{postId}/comments")
     public ResponseEntity<?> createComment(
             @PathVariable Long postId,
-            @RequestParam String userId,
+            HttpServletRequest request,
             @RequestParam String displayName,
             @RequestParam String body) {
         try {
+            String userId = getEmailFromRequest(request);
             ForumComment comment = forumService.createComment(
                     postId, userId, displayName, body);
             return ResponseEntity.ok(comment);
@@ -126,15 +136,35 @@ public class ForumController {
     // DELETE /api/forum/comments/{commentId}
     @DeleteMapping("/comments/{commentId}")
     public ResponseEntity<?> deleteComment(@PathVariable Long commentId,
-                                           @RequestParam String userId,
+                                           HttpServletRequest request,
                                            Authentication auth) {
         try {
             boolean isAdmin = auth != null &&
                     auth.getAuthorities().contains(new SimpleGrantedAuthority("ROLE_ADMIN"));
+            String userId = getEmailFromRequest(request);
             forumService.deleteComment(commentId, userId, isAdmin);
             return ResponseEntity.ok("Comment deleted.");
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+
+    // GET /api/forum/posts/{postId}/related?userId=...
+    @GetMapping("/posts/{postId}/related")
+    public ResponseEntity<?> hasRelated(@PathVariable Long postId,
+                                        HttpServletRequest request) {
+        String userId = getEmailFromRequest(request);
+        if (userId == null) return ResponseEntity.ok(java.util.Map.of("related", false));
+        boolean related = relateRepo.existsByUserIdAndPostId(userId, postId);
+        return ResponseEntity.ok(java.util.Map.of("related", related));
+    }
+
+    private String getEmailFromRequest(HttpServletRequest request) {
+        String header = request.getHeader("Authorization");
+        if (header != null && header.startsWith("Bearer ")) {
+            return jwtutil.gettokenemail(header.substring(7));
+        }
+        return null;
     }
 }

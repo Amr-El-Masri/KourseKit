@@ -5,8 +5,11 @@ import com.koursekit.model.ForumPost;
 import com.koursekit.model.ReviewStatus;
 import com.koursekit.repository.ForumCommentRepository;
 import com.koursekit.repository.ForumPostRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import com.koursekit.model.ForumRelate;
+import com.koursekit.repository.ForumRelateRepository;
 
 import java.util.List;
 
@@ -16,6 +19,7 @@ public class ForumService {
     @Autowired private ForumPostRepository postRepo;
     @Autowired private ForumCommentRepository commentRepo;
     @Autowired private ContentFilterService contentFilterService;
+    @Autowired private ForumRelateRepository relateRepo;
 
     // ─── POSTS ───────────────────────────────────────────────
 
@@ -23,9 +27,16 @@ public class ForumService {
                                 String body, String category,
                                 String courseTag, String professorTag) {
 
-        // Filter title and body separately
-        ContentFilterService.FilterResult titleResult = contentFilterService.filter(title);
-        ContentFilterService.FilterResult bodyResult  = contentFilterService.filter(body);
+        // Pick the right context based on category
+        ContentFilterService.ContentContext ctx = switch (category.toUpperCase()) {
+            case "COURSE"    -> ContentFilterService.ContentContext.FORUM_COURSE;
+            case "PROFESSOR" -> ContentFilterService.ContentContext.FORUM_PROFESSOR;
+            default          -> ContentFilterService.ContentContext.FORUM_GENERAL;
+        };
+
+        // Filter title and body separately with the correct context
+        ContentFilterService.FilterResult titleResult = contentFilterService.filter(title, ctx);
+        ContentFilterService.FilterResult bodyResult  = contentFilterService.filter(body,  ctx);
 
         // Use the stricter of the two verdicts
         String status = stricterVerdict(titleResult.status, bodyResult.status);
@@ -68,13 +79,6 @@ public class ForumService {
                 .orElseThrow(() -> new RuntimeException("Post not found."));
     }
 
-    public ForumPost relate(Long postId, String userId) {
-        ForumPost post = postRepo.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post not found."));
-        post.setRelateCount(post.getRelateCount() + 1);
-        return postRepo.save(post);
-    }
-
     public void deletePost(Long postId, String userId, boolean isAdmin) {
         ForumPost post = postRepo.findById(postId)
                 .orElseThrow(() -> new RuntimeException("Post not found."));
@@ -92,7 +96,8 @@ public class ForumService {
         ForumPost post = postRepo.findById(postId)
                 .orElseThrow(() -> new RuntimeException("Post not found."));
 
-        ContentFilterService.FilterResult result = contentFilterService.filter(body);
+        ContentFilterService.FilterResult result = contentFilterService.filter(
+                body, ContentFilterService.ContentContext.FORUM_COMMENT);
 
         ForumComment comment = new ForumComment();
         comment.setPost(post);
@@ -101,7 +106,12 @@ public class ForumService {
         comment.setBody(result.comment);
         comment.setStatus(ReviewStatus.valueOf(result.status));
 
-        return commentRepo.save(comment);
+        ForumComment saved = commentRepo.save(comment);
+
+        post.setCommentCount(post.getCommentCount() + 1);
+        postRepo.save(post);
+
+        return saved;
     }
 
     public List<ForumComment> getCommentsForPost(Long postId) {
@@ -125,5 +135,26 @@ public class ForumService {
         if ("FLAGGED".equals(a) || "FLAGGED".equals(b)) return "FLAGGED";
         if ("PENDING".equals(a) || "PENDING".equals(b)) return "PENDING";
         return "APPROVED";
+    }
+
+    @Transactional
+    public ForumPost relate(Long postId, String userId) {
+        ForumPost post = postRepo.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post not found."));
+
+        if (relateRepo.existsByUserIdAndPostId(userId, postId)) {
+            // Already liked — unlike it
+            relateRepo.deleteByUserIdAndPostId(userId, postId);
+            post.setRelateCount(Math.max(0, post.getRelateCount() - 1));
+        } else {
+            // Not liked yet — like it
+            ForumRelate relate = new ForumRelate();
+            relate.setUserId(userId);
+            relate.setPostId(postId);
+            relateRepo.save(relate);
+            post.setRelateCount(post.getRelateCount() + 1);
+        }
+
+        return postRepo.save(post);
     }
 }
