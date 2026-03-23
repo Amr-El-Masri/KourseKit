@@ -1258,7 +1258,7 @@ export default function Dashboard({ onLogout }) {
 {calTab==="deadlines" ? (() => {
   const now2 = new Date();
   const upcoming = tasks.filter(t => !t.done && t.due).sort((a,b) => new Date(a.due)-new Date(b.due)).slice(0,8);
-  const urgencyColor = due => { const d=(new Date(due)-now2)/86400000; return d<0?"var(--error)":d<1?"var(--error)":d<3?"#e67e22":"#27ae60"; };
+  const urgencyColor = due => { const d=(new Date(due)-now2)/86400000; return d<0?"var(--error)":d<1?"var(--error)":d<3?"var(--warn)":"var(--success)"; };
   const urgencyLabel = due => { const d=(new Date(due)-now2)/86400000; return d<0?"Overdue":d<1?"Today":d<2?"Tomorrow":new Date(due).toLocaleDateString("en-US",{month:"short",day:"numeric"}); };
   return upcoming.length===0 ? (
     <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>No upcoming deadlines!</div>
@@ -1282,8 +1282,8 @@ export default function Dashboard({ onLogout }) {
             <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginTop:4}}>
               {[
                 {label:"Due this week",val:weekTasks2.filter(t=>!t.done).length,color:"var(--primary)"},
-                {label:"Completed",val:weekTasks2.filter(t=>t.done).length,color:"#27ae60"},
-                {label:"Due today",val:tasks.filter(t=>!t.done&&t.due&&new Date(t.due).toISOString().slice(0,10)===new Date().toISOString().slice(0,10)).length,color:"#e67e22"},
+                {label:"Completed",val:weekTasks2.filter(t=>t.done).length,color:"var(--success)"},
+                {label:"Due today",val:tasks.filter(t=>!t.done&&t.due&&new Date(t.due).toISOString().slice(0,10)===new Date().toISOString().slice(0,10)).length,color:"var(--warn)"},
                 {label:"Overdue",val:tasks.filter(t=>!t.done&&t.due&&new Date(t.due)<new Date()).length,color:"var(--error)"},
                 {label:"Total tasks",val:tasks.length,color:"var(--accent2)"},
                 {label:"Pending todos",val:todos.filter(t=>!t.done).length,color:"var(--text2)"},
@@ -1306,10 +1306,10 @@ export default function Dashboard({ onLogout }) {
               {calCells.map((d,i)=>{
                 const dayTasks = d?(tasksByDate[calKey(d)]||[]):[];
                 return (
-                  <div key={i} className={d?"cal-day":""} style={{display:"flex",flexDirection:"column",alignItems:"center",borderRadius:6,cursor:d?"pointer":"default",background:isToday(d)?"var(--primary)":"transparent",paddingBottom:dayTasks.length?3:0,height:"100%"}}>
+                  <div key={i} className={d?"cal-day":""} style={{display:"flex",flexDirection:"column",alignItems:"center",borderRadius:6,cursor:d?"pointer":"default",background:isToday(d)?"color-mix(in srgb, var(--primary) 25%, transparent)":"transparent",paddingBottom:dayTasks.length?3:0,height:"100%"}}>
                     <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,width:"100%",color:isToday(d)?"#fff":d?"var(--text)":"transparent",fontWeight:isToday(d)?700:400}}>{d||""}</div>
                     {dayTasks.map((t,ti)=>{
-                      const color = t.done?"#27ae60":new Date(t.due)<new Date()?"var(--error)":"var(--text2)";
+                      const color = t.done?"var(--success)":new Date(t.due)<new Date()?"var(--error)":"var(--text2)";
                       return <div key={ti} onMouseEnter={e=>{const rect=e.target.getBoundingClientRect();const cardRect=e.target.closest("section").getBoundingClientRect();setHoveredTask({task:t,x:rect.left-cardRect.left,y:rect.bottom-cardRect.top+4});}} onMouseLeave={()=>setHoveredTask(null)} onClick={()=>{setEditingTask(t);setActivePage("tasks");}} style={{width:"90%",height:3,borderRadius:2,background:color,marginBottom:1,cursor:"pointer",transition:"height .1s"}} className="cal-task-line" />;
                     })}
                   </div>
@@ -1320,11 +1320,11 @@ export default function Dashboard({ onLogout }) {
           </div>
           )}
           {calTab==="calendar" && hoveredTask && (
-            <div style={{position:"absolute",left:Math.min(hoveredTask.x,220),top:hoveredTask.y,background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"9px 13px",boxShadow:"0 6px 24px rgba(49,72,122,0.13)",zIndex:300,minWidth:170,maxWidth:220,pointerEvents:"none"}}>
+            <div style={{position:"absolute",left:Math.min(hoveredTask.x,220),top:hoveredTask.y,background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"9px 13px",boxShadow:"0 6px 24px color-mix(in srgb, var(--primary) 13%, transparent)",zIndex:300,minWidth:170,maxWidth:220,pointerEvents:"none"}}>
               <div style={{fontSize:11,fontWeight:700,color:"var(--text2)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>{hoveredTask.task.type} · {hoveredTask.task.course}</div>
               <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4,lineHeight:1.3}}>{hoveredTask.task.title}</div>
               <div style={{fontSize:11,color:"var(--text3)"}}>{hoveredTask.task.due?new Date(hoveredTask.task.due).toLocaleDateString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}):"No due date"}</div>
-              {hoveredTask.task.done && <div style={{fontSize:11,color:"#27ae60",fontWeight:600,marginTop:4}}>✓ Completed</div>}
+              {hoveredTask.task.done && <div style={{fontSize:11,color:"var(--success)",fontWeight:600,marginTop:4}}>✓ Completed</div>}
               {!hoveredTask.task.done && new Date(hoveredTask.task.due)<new Date() && <div style={{fontSize:11,color:"var(--error)",fontWeight:600,marginTop:4}}>Overdue</div>}
             </div>
           )}
