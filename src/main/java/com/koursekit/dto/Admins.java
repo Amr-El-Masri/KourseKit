@@ -12,9 +12,10 @@ public class Admins {
     private int reportCount;
     private boolean flagged;
     private String flagReason;
+    private int strikeCount;
 
     public Admins(Long id, String email, String role, boolean active, LocalDateTime createdat,
-                  int reportCount, boolean flagged, String flagReason) {
+                  int reportCount, boolean flagged, String flagReason, int strikeCount) {
         this.id = id;
         this.email = email;
         this.role = role;
@@ -23,6 +24,7 @@ public class Admins {
         this.reportCount = reportCount;
         this.flagged = flagged;
         this.flagReason = flagReason;
+        this.strikeCount = strikeCount;
     }
 
     public Long getId() { return id; }
@@ -36,4 +38,6 @@ public class Admins {
     public boolean isFlagged() { return flagged; }
     @JsonProperty("flagreason")
     public String getFlagReason() { return flagReason; }
+    @JsonProperty("strikecount")
+    public int getStrikeCount() { return strikeCount; }
 }

@@ -41,7 +41,7 @@ public class AdminController {
 
     private Admins toAdminsDto(User u) {
         return new Admins(u.getId(), u.getEmail(), u.getRole(), u.isActive(), u.getCreatedAt(),
-                u.getReportCount(), u.isFlagged(), u.getFlagReason());
+                u.getReportCount(), u.isFlagged(), u.getFlagReason(), u.getStrikeCount());
     }
 
     @GetMapping("/users")
@@ -80,6 +80,7 @@ public class AdminController {
         user.setFlagged(false);
         user.setReportCount(0);
         user.setFlagReason(null);
+        user.setStrikeCount(0);
         userrepo.save(user);
         return ResponseEntity.ok("User flag cleared.");
     }
@@ -184,14 +185,14 @@ public class AdminController {
 
     @GetMapping("/reviews/flagged")
     public List<Map<String, Object>> getFlaggedReviews() {
-        return reviewrepo.findByStatus(ReviewStatus.FLAGGED).stream().map(this::reviewToMap).collect(Collectors.toList());
+        return reviewrepo.findByStatusIn(List.of(ReviewStatus.FLAGGED, ReviewStatus.PENDING)).stream().map(this::reviewToMap).collect(Collectors.toList());
     }
 
     @GetMapping("/reviews/reported")
     public List<Map<String, Object>> getReportedReviews() {
         return reviewrepo.findByStatus(ReviewStatus.REPORTED).stream()
             .map(this::reviewToMap)
-            .sorted((a, b) -> Integer.compare((int) b.get("reportCount"), (int) a.get("reportCount")))
+            .sorted((a, b) -> Integer.compare((int) b.get("reportcount"), (int) a.get("reportcount")))
             .collect(Collectors.toList());
     }
 
@@ -206,9 +207,15 @@ public class AdminController {
     @PutMapping("/reviews/{reviewid}/warn")
     public ResponseEntity<?> warnReview(@PathVariable Long reviewid) {
         Review r = reviewrepo.findById(reviewid).orElseThrow(() -> new RuntimeException("Review not found."));
-        r.setStatus(ReviewStatus.PENDING);
-        reviewrepo.save(r);
-        return ResponseEntity.ok("Review set to pending.");
+        reviewrepo.delete(r);
+        userrepo.findByEmail(r.getUserId()).ifPresent(author -> {
+            int strikes = author.getStrikeCount() + 1;
+            author.setStrikeCount(strikes);
+            author.setFlagged(true);
+            if (strikes >= 5) author.setActive(false);
+            userrepo.save(author);
+        });
+        return ResponseEntity.ok("User warned.");
     }
 
     @DeleteMapping("/reviews/{reviewid}")
@@ -232,14 +239,14 @@ public class AdminController {
 
     @GetMapping("/professor-reviews/flagged")
     public List<Map<String, Object>> getFlaggedProfReviews() {
-        return profReviewRepo.findByStatus(ReviewStatus.FLAGGED).stream().map(this::profReviewToMap).collect(Collectors.toList());
+        return profReviewRepo.findByStatusIn(List.of(ReviewStatus.FLAGGED, ReviewStatus.PENDING)).stream().map(this::profReviewToMap).collect(Collectors.toList());
     }
 
     @GetMapping("/professor-reviews/reported")
     public List<Map<String, Object>> getReportedProfReviews() {
         return profReviewRepo.findByStatus(ReviewStatus.REPORTED).stream()
             .map(this::profReviewToMap)
-            .sorted((a, b) -> Integer.compare((int) b.get("reportCount"), (int) a.get("reportCount")))
+            .sorted((a, b) -> Integer.compare((int) b.get("reportcount"), (int) a.get("reportcount")))
             .collect(Collectors.toList());
     }
 
@@ -254,9 +261,15 @@ public class AdminController {
     @PutMapping("/professor-reviews/{reviewid}/warn")
     public ResponseEntity<?> warnProfReview(@PathVariable Long reviewid) {
         ProfessorReview r = profReviewRepo.findById(reviewid).orElseThrow(() -> new RuntimeException("Review not found."));
-        r.setStatus(ReviewStatus.PENDING);
-        profReviewRepo.save(r);
-        return ResponseEntity.ok("Review set to pending.");
+        profReviewRepo.delete(r);
+        userrepo.findByEmail(r.getUserId()).ifPresent(author -> {
+            int strikes = author.getStrikeCount() + 1;
+            author.setStrikeCount(strikes);
+            author.setFlagged(true);
+            if (strikes >= 5) author.setActive(false);
+            userrepo.save(author);
+        });
+        return ResponseEntity.ok("User warned.");
     }
 
     @DeleteMapping("/professor-reviews/{reviewid}")

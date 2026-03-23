@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import StudentDirectoryPanel from "./StudentDirectoryPanel";
-import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle } from "lucide-react";
+import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle, TriangleAlert } from "lucide-react";
 import AdminDashboard from "./AdminDashboard";
 import TranscriptModal from "./TranscriptModal";
 import StudentCourses from "./StudentCourses";
@@ -549,7 +549,7 @@ export function DefaultScheduleEditor({ token, onDone, extraAction }) {
 
         {isEditing && (
           <div style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 8 }}>
-            <button onClick={handleSave} disabled={saving} style={{ padding: "8px 22px", background: "var(--primary)", color: "white", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", opacity: saving ? 0.7 : 1 }}>
+            <button onClick={handleSave} disabled={saving} style={{ padding: "8px 22px", background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif", opacity: saving ? 0.7 : 1 }}>
               {saving ? "Saving…" : "Save"}
             </button>
             {hasSaved && (
@@ -958,8 +958,8 @@ const refetchSemesters = () =>
               fontWeight:600,  
               cursor:"pointer",
               fontFamily:"'DM Sans',sans-serif",
-              background: section === t.id ? "var(--primary)" : "transparent",
-              color:      section === t.id ? "#fff"    : "var(--text2)",
+              background: section === t.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+              color:      section === t.id ? "var(--primary)" : "var(--text2)",
             }}>{t.label}</button>
             ))}
           </div>
@@ -1056,6 +1056,24 @@ const refetchSemesters = () =>
               <span style={{ fontSize:12, color:"var(--text2)", marginLeft:5 }}>Following</span>
             </button>
           </div>
+
+          {profile.strikeCount > 0 && (
+            <div style={{ marginTop:18, padding:"12px 16px", border:"2px solid var(--error)", borderRadius:12, background:"var(--error-bg)", display:"flex", alignItems:"center", gap:10 }}>
+              <TriangleAlert size={18} color="var(--error)" />
+              <div>
+                <div style={{ fontSize:13, fontWeight:700, color:"var(--error)" }}>
+                  {profile.strikeCount >= 5
+                    ? "Your account has been suspended due to repeated violations."
+                    : `Warning: ${5 - profile.strikeCount} strike${5 - profile.strikeCount === 1 ? "" : "s"} left until your account gets suspended and becomes inaccessible.`}
+                </div>
+                <div style={{ fontSize:12, color:"var(--error)", marginTop:2 }}>
+                  {profile.strikeCount >= 5
+                    ? "Contact support to appeal."
+                    : `You have used ${profile.strikeCount} of 5 strikes.`}
+                </div>
+              </div>
+            </div>
+          )}
 
           {showFollowList && (
             <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", zIndex:1001, display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -1686,6 +1704,6 @@ const pf = {
   label:     { display:"block", fontSize:12, fontWeight:600, color:"var(--text)", marginBottom:6 },
   input:     { width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", marginBottom:14, display:"block", transition:"border-color .15s", outline:"none" },
   editBtn:   { padding:"8px 18px", background:"var(--bg)", color:"var(--primary)", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
-  saveBtn:   { padding:"8px 20px", background:"var(--primary)", color:"white", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  saveBtn:   { padding:"8px 20px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
   cancelBtn: { padding:"8px 16px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
 };

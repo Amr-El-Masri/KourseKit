@@ -510,12 +510,12 @@ function AvailabilitySlot({ slot, dayKey, onDelete, onResize }) {
             onMouseDown={handleMoveStart}
         >
             <div data-resize="top" onMouseDown={handleTopResizeStart} style={{ position:"absolute", top:0, left:0, right:0, height:8, cursor:"n-resize", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <div style={{ width:24, height:3, borderRadius:2, background:"rgba(123,94,167,0.4)" }} />
+                <div style={{ width:24, height:3, borderRadius:2, background:"var(--border2)" }} />
             </div>
             <span className="sp-slot-time">{formatTime(startHour)}–{formatTime(endHour)}</span>
             <button className="sp-slot-delete" onMouseDown={e => e.stopPropagation()} onClick={e => { e.stopPropagation(); onDelete(dayKey, slot.id); }}>×</button>
             <div data-resize="bot" onMouseDown={handleBotResizeStart} style={{ position:"absolute", bottom:0, left:0, right:0, height:8, cursor:"s-resize", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                <div style={{ width:24, height:3, borderRadius:2, background:"rgba(123,94,167,0.4)" }} />
+                <div style={{ width:24, height:3, borderRadius:2, background:"var(--border2)" }} />
             </div>
         </div>
     );
@@ -608,7 +608,7 @@ function DayColumn({
     return (
         <div
             className={`sp-day-column ${isToday(date) ? "today" : ""} ${isAvailabilityMode ? "avail-mode" : ""}`}
-            style={isPastDay ? { background: "rgba(0,0,0,0.025)" } : undefined}
+            style={isPastDay ? { background: "var(--divider)" } : undefined}
             ref={columnRef}
             onMouseDown={handleMouseDown}
         >
@@ -690,6 +690,7 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
     const [openColorPickerId, setOpenColorPickerId] = useState(null);
     const [editingHoursId, setEditingHoursId] = useState(null);
     const [draftHours, setDraftHours] = useState("");
+    const [taskDropOpen, setTaskDropOpen] = useState(false);
 
     useEffect(() => {
         if (!openColorPickerId) return;
@@ -752,18 +753,37 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
                     </div>
                 )}
                 {availableTasks.length > 0 && (
-                    <select
-                        className="sp-input sp-select"
-                        value={selectedTaskId}
-                        onChange={e => setSelectedTaskId(e.target.value)}
-                    >
-                        <option value="">Pick a task</option>
-                        {availableTasks.map(t => (
-                            <option key={t.id} value={t.id}>
-                                {t.title} - {t.course}
-                            </option>
-                        ))}
-                    </select>
+                    <div style={{ position:"relative" }}>
+                        <button onClick={() => setTaskDropOpen(o => !o)} style={{
+                            padding:"8px 14px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
+                            display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
+                            background:"var(--surface)", border:"1px solid var(--border)", color: selectedTaskId ? "var(--text)" : "var(--text3)",
+                            fontFamily:"'DM Sans',sans-serif",
+                        }}>
+                            {selectedTaskId
+                                ? (() => { const t = availableTasks.find(t => String(t.id) === String(selectedTaskId)); return t ? `${t.title} - ${t.course}` : "Pick a task"; })()
+                                : "Pick a task"}
+                            <span style={{ fontSize:10, opacity:0.7 }}>▼</span>
+                        </button>
+                        {taskDropOpen && (
+                            <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
+                                <div onClick={() => { setSelectedTaskId(""); setTaskDropOpen(false); }}
+                                    style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                                        background: !selectedTaskId ? "var(--divider)" : "transparent",
+                                        color:      !selectedTaskId ? "var(--accent)"  : "var(--primary)" }}>
+                                    Pick a task
+                                </div>
+                                {availableTasks.map(t => (
+                                    <div key={t.id} onClick={() => { setSelectedTaskId(t.id); setTaskDropOpen(false); }}
+                                        style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                                            background: String(selectedTaskId) === String(t.id) ? "var(--divider)" : "transparent",
+                                            color:      String(selectedTaskId) === String(t.id) ? "var(--accent)"  : "var(--primary)" }}>
+                                        {t.title} - {t.course}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 )}
 
                 {selectedTask && (
@@ -819,7 +839,7 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
                             {incomplete.length} {incomplete.length === 1 ? "entry" : "entries"} not fully completed
                         </div>
                         <button
-                            style={{ width:"100%", cursor:"pointer", background:"var(--primary)", color:"#fff", border:"none", borderRadius:7, padding:"7px 0", fontSize:11, fontWeight:600, fontFamily:"'DM Sans', sans-serif" }}
+                            style={{ width:"100%", cursor:"pointer", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"none", borderRadius:7, padding:"7px 0", fontSize:11, fontWeight:600, fontFamily:"'DM Sans', sans-serif" }}
                             onClick={() => onCarryOver(incomplete)}
                         >
                             Carry over to current week →
@@ -852,7 +872,7 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
                                         {isPastWeek ? (
                                             <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
                                                 <span style={{ fontSize:11, color:"var(--text2)" }}>Completed: <b>{completed}h</b> / {entry.hoursPerWeek}h</span>
-                                                {remaining > 0 && <span style={{ fontSize:10, color:"#c0392b" }}>{remaining}h not completed</span>}
+                                                {remaining > 0 && <span style={{ fontSize:10, color:"var(--error)" }}>{remaining}h not completed</span>}
                                             </div>
                                         ) : editingHoursId === entry.id ? (
                                             <input
@@ -983,7 +1003,7 @@ function CoursesPanel({ enrolledSections, courseColorOverrides, onColorChange, d
                     const crn = crnParts.join("_");
                     const es = enrolledSections.find(e => e.crn === crn);
                     const esIdx = enrolledSections.findIndex(e => e.crn === crn);
-                    const color = courseColorOverrides[crn] || (esIdx >= 0 ? COURSE_COLORS[esIdx % COURSE_COLORS.length] : "#888");
+                    const color = courseColorOverrides[crn] || (esIdx >= 0 ? COURSE_COLORS[esIdx % COURSE_COLORS.length] : "var(--text3)");
                     const d = new Date(dateStr + "T00:00:00");
                     const label = d.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
                     return (
@@ -993,7 +1013,7 @@ function CoursesPanel({ enrolledSections, courseColorOverrides, onColorChange, d
                                 <span style={{ fontSize:11, fontWeight:600, color:"var(--text)" }}>{es?.courseCode}</span>
                                 <span style={{ fontSize:10, color:"var(--text3)", marginLeft:6 }}>{label}</span>
                             </div>
-                            <button onClick={() => onRestore(key)} style={{ fontSize:10, background:"var(--primary-light,#e0e7ff)", color:"var(--primary,#2563eb)", border:"none", borderRadius:5, padding:"2px 7px", cursor:"pointer", fontWeight:600 }}>Restore</button>
+                            <button onClick={() => onRestore(key)} style={{ fontSize:10, background:"var(--blue-light-bg)", color:"var(--primary)", border:"none", borderRadius:5, padding:"2px 7px", cursor:"pointer", fontWeight:600 }}>Restore</button>
                         </div>
                     );
                 })}
@@ -1860,8 +1880,8 @@ export default function StudyPlanner({ enrolledSections = [] }) {
         .sp-btn-ghost:hover { background: var(--bg); color: var(--primary); }
         .sp-btn-outline { background: var(--surface); color: var(--primary); }
         .sp-btn-outline:hover { background: var(--bg); }
-        .sp-btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
-        .sp-btn-primary:hover { background: var(--button); }
+        .sp-btn-primary { background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary); border-color: transparent; }
+        .sp-btn-primary:hover { background: color-mix(in srgb, var(--primary) 22%, transparent); }
         .sp-btn-active { background: var(--blue-light-bg); color: var(--primary); border-color: var(--primary); }
 
         .sp-slot-badge {
@@ -1986,15 +2006,15 @@ export default function StudyPlanner({ enrolledSections = [] }) {
           transition: transform 0.1s, border-color 0.1s, box-shadow 0.1s;
           padding: 0;
         }
-        .sp-color-dot:hover { transform: scale(1.2); box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+        .sp-color-dot:hover { transform: scale(1.2); box-shadow: 0 2px 8px var(--border); }
         .sp-color-dot.selected { border-color: var(--surface); box-shadow: 0 0 0 2px var(--text); transform: scale(1.1); }
 
         .sp-add-btn {
           width: 100%;
           padding: 8px;
-          background: var(--primary);
-          color: #fff;
-          border: none;
+          background: color-mix(in srgb, var(--primary) 15%, transparent);
+          color: var(--primary);
+          border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
           border-radius: 8px;
           font-size: 12px;
           font-weight: 600;
@@ -2002,7 +2022,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
           cursor: pointer;
           transition: background 0.15s;
         }
-        .sp-add-btn:hover:not(:disabled) { background: var(--button); }
+        .sp-add-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--primary) 25%, transparent); }
         .sp-add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
         /* ── Task preview card ── */
@@ -2336,7 +2356,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
 
         .sp-block-action-btn {
           background: var(--sp-bg2);
-          border: 1px solid rgba(0,0,0,0.08);
+          border: 1px solid var(--border);
           border-radius: 4px;
           width: 18px;
           height: 18px;
@@ -2388,8 +2408,8 @@ export default function StudyPlanner({ enrolledSections = [] }) {
         .sp-avail-slot {
           position: absolute;
           left: 4px; right: 4px;
-          background: rgba(123,94,167,0.08);
-          border: 1px dashed rgba(123,94,167,0.35);
+          background: var(--blue-light-bg);
+          border: 1px dashed var(--border2);
           border-radius: 6px;
           z-index: 1;
           display: flex;
@@ -2418,7 +2438,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
         .sp-drag-preview {
           position: absolute;
           left: 4px; right: 4px;
-          background: rgba(123,94,167,0.12);
+          background: var(--blue-light-bg);
           border: 1px dashed var(--accent);
           border-radius: 6px;
           z-index: 10;
@@ -2446,9 +2466,9 @@ export default function StudyPlanner({ enrolledSections = [] }) {
         }
         .sp-toast.success { border-color: var(--success); color: var(--success); }
         .sp-toast.error   { border-color: var(--error); color: var(--error); }
-        .sp-toast.warning { border-color: #f59e0b; color: #92400e; background: #fffbeb; }
+        .sp-toast.warning { border-color: var(--warn1); color: var(--warn); background: var(--warn-bg); }
         .sp-undo-toast { bottom: 62px; display: flex; align-items: center; gap: 14px; min-width: 200px; }
-        .sp-undo-btn { background: var(--primary); color: #fff; border: none; font-size: 12px; font-weight: 700; cursor: pointer; padding: 5px 12px; border-radius: 6px; }
+        .sp-undo-btn { background: color-mix(in srgb, var(--primary) 15%, transparent); color: var(--primary); border: none; font-size: 12px; font-weight: 700; cursor: pointer; padding: 5px 12px; border-radius: 6px; }
         .sp-undo-btn:hover { opacity: 0.85; }
         .sp-undo-dismiss { background: none; border: none; color: var(--text3); font-size: 15px; cursor: pointer; padding: 0; line-height: 1; }
 
@@ -2571,7 +2591,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                                     <button className="sp-btn sp-btn-outline" onClick={handleRebalance}><RotateCcw size={13} style={{verticalAlign:"middle",marginRight:4}}/>Rebalance</button>
                                 )}
                                 {hasGenerated && entries.length > 0 && (
-                                    <button className="sp-btn sp-btn-outline" onClick={handleMarkPastDone} title="Mark all blocks that have already started as complete" style={{color:"#2d7a4a",borderColor:"#b7dfc4"}}>✓ Mark past done</button>
+                                    <button className="sp-btn sp-btn-outline" onClick={handleMarkPastDone} title="Mark all blocks that have already started as complete" style={{color:"var(--success)",borderColor:"var(--success)"}}>✓ Mark past done</button>
                                 )}
                                 {hasGenerated && (
                                     <button className="sp-btn sp-btn-ghost" onClick={handleClearPlan} style={{color:"var(--error)",borderColor:"var(--error-border)"}}>✕ Clear Plan</button>
@@ -2589,26 +2609,26 @@ export default function StudyPlanner({ enrolledSections = [] }) {
 
                 {postGenWarnings.length > 0 && (
                     <div style={{
-                        background: "#fffbeb",
-                        borderBottom: "1px solid #fcd34d",
+                        background: "var(--warn-bg)",
+                        borderBottom: "1px solid var(--warn1)",
                         padding: "10px 16px",
                         display: "flex",
                         alignItems: "flex-start",
                         gap: 10,
                         flexShrink: 0,
                     }}>
-                        <div style={{ flex: 1, fontSize: 12, color: "#92400e", lineHeight: 1.6 }}>
+                        <div style={{ flex: 1, fontSize: 12, color: "var(--warn)", lineHeight: 1.6 }}>
                             <span style={{ fontWeight: 600 }}>Some tasks couldn't be fully scheduled this week: </span>
                             {postGenWarnings.map((w, i) => (
                                 <span key={i}>
                                     {w.taskTitle}{w.course ? ` (${w.course})` : ""}, only {w.scheduled}h of {w.remaining}h scheduled{i < postGenWarnings.length - 1 ? "; " : ". "}
                                 </span>
                             ))}
-                            <span style={{ color: "#a16207" }}>Add more availability slots or reduce the hours to fit everything.</span>
+                            <span style={{ color: "var(--warn1)" }}>Add more availability slots or reduce the hours to fit everything.</span>
                         </div>
                         <button
                             onClick={() => setPostGenWarnings([])}
-                            style={{ background: "none", border: "none", color: "#92400e", cursor: "pointer", fontSize: 18, padding: 0, lineHeight: 1, flexShrink: 0, opacity: 0.7 }}
+                            style={{ background: "none", border: "none", color: "var(--warn)", cursor: "pointer", fontSize: 18, padding: 0, lineHeight: 1, flexShrink: 0, opacity: 0.7 }}
                             title="Dismiss"
                         >×</button>
                     </div>
@@ -2681,18 +2701,18 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                                 <div style={{
                                     position:"absolute", inset:0, zIndex:20,
                                     display:"flex", alignItems:"center", justifyContent:"center",
-                                    background:"rgba(240,243,255,0.55)", backdropFilter:"blur(12px) saturate(1.4)",
+                                    background:"var(--sp-bg2)", backdropFilter:"blur(12px) saturate(1.4)",
                                     WebkitBackdropFilter:"blur(12px) saturate(1.4)",
                                 }}>
                                     <div style={{ textAlign:"center", color:"var(--text3)", padding:"0 32px", lineHeight:1.9 }}>
-                                        <div style={{ fontSize:14, fontWeight:500, color:"#1a2f6e" }}>
+                                        <div style={{ fontSize:14, fontWeight:500, color:"var(--primary)" }}>
                                             This week has already passed
                                         </div>
-                                        <div style={{ fontSize:11, marginTop:4, marginBottom:14, color:"#1a2f6e" }}>
+                                        <div style={{ fontSize:11, marginTop:4, marginBottom:14, color:"var(--primary)" }}>
                                             Navigate forward to plan your current week
                                         </div>
                                         <button
-                                            style={{ cursor:"pointer", background:"var(--primary)", color:"#fff", border:"none", borderRadius:8, padding:"8px 18px", fontSize:12, fontWeight:600, fontFamily:"'DM Sans', sans-serif" }}
+                                            style={{ cursor:"pointer", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"none", borderRadius:8, padding:"8px 18px", fontSize:12, fontWeight:600, fontFamily:"'DM Sans', sans-serif" }}
                                             onClick={() => setCurrentDate(new Date())}
                                         >
                                             Go to current week →
@@ -2893,10 +2913,10 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                                         {issues.map((issue, i) => (
                                             <div key={i} style={{
                                                 padding:"9px 12px", borderRadius:8,
-                                                background: issue.type === "error" ? "var(--error-bg)" : "#fffbeb",
-                                                border:`1px solid ${issue.type === "error" ? "var(--error-border,#fca5a5)" : "#fcd34d"}`,
+                                                background: issue.type === "error" ? "var(--error-bg)" : "var(--warn-bg)",
+                                                border:`1px solid ${issue.type === "error" ? "var(--error-border)" : "var(--warn1)"}`,
                                                 fontSize:12, lineHeight:1.5,
-                                                color: issue.type === "error" ? "var(--error)" : "#92400e",
+                                                color: issue.type === "error" ? "var(--error)" : "var(--warn)",
                                             }}>
                                                 {issue.msg}
                                             </div>

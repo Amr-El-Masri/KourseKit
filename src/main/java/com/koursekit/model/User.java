@@ -95,6 +95,9 @@ public class User {
     @Column(name = "flag_reason", columnDefinition = "TEXT")
     private String flagReason;
 
+    @Column(name = "strike_count", nullable = false, columnDefinition = "INT DEFAULT 0")
+    private int strikeCount = 0;
+
     public User() {}
     public User(String email, String pass) {
         this.email = email;
@@ -217,4 +220,7 @@ public class User {
 
     public String getFlagReason() { return flagReason; }
     public void setFlagReason(String flagReason) { this.flagReason = flagReason; }
+
+    public int getStrikeCount() { return strikeCount; }
+    public void setStrikeCount(int strikeCount) { this.strikeCount = strikeCount; }
 }
