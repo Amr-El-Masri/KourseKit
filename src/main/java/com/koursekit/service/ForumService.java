@@ -1,17 +1,19 @@
 package com.koursekit.service;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
 import com.koursekit.model.ForumComment;
 import com.koursekit.model.ForumPost;
+import com.koursekit.model.ForumRelate;
 import com.koursekit.model.ReviewStatus;
 import com.koursekit.repository.ForumCommentRepository;
 import com.koursekit.repository.ForumPostRepository;
-import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import com.koursekit.model.ForumRelate;
 import com.koursekit.repository.ForumRelateRepository;
 
-import java.util.List;
+import jakarta.transaction.Transactional;
 
 @Service
 public class ForumService {

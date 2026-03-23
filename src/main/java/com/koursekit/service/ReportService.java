@@ -75,4 +75,26 @@ public class ReportService {
             userRepo.save(author);
         });
     }
+
+    public void reportForumPost(Long forumPostId, String userId, String reason) {
+        if (reportRepo.existsByUserIdAndForumPostId(userId, forumPostId)) {
+            throw new RuntimeException("You have already reported this post.");
+        }
+        Report report = new Report();
+        report.setUserId(userId);
+        report.setForumPostId(forumPostId);
+        report.setReason(reason);
+        reportRepo.save(report);
+    }
+
+    public void reportForumComment(Long forumCommentId, String userId, String reason) {
+        if (reportRepo.existsByUserIdAndForumCommentId(userId, forumCommentId)) {
+            throw new RuntimeException("You have already reported this comment.");
+        }
+        Report report = new Report();
+        report.setUserId(userId);
+        report.setForumCommentId(forumCommentId);
+        report.setReason(reason);
+        reportRepo.save(report);
+    }
 }
