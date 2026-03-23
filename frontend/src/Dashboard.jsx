@@ -704,7 +704,7 @@ export default function Dashboard({ onLogout }) {
   const selectedSem = apiSemesters.find(s => s.semesterName === semester) ?? { courses: [] };
   const semCourseList = (selectedSem.courses || [])
   .filter(c => !c.componenttype && !(/^B(?!L)/i.test(c.section?.sectionNumber || "") || /^E/i.test(c.section?.sectionNumber || "")))
-  .map(c => ({ id: c.id, name: c.courseCode, section: c.section, grade: c.grade, credits: c.credits }));
+  .map(c => ({ id: c.sectioncrn, name: c.courseCode, section: c.section, grade: c.grade, credits: c.credits, sectioncrn: c.sectioncrn }));
 
   const addTodo = () => {
     if (!todoInput.trim()) { setTodoError(true); return; }

@@ -982,7 +982,8 @@ function CoursesPanel({ enrolledSections, courseColorOverrides, onColorChange, d
                     const [dateStr, ...crnParts] = key.split("_");
                     const crn = crnParts.join("_");
                     const es = enrolledSections.find(e => e.crn === crn);
-                    const color = courseColorOverrides[crn] || es?.color || "#888";
+                    const esIdx = enrolledSections.findIndex(e => e.crn === crn);
+                    const color = courseColorOverrides[crn] || (esIdx >= 0 ? COURSE_COLORS[esIdx % COURSE_COLORS.length] : "#888");
                     const d = new Date(dateStr + "T00:00:00");
                     const label = d.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
                     return (
@@ -1002,8 +1003,8 @@ function CoursesPanel({ enrolledSections, courseColorOverrides, onColorChange, d
             {/* Section 2: Course colors */}
             <div className="sp-panel-title" style={{ marginBottom:8 }}>Course Colors</div>
             <div style={{ fontSize:10, color:"var(--text3)", marginBottom:10, lineHeight:1.4 }}>Click the color circle to change a course color.</div>
-            {enrolledSections.map(es => {
-                const color = courseColorOverrides[es.crn] || es.color;
+            {enrolledSections.map((es, idx) => {
+                const color = courseColorOverrides[es.crn] || COURSE_COLORS[idx % COURSE_COLORS.length];
                 const slots = getSectionTimeSlots(es.section);
                 const isOpen = openCrn === es.crn;
                 return (
@@ -1018,7 +1019,7 @@ function CoursesPanel({ enrolledSections, courseColorOverrides, onColorChange, d
                             />
                             <div style={{ flex:1, minWidth:0 }}>
                                 <div style={{ fontSize:12, fontWeight:700, color:"var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{es.courseCode}</div>
-                                <div style={{ fontSize:10, color:"var(--text2)" }}>Section {es.sectionNumber}</div>
+                                <div style={{ fontSize:10, color:"var(--text2)" }}>Section {es.section?.sectionNumber}</div>
                             </div>
                         </div>
                         {/* Schedule times */}
