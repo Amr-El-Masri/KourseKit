@@ -1065,7 +1065,7 @@ export default function Dashboard({ onLogout }) {
                       </button>
                     </div>
                   )}
-                  {courseSyllabi[c.name] && courseOfficeHours[c.name]?.length > 0 && (
+                  {courseOfficeHours[c.name]?.length > 0 && (
                     <div style={{marginTop:6,paddingTop:6,borderTop:"1px solid var(--border)"}}>
                       <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>Office Hours</div>
                       {courseOfficeHours[c.name].map((oh,i)=>(
@@ -2056,7 +2056,7 @@ export default function Dashboard({ onLogout }) {
                   )}
 
                   {/* Office Hours */}
-                  {syllabus && oh.length > 0 && (
+                  {oh.length > 0 && (
                     <div>
                       <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.07em",marginBottom:5}}>Office Hours</div>
                       {oh.map((o,i)=>(
