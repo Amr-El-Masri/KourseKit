@@ -1943,8 +1943,8 @@ export default function StudyPlanner({ enrolledSections = [] }) {
           background: transparent;
           font-family: 'DM Sans', sans-serif;
         }
-        .sp-sidebar-tab.active { color: #fff; font-weight: 600; background: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
-        .sp-sidebar-tab:hover:not(.active) { background: var(--surface3); color: var(--text); }
+        .sp-sidebar-tab.active { color: var(--primary); font-weight: 600; background: var(--surface); box-shadow: 0 1px 4px rgba(49,72,122,0.08); }
+        .sp-sidebar-tab:hover:not(.active) { background: var(--surface3); color: var(--primary); }
 
         .sp-sidebar-content { flex: 1; overflow-y: auto; padding: 16px; }
 

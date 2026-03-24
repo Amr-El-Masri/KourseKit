@@ -476,8 +476,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
         <div style={{
           display:"flex",
           gap:4,
-          background:"var(--surface)",
-          border:"1px solid var(--border)",
+          background:"var(--surface2)",
           padding:4,
           borderRadius:12,
           marginBottom:20,
@@ -498,9 +497,9 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
                 cursor:"pointer",
                 fontFamily:"'DM Sans',sans-serif",
                 transition:"all .15s",
-                background: filter === c.filter ? "var(--primary)" : "transparent",
-                color: filter === c.filter ? "#fff" : c.warn ? "var(--error)" : "var(--text2)",
-                boxShadow: filter === c.filter ? "0 2px 8px rgba(0,0,0,0.18)" : "none",
+                background: filter === c.filter ? "var(--surface)" : "transparent",
+                color: filter === c.filter ? "var(--primary)" : c.warn ? "var(--error)" : "var(--text2)",
+                boxShadow: filter === c.filter ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
               }}>
                 {c.label} <span style={{ opacity:.7 }}>{c.val}</span>
               </button>

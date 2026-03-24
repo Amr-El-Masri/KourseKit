@@ -570,8 +570,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       {/* Tab bar */}
       <div style={{
         display:"flex",
-        background:"var(--surface)",
-        border:"1px solid var(--border)",
+        background:"var(--surface2)",
         marginTop:24,
         borderRadius:12,
         padding:4,
@@ -588,9 +587,9 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             cursor:"pointer",
             fontFamily:"'DM Sans',sans-serif",
             transition:"all .15s",
-            background: activeTab === t.id ? "var(--primary)" : "transparent",
-            color: activeTab === t.id ? "#fff" : "var(--text2)",
-            boxShadow: activeTab === t.id ? "0 2px 8px rgba(0,0,0,0.18)" : "none",
+            background: activeTab === t.id ? "var(--surface)" : "transparent",
+            color: activeTab === t.id ? "var(--primary)" : "var(--text2)",
+            boxShadow: activeTab === t.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
           }}>
             {t.label}
           </button>
