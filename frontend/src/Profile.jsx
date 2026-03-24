@@ -992,26 +992,22 @@ const refetchSemesters = () =>
       {isAdmin && (
         <div style={{
           display:"flex",
-          gap:4,
-          background:"var(--surface2)",
-          padding:4,
-          borderRadius:12,
+          gap:6,
           marginBottom:24,
           width:"fit-content",
         }}>
           {[{ id:"profile", label:"My Profile" }, { id:"admin", label:"Admin" }].map(t => (
-            <button key={t.id} className="kk-tab" data-active={section === t.id} onClick={() => setSection(t.id)} style={{
-              padding:"8px 20px",
-              border:"none",
+            <button key={t.id} onClick={() => setSection(t.id)} style={{
+              padding:"8px 18px",
+              border: section === t.id ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
               borderRadius:9,
               fontSize:13,
               fontWeight: section === t.id ? 600 : 400,
               cursor:"pointer",
               fontFamily:"'DM Sans',sans-serif",
               transition:"all .15s",
-              background: section === t.id ? "var(--surface)" : "transparent",
+              background: section === t.id ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
               color:      section === t.id ? "var(--primary)" : "var(--text2)",
-              boxShadow:  section === t.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
             }}>{t.label}</button>
             ))}
           </div>
@@ -1077,8 +1073,7 @@ const refetchSemesters = () =>
               <div style={{ fontSize:12, color:"var(--text2)" }}>{profile.email}</div>
             </div>
             <div style={{ marginLeft:"auto", display:"flex", gap:10, paddingBottom:4 }}>
-               <button onClick={() => setShowDirectory(true)} style={{ padding:"8px 16px", background:"var(--surface2)", color:"var(--primary)", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}> 
-                  Find Students </button>
+               <button onClick={() => setShowDirectory(true)} style={{ padding:"8px 16px", background:"var(--surface)", color:"var(--primary)", border:"1.5px solid var(--primary)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Find Students</button>
               {saved && (
                 <div style={{ fontSize:12, fontWeight:600, color:"#2d7a4a", background:"#eef7f0", border:"1px solid #b7d9c0", borderRadius:8, padding:"6px 14px", display:"flex", alignItems:"center", gap:6 }}>
                   ✓ Saved
@@ -1793,7 +1788,7 @@ function StatChip({ label, value, color, bg }) {
 const pf = {
   label:     { display:"block", fontSize:12, fontWeight:600, color:"var(--text)", marginBottom:6 },
   input:     { width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", marginBottom:14, display:"block", transition:"border-color .15s", outline:"none" },
-  editBtn:   { padding:"8px 18px", background:"var(--bg)", color:"var(--primary)", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
-  saveBtn:   { padding:"8px 20px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
-  cancelBtn: { padding:"8px 16px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  editBtn:   { padding:"8px 18px", background:"var(--surface)", color:"var(--primary)", border:"1.5px solid var(--primary)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  saveBtn:   { padding:"8px 20px", background:"color-mix(in srgb, var(--primary) 14%, var(--surface))", color:"var(--primary)", border:"1.5px solid var(--primary)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  cancelBtn: { padding:"8px 16px", background:"var(--surface)", color:"var(--text2)", border:"1.5px solid var(--border)", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
 };

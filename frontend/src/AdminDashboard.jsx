@@ -340,21 +340,21 @@ export default function AdminDashboard({ token }) {
       </div>
 
       {/* tab bar */}
-      <div style={{ display:"flex", gap:4, background:"var(--surface2)", padding:4, borderRadius:12, marginBottom:24, width:"fit-content", alignItems:"center" }}>
-        <button className="kk-tab" data-active={tab === "users"} onClick={() => { setErr(""); setTab("users"); setReviewDropdownOpen(false); }} style={{
-          padding:"8px 20px", border:"none", borderRadius:9, fontSize:13, fontWeight: tab === "users" ? 600 : 400, cursor:"pointer",
-          background: tab === "users" ? "var(--surface)" : "transparent",
+      <div style={{ display:"flex", gap:6, marginBottom:24, width:"fit-content", alignItems:"center" }}>
+        <button onClick={() => { setErr(""); setTab("users"); setReviewDropdownOpen(false); }} style={{
+          padding:"8px 18px", borderRadius:9, fontSize:13, fontWeight: tab === "users" ? 600 : 400, cursor:"pointer",
+          border: tab === "users" ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
+          background: tab === "users" ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
           color:      tab === "users" ? "var(--primary)" : "var(--text2)",
-          boxShadow:  tab === "users" ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
           transition:"all .15s",
         }}>Users</button>
 
         <div style={{ position:"relative" }}>
-          <button className="kk-tab" data-active={tab === "reviews"} onClick={() => { setErr(""); setReviewDropdownOpen(o => !o); if (tab !== "reviews") setTab("reviews"); }} style={{
-            padding:"8px 20px", border:"none", borderRadius:9, fontSize:13, fontWeight: tab === "reviews" ? 600 : 400, cursor:"pointer", display:"flex", alignItems:"center", gap:6,
-            background: tab === "reviews" ? "var(--surface)" : "transparent",
+          <button onClick={() => { setErr(""); setReviewDropdownOpen(o => !o); if (tab !== "reviews") setTab("reviews"); }} style={{
+            padding:"8px 18px", borderRadius:9, fontSize:13, fontWeight: tab === "reviews" ? 600 : 400, cursor:"pointer", display:"flex", alignItems:"center", gap:6,
+            border: tab === "reviews" ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
+            background: tab === "reviews" ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
             color:      tab === "reviews" ? "var(--primary)" : "var(--text2)",
-            boxShadow:  tab === "reviews" ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
             transition:"all .15s",
           }}>
             Reviews <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: reviewDropdownOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
@@ -385,14 +385,14 @@ export default function AdminDashboard({ token }) {
       {/* users tab */}
       {tab === "users" && (
         <>
-          <div style={{ display:"flex", gap:4, background:"var(--surface2)", padding:4, borderRadius:12, marginBottom:20, width:"fit-content" }}>
+          <div style={{ display:"flex", gap:6, marginBottom:20, width:"fit-content" }}>
             {[{id:"all",label:"All"},{id:"flagged",label:"Flagged"}].map(t => (
-              <button key={t.id} className="kk-tab" data-active={userSubTab === t.id} onClick={() => setUserSubTab(t.id)} style={{
-                padding:"8px 20px", border:"none", borderRadius:9, fontSize:13,
+              <button key={t.id} onClick={() => setUserSubTab(t.id)} style={{
+                padding:"8px 18px", borderRadius:9, fontSize:13,
                 fontWeight: userSubTab === t.id ? 600 : 400, cursor:"pointer", transition:"all .15s",
-                background: userSubTab === t.id ? "var(--surface)" : "transparent",
+                border: userSubTab === t.id ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
+                background: userSubTab === t.id ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
                 color:      userSubTab === t.id ? "var(--primary)" : "var(--text2)",
-                boxShadow:  userSubTab === t.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
               }}>{t.label}</button>
             ))}
           </div>
@@ -618,14 +618,14 @@ export default function AdminDashboard({ token }) {
       {/* reviews tab */}
       {tab === "reviews" && (
         <>
-          <div style={{ display:"flex", gap:4, background:"var(--surface2)", padding:4, borderRadius:12, marginBottom:20, width:"fit-content" }}>
+          <div style={{ display:"flex", gap:6, marginBottom:20, width:"fit-content" }}>
             {[{id:"all",label:"All"},{id:"flagged",label:"Flagged"},{id:"reported",label:"Reported"}].map(t => (
-              <button key={t.id} className="kk-tab" data-active={reviewStatus === t.id} onClick={() => { setReviewStatus(t.id); setExpandedId(null); setConfirmAction(null); }} style={{
-                padding:"8px 20px", border:"none", borderRadius:9, fontSize:13,
+              <button key={t.id} onClick={() => { setReviewStatus(t.id); setExpandedId(null); setConfirmAction(null); }} style={{
+                padding:"8px 18px", borderRadius:9, fontSize:13,
                 fontWeight: reviewStatus === t.id ? 600 : 400, cursor:"pointer", transition:"all .15s",
-                background: reviewStatus === t.id ? "var(--surface)" : "transparent",
+                border: reviewStatus === t.id ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
+                background: reviewStatus === t.id ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
                 color:      reviewStatus === t.id ? "var(--primary)" : "var(--text2)",
-                boxShadow:  reviewStatus === t.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
               }}>{t.label}</button>
             ))}
           </div>
