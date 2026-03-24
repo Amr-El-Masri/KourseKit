@@ -1920,11 +1920,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
 
         .sp-sidebar-tabs {
           display: flex;
-          gap: 4px;
-          padding: 4px;
-          background: var(--surface);
-          border: 1px solid var(--border);
-          border-radius: 12px;
+          gap: 6px;
           flex-shrink: 0;
           margin: 8px;
         }
@@ -1938,13 +1934,13 @@ export default function StudyPlanner({ enrolledSections = [] }) {
           cursor: pointer;
           color: var(--text2);
           border-radius: 9px;
-          border: none;
+          border: 1.5px solid var(--border);
           transition: all 0.15s;
-          background: transparent;
+          background: var(--surface);
           font-family: 'DM Sans', sans-serif;
         }
-        .sp-sidebar-tab.active { color: #fff; font-weight: 600; background: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
-        .sp-sidebar-tab:hover:not(.active) { background: var(--surface3); color: var(--text); }
+        .sp-sidebar-tab.active { color: var(--primary); font-weight: 600; background: color-mix(in srgb, var(--primary) 14%, var(--surface)); border-color: var(--primary); }
+        .sp-sidebar-tab:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
 
         .sp-sidebar-content { flex: 1; overflow-y: auto; padding: 16px; }
 

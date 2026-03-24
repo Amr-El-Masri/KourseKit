@@ -535,7 +535,7 @@ export default function StudyGroupFinder({ courses = [] }) {
         </button>
       </div>
 
-      <div style={{ display: "flex", gap: 4, marginBottom: 24, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: 4, width: "fit-content" }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 24, width: "fit-content" }}>
         {[
           { id: "find", label: "Find Groups" },
           { id: "mine", label: `My Groups${myGroups.length > 0 ? ` (${myGroups.length})` : ""}` },
@@ -546,13 +546,13 @@ export default function StudyGroupFinder({ courses = [] }) {
             data-active={tab === t.id}
             onClick={() => setTab(t.id)}
             style={{
-              padding: "8px 20px", borderRadius: 9, border: "none",
-              background: tab === t.id ? "var(--primary)" : "transparent",
-              color: tab === t.id ? "#fff" : "var(--text2)",
+              padding: "8px 18px", borderRadius: 9,
+              background: tab === t.id ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
+              color: tab === t.id ? "var(--primary)" : "var(--text2)",
+              border: tab === t.id ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
               fontWeight: tab === t.id ? 600 : 400,
               fontSize: 13, cursor: "pointer",
               fontFamily: "'DM Sans',sans-serif",
-              boxShadow: tab === t.id ? "0 2px 8px rgba(0,0,0,0.18)" : "none",
               transition: "all 0.15s",
             }}
           >

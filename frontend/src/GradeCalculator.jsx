@@ -568,29 +568,19 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       )}
 
       {/* Tab bar */}
-      <div style={{
-        display:"flex",
-        background:"var(--surface)",
-        border:"1px solid var(--border)",
-        marginTop:24,
-        borderRadius:12,
-        padding:4,
-        width:"fit-content",
-        gap:4
-      }}>
+      <div style={{ display:"flex", marginTop:24, gap:6, width:"fit-content" }}>
         {TABS.map(t => (
           <button key={t.id} className="kk-tab" data-active={activeTab === t.id} onClick={() => setActiveTab(t.id)} style={{
-            padding:"8px 20px",
-            border:"none",
+            padding:"8px 18px",
             borderRadius:9,
             fontSize:13,
             fontWeight: activeTab === t.id ? 600 : 400,
             cursor:"pointer",
             fontFamily:"'DM Sans',sans-serif",
             transition:"all .15s",
-            background: activeTab === t.id ? "var(--primary)" : "transparent",
-            color: activeTab === t.id ? "#fff" : "var(--text2)",
-            boxShadow: activeTab === t.id ? "0 2px 8px rgba(0,0,0,0.18)" : "none",
+            background: activeTab === t.id ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
+            color: activeTab === t.id ? "var(--primary)" : "var(--text2)",
+            border: activeTab === t.id ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
           }}>
             {t.label}
           </button>

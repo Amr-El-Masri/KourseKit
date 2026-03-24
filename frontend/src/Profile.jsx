@@ -1315,8 +1315,9 @@ const refetchSemesters = () =>
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                 <div style={{ flex:1, minWidth:140 }}>
                   <label style={pf.label}>Cumulative GPA <span style={{ color:"var(--text3)", fontWeight:400 }}>(optional)</span></label>
-                  <input className="pf-input" value={draft.cumGPA} onChange={e => set("cumGPA", e.target.value)}
-                    placeholder="e.g. 3.45" type="number" step="0.01" min="0" max="4"
+                  <input className="pf-input" value={draft.cumGPA}
+                    onChange={e => { const v = e.target.value; if (v === "" || (parseFloat(v) >= 0 && parseFloat(v) <= 4.3)) set("cumGPA", v); }}
+                    placeholder="e.g. 3.45" type="number" step="0.01" min="0" max="4.3"
                     style={pf.input} />
                 </div>
                 <div style={{ flex:1, minWidth:140 }}>
