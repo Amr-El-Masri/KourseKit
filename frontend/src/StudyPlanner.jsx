@@ -531,7 +531,7 @@ function CourseBlock({ startHour, endHour, courseCode, sectionNumber, color, onD
         >
             <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:2, height:"100%" }}>
                 <div style={{ minWidth:0, overflow:"hidden" }}>
-                    <div style={{ fontSize:10, fontWeight:800, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", textShadow:"0 1px 2px rgba(0,0,0,0.2)" }}>{courseCode} · {sectionNumber}</div>
+                    <div style={{ fontSize:10, fontWeight:800, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", textShadow:"0 1px 2px rgba(0,0,0,0.2)" }}>{courseCode} {sectionNumber}</div>
                     {height > 26 && <div style={{ fontSize:9, color:"rgba(255,255,255,0.85)" }}>{formatTime(startHour)} – {formatTime(endHour)}</div>}
                 </div>
                 {onDismiss && height > 26 && (
@@ -753,7 +753,7 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
                     </div>
                 )}
                 {availableTasks.length > 0 && (
-                    <div style={{ position:"relative" }}>
+                    <div style={{ position:"relative", marginBottom:12 }}>
                         <button onClick={() => setTaskDropOpen(o => !o)} style={{
                             padding:"8px 14px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
                             display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
@@ -1034,7 +1034,7 @@ function CoursesPanel({ enrolledSections, courseColorOverrides, onColorChange, d
                 const slots = getSectionTimeSlots(es.section);
                 const isOpen = openCrn === es.crn;
                 return (
-                    <div key={es.crn} style={{ marginBottom:12, background:"var(--surface2)", borderRadius:10, overflow:"hidden" }}>
+                    <div key={es.crn} style={{ marginBottom:12, background:"var(--surface2)", borderRadius:10, overflow:"hidden", border:"1px solid var(--border)" }}>
                         {/* Course row */}
                         <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px" }}>
                             {/* Color swatch — click to open picker */}
