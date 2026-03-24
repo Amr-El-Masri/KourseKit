@@ -1757,22 +1757,25 @@ export default function Dashboard({ onLogout }) {
                 </div>
             ))}
           </nav>
-          <div className="nav-btn" onClick={() => setActivePage("profile")} style={{display:"flex",alignItems:"center",padding:"10px 16px",margin:"2px 8px 12px",borderRadius:10,justifyContent:sidebarOpen?"flex-start":"center",cursor:"pointer",userSelect:"none",background:"rgba(255,255,255,0.18)",border:"1px solid rgba(255,255,255,0.25)"}}>
-            <div style={{width:28,height:28,borderRadius:"50%",background:"#31487A",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,border:activePage==="profile"?"2px solid #7B5EA7":"2px solid transparent",transition:"border-color .15s"}}>
-              {profile.avatar
-                  ? (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={13} color="white" /> : <span style={{fontWeight:700,fontSize:11,color:"white"}}>{email[0].toUpperCase()}</span>; })()
-                  : <span style={{fontWeight:700,fontSize:11,color:"white"}}>{email[0].toUpperCase()}</span>}
+          <div style={{margin:"0 8px 8px",borderRadius:10,border:"1px solid rgba(255,255,255,0.18)",background:"rgba(255,255,255,0.10)",display:"flex",alignItems:"center",padding:"8px 10px",gap:8,justifyContent:sidebarOpen?"flex-start":"center"}}>
+            <div className="nav-btn" onClick={() => setActivePage("profile")} style={{display:"flex",alignItems:"center",gap:8,flex:1,cursor:"pointer",userSelect:"none",minWidth:0,borderRadius:8,padding:"2px 4px",background:activePage==="profile"?"rgba(255,255,255,0.12)":"transparent"}}>
+              <div style={{width:28,height:28,borderRadius:"50%",background:"#31487A",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,border:activePage==="profile"?"2px solid rgba(255,255,255,0.6)":"2px solid transparent",transition:"border-color .15s"}}>
+                {profile.avatar
+                    ? (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={13} color="white" /> : <span style={{fontWeight:700,fontSize:11,color:"white"}}>{email[0].toUpperCase()}</span>; })()
+                    : <span style={{fontWeight:700,fontSize:11,color:"white"}}>{email[0].toUpperCase()}</span>}
+              </div>
+              {sidebarOpen && (
+                <div style={{display:"flex",flexDirection:"column",lineHeight:1.3,overflow:"hidden",minWidth:0}}>
+                  <span style={{fontSize:12,fontWeight:600,color:"#ffffff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>Student Profile</span>
+                  <span style={{fontSize:10,color:"rgba(255,255,255,0.42)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{email}</span>
+                </div>
+              )}
             </div>
             {sidebarOpen && (
-                <div style={{marginLeft:10,display:"flex",flexDirection:"column",lineHeight:1.3,overflow:"hidden"}}>
-                  <span style={{fontSize:13,fontWeight:600,color:activePage==="profile"?"#ffffff":"#D9E1F1"}}>Student Profile</span>
-                  <span style={{fontSize:11,color:"rgba(255,255,255,0.42)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{email}</span>
-                </div>
+              <div className="nav-btn" onClick={() => setActivePage("settings")} style={{flexShrink:0,cursor:"pointer",padding:"4px",borderRadius:7,background:activePage==="settings"?"rgba(255,255,255,0.18)":"transparent",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                <SettingsIcon size={15} color={activePage==="settings"?"#ffffff":"rgba(255,255,255,0.55)"} />
+              </div>
             )}
-          </div>
-          <div className="nav-btn" onClick={() => setActivePage("settings")} style={{display:"flex",alignItems:"center",padding:"8px 16px",margin:"0 8px 8px",borderRadius:10,justifyContent:sidebarOpen?"flex-start":"center",cursor:"pointer",userSelect:"none",background:activePage==="settings"?"rgba(255,255,255,0.18)":"transparent"}}>
-            <SettingsIcon size={15} color={activePage==="settings"?"#ffffff":"#D9E1F1"} />
-            {sidebarOpen && <span style={{marginLeft:10,fontSize:13,fontWeight:500,color:activePage==="settings"?"#ffffff":"#D9E1F1"}}>Account Settings</span>}
           </div>
           <button onClick={() => setSidebarOpen(o=>!o)} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,margin:"0 8px 16px",padding:"7px 12px",background:"none",border:"1px solid rgba(255,255,255,0.15)",borderRadius:9,cursor:"pointer",color:"rgba(255,255,255,0.45)",fontSize:12,width:"calc(100% - 16px)",fontFamily:"inherit"}}>
             {sidebarOpen ? <><span style={{fontSize:11}}>◀</span><span>Collapse</span></> : <span style={{fontSize:11}}>▶</span>}

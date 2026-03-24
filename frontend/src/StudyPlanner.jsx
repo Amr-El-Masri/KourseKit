@@ -802,17 +802,19 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
                     </div>
                 )}
 
-                <input
-                    className="sp-input"
-                    type="number"
-                    placeholder="Hours per week"
-                    min="0.5"
-                    max="40"
-                    step="0.5"
-                    value={hoursPerWeek}
-                    onChange={e => setHoursPerWeek(e.target.value)}
-                    onKeyDown={e => ["e","E","+","-"].includes(e.key) && e.preventDefault()}
-                />
+                {selectedTask && (
+                    <input
+                        className="sp-input"
+                        type="number"
+                        placeholder="Hours per week"
+                        min="0.5"
+                        max="40"
+                        step="0.5"
+                        value={hoursPerWeek}
+                        onChange={e => setHoursPerWeek(e.target.value)}
+                        onKeyDown={e => ["e","E","+","-"].includes(e.key) && e.preventDefault()}
+                    />
+                )}
 
                 <div className="sp-color-row">
                     {PALETTE.slice(0, 7).map(c => (
@@ -1920,7 +1922,8 @@ export default function StudyPlanner({ enrolledSections = [] }) {
           display: flex;
           gap: 4px;
           padding: 4px;
-          background: var(--surface2);
+          background: var(--surface);
+          border: 1px solid var(--border);
           border-radius: 12px;
           flex-shrink: 0;
           margin: 8px;
@@ -1940,8 +1943,8 @@ export default function StudyPlanner({ enrolledSections = [] }) {
           background: transparent;
           font-family: 'DM Sans', sans-serif;
         }
-        .sp-sidebar-tab.active { color: var(--primary); font-weight: 600; background: var(--surface); box-shadow: 0 1px 4px rgba(49,72,122,0.08); }
-        .sp-sidebar-tab:hover:not(.active) { background: var(--surface3); color: var(--primary); }
+        .sp-sidebar-tab.active { color: #fff; font-weight: 600; background: var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+        .sp-sidebar-tab:hover:not(.active) { background: var(--surface3); color: var(--text); }
 
         .sp-sidebar-content { flex: 1; overflow-y: auto; padding: 16px; }
 

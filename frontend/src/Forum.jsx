@@ -765,7 +765,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
       </div>
 
       {/* Category tabs */}
-      <div style={{ display: "flex", background: "var(--surface2)", borderRadius: 12, padding: 4, width: "fit-content", gap: 4, marginBottom: 20, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: 4, width: "fit-content", gap: 4, marginBottom: 20, flexWrap: "wrap" }}>
         {CATEGORIES.map(c => {
           const Icon = c.icon;
           return (
@@ -774,9 +774,9 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
               padding: "8px 20px", border: "none", borderRadius: 9,
               fontSize: 13, fontWeight: category === c.id ? 600 : 400, cursor: "pointer",
               fontFamily: "'DM Sans', sans-serif", transition: "all .15s",
-              background: category === c.id ? "var(--surface)" : "transparent",
-              color:      category === c.id ? "var(--primary)" : "var(--text2)",
-              boxShadow:  category === c.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
+              background: category === c.id ? "var(--primary)" : "transparent",
+              color:      category === c.id ? "#fff" : "var(--text2)",
+              boxShadow:  category === c.id ? "0 2px 8px rgba(0,0,0,0.18)" : "none",
             }}>
               <Icon size={14} /> {c.label}
             </button>
