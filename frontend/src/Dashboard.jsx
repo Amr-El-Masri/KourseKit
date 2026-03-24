@@ -1737,14 +1737,14 @@ export default function Dashboard({ onLogout }) {
         .toggle-opt:hover { background:var(--surface3); }
       `}</style>
 
-        <aside style={{ ...s.sidebar, width:sidebarOpen ? 224 : 66 }}>
+        <aside onClick={() => setSidebarOpen(o=>!o)} style={{ ...s.sidebar, width:sidebarOpen ? 224 : 66, cursor:"pointer" }}>
           <div style={{ ...s.sidebarTop, justifyContent: sidebarOpen ? "flex-start" : "center" }}>
             <img src="/KourseKit.jpeg" alt="KourseKit" style={{ width:34, height:34, borderRadius:10, objectFit:"cover", flexShrink:0 }} />
             {sidebarOpen && <span style={{ ...s.logoLabel, marginLeft:12 }}>KourseKit</span>}
           </div>
           <nav style={{flex:1,paddingTop:10}}>
             {NAV_ITEMS.map(item => (
-                <div key={item.id} className="nav-btn" onClick={() => setActivePage(item.id)} style={{
+                <div key={item.id} className="nav-btn" onClick={e => { e.stopPropagation(); setActivePage(item.id); }} style={{
                   display:"flex", alignItems:"center", padding:"10px 16px", margin:"2px 8px", borderRadius:10,
                   justifyContent:sidebarOpen?"flex-start":"center",
                   background:activePage===item.id?"rgba(255,255,255,0.15)":"transparent",
@@ -1757,7 +1757,7 @@ export default function Dashboard({ onLogout }) {
                 </div>
             ))}
           </nav>
-          <div style={{margin:"0 8px 8px",borderRadius:10,border:"1px solid rgba(255,255,255,0.18)",background:"rgba(255,255,255,0.10)",display:"flex",alignItems:"center",padding:"8px 10px",gap:8,justifyContent:sidebarOpen?"flex-start":"center"}}>
+          <div onClick={e => e.stopPropagation()} style={{margin:"0 8px 16px",borderRadius:10,border:"1px solid rgba(255,255,255,0.18)",background:"rgba(255,255,255,0.10)",display:"flex",alignItems:"center",padding:"8px 10px",gap:8,justifyContent:sidebarOpen?"flex-start":"center"}}>
             <div className="nav-btn" onClick={() => setActivePage("profile")} style={{display:"flex",alignItems:"center",gap:8,flex:1,cursor:"pointer",userSelect:"none",minWidth:0,borderRadius:8,padding:"2px 4px",background:activePage==="profile"?"rgba(255,255,255,0.12)":"transparent"}}>
               <div style={{width:28,height:28,borderRadius:"50%",background:"#31487A",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,border:activePage==="profile"?"2px solid rgba(255,255,255,0.6)":"2px solid transparent",transition:"border-color .15s"}}>
                 {profile.avatar
@@ -1777,9 +1777,6 @@ export default function Dashboard({ onLogout }) {
               </div>
             )}
           </div>
-          <button onClick={() => setSidebarOpen(o=>!o)} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,margin:"0 8px 16px",padding:"7px 12px",background:"none",border:"1px solid rgba(255,255,255,0.15)",borderRadius:9,cursor:"pointer",color:"rgba(255,255,255,0.45)",fontSize:12,width:"calc(100% - 16px)",fontFamily:"inherit"}}>
-            {sidebarOpen ? <><span style={{fontSize:11}}>◀</span><span>Collapse</span></> : <span style={{fontSize:11}}>▶</span>}
-          </button>
         </aside>
 
         <main style={s.main}>
