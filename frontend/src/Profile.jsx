@@ -679,6 +679,23 @@ export default function Profile({ onProfileSave, onSemestersUpdated }) {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const GP = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
+    const allCourses = semesters.flatMap(s => (s.courses || []).filter(c => !c.componenttype));
+    const valid = allCourses.filter(c => c.grade && GP[c.grade?.trim()?.toUpperCase()] !== undefined && Number(c.credits) > 0);
+    if (!valid.length) return;
+    const pts = valid.reduce((sum, c) => sum + GP[c.grade.trim().toUpperCase()] * Number(c.credits), 0);
+    const creds = valid.reduce((sum, c) => sum + Number(c.credits), 0);
+    const computed = (pts / creds).toFixed(2);
+    setProfile(prev => {
+      if (String(prev.cumGPA) === computed) return prev;
+      const updated = { ...prev, cumGPA: computed };
+      profileFetch("/api/profile", { method: "PUT", body: JSON.stringify(updated) }).catch(() => {});
+      return updated;
+    });
+    setDraft(d => ({ ...d, cumGPA: computed }));
+  }, [semesters]);
+
   const SEMESTER_ORDER = { "fall": 0, "spring": 1, "summer": 2 };
 
 const sortSemesters = (list) => {
@@ -1342,11 +1359,12 @@ const refetchSemesters = () =>
 
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                 <div style={{ flex:1, minWidth:140 }}>
-                  <label style={pf.label}>Cumulative GPA <span style={{ color:"var(--text3)", fontWeight:400 }}>(optional)</span></label>
+                  <label style={pf.label}>Cumulative GPA {semesters.length > 0 ? <span style={{ color:"var(--primary)", fontWeight:500, fontSize:11 }}>(auto-calculated from transcript)</span> : <span style={{ color:"var(--text3)", fontWeight:400 }}>(optional)</span>}</label>
                   <input className="pf-input" value={draft.cumGPA}
-                    onChange={e => { const v = e.target.value; if (v === "" || (parseFloat(v) >= 0 && parseFloat(v) <= 4.3)) set("cumGPA", v); }}
+                    onChange={e => { if (semesters.length > 0) return; const v = e.target.value; if (v === "" || (parseFloat(v) >= 0 && parseFloat(v) <= 4.3)) set("cumGPA", v); }}
                     placeholder="e.g. 3.45" type="number" step="0.01" min="0" max="4.3"
-                    style={pf.input} />
+                    readOnly={semesters.length > 0}
+                    style={{ ...pf.input, ...(semesters.length > 0 ? { opacity:0.7, cursor:"default" } : {}) }} />
                 </div>
                 <div style={{ flex:1, minWidth:140 }}>
                   <label style={pf.label}>Total Credits <span style={{ color:"var(--text3)", fontWeight:400 }}>(optional)</span></label>
