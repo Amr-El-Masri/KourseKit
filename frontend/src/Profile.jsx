@@ -837,9 +837,36 @@ const refetchSemesters = () =>
 
   const removeTranscript = async () => {
     const ids = (() => { try { return JSON.parse(localStorage.getItem("kk_transcript_sem_ids") || "[]"); } catch { return []; } })();
-    const snapshots = semesters.filter(s => ids.includes(String(s.id)));
-    // Delete semesters from backend
-    await Promise.all(ids.map(id =>
+    // Keep the current (most recent) semester
+    const currentSemId = semesters.length > 0 ? String(semesters[semesters.length - 1].id) : null;
+    const idsToDelete = ids.filter(id => id !== currentSemId);
+    const snapshots = semesters.filter(s => idsToDelete.includes(String(s.id)));
+    // Collect all course codes from the semesters being deleted
+    const currentSem = semesters.find(s => String(s.id) === currentSemId);
+    const currentCodes = new Set((currentSem?.courses || []).map(c => c.courseCode));
+    const codesToDelete = [...new Set(snapshots.flatMap(s => (s.courses || []).map(c => c.courseCode)))].filter(c => !currentCodes.has(c));
+    // Clean up localStorage per-course data
+    const syllabusMap = (() => { try { return JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"); } catch { return {}; } })();
+    const dataMap     = (() => { try { return JSON.parse(localStorage.getItem("kk_course_data")    || "{}"); } catch { return {}; } })();
+    const ohMap       = (() => { try { return JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}"); } catch { return {}; } })();
+    const taskIdMap   = (() => { try { return JSON.parse(localStorage.getItem("kk_syllabus_task_ids")   || "{}"); } catch { return {}; } })();
+    codesToDelete.forEach(code => {
+      delete syllabusMap[code];
+      delete dataMap[code];
+      delete ohMap[code];
+      delete taskIdMap[code];
+    });
+    localStorage.setItem("kk_course_syllabus",     JSON.stringify(syllabusMap));
+    localStorage.setItem("kk_course_data",          JSON.stringify(dataMap));
+    localStorage.setItem("kk_course_office_hours",  JSON.stringify(ohMap));
+    localStorage.setItem("kk_syllabus_task_ids",    JSON.stringify(taskIdMap));
+    // Delete backend syllabi for removed courses
+    const token = localStorage.getItem("kk_token");
+    if (token) codesToDelete.forEach(code =>
+      fetch(`${API}/api/user-syllabi/${encodeURIComponent(code)}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{})
+    );
+    // Delete all transcript semesters except current from backend
+    await Promise.all(idsToDelete.map(id =>
       fetch(`${API}/api/grades/saved/${id}`, { method: "DELETE", headers: semAuthHeaders() }).catch(() => {})
     ));
     // Delete transcript info from backend
@@ -847,9 +874,10 @@ const refetchSemesters = () =>
     localStorage.removeItem("kk_transcript_sem_ids");
     localStorage.removeItem("kk_transcript_info");
     setTranscriptInfo(null);
+    setSyllabi(syllabusMap);
     await refetchSemesters();
     // Show undo toast for 6 seconds
-    setUndoToast({ ids, snapshots });
+    setUndoToast({ ids: idsToDelete, snapshots });
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     undoTimerRef.current = setTimeout(() => setUndoToast(null), 6000);
   };
