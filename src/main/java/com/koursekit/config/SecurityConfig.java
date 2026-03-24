@@ -38,6 +38,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/forum/**").permitAll()       // anyone can read
                 .requestMatchers(HttpMethod.POST, "/api/forum/**").authenticated()  // must be logged in to post
                 .requestMatchers(HttpMethod.DELETE, "/api/forum/**").authenticated() // must be logged in to delete
+                .requestMatchers("/ws/**").permitAll()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
