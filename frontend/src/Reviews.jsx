@@ -471,20 +471,20 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
       <div>
         <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:8}}>Reviews</div>
       </div>
-      <div style={{ display:"flex", background:"var(--surface2)", borderRadius:12, padding:4, width:"fit-content", gap:4, marginBottom:24 }}>
+      <div style={{ display:"flex", gap:6, width:"fit-content", marginBottom:24 }}>
         {[
-          { id:"course",    icon:"", label:"Course Reviews"    },
-          { id:"professor", icon:"", label:"Professor Reviews" },
+          { id:"course",    label:"Course Reviews"    },
+          { id:"professor", label:"Professor Reviews" },
         ].map(t => (
           <button key={t.id} className="kk-tab" data-active={tab===t.id} onClick={() => setTab(t.id)} style={{
-            padding:"8px 20px", border:"none", borderRadius:9, fontSize:13,
+            padding:"8px 18px", borderRadius:9, fontSize:13,
             fontWeight: tab===t.id ? 600 : 400,
             cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
-            background: tab===t.id ? "var(--surface)" : "transparent",
-            color:       tab===t.id ? "var(--primary)" : "var(--text2)",
-            boxShadow:   tab===t.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
+            background: tab===t.id ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
+            color:  tab===t.id ? "var(--primary)" : "var(--text2)",
+            border: tab===t.id ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
           }}>
-            {t.icon} {t.label}
+            {t.label}
           </button>
         ))}
       </div>

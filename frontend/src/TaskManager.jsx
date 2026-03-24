@@ -475,10 +475,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
 
         <div style={{
           display:"flex",
-          gap:4,
-          background:"var(--surface2)",
-          padding:4,
-          borderRadius:12,
+          gap:6,
           marginBottom:20,
           width:"fit-content",
         }}>
@@ -489,17 +486,16 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
             { label:"Overdue", val:counts.overdue, filter:"Overdue", warn:counts.overdue>0 },
           ].map(c => (
               <button key={c.filter} className="kk-tab" data-active={filter === c.filter} onClick={() => setFilter(c.filter)} style={{
-                padding:"8px 20px",
-                border:"none",
+                padding:"8px 18px",
                 borderRadius:9,
                 fontSize:13,
                 fontWeight: filter === c.filter ? 600 : 400,
                 cursor:"pointer",
                 fontFamily:"'DM Sans',sans-serif",
                 transition:"all .15s",
-                background: filter === c.filter ? "var(--surface)" : "transparent",
+                background: filter === c.filter ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
                 color: filter === c.filter ? "var(--primary)" : c.warn ? "var(--error)" : "var(--text2)",
-                boxShadow: filter === c.filter ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
+                border: filter === c.filter ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
               }}>
                 {c.label} <span style={{ opacity:.7 }}>{c.val}</span>
               </button>

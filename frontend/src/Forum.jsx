@@ -765,18 +765,18 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
       </div>
 
       {/* Category tabs */}
-      <div style={{ display: "flex", background: "var(--surface2)", borderRadius: 12, padding: 4, width: "fit-content", gap: 4, marginBottom: 20, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 6, width: "fit-content", marginBottom: 20, flexWrap: "wrap" }}>
         {CATEGORIES.map(c => {
           const Icon = c.icon;
           return (
             <button key={c.id} className="kk-tab" data-active={category === c.id} onClick={() => { setCategory(c.id); setComposing(false); }} style={{
               display: "flex", alignItems: "center", gap: 6,
-              padding: "8px 20px", border: "none", borderRadius: 9,
+              padding: "8px 18px", borderRadius: 9,
               fontSize: 13, fontWeight: category === c.id ? 600 : 400, cursor: "pointer",
               fontFamily: "'DM Sans', sans-serif", transition: "all .15s",
-              background: category === c.id ? "var(--surface)" : "transparent",
-              color:      category === c.id ? "var(--primary)" : "var(--text2)",
-              boxShadow:  category === c.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
+              background: category === c.id ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
+              color:  category === c.id ? "var(--primary)" : "var(--text2)",
+              border: category === c.id ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
             }}>
               <Icon size={14} /> {c.label}
             </button>
