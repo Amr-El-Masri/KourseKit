@@ -174,6 +174,11 @@ export default function StudentCourses({ value, onSelect, inputStyle = {}, filte
         readOnly={hasSection || !!lockedCourse}
         placeholder={lockedCourse ? "Click to pick section" : "Search course"}
         style={base}
+        onFocus={() => {
+          if (!lockedCourse && !hasSection && query.trim().length >= 2 && courseResults.length > 0) {
+            setShowCourses(true); openDrop(180);
+          }
+        }}
         onBlur={() => setTimeout(() => { setShowCourses(false); setShowSections(false); setDropPos(null); }, 200)}
       />
 
