@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { NotebookPen, Notebook, Pencil, Search, ListChecks } from "lucide-react";
 
 const API_BASE = "http://localhost:8080";
@@ -71,7 +71,6 @@ function DueBadge({ due, done }) {
 
 function TaskRow({ task, onToggle, onDelete, onEdit }) {
   const [expanded, setExpanded] = useState(false);
-  const [confirming, setConfirming] = useState(false);
   const p = priority(task.priority);
   const over = isOverdue(task.due, task.done);
 
@@ -111,15 +110,7 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
               {task.notes ? <NotebookPen size={15} color="var(--text)" /> : <Notebook size={15} color="var(--text)" />}
             </button>
             <button onClick={() => onEdit(task)} style={tm.iconBtn} title="Edit"><Pencil size={15} color="var(--text)" /></button>
-            {confirming ? (
-                <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                <span style={{ fontSize:11, color:"var(--error)", fontWeight:600, whiteSpace:"nowrap" }}>Delete?</span>
-                <button onClick={() => { setConfirming(false); onDelete(task.id); }} style={{ ...tm.iconBtn, color:"var(--error)", fontSize:11, fontWeight:700, padding:"2px 6px" }}>Yes</button>
-                <button onClick={() => setConfirming(false)} style={{ ...tm.iconBtn, fontSize:11, padding:"2px 6px" }}>No</button>
-              </span>
-            ) : (
-                <button onClick={() => setConfirming(true)} style={{ ...tm.iconBtn, color:"var(--error)" }} title="Delete">✕</button>
-            )}
+            <button onClick={() => onDelete(task.id)} style={{ ...tm.iconBtn, color:"var(--error)" }} title="Delete">✕</button>
           </div>
         </div>
 
@@ -267,7 +258,8 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
 
   const [allCourses,   setAllCourses]   = useState([]);
   const [savedCourses, setSavedCourses] = useState([]);
-  const [undoSyllabus, setUndoSyllabus] = useState(null); // { task, timer }
+  const [undoTask, setUndoTask] = useState(null); // { task, timer }
+  const undoTimerRef = useRef(null);
 
   useEffect(() => {
     const token = localStorage.getItem("kk_token");
@@ -337,32 +329,26 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
     if (updated) setTasks(p => p.map(t => t.id === id ? { ...updated, due: updated.deadline, done: updated.completed } : t));
   };
 
-  const deleteTask = async id => {
-    await apiFetch(`/api/tasks/delete/${id}`, { method: "DELETE" });
-    setTasks(p => p.filter(t => t.id !== id));
-  };
-
-  const deleteSyllabusTask = async (id) => {
+  const handleDeleteTask = useCallback((id) => {
     const task = tasks.find(t => t.id === id);
-    await deleteTask(id);
-    if (undoSyllabus?.timer) clearTimeout(undoSyllabus.timer);
-    const timer = setTimeout(() => setUndoSyllabus(null), 6000);
-    setUndoSyllabus({ task, timer });
-  };
+    if (!task) return;
+    setTasks(p => p.filter(t => t.id !== id));
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    const timer = setTimeout(async () => {
+      setUndoTask(null);
+      undoTimerRef.current = null;
+      await apiFetch(`/api/tasks/delete/${id}`, { method: "DELETE" });
+    }, 5000);
+    undoTimerRef.current = timer;
+    setUndoTask({ task, timer });
+  }, [tasks]);
 
-  const undoDelete = async () => {
-    if (!undoSyllabus) return;
-    clearTimeout(undoSyllabus.timer);
-    const { task } = undoSyllabus;
-    setUndoSyllabus(null);
-    const res = await fetch(`${API_BASE}/api/tasks/add`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getToken()}` },
-      body: JSON.stringify({ title: task.title, course: task.course, type: task.type, deadline: task.due, notes: task.notes || "", allowPastDeadline: true, fromSyllabus: true }),
-    });
-    if (res.ok) {
-      await loadTasks();
-    }
+  const handleUndoDelete = () => {
+    if (!undoTask) return;
+    clearTimeout(undoTask.timer);
+    undoTimerRef.current = null;
+    setTasks(p => [...p, undoTask.task]);
+    setUndoTask(null);
   };
 
   const saveTask = async (task, onError) => {
@@ -434,6 +420,8 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
         .tm-check:hover { border-color:var(--success) !important; background:color-mix(in srgb,var(--success) 12%,transparent) !important; }
         @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
         .tm-anim { animation: fadeUp 0.3s ease both; }
+        @keyframes tmToastIn { from{opacity:0;transform:translateX(-50%) translateY(10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+        .tm-undo-toast { animation: tmToastIn 0.2s ease; }
       `}</style>
 
         <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:24, flexWrap:"wrap", gap:12 }}>
@@ -570,7 +558,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 {syllabusDisplayed.map((t, i) => (
                   <div key={t.id} className="tm-anim" style={{ animationDelay: `${i * 0.05}s` }}>
-                    <TaskRow task={t} onToggle={toggleDone} onDelete={deleteSyllabusTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
+                    <TaskRow task={t} onToggle={toggleDone} onDelete={handleDeleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
                     {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
                   </div>
                 ))}
@@ -586,7 +574,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 {manualDisplayed.map((t, i) => (
                   <div key={t.id} className="tm-anim" style={{ animationDelay: `${(syllabusDisplayed.length + i) * 0.05}s` }}>
-                    <TaskRow task={t} onToggle={toggleDone} onDelete={deleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
+                    <TaskRow task={t} onToggle={toggleDone} onDelete={handleDeleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
                     {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
                   </div>
                 ))}
@@ -595,11 +583,11 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
           )}
         </>)}
 
-        {undoSyllabus && (
-            <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:"var(--primary)", color:"white", borderRadius:14, padding:"12px 20px", display:"flex", alignItems:"center", gap:14, boxShadow:"0 4px 24px rgba(49,72,122,0.28)", zIndex:9999, fontFamily:"'DM Sans',sans-serif", whiteSpace:"nowrap" }}>
-              <span style={{ fontSize:13 }}>Syllabus task deleted</span>
-              <button onClick={undoDelete} style={{ background:"white", color:"var(--primary)", border:"none", borderRadius:8, padding:"5px 14px", fontSize:13, fontWeight:700, cursor:"pointer" }}>Undo</button>
-              <button onClick={() => { clearTimeout(undoSyllabus.timer); setUndoSyllabus(null); }} style={{ background:"none", border:"none", color:"rgba(255,255,255,0.6)", fontSize:16, cursor:"pointer", padding:"0 2px", lineHeight:1 }}>✕</button>
+        {undoTask && (
+            <div className="tm-undo-toast" style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"var(--surface)", border:"1px solid var(--border)", color:"var(--text)", borderRadius:10, padding:"10px 20px", display:"flex", alignItems:"center", gap:14, boxShadow:"0 4px 24px rgba(49,72,122,0.12)", zIndex:9999, fontFamily:"'DM Sans',sans-serif", whiteSpace:"nowrap", fontSize:12, minWidth:200 }}>
+              <span style={{ flex:1 }}>Task deleted</span>
+              <button onClick={handleUndoDelete} style={{ background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"none", fontSize:12, fontWeight:700, cursor:"pointer", padding:"5px 12px", borderRadius:6 }}>Undo</button>
+              <button onClick={() => { clearTimeout(undoTask.timer); undoTimerRef.current = null; setUndoTask(null); apiFetch(`/api/tasks/delete/${undoTask.task.id}`, { method: "DELETE" }); }} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:15, cursor:"pointer", padding:0, lineHeight:1 }}>✕</button>
             </div>
         )}
       </div>
