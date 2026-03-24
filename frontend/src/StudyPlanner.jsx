@@ -430,7 +430,7 @@ function AvailabilitySlot({ slot, dayKey, onDelete, onResize }) {
         const onMove = (ev) => {
             const scrollDelta = (scrollEl?.scrollTop ?? 0) - topDragRef.current.startScroll;
             const diff = (ev.clientY - topDragRef.current.startY + scrollDelta) / HOUR_HEIGHT;
-            const newStart = Math.min(Math.max(snapToQuarter(topDragRef.current.origStart + diff), START_HOUR), slot.endHour - 0.25);
+            const newStart = Math.min(Math.max(snapToQuarter(topDragRef.current.origStart + diff), START_HOUR), slot.endHour - 0.5);
             topDragRef.current.curStart = newStart;
             setLiveStartHour(newStart);
             autoScroll(ev);
@@ -453,7 +453,7 @@ function AvailabilitySlot({ slot, dayKey, onDelete, onResize }) {
         const onMove = (ev) => {
             const scrollDelta = (scrollEl?.scrollTop ?? 0) - botDragRef.current.startScroll;
             const diff = (ev.clientY - botDragRef.current.startY + scrollDelta) / HOUR_HEIGHT;
-            const newEnd = Math.max(snapToQuarter(botDragRef.current.origEnd + diff), slot.startHour + 0.25);
+            const newEnd = Math.max(snapToQuarter(botDragRef.current.origEnd + diff), slot.startHour + 0.5);
             botDragRef.current.curEnd = newEnd;
             setLiveEndHour(newEnd);
             autoScroll(ev);
@@ -561,15 +561,15 @@ function DayColumn({
         if (!isAvailabilityMode && !showSlotOverlay) return;
         if (e.target.closest(".sp-avail-slot") || e.target.closest(".sp-study-block")) return;
         e.preventDefault();
-        const startHour = Math.min(getHourFromEvent(e), END_HOUR - 0.25);
-        dragRef.current = { startHour, endHour: Math.min(startHour + 0.25, END_HOUR) };
-        setDragging({ startHour, endHour: Math.min(startHour + 0.25, END_HOUR) });
+        const startHour = Math.min(getHourFromEvent(e), END_HOUR - 0.5);
+        dragRef.current = { startHour, endHour: Math.min(startHour + 0.5, END_HOUR) };
+        setDragging({ startHour, endHour: Math.min(startHour + 0.5, END_HOUR) });
     }, [isAvailabilityMode, getHourFromEvent]);
 
     const handleMouseMove = useCallback((e) => {
         if (!dragRef.current) return;
         const currentHour = getHourFromEvent(e);
-        const endHour = Math.min(Math.max(snapToQuarter(currentHour), dragRef.current.startHour + 0.25), END_HOUR);
+        const endHour = Math.min(Math.max(snapToQuarter(currentHour), dragRef.current.startHour + 0.5), END_HOUR);
         dragRef.current.endHour = endHour;
         setDragging({ startHour: dragRef.current.startHour, endHour });
         const scrollEl = columnRef.current?.closest(".sp-cal-body");
@@ -584,7 +584,7 @@ function DayColumn({
     const handleMouseUp = useCallback(() => {
         if (!dragRef.current) return;
         const { startHour, endHour } = dragRef.current;
-        if (endHour - startHour >= 0.25) {
+        if (endHour - startHour >= 0.5) {
             const overlapsCourse = (courseBlocks || []).some(cb => startHour < cb.endHour && endHour > cb.startHour);
             if (!overlapsCourse) onAddSlot(dayKey, { startHour, endHour, id: Date.now(), date });
         }
@@ -1439,9 +1439,6 @@ export default function StudyPlanner({ enrolledSections = [] }) {
             }
             const next = { ...prev, [dayKey]: [...existing, newSlot] };
             setTimeout(() => persistSlots(next), 0);
-            if (newSlot.endHour - newSlot.startHour < 0.5) {
-                showToast("Slot is under 30 min and won't be used for scheduling", "warning");
-            }
             return next;
         });
     }, [showToast, persistSlots]);
