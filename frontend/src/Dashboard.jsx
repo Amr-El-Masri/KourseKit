@@ -11,7 +11,8 @@ import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./ThemeContext";
 import StudentDirectory from "./StudentDirectoryPanel";
 import Forum from "./Forum";
-import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle, Settings as SettingsIcon, MessageSquare } from 'lucide-react';
+import StudyGroupFinder from "./StudyGroupFinder";
+import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle, Settings as SettingsIcon, MessageSquare, Users } from 'lucide-react';
 
 const AVATAR_ICONS = [
   { id:"Banana", icon: Banana },
@@ -160,7 +161,7 @@ function PomodoroTimer() {
       <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14,paddingTop:6}}>
         <div style={{display:"flex",gap:4,background:"var(--surface2)",padding:4,borderRadius:12,width:"100%"}}>
           {MODES.map((m,i) => (
-              <button key={m.label} onClick={() => switchMode(i)} style={{
+              <button key={m.label} className="kk-tab" data-active={modeIdx===i} onClick={() => switchMode(i)} style={{
                 flex:1, padding:"6px 0", border:"none", borderRadius:8, fontSize:11, fontWeight:600,
                 cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
                 background: modeIdx===i ? `color-mix(in srgb, ${m.color} 15%, transparent)` : "transparent",
@@ -169,6 +170,7 @@ function PomodoroTimer() {
           ))}
         </div>
 
+        <div key={modeIdx} className="card-anim" style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14,width:"100%"}}>
         <div style={{position:"relative",width:120,height:120}}>
           <svg width="120" height="120" style={{transform:"rotate(-90deg)"}}>
             <circle cx="60" cy="60" r={r} fill="none" stroke="#D9E1F1" strokeWidth="8"/>
@@ -195,6 +197,7 @@ function PomodoroTimer() {
           <span></span>
           <span style={{color:"var(--primary)",fontWeight:600}}>{sessions}</span>
           <span>session{sessions!==1?"s":""} completed</span>
+        </div>
         </div>
       </div>
   );
@@ -292,6 +295,8 @@ function CourseGradeSummaryWidget({ apiSemesters, selectedSemester, footer }) {
                 {courses.map(c => (
                     <button
                         key={c.courseCode}
+                        className="kk-pill"
+                        data-active={selectedCourse === c.courseCode}
                         onClick={() => setSelectedCourse(c.courseCode)}
                         style={{
                           padding:"5px 12px", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
@@ -530,6 +535,7 @@ export default function Dashboard({ onLogout }) {
     { id:"grades",    label:"Grade Calculator", icon:<Calculator size={17}/> },
     { id:"reviews",   label:"Reviews",          icon:<Star size={17}/> },
     { id:"forum",     label:"Forum",            icon:<MessageSquare size={17}/> },
+    { id:"groups",    label:"Study Groups",     icon:<Users size={17}/> },
   ];
 
   const widgetSaveTimer = useRef(null);
@@ -1026,8 +1032,8 @@ export default function Dashboard({ onLogout }) {
 
   // Courses from all saved semesters (deduplicated) for Grade Calculator dropdown
   const dashboardCourses = [...new Map(
-      apiSemesters.flatMap(s => (s.courses || []).map(c => ({ id: c.id, name: c.courseCode })))
-          .filter(c => c.name)
+      apiSemesters.flatMap(s => (s.courses || []).map(c => ({ id: c.id, name: c.courseCode, section: c.section })))
+          .filter(c => c.name && (!c.section?.sectionNumber || !(/^B(?!L)/i.test(c.section.sectionNumber) || /^E/i.test(c.section.sectionNumber))))
           .map(c => [c.name, c])
   ).values()];
 
@@ -1083,23 +1089,23 @@ export default function Dashboard({ onLogout }) {
           <>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
               <SectionTitle>{progressTab==="semester"?"Semester Overview":"Credits Progress"}</SectionTitle>
-              <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:7,padding:2}}>
-                {tabs2.map(t=><button key={t.id} onClick={()=>setProgressTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:progressTab===t.id?"color-mix(in srgb, var(--primary) 15%, transparent)":"transparent",color:progressTab===t.id?"var(--primary)":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
+              <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:9,padding:3}}>
+                {tabs2.map(t=><button key={t.id} className="kk-tab" data-active={progressTab===t.id} onClick={()=>setProgressTab(t.id)} style={{padding:"3px 10px",borderRadius:7,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:progressTab===t.id?"var(--surface)":"transparent",color:progressTab===t.id?"var(--primary)":"var(--text2)",boxShadow:progressTab===t.id?"0 1px 4px rgba(49,72,122,0.08)":"none",transition:"all .15s"}}>{t.label}</button>)}
               </div>
             </div>
             {progressTab==="semester" ? (
-              <div style={{marginTop:6,display:"flex",gap:10}}>
+              <div key="sem" className="card-anim" style={{marginTop:6,display:"flex",gap:10,width:"100%"}}>
                 {[{label:"Courses",val:semCourseList.length||"—"},{label:"To-Do",val:todos.filter(t=>!t.done).length},{label:"Due Today",val:tasks.filter(t=>!t.done&&t.due?.slice(0,10)===new Date().toISOString().slice(0,10)).length}].map(chip=>(
                   <div key={chip.label} style={s.chip}><div style={{fontSize:11,color:"var(--text2)"}}>{chip.label}</div><div style={{fontWeight:600,fontSize:13,color:"var(--primary)"}}>{chip.val}</div></div>
                 ))}
               </div>
             ) : (
-              <>
-                <div style={{textAlign:"center",padding:"16px 0 10px"}}>
-                  <div style={{fontFamily:"'Fraunces',serif",fontSize:46,fontWeight:700,color:"var(--primary)",lineHeight:1}}>{earnedCr}</div>
-                  <div style={{fontSize:12,color:"var(--text2)",marginTop:4}}>of {creditsGoal} credits completed</div>
+              <div key="cred" className="card-anim" style={{width:"100%"}}>
+                <div style={{textAlign:"center",padding:"8px 0 6px"}}>
+                  <div style={{fontFamily:"'Fraunces',serif",fontSize:38,fontWeight:700,color:"var(--primary)",lineHeight:1}}>{earnedCr}</div>
+                  <div style={{fontSize:12,color:"var(--text2)",marginTop:3}}>of {creditsGoal} credits completed</div>
                 </div>
-                <div style={{background:"var(--surface2)",borderRadius:99,height:10,overflow:"hidden",marginBottom:10}}>
+                <div style={{background:"var(--surface2)",borderRadius:99,height:8,overflow:"hidden",marginBottom:8}}>
                   <div style={{height:"100%",borderRadius:99,background:"linear-gradient(90deg,var(--accent),var(--primary))",width:`${pct2}%`,transition:"width .5s"}}/>
                 </div>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -1115,7 +1121,7 @@ export default function Dashboard({ onLogout }) {
                     <button onClick={()=>{setCreditsGoalInput(String(creditsGoal));setEditingCreditsGoal(true);}} style={{fontSize:11,color:"var(--accent)",background:"none",border:"none",cursor:"pointer",fontFamily:"inherit"}}>Edit goal</button>
                   )}
                 </div>
-              </>
+              </div>
             )}
           </>
         );
@@ -1140,10 +1146,10 @@ export default function Dashboard({ onLogout }) {
         </>
       );
       case "pomodoro": return (
-        <>
+        <div className="card-anim">
           <SectionTitle>Pomodoro Timer</SectionTitle>
           <PomodoroTimer />
-        </>
+        </div>
       );
       case "schedule": return (
         <>
@@ -1251,8 +1257,8 @@ export default function Dashboard({ onLogout }) {
         <>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
             <SectionTitle>{calTab==="calendar"?"Calendar":calTab==="deadlines"?"Upcoming Deadlines":"Week at a Glance"}</SectionTitle>
-            <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:7,padding:2}}>
-              {calTabs.map(t=><button key={t.id} onClick={()=>setCalTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:calTab===t.id?"color-mix(in srgb, var(--primary) 15%, transparent)":"transparent",color:calTab===t.id?"var(--primary)":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
+            <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:9,padding:3}}>
+              {calTabs.map(t=><button key={t.id} className="kk-tab" data-active={calTab===t.id} onClick={()=>setCalTab(t.id)} style={{padding:"3px 10px",borderRadius:7,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:calTab===t.id?"var(--surface)":"transparent",color:calTab===t.id?"var(--primary)":"var(--text2)",boxShadow:calTab===t.id?"0 1px 4px rgba(49,72,122,0.08)":"none",transition:"all .15s"}}>{t.label}</button>)}
             </div>
           </div>
 {calTab==="deadlines" ? (() => {
@@ -1267,7 +1273,7 @@ export default function Dashboard({ onLogout }) {
       {upcoming.map((t,i) => {
         const color = urgencyColor(t.due);
         return (
-          <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:"var(--surface2)",borderLeft:`3px solid ${color}`}}>
+          <div key={i} className="card-anim" style={{animationDelay:`${i*0.05}s`,display:"flex",alignItems:"center",gap:10,padding:"8px 12px",borderRadius:10,background:"var(--surface2)",borderLeft:`3px solid ${color}`}}>
             <div style={{flex:1,minWidth:0}}>
               <div style={{fontSize:12,fontWeight:600,color:"var(--primary)",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{t.title}</div>
               <div style={{fontSize:11,color:"var(--text2)",marginTop:1}}>{[t.course,t.type].filter(Boolean).join(" · ")}</div>
@@ -1288,7 +1294,7 @@ export default function Dashboard({ onLogout }) {
                 {label:"Total tasks",val:tasks.length,color:"var(--accent2)"},
                 {label:"Pending todos",val:todos.filter(t=>!t.done).length,color:"var(--text2)"},
               ].map(chip=>(
-                <div key={chip.label} style={{background:"var(--surface2)",borderRadius:10,padding:"12px 14px",border:"1px solid var(--border)"}}>
+                <div key={chip.label} className="card-anim" style={{animationDelay:`${["Due this week","Completed","Due today","Overdue","Total tasks","Pending todos"].indexOf(chip.label)*0.05}s`,background:"var(--surface2)",borderRadius:10,padding:"12px 14px",border:"1px solid var(--border)"}}>
                   <div style={{fontFamily:"'Fraunces',serif",fontSize:28,fontWeight:700,color:chip.color,lineHeight:1}}>{chip.val}</div>
                   <div style={{fontSize:11,color:"var(--text2)",marginTop:4,lineHeight:1.3}}>{chip.label}</div>
                 </div>
@@ -1340,8 +1346,8 @@ export default function Dashboard({ onLogout }) {
           <>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
               <SectionTitle>{gradesTab==="grades"?"Course Grades":gradesTab==="gpa"?"GPA":"Goals"}</SectionTitle>
-              <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:7,padding:2}}>
-                {gradeTabs.map(t=><button key={t.id} onClick={()=>setGradesTab(t.id)} style={{padding:"3px 10px",borderRadius:5,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:gradesTab===t.id?"color-mix(in srgb, var(--primary) 15%, transparent)":"transparent",color:gradesTab===t.id?"var(--primary)":"var(--text2)",transition:"all .15s"}}>{t.label}</button>)}
+              <div style={{display:"flex",gap:2,background:"var(--surface2)",borderRadius:9,padding:3}}>
+                {gradeTabs.map(t=><button key={t.id} className="kk-tab" data-active={gradesTab===t.id} onClick={()=>setGradesTab(t.id)} style={{padding:"3px 10px",borderRadius:7,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:gradesTab===t.id?"var(--surface)":"transparent",color:gradesTab===t.id?"var(--primary)":"var(--text2)",boxShadow:gradesTab===t.id?"0 1px 4px rgba(49,72,122,0.08)":"none",transition:"all .15s"}}>{t.label}</button>)}
               </div>
             </div>
             {gradesTab==="grades" && <CourseGradeSummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} footer={null}/>}
@@ -1354,23 +1360,23 @@ export default function Dashboard({ onLogout }) {
                   <div style={{display:"grid",gridTemplateColumns:"1fr 90px 44px",gap:8,padding:"0 10px",marginBottom:2}}>
                     {["Course","Target","Actual"].map(h=><span key={h} style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:"0.05em"}}>{h}</span>)}
                   </div>
-                  {semCourses.map(c => {
+                  {semCourses.map((c, i) => {
                     const goal = gradeGoals[c.courseCode]||"";
                     const actual = c.grade||null;
                     const goalPts = gradePoints[goal]; const actualPts = gradePoints[actual?.trim()?.toUpperCase()];
                     const status = goal&&actual&&actualPts!==undefined ? (actualPts>=goalPts?"on-track":"behind") : null;
                     return (
-                      <div key={c.courseCode} style={{display:"grid",gridTemplateColumns:"1fr 90px 44px",gap:8,alignItems:"center",padding:"7px 10px",borderRadius:9,background:"var(--surface2)",borderLeft:`3px solid ${status==="on-track"?"#27ae60":status==="behind"?"var(--error)":"var(--border)"}`,position:"relative",overflow:"visible"}}>
+                      <div key={c.courseCode} className="card-anim" style={{animationDelay:`${i*0.05}s`,display:"grid",gridTemplateColumns:"1fr 90px 44px",gap:8,alignItems:"center",padding:"7px 10px",borderRadius:9,background:"var(--surface2)",borderLeft:`3px solid ${status==="on-track"?"#27ae60":status==="behind"?"var(--error)":"var(--border)"}`,position:"relative",overflow:"visible",zIndex:dashDropId==="goal-"+c.courseCode?10:1}}>
                         <span style={{fontSize:12,fontWeight:600,color:"var(--primary)"}}>{c.courseCode}</span>
                         <div style={{position:"relative"}}>
                           <button onClick={(e)=>{e.stopPropagation();const k="goal-"+c.courseCode;setDashDropId(dashDropId===k?"":k);}} style={{width:"100%",padding:"3px 8px",borderRadius:6,border:"1px solid var(--border)",background:"var(--surface)",color:goal?"var(--text)":"var(--text3)",cursor:"pointer",fontFamily:"inherit",fontSize:11,display:"flex",alignItems:"center",justifyContent:"space-between",gap:4}}>
-                            {goal||"Set goal…"}<span style={{fontSize:8,opacity:0.6}}>▾</span>
+                            {goal||"Set goal…"}<span style={{fontSize:8,opacity:0.6,display:"inline-block",transition:"transform .2s",transform:dashDropId==="goal-"+c.courseCode?"rotate(0deg)":"rotate(-90deg)"}}>▾</span>
                           </button>
                           {dashDropId==="goal-"+c.courseCode && (
                             <div onWheel={e=>e.stopPropagation()} style={{position:"absolute",top:"calc(100% + 4px)",left:0,background:"var(--surface)",borderRadius:10,boxShadow:"0 8px 32px rgba(49,72,122,0.15)",border:"1px solid var(--border)",zIndex:300,padding:4,minWidth:"100%",maxHeight:180,overflowY:"auto"}}>
-                              <div onClick={()=>{const next={...gradeGoals,[c.courseCode]:""};setGradeGoals(next);localStorage.setItem("kk_grade_goals",JSON.stringify(next));setDashDropId("");}} style={{padding:"7px 12px",borderRadius:7,cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--text3)"}}>Set goal…</div>
+                              <div className="kk-option" onClick={()=>{const next={...gradeGoals,[c.courseCode]:""};setGradeGoals(next);localStorage.setItem("kk_grade_goals",JSON.stringify(next));setDashDropId("");}} style={{padding:"7px 12px",borderRadius:7,cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--text3)",transition:"background .15s"}}>Set goal…</div>
                               {LETTER_GRADES.map(g=>(
-                                <div key={g} onClick={()=>{const next={...gradeGoals,[c.courseCode]:g};setGradeGoals(next);localStorage.setItem("kk_grade_goals",JSON.stringify(next));setDashDropId("");}} style={{padding:"7px 12px",borderRadius:7,cursor:"pointer",fontSize:12,fontWeight:600,background:goal===g?"var(--divider)":"transparent",color:goal===g?"var(--accent)":"var(--primary)"}}>
+                                <div key={g} className="kk-option" onClick={()=>{const next={...gradeGoals,[c.courseCode]:g};setGradeGoals(next);localStorage.setItem("kk_grade_goals",JSON.stringify(next));setDashDropId("");}} style={{padding:"7px 12px",borderRadius:7,cursor:"pointer",fontSize:12,fontWeight:600,background:goal===g?"var(--divider)":"transparent",color:goal===g?"var(--accent)":"var(--primary)",transition:"background .15s"}}>
                                   {g}
                                 </div>
                               ))}
@@ -1594,17 +1600,17 @@ export default function Dashboard({ onLogout }) {
                     const val = simGrades[c.courseCode] || c.grade?.trim().toUpperCase() || "";
                     const pts = gradePoints[val];
                     return (
-                      <div key={c.courseCode} style={{display:"grid",gridTemplateColumns:"1fr auto 36px",gap:8,alignItems:"center",padding:"6px 10px",borderRadius:8,background:"var(--surface2)",borderLeft:`3px solid ${pts===undefined?"var(--border)":pts>=3.7?"#27ae60":pts>=2.7?"#e67e22":"var(--error)"}`,position:"relative",overflow:"visible"}}>
+                      <div key={c.courseCode} style={{display:"grid",gridTemplateColumns:"1fr auto 36px",gap:8,alignItems:"center",padding:"6px 10px",borderRadius:8,background:"var(--surface2)",borderLeft:`3px solid ${pts===undefined?"var(--border)":pts>=3.7?"#27ae60":pts>=2.7?"#e67e22":"var(--error)"}`,position:"relative",overflow:"visible",zIndex:dashDropId==="sim-"+c.courseCode?10:1}}>
                         <span style={{fontSize:12,fontWeight:600,color:"var(--primary)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{c.courseCode}</span>
                         <div style={{position:"relative"}}>
                           <button onClick={(e)=>{e.stopPropagation();const k="sim-"+c.courseCode;setDashDropId(dashDropId===k?"":k);}} style={{padding:"2px 8px",borderRadius:6,border:"1px solid var(--border)",background:"var(--surface)",color:val?"var(--text)":"var(--text3)",cursor:"pointer",fontFamily:"inherit",fontSize:11,display:"flex",alignItems:"center",gap:4}}>
-                            {val||"—"}<span style={{fontSize:8,opacity:0.6}}>▾</span>
+                            {val||"—"}<span style={{fontSize:8,opacity:0.6,display:"inline-block",transition:"transform .2s",transform:dashDropId==="sim-"+c.courseCode?"rotate(0deg)":"rotate(-90deg)"}}>▾</span>
                           </button>
                           {dashDropId==="sim-"+c.courseCode && (
                             <div onWheel={e=>e.stopPropagation()} style={{position:"absolute",top:"calc(100% + 4px)",right:0,background:"var(--surface)",borderRadius:10,boxShadow:"0 8px 32px rgba(49,72,122,0.15)",border:"1px solid var(--border)",zIndex:300,padding:4,minWidth:70,maxHeight:180,overflowY:"auto"}}>
-                              <div onClick={()=>{setSimGrades(p=>({...p,[c.courseCode]:""}));setDashDropId("");}} style={{padding:"7px 12px",borderRadius:7,cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--text3)"}}>—</div>
+                              <div className="kk-option" onClick={()=>{setSimGrades(p=>({...p,[c.courseCode]:""}));setDashDropId("");}} style={{padding:"7px 12px",borderRadius:7,cursor:"pointer",fontSize:12,fontWeight:600,color:"var(--text3)",transition:"background .15s"}}>—</div>
                               {LETTER_GRADES.map(g=>(
-                                <div key={g} onClick={()=>{setSimGrades(p=>({...p,[c.courseCode]:g}));setDashDropId("");}} style={{padding:"7px 12px",borderRadius:7,cursor:"pointer",fontSize:12,fontWeight:600,background:val===g?"var(--divider)":"transparent",color:val===g?"var(--accent)":"var(--primary)"}}>
+                                <div key={g} className="kk-option" onClick={()=>{setSimGrades(p=>({...p,[c.courseCode]:g}));setDashDropId("");}} style={{padding:"7px 12px",borderRadius:7,cursor:"pointer",fontSize:12,fontWeight:600,background:val===g?"var(--divider)":"transparent",color:val===g?"var(--accent)":"var(--primary)",transition:"background .15s"}}>
                                   {g}
                                 </div>
                               ))}
@@ -1713,8 +1719,8 @@ export default function Dashboard({ onLogout }) {
         body { font-family:'DM Sans',sans-serif; background:var(--bg); }
         ::-webkit-scrollbar { width:5px; }
         ::-webkit-scrollbar-thumb { background:#8FB3E2; border-radius:10px; }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
-        .card-anim { animation:fadeUp .38s ease both; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .card-anim { animation:fadeUp .3s ease both; }
         .card-anim:nth-child(2){animation-delay:.06s} .card-anim:nth-child(3){animation-delay:.12s}
         .card-anim:nth-child(4){animation-delay:.18s} .card-anim:nth-child(5){animation-delay:.24s}
         .card-anim:nth-child(6){animation-delay:.30s} .card-anim:nth-child(7){animation-delay:.36s}
@@ -1724,7 +1730,7 @@ export default function Dashboard({ onLogout }) {
         .course-card { transition:transform .2s,box-shadow .2s; cursor:pointer; }
         .course-card:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(49,72,122,0.18) !important; }
         .todo-row { transition:background .15s; }
-        .todo-row:hover { background:#D9E1F1 !important; }
+        .todo-row:hover { background:var(--surface3) !important; }
         .add-btn:hover { background:#221866 !important; }
         .add-btn { transition:background .15s; }
         .cal-day:hover { background:var(--surface3) !important; border-radius:6px; }
@@ -1962,6 +1968,7 @@ export default function Dashboard({ onLogout }) {
           {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
           {activePage === "forum" && <Forum initialCourseTag={forumCourseTag} initialProfTag={forumProfTag} />}
           {activePage === "planner" && <StudyPlanner enrolledSections={semCourseList.map(c => ({ crn: c.id, courseCode: c.name, section: c.section }))} />}
+          {activePage === "groups" && <StudyGroupFinder courses={[...new Map(semCourseList.map(c => [c.name, { id: c.name, name: c.name }])).values()]} />}
           {activePage === "students" && <StudentDirectory />}
           {activePage === "profile" && (
               <Profile onProfileSave={p => setProfile(p)} onSemestersUpdated={fetchSemesters} />

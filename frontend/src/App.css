@@ -1,2 +1,7 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: #f0ede8; }
+.kk-tab:hover:not([data-active="true"]) { background: var(--surface3) !important; }
+select:hover, .kk-select:hover { background: var(--surface3) !important; border-color: var(--accent2) !important; }
+.kk-option:hover { background: var(--surface2) !important; }
+.kk-pill:hover:not([data-active="true"]) { background: var(--surface3) !important; border-color: var(--accent2) !important; }
+.kk-pill { transition: all .15s; }

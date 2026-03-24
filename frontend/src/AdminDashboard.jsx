@@ -249,7 +249,7 @@ export default function AdminDashboard({ token }) {
           </div>
         )}
         {!isLoading && list.length > 0 && (
-          <div style={ad.table}>
+          <div className="ad-anim" style={ad.table}>
             <div style={{ ...ad.tableHeader, gridTemplateColumns: cols }}>
               <span>User</span>
               <span>{reviewTypeStr === "course" ? "Course" : "Professor"}</span>
@@ -262,9 +262,9 @@ export default function AdminDashboard({ token }) {
               const expanded = expandedId === `${expandKey}-${r.id}`;
               const isConfirming = confirmAction?.id === `${expandKey}-${r.id}`;
               return (
-                <div key={r.id}
+                <div key={r.id} className="ad-anim"
                   onClick={() => setExpandedId(expanded ? null : `${expandKey}-${r.id}`)}
-                  style={{ padding:"10px 20px 12px", background: i % 2 === 0 ? "var(--surface)" : "var(--surface2)", borderBottom: i < list.length - 1 ? "1px solid var(--divider)" : "none", cursor:"pointer" }}
+                  style={{ animationDelay:`${i*0.04}s`, padding:"10px 20px 12px", background: i % 2 === 0 ? "var(--surface)" : "var(--surface2)", borderBottom: i < list.length - 1 ? "1px solid var(--divider)" : "none", cursor:"pointer" }}
                 >
                   <div style={{ display:"grid", gridTemplateColumns: cols, alignItems:"center", marginBottom:8 }}>
                     <span style={{ fontSize:12, color:"var(--text2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:8 }}>{r.userid || "—"}</span>
@@ -330,6 +330,8 @@ export default function AdminDashboard({ token }) {
         * { box-sizing:border-box; }
         .action-btn { transition:opacity .15s; }
         .action-btn:hover { opacity:0.8; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        .ad-anim { animation: fadeUp 0.3s ease both; }
       `}</style>
 
       <div style={{ marginBottom:28 }}>
@@ -338,18 +340,22 @@ export default function AdminDashboard({ token }) {
       </div>
 
       {/* tab bar */}
-      <div style={{ display:"flex", gap:4, background:"var(--surface)", padding:5, borderRadius:14, marginBottom:24, width:"fit-content", alignItems:"center", border:"1px solid var(--border)" }}>
-        <button onClick={() => { setErr(""); setTab("users"); setReviewDropdownOpen(false); }} style={{
-          padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
-          background: tab === "users" ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+      <div style={{ display:"flex", gap:4, background:"var(--surface2)", padding:4, borderRadius:12, marginBottom:24, width:"fit-content", alignItems:"center" }}>
+        <button className="kk-tab" data-active={tab === "users"} onClick={() => { setErr(""); setTab("users"); setReviewDropdownOpen(false); }} style={{
+          padding:"8px 20px", border:"none", borderRadius:9, fontSize:13, fontWeight: tab === "users" ? 600 : 400, cursor:"pointer",
+          background: tab === "users" ? "var(--surface)" : "transparent",
           color:      tab === "users" ? "var(--primary)" : "var(--text2)",
+          boxShadow:  tab === "users" ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
+          transition:"all .15s",
         }}>Users</button>
 
         <div style={{ position:"relative" }}>
-          <button onClick={() => { setErr(""); setReviewDropdownOpen(o => !o); if (tab !== "reviews") setTab("reviews"); }} style={{
-            padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6,
-            background: tab === "reviews" ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+          <button className="kk-tab" data-active={tab === "reviews"} onClick={() => { setErr(""); setReviewDropdownOpen(o => !o); if (tab !== "reviews") setTab("reviews"); }} style={{
+            padding:"8px 20px", border:"none", borderRadius:9, fontSize:13, fontWeight: tab === "reviews" ? 600 : 400, cursor:"pointer", display:"flex", alignItems:"center", gap:6,
+            background: tab === "reviews" ? "var(--surface)" : "transparent",
             color:      tab === "reviews" ? "var(--primary)" : "var(--text2)",
+            boxShadow:  tab === "reviews" ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
+            transition:"all .15s",
           }}>
             Reviews <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: reviewDropdownOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
           </button>
@@ -357,7 +363,9 @@ export default function AdminDashboard({ token }) {
             <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:140 }}>
               {[{id:"course",label:"Course"},{id:"professor",label:"Professor"}].map(opt => (
                 <div key={opt.id} onClick={() => { setReviewType(opt.id); setReviewDropdownOpen(false); setExpandedId(null); }}
+                  className="kk-option"
                   style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                    transition:"background .15s",
                     background: reviewType === opt.id ? "var(--divider)" : "transparent",
                     color:      reviewType === opt.id ? "var(--accent)"  : "var(--primary)" }}>
                   {opt.label}
@@ -377,12 +385,14 @@ export default function AdminDashboard({ token }) {
       {/* users tab */}
       {tab === "users" && (
         <>
-          <div style={{ display:"flex", gap:4, background:"var(--surface)", padding:5, borderRadius:14, marginBottom:20, width:"fit-content", border:"1px solid var(--border)" }}>
+          <div style={{ display:"flex", gap:4, background:"var(--surface2)", padding:4, borderRadius:12, marginBottom:20, width:"fit-content" }}>
             {[{id:"all",label:"All"},{id:"flagged",label:"Flagged"}].map(t => (
-              <button key={t.id} onClick={() => setUserSubTab(t.id)} style={{
-                padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
-                background: userSubTab === t.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+              <button key={t.id} className="kk-tab" data-active={userSubTab === t.id} onClick={() => setUserSubTab(t.id)} style={{
+                padding:"8px 20px", border:"none", borderRadius:9, fontSize:13,
+                fontWeight: userSubTab === t.id ? 600 : 400, cursor:"pointer", transition:"all .15s",
+                background: userSubTab === t.id ? "var(--surface)" : "transparent",
                 color:      userSubTab === t.id ? "var(--primary)" : "var(--text2)",
+                boxShadow:  userSubTab === t.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
               }}>{t.label}</button>
             ))}
           </div>
@@ -407,7 +417,9 @@ export default function AdminDashboard({ token }) {
                     <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:130 }}>
                       {[{id:"all",label:"Role"},{id:"STUDENT",label:"Student"},{id:"ADMIN",label:"Admin"}].map(opt => (
                         <div key={opt.id} onClick={() => { setRoleFilter(opt.id); setSelectedUserIds(new Set()); setRoleDropOpen(false); }}
+                          className="kk-option"
                           style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                            transition:"background .15s",
                             background: roleFilter === opt.id ? "var(--divider)" : "transparent",
                             color:      roleFilter === opt.id ? "var(--accent)"  : "var(--primary)" }}>
                           {opt.label}
@@ -428,7 +440,9 @@ export default function AdminDashboard({ token }) {
                     <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:150 }}>
                       {[{id:"all",label:"Status"},{id:"active",label:"Active"},{id:"deactivated",label:"Deactivated"}].map(opt => (
                         <div key={opt.id} onClick={() => { setStatusFilter(opt.id); setSelectedUserIds(new Set()); setStatusDropOpen(false); }}
+                          className="kk-option"
                           style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                            transition:"background .15s",
                             background: statusFilter === opt.id ? "var(--divider)" : "transparent",
                             color:      statusFilter === opt.id ? "var(--accent)"  : "var(--primary)" }}>
                           {opt.label}
@@ -472,12 +486,12 @@ export default function AdminDashboard({ token }) {
                 </div>
               )}
               {!loading && displayed.length > 0 && (
-                <div style={ad.table}>
+                <div className="ad-anim" style={ad.table}>
                   <div style={{ ...ad.tableHeader, gridTemplateColumns: "1fr 90px 110px 120px 150px 140px" }}>
                       <span>Email</span><span>Role</span><span>Status</span><span>Joined</span><span>Admin</span><span>Account</span>
                   </div>
                   {displayed.map((u, i) => (
-                    <div key={u.id} style={{ borderBottom: i < displayed.length - 1 ? "1px solid var(--divider)" : "none" }}>
+                    <div key={u.id} className="ad-anim" style={{ animationDelay:`${i*0.04}s`, borderBottom: i < displayed.length - 1 ? "1px solid var(--divider)" : "none" }}>
                       <div onClick={() => { if (!selectMode) openUser(u); }} style={{ ...ad.row, gridTemplateColumns: selectMode ? "32px 1fr 90px 110px 120px 150px 140px" : "1fr 90px 110px 120px 150px 140px", background: i % 2 === 0 ? "var(--surface)" : "var(--surface2)", cursor: selectMode ? "default" : "pointer" }}>
                         {selectMode && (
                           <StyledCheckbox checked={selectedUserIds.has(u.id)}
@@ -604,12 +618,14 @@ export default function AdminDashboard({ token }) {
       {/* reviews tab */}
       {tab === "reviews" && (
         <>
-          <div style={{ display:"flex", gap:4, background:"var(--surface)", padding:5, borderRadius:14, marginBottom:20, width:"fit-content", border:"1px solid var(--border)" }}>
+          <div style={{ display:"flex", gap:4, background:"var(--surface2)", padding:4, borderRadius:12, marginBottom:20, width:"fit-content" }}>
             {[{id:"all",label:"All"},{id:"flagged",label:"Flagged"},{id:"reported",label:"Reported"}].map(t => (
-              <button key={t.id} onClick={() => { setReviewStatus(t.id); setExpandedId(null); setConfirmAction(null); }} style={{
-                padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
-                background: reviewStatus === t.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+              <button key={t.id} className="kk-tab" data-active={reviewStatus === t.id} onClick={() => { setReviewStatus(t.id); setExpandedId(null); setConfirmAction(null); }} style={{
+                padding:"8px 20px", border:"none", borderRadius:9, fontSize:13,
+                fontWeight: reviewStatus === t.id ? 600 : 400, cursor:"pointer", transition:"all .15s",
+                background: reviewStatus === t.id ? "var(--surface)" : "transparent",
                 color:      reviewStatus === t.id ? "var(--primary)" : "var(--text2)",
+                boxShadow:  reviewStatus === t.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
               }}>{t.label}</button>
             ))}
           </div>

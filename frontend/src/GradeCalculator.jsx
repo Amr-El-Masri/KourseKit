@@ -426,10 +426,11 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
   // Selected course (shared across course/target/simulator tabs)
   const [selectedCourse, setSelectedCourse] = useState("");
+  const notBESection = (c) => !c.section?.sectionNumber || !(/^B(?!L)/i.test(c.section.sectionNumber) || /^E/i.test(c.section.sectionNumber));
   const semesterCourses = semToLoad
-    ? (savedSemesters.find(s => String(s.id) === String(semToLoad))?.courses || []).filter(c => c.courseCode).map(c => ({ name: c.courseCode }))
+    ? (savedSemesters.find(s => String(s.id) === String(semToLoad))?.courses || []).filter(c => c.courseCode && notBESection(c)).map(c => ({ name: c.courseCode }))
     : selectedSemester
-      ? (savedSemesters.find(s => s.semesterName === selectedSemester)?.courses || []).filter(c => c.courseCode).map(c => ({ name: c.courseCode }))
+      ? (savedSemesters.find(s => s.semesterName === selectedSemester)?.courses || []).filter(c => c.courseCode && notBESection(c)).map(c => ({ name: c.courseCode }))
       : dashboardCourses;
 
   // Switch course — loads saved state or falls back to syllabus extract
@@ -521,6 +522,8 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; }
         .gc-input:focus { border-color:var(--border2) !important; outline:none; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        .gc-anim { animation: fadeUp 0.32s ease both; }
         .gc-row-hover:hover { background:var(--divider) !important; }
         .gc-tab-hover:hover { background:var(--bg); }
         .gc-addbtn:hover { background:var(--surface3) !important; }
@@ -545,7 +548,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
           <span style={{ fontSize:13, fontWeight:600, color:"var(--accent2)" }}>Course:</span>
           <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
             {semesterCourses.map(c => (
-              <button key={c.name} onClick={() => switchCourse(selectedCourse === c.name ? "" : c.name)} style={{
+              <button key={c.name} className="kk-pill" data-active={selectedCourse === c.name} onClick={() => switchCourse(selectedCourse === c.name ? "" : c.name)} style={{
                 fontSize:12, fontWeight:600, padding:"5px 14px", borderRadius:20,
                 border: selectedCourse === c.name ? "none" : "1px solid var(--border)",
                 background: selectedCourse === c.name ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--bg)",
@@ -567,26 +570,26 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       {/* Tab bar */}
       <div style={{
         display:"flex",
-        background:"var(--surface)",
-        border:"1px solid var(--border)",
+        background:"var(--surface2)",
         marginTop:24,
-        borderRadius:14, 
-        padding:5, 
-        width:"fit-content", 
-        gap:4 
+        borderRadius:12,
+        padding:4,
+        width:"fit-content",
+        gap:4
       }}>
         {TABS.map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
-            padding:"9px 22px",
+          <button key={t.id} className="kk-tab" data-active={activeTab === t.id} onClick={() => setActiveTab(t.id)} style={{
+            padding:"8px 20px",
             border:"none",
-            borderRadius:10,
+            borderRadius:9,
             fontSize:13,
-            fontWeight:600,
-            cursor:"pointer", 
-            fontFamily:"'DM Sans',sans-serif", 
+            fontWeight: activeTab === t.id ? 600 : 400,
+            cursor:"pointer",
+            fontFamily:"'DM Sans',sans-serif",
             transition:"all .15s",
-            background: activeTab === t.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+            background: activeTab === t.id ? "var(--surface)" : "transparent",
             color: activeTab === t.id ? "var(--primary)" : "var(--text2)",
+            boxShadow: activeTab === t.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
           }}>
             {t.label}
           </button>
@@ -595,7 +598,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
       {/* Semester GPA */}
       {activeTab==="semester" && (
-        <div style={{ ...gc.card, marginTop:24 }}>
+        <div key="semester" className="gc-anim" style={{ ...gc.card, marginTop:24 }}>
           <SectionTitle>Semester GPA</SectionTitle>
           <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:18 }}>
             Enter each course, your grade (letter or GPA point), and its credit hours.
@@ -610,6 +613,8 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
               {savedSemesters.map(s => (
                 <button
                   key={s.id}
+                  className="kk-pill"
+                  data-active={String(semToLoad) === String(s.id)}
                   onClick={() => { loadSnapshot(s); setSemResult(null); setSelectedLoad(String(s.id)); }}
                   style={{
                     fontSize:12, fontWeight:600, padding:"5px 14px", borderRadius:20,
@@ -647,9 +652,11 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                   </button>
                   {openDropId === `${c.id}-semcourse` && (
                     <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
-                      {(savedSemesters.find(s => String(s.id) === String(semToLoad))?.courses || []).filter(x => x.courseCode).map(x => (
+                      {(savedSemesters.find(s => String(s.id) === String(semToLoad))?.courses || []).filter(x => x.courseCode && notBESection(x)).map(x => (
                         <div key={x.courseCode} onClick={() => { updateRow(setSemCourses, c.id, "name", x.courseCode); setOpenDropId(""); }}
+                          className="kk-option"
                           style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                            transition:"background .15s",
                             background: c.name === x.courseCode ? "var(--divider)" : "transparent",
                             color:      c.name === x.courseCode ? "var(--accent)"  : "var(--primary)" }}>
                           {x.courseCode}
@@ -673,7 +680,9 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                     <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
                       {dashboardCourses.map(dc => (
                         <div key={dc.id} onClick={() => { updateRow(setSemCourses, c.id, "name", dc.name); setOpenDropId(""); }}
+                          className="kk-option"
                           style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                            transition:"background .15s",
                             background: c.name === dc.name ? "var(--divider)" : "transparent",
                             color:      c.name === dc.name ? "var(--accent)"  : "var(--primary)" }}>
                           {dc.name}
@@ -699,7 +708,9 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                   <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
                     {LETTER_GRADES.map(g => (
                       <div key={g} onClick={() => { updateRow(setSemCourses, c.id, "grade", g); setOpenDropId(""); }}
+                        className="kk-option"
                         style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                          transition:"background .15s",
                           background: c.grade === g ? "var(--divider)" : "transparent",
                           color:      c.grade === g ? "var(--accent)"  : "var(--primary)" }}>
                         {g}
@@ -784,7 +795,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
       {/* Cumulative GPA */}
       {activeTab==="cumulative" && (
-        <div style={{ ...gc.card, marginTop:24 }}>
+        <div className="gc-anim" style={{ ...gc.card, marginTop:24 }}>
           <SectionTitle>Cumulative GPA</SectionTitle>
           <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:18 }}>
             Enter your GPA and credit hours for each completed semester.
@@ -844,7 +855,9 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                         setCumSems(p => p.map(r => r.id === c.id ? { ...r, name, gpa: autoGpa != null ? Number(autoGpa).toFixed(2) : r.gpa, credits: autoCredits != null && autoCredits > 0 ? String(autoCredits) : r.credits } : r));
                         setOpenDropId("");
                       }}
+                        className="kk-option"
                         style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                          transition:"background .15s",
                           background: c.name === opt.value ? "var(--divider)" : "transparent",
                           color:      c.name === opt.value ? "var(--accent)"  : "var(--primary)" }}>
                         {opt.value}
@@ -969,7 +982,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
       {/* Course Grade */}
       {activeTab==="course" && (
-        <div style={{ ...gc.card, marginTop:24 }}>
+        <div key="course" className="gc-anim" style={{ ...gc.card, marginTop:24 }}>
           <SectionTitle>Course Grade (So Far)</SectionTitle>
           <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:4 }}>
             Log your grades as you receive them — they auto-save per course as your grade diary.
@@ -998,7 +1011,9 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                   <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
                     {COMP_TYPES.map(t => (
                       <div key={t} onClick={() => { updateRow(setComponents, c.id, "type", t); setOpenDropId(""); }}
+                        className="kk-option"
                         style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                          transition:"background .15s",
                           background: c.type === t ? "var(--divider)" : "transparent",
                           color:      c.type === t ? "var(--accent)"  : "var(--primary)" }}>
                         {t}
@@ -1057,7 +1072,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
         const useAuto = autoRows.length > 0;
         const activeGraded = useAuto ? autoRows : graded;
         return (
-        <div style={{ ...gc.card, marginTop:24 }}>
+        <div key="target" className="gc-anim" style={{ ...gc.card, marginTop:24 }}>
           <SectionTitle>Target Course Grade</SectionTitle>
           <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:18 }}>
             What do you need on the final exam to hit your target grade?
@@ -1163,7 +1178,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             })()
           : null;
         return (
-        <div style={{ ...gc.card, marginTop:24 }}>
+        <div key="simulator" className="gc-anim" style={{ ...gc.card, marginTop:24 }}>
           <SectionTitle>Grade Simulator</SectionTitle>
           <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:18 }}>
             Fill in your grades — actual or hypothetical. Results update live as you type.
@@ -1183,7 +1198,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
           {simPast.map((c, i) => {
             const hasGrade = c.grade && isValidGrade(c.grade);
             return (
-              <div key={c.id} style={{ ...gc.row, alignItems:"center", background: hasGrade ? "transparent" : "var(--surface2)", borderRadius:8, marginBottom:4 }}>
+              <div key={c.id} style={{ ...gc.row, alignItems:"center", background: "transparent", borderRadius:8, marginBottom:4 }}>
                 {selectedCourse ? (
                   <span style={{ flex:2, fontSize:13, color:"var(--text)", fontWeight:500 }}>
                     {c.type === "Other" ? (c.customType || "Other") : c.type}
@@ -1204,7 +1219,9 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                       <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
                         {COMP_TYPES.map(t => (
                           <div key={t} onClick={() => { updateRow(setSimPast, c.id, "type", t); setOpenDropId(""); }}
+                            className="kk-option"
                             style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                              transition:"background .15s",
                               background: c.type === t ? "var(--divider)" : "transparent",
                               color:      c.type === t ? "var(--accent)"  : "var(--primary)" }}>
                             {t}

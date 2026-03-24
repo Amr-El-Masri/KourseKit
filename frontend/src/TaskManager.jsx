@@ -84,7 +84,7 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
         opacity: task.done ? 0.6 : 1,
       }} className="task-row">
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <button onClick={() => onToggle(task.id)} style={{
+          <button className="tm-check" onClick={() => onToggle(task.id)} style={{
             width:20, height:20, borderRadius:6, border:`2px solid ${task.done?"var(--success)":"var(--border)"}`,
             background: task.done?"var(--success)":"var(--surface)", cursor:"pointer", flexShrink:0,
             display:"flex", alignItems:"center", justifyContent:"center", transition:"all .15s",
@@ -178,7 +178,9 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
                     <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
                       {courses.map(c => (
                         <div key={c} onClick={() => { set("course", c); setFormCourseDropOpen(false); }}
+                          className="kk-option"
                           style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                            transition:"background .15s",
                             background: form.course === c ? "var(--divider)" : "transparent",
                             color:      form.course === c ? "var(--accent)"  : "var(--primary)" }}>
                           {c}
@@ -209,7 +211,9 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
                 <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
                   {TYPES.map(t => (
                     <div key={t} onClick={() => { set("type", t); setFormTypeDropOpen(false); }}
+                      className="kk-option"
                       style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                        transition:"background .15s",
                         background: form.type === t ? "var(--divider)" : "transparent",
                         color:      form.type === t ? "var(--accent)"  : "var(--primary)" }}>
                       {t}
@@ -427,6 +431,9 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
         .tm-input:focus { border-color:var(--border2) !important; outline:none; }
         .task-row:hover { box-shadow:0 3px 16px rgba(49,72,122,0.1) !important; }
         .tm-icon-btn:hover { background:var(--divider) !important; }
+        .tm-check:hover { border-color:var(--success) !important; background:color-mix(in srgb,var(--success) 12%,transparent) !important; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        .tm-anim { animation: fadeUp 0.3s ease both; }
       `}</style>
 
         <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:24, flexWrap:"wrap", gap:12 }}>
@@ -469,12 +476,11 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
         <div style={{
           display:"flex",
           gap:4,
-          background:"var(--surface)",
-          padding:5,
-          borderRadius:14,
+          background:"var(--surface2)",
+          padding:4,
+          borderRadius:12,
           marginBottom:20,
           width:"fit-content",
-          border:"1px solid var(--border)"
         }}>
           {[
             { label:"All",     val:counts.all,     filter:"All"     },
@@ -482,17 +488,18 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
             { label:"Done",    val:counts.done,    filter:"Done"    },
             { label:"Overdue", val:counts.overdue, filter:"Overdue", warn:counts.overdue>0 },
           ].map(c => (
-              <button key={c.filter} onClick={() => setFilter(c.filter)} style={{
-                padding:"9px 22px",
+              <button key={c.filter} className="kk-tab" data-active={filter === c.filter} onClick={() => setFilter(c.filter)} style={{
+                padding:"8px 20px",
                 border:"none",
-                borderRadius:10,
+                borderRadius:9,
                 fontSize:13,
-                fontWeight:600,
+                fontWeight: filter === c.filter ? 600 : 400,
                 cursor:"pointer",
                 fontFamily:"'DM Sans',sans-serif",
                 transition:"all .15s",
-                background: filter === c.filter ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+                background: filter === c.filter ? "var(--surface)" : "transparent",
                 color: filter === c.filter ? "var(--primary)" : c.warn ? "var(--error)" : "var(--text2)",
+                boxShadow: filter === c.filter ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
               }}>
                 {c.label} <span style={{ opacity:.7 }}>{c.val}</span>
               </button>
@@ -519,14 +526,18 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
             {courseFilterDropOpen && (
               <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
                 <div onClick={() => { setSearch(""); setCourseFilter(""); setCourseFilterDropOpen(false); }}
+                  className="kk-option"
                   style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                    transition:"background .15s",
                     background: !courseFilter ? "var(--divider)" : "transparent",
                     color:      !courseFilter ? "var(--accent)"  : "var(--primary)" }}>
                   All Courses
                 </div>
                 {allCourses.map(c => (
                   <div key={c} onClick={() => { setSearch(""); setCourseFilter(c); setCourseFilterDropOpen(false); }}
+                    className="kk-option"
                     style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                      transition:"background .15s",
                       background: courseFilter === c ? "var(--divider)" : "transparent",
                       color:      courseFilter === c ? "var(--accent)"  : "var(--primary)" }}>
                     {c}
@@ -556,8 +567,8 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
                 <span style={{ fontSize:12, color:"var(--text3)" }}>— imported automatically</span>
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                {syllabusDisplayed.map(t => (
-                  <div key={t.id}>
+                {syllabusDisplayed.map((t, i) => (
+                  <div key={t.id} className="tm-anim" style={{ animationDelay: `${i * 0.05}s` }}>
                     <TaskRow task={t} onToggle={toggleDone} onDelete={deleteSyllabusTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
                     {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
                   </div>
@@ -572,8 +583,8 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
                 <span style={{ fontSize:13, fontWeight:700, color:"var(--primary)", fontFamily:"'DM Sans',sans-serif" }}>My Tasks</span>
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                {manualDisplayed.map(t => (
-                  <div key={t.id}>
+                {manualDisplayed.map((t, i) => (
+                  <div key={t.id} className="tm-anim" style={{ animationDelay: `${(syllabusDisplayed.length + i) * 0.05}s` }}>
                     <TaskRow task={t} onToggle={toggleDone} onDelete={deleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
                     {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
                   </div>

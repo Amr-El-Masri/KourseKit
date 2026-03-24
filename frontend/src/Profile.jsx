@@ -939,30 +939,34 @@ const refetchSemesters = () =>
         * { box-sizing:border-box; }
         .pf-input:focus { border-color:#8FB3E2 !important; outline:none; }
         .pf-status:hover { border-color:var(--accent) !important; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        .pf-anim { animation: fadeUp 0.35s ease both; }
+        .pf-anim:nth-child(2) { animation-delay:.06s } .pf-anim:nth-child(3) { animation-delay:.12s } .pf-anim:nth-child(4) { animation-delay:.18s }
       `}</style>
 
       {isAdmin && (
-        <div style={{ 
-          display:"flex", 
-          gap:4, 
-          background:"var(--surface)",  
-          padding:5,                     
-          borderRadius:14,              
-          marginBottom:24, 
+        <div style={{
+          display:"flex",
+          gap:4,
+          background:"var(--surface2)",
+          padding:4,
+          borderRadius:12,
+          marginBottom:24,
           width:"fit-content",
-          border:"1px solid var(--border)" 
         }}>
           {[{ id:"profile", label:"My Profile" }, { id:"admin", label:"Admin" }].map(t => (
-            <button key={t.id} onClick={() => setSection(t.id)} style={{
-              padding:"9px 22px",
+            <button key={t.id} className="kk-tab" data-active={section === t.id} onClick={() => setSection(t.id)} style={{
+              padding:"8px 20px",
               border:"none",
-              borderRadius:10,
+              borderRadius:9,
               fontSize:13,
-              fontWeight:600,  
+              fontWeight: section === t.id ? 600 : 400,
               cursor:"pointer",
               fontFamily:"'DM Sans',sans-serif",
-              background: section === t.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+              transition:"all .15s",
+              background: section === t.id ? "var(--surface)" : "transparent",
               color:      section === t.id ? "var(--primary)" : "var(--text2)",
+              boxShadow:  section === t.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
             }}>{t.label}</button>
             ))}
           </div>
@@ -972,13 +976,13 @@ const refetchSemesters = () =>
         <AdminDashboard token={localStorage.getItem("kk_token")} />
       )}
 
-      {section === "profile" && <>
+      {section === "profile" && <div key="profile-section">
       <div style={{ marginBottom:16 }}>
         <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:4 }}>My Profile</div>
         <div style={{ fontSize:13, color:"var(--text2)" }}>Your info shows up on the dashboard greeting and affects how KourseKit personalizes your experience.</div>
       </div>
 
-      <div style={{ background:"var(--surface)", borderRadius:20, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", overflow:"hidden", marginBottom:20 }}>
+      <div className="pf-anim" style={{ animationDelay:"0s", background:"var(--surface)", borderRadius:20, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", overflow:"hidden", marginBottom:20 }}>
         <div style={{ padding:"24px 28px 24px" }}>
 
           <div style={{ display:"flex", alignItems:"flex-end", gap:16, marginBottom:20 }}>
@@ -1486,7 +1490,7 @@ const refetchSemesters = () =>
 
       {/* Uploaded Transcript */}
       {transcriptInfo && (
-        <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", marginTop:20, overflow:"hidden" }}>
+        <div className="pf-anim" style={{ animationDelay:"0.06s", background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", marginTop:20, overflow:"hidden" }}>
           <div onClick={() => toggleSect("transcript")} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", cursor:"pointer", userSelect:"none" }}>
             <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)" }}>Uploaded Transcript</div>
             <span style={{ fontSize:16, color:"var(--text3)" }}>{sectOpen.transcript ? "▾" : "▸"}</span>
@@ -1513,7 +1517,7 @@ const refetchSemesters = () =>
       )}
 
       {/* My Semesters */}
-      <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", marginTop:20, overflow:"hidden" }}>
+      <div className="pf-anim" style={{ animationDelay:"0.12s", background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", marginTop:20, overflow:"hidden" }}>
         <div onClick={() => toggleSect("semesters")} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", cursor:"pointer", userSelect:"none" }}>
           <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)" }}>My Semesters</div>
           <div style={{ display:"flex", alignItems:"center", gap:10 }} onClick={e => e.stopPropagation()}>
@@ -1544,9 +1548,9 @@ const refetchSemesters = () =>
                   </button>
                   {newSemDrop && (
                     <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, maxHeight:220, overflowY:"auto" }}>
-                      <div onClick={() => { setNewSemName(""); setNewSemDrop(false); }} style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, background: !newSemName ? "var(--divider)" : "transparent", color: !newSemName ? "var(--accent)" : "var(--primary)" }}>Select semester…</div>
+                      <div onClick={() => { setNewSemName(""); setNewSemDrop(false); }} className="kk-option" style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, transition:"background .15s", background: !newSemName ? "var(--divider)" : "transparent", color: !newSemName ? "var(--accent)" : "var(--primary)" }}>Select semester…</div>
                       {AUB_SEMESTERS.map(s => (
-                        <div key={s} onClick={() => { setNewSemName(s); setNewSemDrop(false); }} style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, background: newSemName === s ? "var(--divider)" : "transparent", color: newSemName === s ? "var(--accent)" : "var(--primary)" }}>{s}</div>
+                        <div key={s} onClick={() => { setNewSemName(s); setNewSemDrop(false); }} className="kk-option" style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, transition:"background .15s", background: newSemName === s ? "var(--divider)" : "transparent", color: newSemName === s ? "var(--accent)" : "var(--primary)" }}>{s}</div>
                       ))}
                     </div>
                   )}
@@ -1569,7 +1573,7 @@ const refetchSemesters = () =>
                         {openGradeDrop === `new-${c.id}` && (
                           <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:300, padding:4, maxHeight:200, overflowY:"auto" }}>
                             {LETTER_GRADES.map(g => (
-                              <div key={g} onClick={() => { setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,grade:g} : r)); setOpenGradeDrop(null); }} style={{ padding:"7px 12px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600, background: c.grade === g ? "var(--divider)" : "transparent", color: c.grade === g ? "var(--accent)" : "var(--primary)" }}>{g === "" ? "—" : g}</div>
+                              <div key={g} onClick={() => { setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,grade:g} : r)); setOpenGradeDrop(null); }} className="kk-option" style={{ padding:"7px 12px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600, transition:"background .15s", background: c.grade === g ? "var(--divider)" : "transparent", color: c.grade === g ? "var(--accent)" : "var(--primary)" }}>{g === "" ? "—" : g}</div>
                             ))}
                           </div>
                         )}
@@ -1646,9 +1650,9 @@ const refetchSemesters = () =>
                       </button>
                       {editSemDrop && (
                         <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, maxHeight:220, overflowY:"auto" }}>
-                          <div onClick={() => { setEditName(""); setEditSemDrop(false); }} style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, background: !editName ? "var(--divider)" : "transparent", color: !editName ? "var(--accent)" : "var(--primary)" }}>Select semester…</div>
+                          <div onClick={() => { setEditName(""); setEditSemDrop(false); }} className="kk-option" style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, transition:"background .15s", background: !editName ? "var(--divider)" : "transparent", color: !editName ? "var(--accent)" : "var(--primary)" }}>Select semester…</div>
                           {AUB_SEMESTERS.map(s => (
-                            <div key={s} onClick={() => { setEditName(s); setEditSemDrop(false); }} style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, background: editName === s ? "var(--divider)" : "transparent", color: editName === s ? "var(--accent)" : "var(--primary)" }}>{s}</div>
+                            <div key={s} onClick={() => { setEditName(s); setEditSemDrop(false); }} className="kk-option" style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, transition:"background .15s", background: editName === s ? "var(--divider)" : "transparent", color: editName === s ? "var(--accent)" : "var(--primary)" }}>{s}</div>
                           ))}
                         </div>
                       )}
@@ -1671,7 +1675,7 @@ const refetchSemesters = () =>
                             {openGradeDrop === `edit-${c.id}` && (
                               <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:300, padding:4, maxHeight:200, overflowY:"auto" }}>
                                 {LETTER_GRADES.map(g => (
-                                  <div key={g} onClick={() => { setEditCourses(p => p.map(r => r.id===c.id ? {...r,grade:g} : r)); setOpenGradeDrop(null); }} style={{ padding:"7px 12px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600, background: c.grade === g ? "var(--divider)" : "transparent", color: c.grade === g ? "var(--accent)" : "var(--primary)" }}>{g === "" ? "—" : g}</div>
+                                  <div key={g} onClick={() => { setEditCourses(p => p.map(r => r.id===c.id ? {...r,grade:g} : r)); setOpenGradeDrop(null); }} className="kk-option" style={{ padding:"7px 12px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600, transition:"background .15s", background: c.grade === g ? "var(--divider)" : "transparent", color: c.grade === g ? "var(--accent)" : "var(--primary)" }}>{g === "" ? "—" : g}</div>
                                 ))}
                               </div>
                             )}
@@ -1713,7 +1717,7 @@ const refetchSemesters = () =>
       </div>
 
       {/* Default Weekly Schedule */}
-      <div style={{ background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", marginTop:20, overflow:"hidden" }}>
+      <div className="pf-anim" style={{ animationDelay:"0.18s", background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", marginTop:20, overflow:"hidden" }}>
         <div onClick={() => toggleSect("schedule")} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", cursor:"pointer", userSelect:"none" }}>
           <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)" }}>Default Weekly Schedule</div>
           <span style={{ fontSize:16, color:"var(--text3)" }}>{sectOpen.schedule ? "▾" : "▸"}</span>
@@ -1725,7 +1729,7 @@ const refetchSemesters = () =>
         )}
       </div>
 
-      </>}
+      </div>}
     </div>
   );
 }

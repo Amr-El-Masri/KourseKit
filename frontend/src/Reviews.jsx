@@ -57,19 +57,31 @@ const fuzzySearch = (text, query) => {
 };
 
 function Stars({ count, interactive, onSet }) {
+  const [hoverCount, setHoverCount] = useState(0);
+  const active = hoverCount || count;
   return (
     <span style={{ display:"inline-flex", gap:2 }}>
       {[1,2,3,4,5].map(i => (
-        <span key={i} onClick={() => interactive && onSet(i)} style={{
-          color: i<=count ? "var(--star)" : "var(--border)", fontSize:16,
-          cursor: interactive ? "pointer" : "default", transition:"color .1s"
-        }}>★</span>
+        <span
+          key={i}
+          onClick={() => interactive && onSet(i)}
+          onMouseEnter={() => interactive && setHoverCount(i)}
+          onMouseLeave={() => interactive && setHoverCount(0)}
+          style={{
+            color: i<=active ? (hoverCount ? "var(--accent2)" : "var(--star)") : "var(--border)",
+            fontSize:16,
+            cursor: interactive ? "pointer" : "default",
+            transition:"color .1s",
+            transform: interactive && i<=hoverCount ? "scale(1.2)" : "scale(1)",
+            display:"inline-block",
+          }}
+        >★</span>
       ))}
     </span>
   );
 }
 
-function ReviewCard({ review, token, userEmail, reviewType = "course" }) {
+function ReviewCard({ review, token, userEmail, reviewType = "course", animDelay = 0 }) {
   const [reporting,  setReporting]  = useState(false);
   const [reason,     setReason]     = useState("");
   const [submitted,  setSubmitted]  = useState(false);
@@ -107,7 +119,7 @@ function ReviewCard({ review, token, userEmail, reviewType = "course" }) {
   };
 
   return (
-    <div style={rv.card}>
+    <div className="rv-anim" style={{ ...rv.card, animationDelay: `${animDelay}s` }}>
       <div style={{ flex: 1 }}>
         {/* Header row */}
         <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap", marginBottom:8 }}>
@@ -363,14 +375,18 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
             {sectionDropOpen && (
               <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, maxHeight:220, overflowY:"auto" }}>
                 <div onClick={() => { setSelectedSection(""); setSectionDropOpen(false); }}
+                  className="kk-option"
                   style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                    transition:"background .15s",
                     background: !selectedSection ? "var(--divider)" : "transparent",
                     color: !selectedSection ? "var(--accent)" : "var(--primary)" }}>
                   — pick a section —
                 </div>
                 {sections.map(s => (
                   <div key={s.id} onClick={() => { setSelectedSection(s.id); setSectionDropOpen(false); }}
+                    className="kk-option"
                     style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                      transition:"background .15s",
                       background: String(selectedSection) === String(s.id) ? "var(--divider)" : "transparent",
                       color: String(selectedSection) === String(s.id) ? "var(--accent)" : "var(--primary)" }}>
                     Section {s.sectionNumber} — {s.professorName}
@@ -448,21 +464,25 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        .rv-anim { animation: fadeUp 0.3s ease both; }
       `}</style>
 
       <div>
         <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:8}}>Reviews</div>
       </div>
-      <div style={{ display:"flex", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:14, padding:5, width:"fit-content", gap:4, marginBottom:24 }}>
+      <div style={{ display:"flex", background:"var(--surface2)", borderRadius:12, padding:4, width:"fit-content", gap:4, marginBottom:24 }}>
         {[
           { id:"course",    icon:"", label:"Course Reviews"    },
           { id:"professor", icon:"", label:"Professor Reviews" },
         ].map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} style={{
-            padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600,
+          <button key={t.id} className="kk-tab" data-active={tab===t.id} onClick={() => setTab(t.id)} style={{
+            padding:"8px 20px", border:"none", borderRadius:9, fontSize:13,
+            fontWeight: tab===t.id ? 600 : 400,
             cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
-            background: tab===t.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+            background: tab===t.id ? "var(--surface)" : "transparent",
             color:       tab===t.id ? "var(--primary)" : "var(--text2)",
+            boxShadow:   tab===t.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
           }}>
             {t.icon} {t.label}
           </button>
@@ -513,16 +533,17 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
               <div style={{ 
                 display:"flex", 
                 gap:4, 
-                background:"var(--surface)", 
-                border:"1px solid var(--border)",
-                padding:4, 
-                borderRadius:10 
+                background:"var(--surface2)",
+                padding:4,
+                borderRadius:10
               }}>
                 {[{id:"top",label:"Top"},{id:"new",label:"New"}].map(s => (
-                  <button key={s.id} onClick={() => setSort(s.id)} style={{
-                    padding:"6px 14px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
-                    background: sort===s.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+                  <button key={s.id} className="kk-tab" data-active={sort===s.id} onClick={() => setSort(s.id)} style={{
+                    padding:"6px 14px", border:"none", borderRadius:8, fontSize:12,
+                    fontWeight: sort===s.id ? 600 : 400, cursor:"pointer", transition:"all .15s",
+                    background: sort===s.id ? "var(--surface)" : "transparent",
                     color:      sort===s.id ? "var(--primary)" : "var(--text2)",
+                    boxShadow:  sort===s.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
                 }}>{s.label}</button>
               ))}
             </div>
@@ -574,7 +595,7 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
 
       {!loading && displayed.length > 0 && (
         <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-          {displayed.map(r => <ReviewCard key={r.id} review={r} token={token} userEmail={userEmail} reviewType="course" />)}
+          {displayed.map((r, i) => <ReviewCard key={r.id} review={r} token={token} userEmail={userEmail} reviewType="course" animDelay={i * 0.05} />)}
         </div>
       )}
       </>}
@@ -756,12 +777,14 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
               </button>
             )}
             <div style={{ display:"flex", gap:8 }}>
-              <div style={{ display:"flex", gap:4, background:"var(--bg)", padding:4, borderRadius:10 }}>
+              <div style={{ display:"flex", gap:4, background:"var(--surface2)", padding:4, borderRadius:10 }}>
                 {[{id:"top",label:"Top"},{id:"new",label:"New"}].map(s => (
-                  <button key={s.id} onClick={() => setSort(s.id)} style={{
-                    padding:"6px 14px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
-                    background: sort===s.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+                  <button key={s.id} className="kk-tab" data-active={sort===s.id} onClick={() => setSort(s.id)} style={{
+                    padding:"6px 14px", border:"none", borderRadius:8, fontSize:12,
+                    fontWeight: sort===s.id ? 600 : 400, cursor:"pointer", transition:"all .15s",
+                    background: sort===s.id ? "var(--surface)" : "transparent",
                     color:      sort===s.id ? "var(--primary)" : "var(--text2)",
+                    boxShadow:  sort===s.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
                   }}>{s.label}</button>
                 ))}
               </div>
@@ -800,7 +823,7 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
 
           {!loading && displayed.length > 0 && (
             <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              {displayed.map(r => <ReviewCard key={r.id} review={r} token={token} userEmail={userEmail} reviewType="professor" />)}
+              {displayed.map((r, i) => <ReviewCard key={r.id} review={r} token={token} userEmail={userEmail} reviewType="professor" animDelay={i * 0.05} />)}
             </div>
           )}
         </>

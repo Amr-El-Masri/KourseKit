@@ -20,13 +20,13 @@ const formatDays = (days) => {
 };
 
 const COLLEGE_COLORS = {
-  "Arts & Sciences": { bg: "#eef2fb", accent: "#31487A" },
-  "Engineering": { bg: "#fff8ec", accent: "#b7680a" },
-  "Medicine": { bg: "#eef7f0", accent: "#2d7a4a" },
-  "Business": { bg: "#F0EEF7", accent: "#5A3B7B" },
-  "Architecture": { bg: "#fef0f7", accent: "#7a2d5a" },
-  "Health Sciences": { bg: "#edfaf6", accent: "#1a7a6a" },
-  "default": { bg: "#F4F4F8", accent: "#31487A" },
+  "Arts & Sciences": { accent: "#31487A" },
+  "Engineering": { accent: "#b7680a" },
+  "Medicine": { accent: "#2d7a4a" },
+  "Business": { accent: "#5A3B7B" },
+  "Architecture": { accent: "#7a2d5a" },
+  "Health Sciences": { accent: "#1a7a6a" },
+  "default": { accent: "#31487A" },
 };
 
 const getCollegeStyle = (college) => {
@@ -41,7 +41,7 @@ const EnrollmentBar = ({ seats, enrolled }) => {
   if (!seats && !enrolled) return null;
   const total = (seats || 0) + (enrolled || 0);
   const pct = total > 0 ? Math.min((enrolled / total) * 100, 100) : 0;
-  const color = pct >= 90 ? "#c0392b" : pct >= 70 ? "#b7680a" : "#2d7a4a";
+  const color = pct >= 90 ? "var(--error)" : pct >= 70 ? "var(--warn)" : "var(--success)";
   return (
     <div style={{ marginTop: 6 }}>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text2)", marginBottom: 4 }}>
@@ -126,7 +126,7 @@ function SectionCard({ section, index }) {
           {/* Section badge */}
           <div style={{
             minWidth: 44, height: 44, borderRadius: 10,
-            background: colStyle.bg,
+            background: `color-mix(in srgb, ${colStyle.accent} 15%, transparent)`,
             display: "flex", alignItems: "center", justifyContent: "center",
             flexShrink: 0,
           }}>
@@ -157,9 +157,9 @@ function SectionCard({ section, index }) {
             </span>
           )}
           <span style={{
-            fontSize: 12, color: "var(--text2)", transition: "transform 0.2s",
+            fontSize: 9, opacity: 0.55, transition: "transform 0.2s",
             display: "inline-block", transform: expanded ? "rotate(180deg)" : "rotate(0deg)"
-          }}>▾</span>
+          }}>▼</span>
         </div>
       </div>
 
@@ -293,14 +293,14 @@ export default function CourseDetails({ course, onBack, onNavigateToForum }) {
                 <span style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>{college}</span>
               </div>
             )}
-            <div style={{ display: "flex", alignItems: "center", gap: 7, background: "#eef7f0", borderRadius: 10, padding: "8px 14px" }}>
-              <Users size={14} color="#2d7a4a" />
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#2d7a4a" }}>{sections.length} section{sections.length !== 1 ? "s" : ""}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, background: "var(--success-bg)", borderRadius: 10, padding: "8px 14px" }}>
+              <Users size={14} color="var(--success)" />
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--success)" }}>{sections.length} section{sections.length !== 1 ? "s" : ""}</span>
             </div>
             {totalEnrolled > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 7, background: "#fff8ec", borderRadius: 10, padding: "8px 14px" }}>
-                <Users size={14} color="#b7680a" />
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#b7680a" }}>{totalEnrolled} enrolled · {totalSeats} seats left</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, background: "var(--warn-bg)", borderRadius: 10, padding: "8px 14px" }}>
+                <Users size={14} color="var(--warn)" />
+                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--warn)" }}>{totalEnrolled} enrolled · {totalSeats} seats left</span>
               </div>
             )}
           </div>
@@ -310,9 +310,12 @@ export default function CourseDetails({ course, onBack, onNavigateToForum }) {
                     onClick={() => onNavigateToForum(data?.courseCode || course.courseCode, "")}
                     style={{
                       marginTop: 14, display: "flex", alignItems: "center", gap: 8,
-                      padding: "9px 18px", background: "var(--primary)", color: "white",
-                      border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600,
-                      cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                      padding: "9px 18px",
+                      background: "color-mix(in srgb, var(--primary) 15%, transparent)",
+                      color: "var(--primary)",
+                      border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
+                      borderRadius: 10, fontSize: 13, fontWeight: 600,
+                      cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "background .15s",
                     }}
                   >
                     <MessageSquare size={14} /> Discuss this Course

@@ -146,12 +146,16 @@ export default function Settings({ onLogout }) {
 
   return (
     <div style={{ padding: "28px 28px 60px", fontFamily: "'DM Sans', sans-serif" }}>
+      <style>{`
+        @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+        .st-anim { animation: fadeUp 0.32s ease both; }
+      `}</style>
       <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:10 }}>
         Account Settings
       </div>
 
       {/* Appearance */}
-      <div style={{ background: "var(--surface)", borderRadius: 16, border: "1px solid var(--border)", padding: "20px 24px", marginBottom: 20 }}>
+      <div className="st-anim" style={{ animationDelay:"0s", background: "var(--surface)", borderRadius: 16, border: "1px solid var(--border)", padding: "20px 24px", marginBottom: 20 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Appearance</div>
         <div style={row}>
           <div>
@@ -163,7 +167,7 @@ export default function Settings({ onLogout }) {
       </div>
 
       {/* Notifications */}
-      <div style={{ background: "var(--surface)", borderRadius: 16, border: "1px solid var(--border)", padding: "20px 24px", marginBottom: 20 }}>
+      <div className="st-anim" style={{ animationDelay:"0.07s", background: "var(--surface)", borderRadius: 16, border: "1px solid var(--border)", padding: "20px 24px", marginBottom: 20 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Notifications</div>
         {[
           { key: "emailReminders", label: "Email Reminders", desc: "Receive email notifications for upcoming deadlines", value: emailReminders, toggle: toggleEmailReminders },
@@ -184,7 +188,7 @@ export default function Settings({ onLogout }) {
       </div>
 
       {/* Account */}
-      <div style={{ background: "var(--surface)", borderRadius: 16, border: "1px solid var(--border)", padding: "20px 24px", marginBottom: 20 }}>
+      <div className="st-anim" style={{ animationDelay:"0.14s", background: "var(--surface)", borderRadius: 16, border: "1px solid var(--border)", padding: "20px 24px", marginBottom: 20 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Account</div>
 
         <div style={row}>
@@ -282,7 +286,7 @@ export default function Settings({ onLogout }) {
       </div>
 
       {/* Account Deletion */}
-      <div style={{ background: "var(--surface)", borderRadius: 16, border: "1px solid var(--error-border)", padding: "20px 24px", marginBottom: 20 }}>
+      <div className="st-anim" style={{ animationDelay:"0.21s", background: "var(--surface)", borderRadius: 16, border: "1px solid var(--error-border)", padding: "20px 24px", marginBottom: 20 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: "var(--error)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Account Deletion</div>
         {!deleteConfirm ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>

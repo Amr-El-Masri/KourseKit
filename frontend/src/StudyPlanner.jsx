@@ -768,14 +768,18 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
                         {taskDropOpen && (
                             <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
                                 <div onClick={() => { setSelectedTaskId(""); setTaskDropOpen(false); }}
+                                    className="kk-option"
                                     style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                                        transition:"background .15s",
                                         background: !selectedTaskId ? "var(--divider)" : "transparent",
                                         color:      !selectedTaskId ? "var(--accent)"  : "var(--primary)" }}>
                                     Pick a task
                                 </div>
                                 {availableTasks.map(t => (
                                     <div key={t.id} onClick={() => { setSelectedTaskId(t.id); setTaskDropOpen(false); }}
+                                        className="kk-option"
                                         style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                                            transition:"background .15s",
                                             background: String(selectedTaskId) === String(t.id) ? "var(--divider)" : "transparent",
                                             color:      String(selectedTaskId) === String(t.id) ? "var(--accent)"  : "var(--primary)" }}>
                                         {t.title} - {t.course}
@@ -1914,28 +1918,30 @@ export default function StudyPlanner({ enrolledSections = [] }) {
 
         .sp-sidebar-tabs {
           display: flex;
-          border-bottom: 1px solid var(--border);
+          gap: 4px;
+          padding: 4px;
+          background: var(--surface2);
+          border-radius: 12px;
           flex-shrink: 0;
+          margin: 8px;
         }
 
         .sp-sidebar-tab {
           flex: 1;
-          padding: 12px 8px;
+          padding: 7px 8px;
           font-size: 12px;
-          font-weight: 600;
+          font-weight: 400;
           text-align: center;
           cursor: pointer;
           color: var(--text2);
-          border-bottom: 2px solid transparent;
+          border-radius: 9px;
+          border: none;
           transition: all 0.15s;
-          background: none;
-          border-top: none;
-          border-left: none;
-          border-right: none;
+          background: transparent;
           font-family: 'DM Sans', sans-serif;
         }
-        .sp-sidebar-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
-        .sp-sidebar-tab:hover:not(.active) { color: var(--primary); background: var(--surface2); }
+        .sp-sidebar-tab.active { color: var(--primary); font-weight: 600; background: var(--surface); box-shadow: 0 1px 4px rgba(49,72,122,0.08); }
+        .sp-sidebar-tab:hover:not(.active) { background: var(--surface3); color: var(--primary); }
 
         .sp-sidebar-content { flex: 1; overflow-y: auto; padding: 16px; }
 
