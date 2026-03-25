@@ -185,11 +185,11 @@ function PomodoroTimer() {
         </div>
 
         <div style={{display:"flex",gap:10}}>
-          <button onClick={reset} style={{padding:"7px 14px",background:"var(--surface2)",border:"1px solid var(--border)",borderRadius:9,fontSize:12,cursor:"pointer",color:"var(--text2)",fontFamily:"'DM Sans',sans-serif"}}>↺ Reset</button>
-          <button onClick={() => setRunning(r => !r)} style={{
+          <button className="kk-pill" onClick={reset} style={{padding:"7px 14px",background:"var(--surface2)",border:"1px solid var(--border)",borderRadius:9,fontSize:12,cursor:"pointer",color:"var(--text2)",fontFamily:"'DM Sans',sans-serif",transition:"all .15s"}}>↺ Reset</button>
+          <button className="kk-pill" onClick={() => setRunning(r => !r)} style={{
             padding:"7px 22px", background:running?"color-mix(in srgb, #e07070 15%, transparent)":`color-mix(in srgb, ${mode.color} 15%, transparent)`, color:running?"#e07070":mode.color,
             border:`1px solid color-mix(in srgb, ${running?"#e07070":mode.color} 30%, transparent)`, borderRadius:9, fontSize:13, fontWeight:600, cursor:"pointer",
-            fontFamily:"'DM Sans',sans-serif", transition:"background .15s",
+            fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
           }}>{running ? <><Pause size={13} style={{verticalAlign:"middle",marginRight:4}}/>Pause</> : <><Play size={13} style={{verticalAlign:"middle",marginRight:4}}/>Start</>}</button>
         </div>
 
@@ -1060,7 +1060,7 @@ export default function Dashboard({ onLogout }) {
                   </div>
                   {!courseSyllabi[c.name] && (
                     <div style={{marginTop:8}}>
-                      <button onClick={e=>{e.stopPropagation();setSyllabusTarget(c.name);}} style={{fontSize:11,color:"var(--accent)",background:"none",border:"1px solid var(--border)",borderRadius:6,padding:"3px 8px",cursor:"pointer"}}>
+                      <button className="kk-pill" onClick={e=>{e.stopPropagation();setSyllabusTarget(c.name);}} style={{fontSize:11,color:"var(--primary)",background:"color-mix(in srgb,var(--primary) 12%,transparent)",border:"1px solid color-mix(in srgb,var(--primary) 25%,transparent)",borderRadius:6,padding:"3px 8px",cursor:"pointer",transition:"all .15s"}}>
                         + Upload Syllabus
                       </button>
                     </div>
@@ -1303,9 +1303,9 @@ export default function Dashboard({ onLogout }) {
           ) : (
           <div style={{marginTop:6, height:384, display:"flex", flexDirection:"column"}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-              <button onClick={prevMonth} style={s.calNavBtn}>‹</button>
+              <button className="kk-pill" onClick={prevMonth} style={s.calNavBtn}>‹</button>
               <span style={{fontWeight:600,fontSize:14,color:"var(--primary)"}}>{monthName} {calYear}</span>
-              <button onClick={nextMonth} style={s.calNavBtn}>›</button>
+              <button className="kk-pill" onClick={nextMonth} style={s.calNavBtn}>›</button>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gridTemplateRows:"auto",gridAutoRows:"1fr",gap:4,flex:1}}>
               {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d=><div key={d} style={{textAlign:"center",fontSize:11,fontWeight:600,color:"var(--text3)",padding:"2px 0"}}>{d}</div>)}
@@ -1731,7 +1731,7 @@ export default function Dashboard({ onLogout }) {
         .course-card:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(49,72,122,0.18) !important; }
         .todo-row { transition:background .15s; }
         .todo-row:hover { background:var(--surface3) !important; }
-        .add-btn:hover { background:#221866 !important; }
+        .add-btn:hover { background:var(--surface3) !important; }
         .add-btn { transition:background .15s; }
         .cal-day:hover { background:var(--surface3) !important; border-radius:6px; }
         .toggle-opt:hover { background:var(--surface3); }
@@ -1791,21 +1791,21 @@ export default function Dashboard({ onLogout }) {
                 <SemesterSelect value={semester} onChange={setSemester} semesters={apiSemesters.map(s => s.semesterName)} />
               )}
               {activePage === "dashboard" && (
-                <button onClick={() => setEditMode(e => !e)} style={{ height:38, padding:"0 16px", borderRadius:10, border: editMode ? "1px solid var(--primary)" : "1px solid var(--border)", background: editMode ? "var(--primary)" : "var(--surface)", color: editMode ? "white" : "var(--primary)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap" }}>
+                <button className="kk-pill" onClick={() => setEditMode(e => !e)} style={{ height:38, padding:"0 16px", borderRadius:10, border: editMode ? "1px solid color-mix(in srgb, var(--primary) 30%, transparent)" : "1px solid var(--border)", background: editMode ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--surface)", color:"var(--primary)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", whiteSpace:"nowrap" }}>
                   {editMode ? "Done" : "Edit Widgets"}
                 </button>
               )}
               <button
                   onClick={() => window.location.reload()}
                   title="Refresh"
-                  style={{...s.bell, fontSize:16, cursor:"pointer", border:"1px solid var(--border)", background:"var(--surface)", color:"var(--primary)"}}
+                  className="kk-pill" style={{...s.bell, fontSize:16, cursor:"pointer", border:"1px solid var(--border)", background:"var(--surface)", color:"var(--primary)"}}
               >
                 ↺
               </button>
               <div ref={notifRef} style={{position:"relative"}}>
                 <button
                     onClick={() => { setShowNotifPanel(p => !p); if (unreadCount > 0) markAllAsRead(); }}
-                    style={{...s.bell, position:"relative", border:"1px solid var(--border)", cursor:"pointer"}}
+                    className="kk-pill" style={{...s.bell, position:"relative", border:"1px solid var(--border)", cursor:"pointer"}}
                     title="Notifications"
                 >
                   <Bell size={18} color="var(--primary)" />
@@ -2100,7 +2100,7 @@ export default function Dashboard({ onLogout }) {
 
                 {/* Actions */}
                 <div style={{padding:"16px 24px",borderTop:"1px solid var(--border)",display:"flex",gap:8}}>
-                  <button onClick={()=>{setCourseDetailsTarget(null);setSyllabusTarget(cn);}} style={{flex:1,padding:"10px",borderRadius:9,border:`1px solid ${color}`,background:color,color:"white",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit"}}>
+                  <button className="kk-pill" onClick={()=>{setCourseDetailsTarget(null);setSyllabusTarget(cn);}} style={{flex:1,padding:"10px",borderRadius:9,border:"1px solid color-mix(in srgb,var(--primary) 30%,transparent)",background:"color-mix(in srgb,var(--primary) 15%,transparent)",color:"var(--primary)",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
                     {syllabus ? "Edit Syllabus" : "+ Upload Syllabus"}
                   </button>
                 </div>
@@ -2193,10 +2193,10 @@ const s = {
   progressFill: { height:"100%", background:"linear-gradient(90deg, #31487A, #8FB3E2)", borderRadius:10, transition:"width 0.6s ease" },
   chip:         { flex:1, background:"var(--surface2)", borderRadius:10, padding:"8px 12px", textAlign:"center" },
   todoInput:    { flex:1, padding:"9px 12px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:"none", background:"var(--surface2)", color:"var(--text)" },
-  addBtn:       { padding:"9px 16px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:18, cursor:"pointer", lineHeight:1 },
+  addBtn:       { padding:"9px 16px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:18, cursor:"pointer", lineHeight:1, transition:"background .15s" },
   todoRow:      { display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 10px", borderRadius:8, background:"var(--surface2)" },
   reviewCard:   { flex:"1 1 260px", background:"var(--bg)", borderRadius:12, padding:"14px 16px" },
-  calNavBtn:    { background:"none", border:"1px solid var(--border)", borderRadius:8, width:28, height:28, cursor:"pointer", fontSize:16, color:"#8FB3E2", display:"flex", alignItems:"center", justifyContent:"center" },
+  calNavBtn:    { background:"none", border:"1px solid var(--border)", borderRadius:8, width:28, height:28, cursor:"pointer", fontSize:14, color:"var(--primary)", display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1, transition:"all .15s" },
 };
 
 const sd = {

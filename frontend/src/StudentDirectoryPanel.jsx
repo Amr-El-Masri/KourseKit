@@ -36,7 +36,7 @@ export function StudentProfileView({ student, onBack, isFriend, onFriendToggle }
           <div style={{ fontSize:12, color:"rgba(255,255,255,0.7)", marginTop:3 }}>{STATUS_LABELS[student.status] || student.status || "Student"}</div>
           {student.email && <div style={{ fontSize:12, color:"rgba(255,255,255,0.6)", marginTop:2 }}>{student.email}</div>}
         </div>
-        <button onClick={() => onFriendToggle(student)} style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px", borderRadius:10, border:"none", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit", background:isFriend?"rgba(255,255,255,0.2)":"white", color:isFriend?"white":"#31487A" }}>
+        <button className="kk-pill" onClick={() => onFriendToggle(student)} style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px", borderRadius:10, border:"1.5px solid color-mix(in srgb,var(--primary) 30%,transparent)", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit", background:isFriend?"color-mix(in srgb,var(--primary) 15%,transparent)":"var(--surface)", color:"var(--primary)", transition:"all .15s" }}>
           {isFriend ? <><UserCheck size={13}/> Following</> : <><UserPlus size={13}/> Follow</>}
         </button>
       </div>
@@ -149,7 +149,7 @@ export default function StudentDirectoryPanel({ onClose, friends, onFriendToggle
                         <div style={{ fontSize:11, color:"var(--text2)", marginTop:1 }}>{s.major || "—"} · {STATUS_LABELS[s.status] || s.status || "—"}</div>
                         {s.email && <div style={{ fontSize:11, color:"var(--text3)", marginTop:1 }}>{s.email}</div>}
                       </div>
-                       <button onClick={e => { e.stopPropagation(); onFriendToggle(s); }} style={{ padding:"5px 10px", borderRadius:8, border:"1px solid var(--border)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit", flexShrink:0, background:isFriend?"color-mix(in srgb, var(--primary) 15%, transparent)":"var(--surface2)", color:isFriend?"var(--primary)":"var(--text2)" }}>
+                       <button className="kk-pill" onClick={e => { e.stopPropagation(); onFriendToggle(s); }} style={{ padding:"5px 10px", borderRadius:8, border:"1px solid var(--border)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit", flexShrink:0, background:isFriend?"color-mix(in srgb, var(--primary) 15%, transparent)":"var(--surface2)", color:isFriend?"var(--primary)":"var(--text2)" }}>
                         {isFriend ? "✓ Following" : "+ Follow"}
                       </button>
                     </div>

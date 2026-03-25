@@ -505,12 +505,12 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
                 <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>
                   {activeCourse.courseCode} — {activeCourse.title}
                 </div>
-                <button
+                <button className="kk-pill"
                   onClick={() => setDetailsCourse(activeCourse)}
                   style={{
                     padding:"7px 16px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)",
-                    border:"none", borderRadius:10, fontSize:12,
-                    fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                    border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:12,
+                    fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
                   }}
                 >
                   View Course Details

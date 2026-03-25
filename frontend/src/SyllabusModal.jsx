@@ -28,6 +28,7 @@ export default function SyllabusModal({ courseName, onClose, onApply, existingDa
   const [error, setError] = useState(null);
   const fileRef = useRef(null);
   const [dragging, setDragging] = useState(false);
+  const [openTypeIdx, setOpenTypeIdx] = useState(null);
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -188,10 +189,13 @@ export default function SyllabusModal({ courseName, onClose, onApply, existingDa
   };
   const label = { fontSize: 12, fontWeight: 600, color: "var(--accent)", marginBottom: 4, display: "block" };
   const input = { width: "100%", padding: "8px 10px", border: "1px solid var(--border)", borderRadius: 8, fontSize: 13, fontFamily: "inherit", outline: "none", background: "var(--surface2)", color: "var(--text)" };
-  const btn = { padding: "10px 20px", borderRadius: 10, border: "none", fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit" };
+const btn = { padding: "10px 20px", borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: "pointer", fontFamily: "inherit", transition: "all .15s" };
+  const btnPrimary = { ...btn, background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)", border: "1.5px solid color-mix(in srgb, var(--primary) 30%, transparent)" };
+  const btnSecondary = { ...btn, background: "var(--surface)", color: "var(--text2)", border: "1.5px solid var(--border)" };
 
   return (
     <div style={overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+      <style>{`.sm-btn-p:hover{background:color-mix(in srgb,var(--primary) 25%,transparent)!important}.sm-btn-s:hover{background:var(--surface2)!important;border-color:var(--accent2)!important}`}</style>
       <div style={box}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div>
@@ -220,8 +224,8 @@ export default function SyllabusModal({ courseName, onClose, onApply, existingDa
             </div>
             {error && <div style={{ fontSize: 12, color: "var(--error)", marginBottom: 10 }}>{error}</div>}
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button onClick={onClose} style={{ ...btn, background: "var(--bg)", color: "var(--text2)" }}>Cancel</button>
-              <button onClick={upload} disabled={loading || !file} style={{ ...btn, background: "var(--primary)", color: "var(--surface)", opacity: file ? 1 : 0.5 }}>
+              <button className="sm-btn-s" onClick={onClose} style={btnSecondary}>Cancel</button>
+              <button className="sm-btn-p" onClick={upload} disabled={loading || !file} style={{ ...btnPrimary, opacity: file ? 1 : 0.5 }}>
                 {loading ? "Extracting…" : "Extract with AI"}
               </button>
             </div>
@@ -280,7 +284,7 @@ export default function SyllabusModal({ courseName, onClose, onApply, existingDa
                   <input
                     type="checkbox"
                     checked={d.include}
-                    onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, include: e.target.checked } : x))}
+                    onChange={e => { setDeadlines(p => p.map((x, j) => j === i ? { ...x, include: e.target.checked } : x)); if (!e.target.checked && openTypeIdx === i) setOpenTypeIdx(null); }}
                   />
                   <input style={{ ...input, flex: 2 }} value={d.title} onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, title: e.target.value } : x))} placeholder="Title" />
                   <input
@@ -289,9 +293,22 @@ export default function SyllabusModal({ courseName, onClose, onApply, existingDa
                     value={d.date}
                     onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, date: e.target.value, include: !!e.target.value } : x))}
                   />
-                  <select style={{ ...input, flex: 1, maxWidth: 130, cursor: "pointer" }} value={d.type} onChange={e => setDeadlines(p => p.map((x, j) => j === i ? { ...x, type: e.target.value } : x))}>
-                    {["Assignment","Project","Quiz","Midterm Exam","Final Exam","Lab","Reading","Presentation","Other"].map(t => <option key={t}>{t}</option>)}
-                  </select>
+                  <div style={{ position:"relative", flex:1, maxWidth:130 }}>
+                    <button type="button" disabled={!d.include} onClick={() => setOpenTypeIdx(openTypeIdx === i ? null : i)} style={{ ...input, width:"100%", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, cursor: d.include ? "pointer" : "default", opacity: d.include ? 1 : 0.5 }}>
+                      <span style={{ fontSize:12, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{d.type}</span>
+                      <span style={{ fontSize:8, opacity:0.6, flexShrink:0, display:"inline-block", transform: openTypeIdx===i ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+                    </button>
+                    {openTypeIdx === i && (
+                      <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10, boxShadow:"0 8px 32px rgba(49,72,122,0.18)", zIndex:400, padding:4, maxHeight:200, overflowY:"auto" }}>
+                        {["Assignment","Project","Quiz","Midterm Exam","Final Exam","Lab","Reading","Presentation","Other"].map(t => (
+                          <div key={t} className="kk-option" onClick={() => { setDeadlines(p => p.map((x,j) => j===i ? {...x,type:t} : x)); setOpenTypeIdx(null); }}
+                            style={{ padding:"7px 12px", borderRadius:7, cursor:"pointer", fontSize:12, fontWeight: d.type===t ? 600 : 400, color: d.type===t ? "var(--accent)" : "var(--primary)", background: d.type===t ? "var(--divider)" : "transparent", transition:"background .15s" }}>
+                            {t}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <button onClick={() => setDeadlines(p => p.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", fontSize: 14, flexShrink: 0 }}>✕</button>
                 </div>
               ))}
@@ -339,8 +356,8 @@ export default function SyllabusModal({ courseName, onClose, onApply, existingDa
             {applyError && <div style={{ fontSize: 12, color: "var(--error)", marginBottom: 10 }}>{applyError}</div>}
 
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button onClick={() => setStep("upload")} style={{ ...btn, background: "var(--bg)", color: "var(--text2)" }}>Back</button>
-              <button onClick={apply} disabled={applying} style={{ ...btn, background: "var(--primary)", color: "var(--surface)" }}>
+              <button className="sm-btn-s" onClick={() => setStep("upload")} style={btnSecondary}>Back</button>
+              <button className="sm-btn-p" onClick={apply} disabled={applying} style={btnPrimary}>
                 {applying ? "Applying…" : "Apply"}
               </button>
             </div>
@@ -376,7 +393,7 @@ export default function SyllabusModal({ courseName, onClose, onApply, existingDa
                 <div style={{ fontSize: 13, color: "var(--text2)", textAlign: "center" }}>Nothing was applied — no items were checked.</div>
               )}
             </div>
-            <button onClick={onClose} style={{ ...btn, background: "var(--primary)", color: "var(--surface)" }}>Done</button>
+            <button className="sm-btn-p" onClick={onClose} style={btnPrimary}>Done</button>
           </div>
         )}
       </div>

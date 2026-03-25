@@ -2,6 +2,7 @@
 body { background: #f0ede8; }
 .kk-tab:hover:not([data-active="true"]) { background: var(--surface3) !important; }
 select:hover, .kk-select:hover { background: var(--surface3) !important; border-color: var(--accent2) !important; }
-.kk-option:hover { background: var(--surface2) !important; }
+.kk-option:hover { background: var(--surface3) !important; }
 .kk-pill:hover:not([data-active="true"]) { background: var(--surface3) !important; border-color: var(--accent2) !important; }
 .kk-pill { transition: all .15s; }
+.f-primary-btn:hover { background: color-mix(in srgb, var(--primary) 25%, transparent) !important; }

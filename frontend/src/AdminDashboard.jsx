@@ -341,7 +341,7 @@ export default function AdminDashboard({ token }) {
 
       {/* tab bar */}
       <div style={{ display:"flex", gap:6, marginBottom:24, width:"fit-content", alignItems:"center" }}>
-        <button onClick={() => { setErr(""); setTab("users"); setReviewDropdownOpen(false); }} style={{
+        <button className="kk-tab" data-active={tab === "users"} onClick={() => { setErr(""); setTab("users"); setReviewDropdownOpen(false); }} style={{
           padding:"8px 18px", borderRadius:9, fontSize:13, fontWeight: tab === "users" ? 600 : 400, cursor:"pointer",
           border: tab === "users" ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
           background: tab === "users" ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
@@ -350,7 +350,7 @@ export default function AdminDashboard({ token }) {
         }}>Users</button>
 
         <div style={{ position:"relative" }}>
-          <button onClick={() => { setErr(""); setReviewDropdownOpen(o => !o); if (tab !== "reviews") setTab("reviews"); }} style={{
+          <button className="kk-tab" data-active={tab === "reviews"} onClick={() => { setErr(""); setReviewDropdownOpen(o => !o); if (tab !== "reviews") setTab("reviews"); }} style={{
             padding:"8px 18px", borderRadius:9, fontSize:13, fontWeight: tab === "reviews" ? 600 : 400, cursor:"pointer", display:"flex", alignItems:"center", gap:6,
             border: tab === "reviews" ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
             background: tab === "reviews" ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
@@ -387,7 +387,7 @@ export default function AdminDashboard({ token }) {
         <>
           <div style={{ display:"flex", gap:6, marginBottom:20, width:"fit-content" }}>
             {[{id:"all",label:"All"},{id:"flagged",label:"Flagged"}].map(t => (
-              <button key={t.id} onClick={() => setUserSubTab(t.id)} style={{
+              <button key={t.id} className="kk-tab" data-active={userSubTab === t.id} onClick={() => setUserSubTab(t.id)} style={{
                 padding:"8px 18px", borderRadius:9, fontSize:13,
                 fontWeight: userSubTab === t.id ? 600 : 400, cursor:"pointer", transition:"all .15s",
                 border: userSubTab === t.id ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
@@ -620,7 +620,7 @@ export default function AdminDashboard({ token }) {
         <>
           <div style={{ display:"flex", gap:6, marginBottom:20, width:"fit-content" }}>
             {[{id:"all",label:"All"},{id:"flagged",label:"Flagged"},{id:"reported",label:"Reported"}].map(t => (
-              <button key={t.id} onClick={() => { setReviewStatus(t.id); setExpandedId(null); setConfirmAction(null); }} style={{
+              <button key={t.id} className="kk-tab" data-active={reviewStatus === t.id} onClick={() => { setReviewStatus(t.id); setExpandedId(null); setConfirmAction(null); }} style={{
                 padding:"8px 18px", borderRadius:9, fontSize:13,
                 fontWeight: reviewStatus === t.id ? 600 : 400, cursor:"pointer", transition:"all .15s",
                 border: reviewStatus === t.id ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",

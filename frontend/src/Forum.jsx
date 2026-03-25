@@ -757,7 +757,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
           Discussion Forum
         </div>
         {token && (
-          <button onClick={() => setComposing(c => !c)}
+          <button className="f-primary-btn" onClick={() => setComposing(c => !c)}
             style={{ ...f.primaryBtn, display: "flex", alignItems: "center", gap: 8 }}>
             {composing ? "Cancel" : <><Plus size={15} /> New Post</>}
           </button>
@@ -805,11 +805,12 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
         </div>
         <div style={{ display: "flex", gap: 4, background: "var(--surface2)", padding: 4, borderRadius: 10 }}>
           {[{ id: "new", label: "New" }, { id: "top", label: "Top" }].map(s => (
-            <button key={s.id} onClick={() => setSort(s.id)} style={{
+            <button key={s.id} className="kk-tab" data-active={sort===s.id} onClick={() => setSort(s.id)} style={{
               padding: "6px 14px", border: "none", borderRadius: 8,
-              fontSize: 12, fontWeight: 600, cursor: "pointer",
-              background: sort === s.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "transparent",
+              fontSize: 12, fontWeight: sort===s.id ? 600 : 400, cursor: "pointer", transition: "all .15s",
+              background: sort === s.id ? "var(--surface)" : "transparent",
               color:      sort === s.id ? "var(--primary)" : "var(--text2)",
+              boxShadow:  sort === s.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
             }}>{s.label}</button>
           ))}
         </div>
@@ -911,7 +912,7 @@ const f = {
   primaryBtn: {
     padding: "10px 22px", background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)",
     border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius: 10, fontSize: 13, fontWeight: 600,
-    cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+    cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all .15s",
   },
   cancelBtn: {
     padding: "10px 18px", background: "var(--surface2)", color: "var(--text2)",

@@ -431,7 +431,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
               {counts.pending} pending · {counts.overdue > 0 && <span style={{ color:"var(--error)", fontWeight:600 }}>{counts.overdue} overdue · </span>}{counts.done} done
             </div>
           </div>
-          <button onClick={() => { setEditing(null); setComposing(true); }} style={tm.newBtn}>
+          <button className="f-primary-btn" onClick={() => { setEditing(null); setComposing(true); }} style={tm.newBtn}>
             + New Task
           </button>
         </div>
@@ -595,7 +595,7 @@ const tm = {
   input:     { width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", marginBottom:14, display:"block", transition:"border-color .15s", outline:"none" },
   saveBtn:   { padding:"10px 24px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
   cancelBtn: { padding:"10px 18px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
-  newBtn:    { padding:"10px 20px", background:"var(--divider)", color:"var(--accent)", border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  newBtn:    { padding:"10px 20px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s" },
   iconBtn:   { background:"none", border:"none", cursor:"pointer", fontSize:15, borderRadius:6, padding:"3px 5px", transition:"background .15s" },
   badge:     (color, bg) => ({ fontSize:11, fontWeight:600, padding:"2px 8px", borderRadius:6, color, background:bg, flexShrink:0 }),
 };

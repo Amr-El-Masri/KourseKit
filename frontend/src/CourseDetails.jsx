@@ -306,7 +306,7 @@ export default function CourseDetails({ course, onBack, onNavigateToForum }) {
           </div>
         )}
 
-        <button
+        <button className="kk-pill"
                     onClick={() => onNavigateToForum(data?.courseCode || course.courseCode, "")}
                     style={{
                       marginTop: 14, display: "flex", alignItems: "center", gap: 8,
@@ -315,7 +315,7 @@ export default function CourseDetails({ course, onBack, onNavigateToForum }) {
                       color: "var(--primary)",
                       border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
                       borderRadius: 10, fontSize: 13, fontWeight: 600,
-                      cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "background .15s",
+                      cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all .15s",
                     }}
                   >
                     <MessageSquare size={14} /> Discuss this Course

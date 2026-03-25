@@ -565,6 +565,35 @@ export function DefaultScheduleEditor({ token, onDone, extraAction }) {
   );
 }
 
+function PfDropdown({ value, options, onChange, placeholder = "Select…", mb = 14 }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+  return (
+    <div ref={ref} style={{ position:"relative", marginBottom:mb }}>
+      <button type="button" onClick={() => setOpen(o => !o)} style={{ width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", background:"var(--surface2)", color: value ? "var(--text)" : "var(--text3)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, transition:"border-color .15s", outline:"none" }}>
+        <span>{value || placeholder}</span>
+        <span style={{ fontSize:8, opacity:0.6, flexShrink:0, display:"inline-block", transform: open ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+      </button>
+      {open && (
+        <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:10, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", zIndex:400, padding:4, maxHeight:220, overflowY:"auto" }}>
+          {options.map(opt => (
+            <div key={opt} className="kk-option" onClick={() => { onChange(opt); setOpen(false); }}
+              style={{ padding:"8px 12px", borderRadius:7, cursor:"pointer", fontSize:13, fontWeight: value===opt ? 600 : 400, color: value===opt ? "var(--accent)" : "var(--primary)", background: value===opt ? "var(--divider)" : "transparent", transition:"background .15s" }}>
+              {opt}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Profile({ onProfileSave, onSemestersUpdated }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const isAdmin = getTokenRole() === "ADMIN";
@@ -984,8 +1013,13 @@ const refetchSemesters = () =>
         * { box-sizing:border-box; }
         .pf-input:focus { border-color:#8FB3E2 !important; outline:none; }
         .pf-status:hover { border-color:var(--accent) !important; }
+        select.pf-input { appearance:none; -webkit-appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6' fill='none' stroke='%23999' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; background-size:10px; padding-right:34px !important; }
+        select.pf-input:hover { border-color:var(--accent2) !important; }
         @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
         .pf-anim { animation: fadeUp 0.35s ease both; }
+        .pf-btn:hover { background: var(--surface2) !important; border-color: var(--accent2) !important; }
+        .pf-yn:not([data-active="true"]):hover { background: var(--surface3) !important; border-color: var(--accent2) !important; }
+        .pf-status:not([data-active="true"]):hover { background: var(--surface3) !important; border-color: var(--accent2) !important; }
         .pf-anim:nth-child(2) { animation-delay:.06s } .pf-anim:nth-child(3) { animation-delay:.12s } .pf-anim:nth-child(4) { animation-delay:.18s }
       `}</style>
 
@@ -997,7 +1031,7 @@ const refetchSemesters = () =>
           width:"fit-content",
         }}>
           {[{ id:"profile", label:"My Profile" }, { id:"admin", label:"Admin" }].map(t => (
-            <button key={t.id} onClick={() => setSection(t.id)} style={{
+            <button key={t.id} className="kk-tab" data-active={section === t.id} onClick={() => setSection(t.id)} style={{
               padding:"8px 18px",
               border: section === t.id ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
               borderRadius:9,
@@ -1073,17 +1107,17 @@ const refetchSemesters = () =>
               <div style={{ fontSize:12, color:"var(--text2)" }}>{profile.email}</div>
             </div>
             <div style={{ marginLeft:"auto", display:"flex", gap:10, paddingBottom:4 }}>
-               <button onClick={() => setShowDirectory(true)} style={{ padding:"8px 16px", background:"var(--surface)", color:"var(--primary)", border:"1.5px solid var(--border)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Find Students</button>
+               <button className="kk-pill" onClick={() => setShowDirectory(true)} style={{ padding:"8px 16px", background:"var(--surface)", color:"var(--primary)", border:"1.5px solid var(--border)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Find Students</button>
               {saved && (
-                <div style={{ fontSize:12, fontWeight:600, color:"#2d7a4a", background:"#eef7f0", border:"1px solid #b7d9c0", borderRadius:8, padding:"6px 14px", display:"flex", alignItems:"center", gap:6 }}>
+                <div style={{ fontSize:12, fontWeight:600, color:"var(--success)", background:"var(--success-bg)", border:"1px solid var(--success-border,color-mix(in srgb,var(--success) 30%,transparent))", borderRadius:8, padding:"6px 14px", display:"flex", alignItems:"center", gap:6 }}>
                   ✓ Saved
                 </div>
               )}
               {!editing
-                ? <button onClick={() => { setDraft(profile); setEditing(true); }} style={pf.editBtn}>Edit Profile</button>
+                ? <button className="pf-btn" onClick={() => { setDraft(profile); setEditing(true); }} style={pf.editBtn}>Edit Profile</button>
                 : <>
-                    <button onClick={handleSave}   style={pf.saveBtn}>Save</button>
-                    <button onClick={handleCancel} style={pf.cancelBtn}>Cancel</button>
+                    <button className="pf-btn" onClick={handleSave}   style={pf.saveBtn}>Save</button>
+                    <button className="pf-btn" onClick={handleCancel} style={pf.cancelBtn}>Cancel</button>
                   </>
               }
             </div>
@@ -1166,20 +1200,11 @@ const refetchSemesters = () =>
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                 <div style={{ flex:1, minWidth:200 }}>
                   <label style={pf.label}>Faculty</label>
-                  <select className="pf-input" value={draft.faculty}
-                    onChange={e => { set("faculty", e.target.value); set("major", ""); }}
-                    style={{ ...pf.input, cursor:"pointer" }}>
-                    {FACULTIES.map(f => <option key={f}>{f}</option>)}
-                  </select>
+                  <PfDropdown value={draft.faculty} options={FACULTIES} onChange={v => { set("faculty", v); set("major", ""); }} />
                 </div>
                 <div style={{ flex:1, minWidth:200 }}>
                   <label style={pf.label}>Major</label>
-                  <select className="pf-input" value={draft.major}
-                    onChange={e => set("major", e.target.value)}
-                    style={{ ...pf.input, cursor:"pointer" }}>
-                    <option value="">Select major…</option>
-                    {(MAJORS_BY_FACULTY[draft.faculty] || []).map(m => <option key={m}>{m}</option>)}
-                  </select>
+                  <PfDropdown value={draft.major} options={MAJORS_BY_FACULTY[draft.faculty] || []} placeholder="Select major…" onChange={v => set("major", v)} />
                 </div>
               </div>
 
@@ -1187,12 +1212,12 @@ const refetchSemesters = () =>
                 <label style={{ ...pf.label, marginBottom:10 }}>Minor?</label>
                 <div style={{ display:"flex", gap:8, marginBottom: draft.minorFaculty ? 12 : 0 }}>
                   {[{val:true,label:"Yes"},{val:false,label:"No"}].map(opt => (
-                    <button key={String(opt.val)} onClick={() => { set("minor", opt.val); set("minorFaculty", opt.val ? (draft.minorFaculty || "Arts & Sciences") : ""); set("minorName", ""); if (!opt.val) { set("doubleMinor", false); set("secondMinorFaculty", ""); set("secondMinor", ""); set("tripleMinor", false); set("thirdMinorFaculty", ""); set("thirdMinor", ""); } }} style={{
+                    <button key={String(opt.val)} className="pf-yn" data-active={String(!!draft.minorFaculty === opt.val)} onClick={() => { set("minor", opt.val); set("minorFaculty", opt.val ? (draft.minorFaculty || "Arts & Sciences") : ""); set("minorName", ""); if (!opt.val) { set("doubleMinor", false); set("secondMinorFaculty", ""); set("secondMinor", ""); set("tripleMinor", false); set("thirdMinorFaculty", ""); set("thirdMinor", ""); } }} style={{
                       padding:"7px 18px", borderRadius:10, border:"1px solid", cursor:"pointer",
                       fontFamily:"'DM Sans',sans-serif", fontSize:13, transition:"all .15s",
-                      borderColor: !!draft.minorFaculty === opt.val ? "var(--accent)" : "var(--border)",
-                      background:  !!draft.minorFaculty === opt.val ? "var(--accent)" : "var(--surface2)",
-                      color:       !!draft.minorFaculty === opt.val ? "#fff"    : "var(--accent2)",
+                      borderColor: !!draft.minorFaculty === opt.val ? "var(--primary)" : "var(--border)",
+                      background:  !!draft.minorFaculty === opt.val ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--surface2)",
+                      color:       !!draft.minorFaculty === opt.val ? "var(--primary)" : "var(--text2)",
                       fontWeight:  !!draft.minorFaculty === opt.val ? 600 : 400,
                     }}>{opt.label}</button>
                   ))}
@@ -1202,20 +1227,11 @@ const refetchSemesters = () =>
                     <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:14 }}>
                       <div style={{ flex:1, minWidth:200 }}>
                         <label style={pf.label}>Minor Faculty</label>
-                        <select className="pf-input" value={draft.minorFaculty}
-                          onChange={e => { set("minorFaculty", e.target.value); set("minorName", ""); }}
-                          style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
-                          {FACULTIES.map(f => <option key={f}>{f}</option>)}
-                        </select>
+                        <PfDropdown value={draft.minorFaculty} options={FACULTIES} onChange={v => { set("minorFaculty", v); set("minorName", ""); }} mb={0} />
                       </div>
                       <div style={{ flex:1, minWidth:200 }}>
                         <label style={pf.label}>Minor</label>
-                        <select className="pf-input" value={draft.minorName || ""}
-                          onChange={e => set("minorName", e.target.value)}
-                          style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
-                          <option value="">Select minor…</option>
-                          {(MINORS_BY_FACULTY[draft.minorFaculty] || []).map(m => <option key={m}>{m}</option>)}
-                        </select>
+                        <PfDropdown value={draft.minorName || ""} options={MINORS_BY_FACULTY[draft.minorFaculty] || []} placeholder="Select minor…" onChange={v => set("minorName", v)} mb={0} />
                       </div>
                     </div>
 
@@ -1223,12 +1239,12 @@ const refetchSemesters = () =>
                       <label style={{ ...pf.label, marginBottom:10 }}>Second Minor?</label>
                       <div style={{ display:"flex", gap:8, marginBottom: draft.secondMinorFaculty ? 12 : 0 }}>
                         {[{val:true,label:"Yes"},{val:false,label:"No"}].map(opt => (
-                          <button key={String(opt.val)} onClick={() => { set("doubleMinor", opt.val); set("secondMinorFaculty", opt.val ? (draft.secondMinorFaculty || "Arts & Sciences") : ""); set("secondMinor", ""); if (!opt.val) { set("tripleMinor", false); set("thirdMinorFaculty", ""); set("thirdMinor", ""); } }} style={{
+                          <button key={String(opt.val)} className="pf-yn" data-active={String(!!draft.secondMinorFaculty === opt.val)} onClick={() => { set("doubleMinor", opt.val); set("secondMinorFaculty", opt.val ? (draft.secondMinorFaculty || "Arts & Sciences") : ""); set("secondMinor", ""); if (!opt.val) { set("tripleMinor", false); set("thirdMinorFaculty", ""); set("thirdMinor", ""); } }} style={{
                             padding:"7px 18px", borderRadius:10, border:"1px solid", cursor:"pointer",
                             fontFamily:"'DM Sans',sans-serif", fontSize:13, transition:"all .15s",
-                            borderColor: !!draft.secondMinorFaculty === opt.val ? "var(--accent)" : "var(--border)",
-                            background:  !!draft.secondMinorFaculty === opt.val ? "var(--accent)" : "var(--surface2)",
-                            color:       !!draft.secondMinorFaculty === opt.val ? "#fff"    : "var(--accent2)",
+                            borderColor: !!draft.secondMinorFaculty === opt.val ? "var(--primary)" : "var(--border)",
+                            background:  !!draft.secondMinorFaculty === opt.val ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--surface2)",
+                            color:       !!draft.secondMinorFaculty === opt.val ? "var(--primary)" : "var(--text2)",
                             fontWeight:  !!draft.secondMinorFaculty === opt.val ? 600 : 400,
                           }}>{opt.label}</button>
                         ))}
@@ -1238,20 +1254,11 @@ const refetchSemesters = () =>
                           <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:14 }}>
                             <div style={{ flex:1, minWidth:200 }}>
                               <label style={pf.label}>Second Minor Faculty</label>
-                              <select className="pf-input" value={draft.secondMinorFaculty}
-                                onChange={e => { set("secondMinorFaculty", e.target.value); set("secondMinor", ""); }}
-                                style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
-                                {FACULTIES.map(f => <option key={f}>{f}</option>)}
-                              </select>
+                              <PfDropdown value={draft.secondMinorFaculty} options={FACULTIES} onChange={v => { set("secondMinorFaculty", v); set("secondMinor", ""); }} mb={0} />
                             </div>
                             <div style={{ flex:1, minWidth:200 }}>
                               <label style={pf.label}>Second Minor</label>
-                              <select className="pf-input" value={draft.secondMinor || ""}
-                                onChange={e => set("secondMinor", e.target.value)}
-                                style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
-                                <option value="">Select minor…</option>
-                                {(MINORS_BY_FACULTY[draft.secondMinorFaculty] || []).map(m => <option key={m}>{m}</option>)}
-                              </select>
+                              <PfDropdown value={draft.secondMinor || ""} options={MINORS_BY_FACULTY[draft.secondMinorFaculty] || []} placeholder="Select minor…" onChange={v => set("secondMinor", v)} mb={0} />
                             </div>
                           </div>
 
@@ -1259,12 +1266,12 @@ const refetchSemesters = () =>
                             <label style={{ ...pf.label, marginBottom:10 }}>Third Minor?</label>
                             <div style={{ display:"flex", gap:8, marginBottom: draft.thirdMinorFaculty ? 12 : 0 }}>
                               {[{val:true,label:"Yes"},{val:false,label:"No"}].map(opt => (
-                                <button key={String(opt.val)} onClick={() => { set("tripleMinor", opt.val); set("thirdMinorFaculty", opt.val ? (draft.thirdMinorFaculty || "Arts & Sciences") : ""); set("thirdMinor", ""); }} style={{
+                                <button key={String(opt.val)} className="pf-yn" data-active={String(!!draft.thirdMinorFaculty === opt.val)} onClick={() => { set("tripleMinor", opt.val); set("thirdMinorFaculty", opt.val ? (draft.thirdMinorFaculty || "Arts & Sciences") : ""); set("thirdMinor", ""); }} style={{
                                   padding:"7px 18px", borderRadius:10, border:"1px solid", cursor:"pointer",
                                   fontFamily:"'DM Sans',sans-serif", fontSize:13, transition:"all .15s",
-                                  borderColor: !!draft.thirdMinorFaculty === opt.val ? "var(--accent)" : "var(--border)",
-                                  background:  !!draft.thirdMinorFaculty === opt.val ? "var(--accent)" : "var(--surface2)",
-                                  color:       !!draft.thirdMinorFaculty === opt.val ? "#fff"    : "var(--accent2)",
+                                  borderColor: !!draft.thirdMinorFaculty === opt.val ? "var(--primary)" : "var(--border)",
+                                  background:  !!draft.thirdMinorFaculty === opt.val ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--surface2)",
+                                  color:       !!draft.thirdMinorFaculty === opt.val ? "var(--primary)" : "var(--text2)",
                                   fontWeight:  !!draft.thirdMinorFaculty === opt.val ? 600 : 400,
                                 }}>{opt.label}</button>
                               ))}
@@ -1273,20 +1280,11 @@ const refetchSemesters = () =>
                               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                                 <div style={{ flex:1, minWidth:200 }}>
                                   <label style={pf.label}>Third Minor Faculty</label>
-                                  <select className="pf-input" value={draft.thirdMinorFaculty}
-                                    onChange={e => { set("thirdMinorFaculty", e.target.value); set("thirdMinor", ""); }}
-                                    style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
-                                    {FACULTIES.map(f => <option key={f}>{f}</option>)}
-                                  </select>
+                                  <PfDropdown value={draft.thirdMinorFaculty} options={FACULTIES} onChange={v => { set("thirdMinorFaculty", v); set("thirdMinor", ""); }} mb={0} />
                                 </div>
                                 <div style={{ flex:1, minWidth:200 }}>
                                   <label style={pf.label}>Third Minor</label>
-                                  <select className="pf-input" value={draft.thirdMinor || ""}
-                                    onChange={e => set("thirdMinor", e.target.value)}
-                                    style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
-                                    <option value="">Select minor…</option>
-                                    {(MINORS_BY_FACULTY[draft.thirdMinorFaculty] || []).map(m => <option key={m}>{m}</option>)}
-                                  </select>
+                                  <PfDropdown value={draft.thirdMinor || ""} options={MINORS_BY_FACULTY[draft.thirdMinorFaculty] || []} placeholder="Select minor…" onChange={v => set("thirdMinor", v)} mb={0} />
                                 </div>
                               </div>
                             )}
@@ -1302,12 +1300,12 @@ const refetchSemesters = () =>
                 <label style={{ ...pf.label, marginBottom:10 }}>Double Major?</label>
                 <div style={{ display:"flex", gap:8, marginBottom: draft.doubleMajor ? 12 : 0 }}>
                   {[{val:true,label:"Yes"},{val:false,label:"No"}].map(opt => (
-                    <button key={String(opt.val)} onClick={() => { set("doubleMajor", opt.val); if (!opt.val) { set("secondMajor", ""); set("secondFaculty", "Arts & Sciences"); } else { set("secondFaculty", draft.secondFaculty || "Arts & Sciences"); } }} style={{
+                    <button key={String(opt.val)} className="pf-yn" data-active={String(draft.doubleMajor === opt.val)} onClick={() => { set("doubleMajor", opt.val); if (!opt.val) { set("secondMajor", ""); set("secondFaculty", "Arts & Sciences"); } else { set("secondFaculty", draft.secondFaculty || "Arts & Sciences"); } }} style={{
                       padding:"7px 18px", borderRadius:10, border:"1px solid", cursor:"pointer",
                       fontFamily:"'DM Sans',sans-serif", fontSize:13, transition:"all .15s",
-                      borderColor: draft.doubleMajor === opt.val ? "var(--accent)" : "var(--border)",
-                      background:  draft.doubleMajor === opt.val ? "var(--accent)" : "var(--surface2)",
-                      color:       draft.doubleMajor === opt.val ? "#fff"    : "var(--accent2)",
+                      borderColor: draft.doubleMajor === opt.val ? "var(--primary)" : "var(--border)",
+                      background:  draft.doubleMajor === opt.val ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--surface2)",
+                      color:       draft.doubleMajor === opt.val ? "var(--primary)" : "var(--text2)",
                       fontWeight:  draft.doubleMajor === opt.val ? 600 : 400,
                     }}>{opt.label}</button>
                   ))}
@@ -1316,20 +1314,11 @@ const refetchSemesters = () =>
                   <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                     <div style={{ flex:1, minWidth:200 }}>
                       <label style={pf.label}>Second Faculty</label>
-                      <select className="pf-input" value={draft.secondFaculty || "Arts & Sciences"}
-                        onChange={e => { set("secondFaculty", e.target.value); set("secondMajor", ""); set("secondMinor", ""); }}
-                        style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
-                        {FACULTIES.map(f => <option key={f}>{f}</option>)}
-                      </select>
+                      <PfDropdown value={draft.secondFaculty || "Arts & Sciences"} options={FACULTIES} onChange={v => { set("secondFaculty", v); set("secondMajor", ""); set("secondMinor", ""); }} mb={0} />
                     </div>
                     <div style={{ flex:1, minWidth:200 }}>
                       <label style={pf.label}>Second Major</label>
-                      <select className="pf-input" value={draft.secondMajor}
-                        onChange={e => set("secondMajor", e.target.value)}
-                        style={{ ...pf.input, cursor:"pointer", marginBottom:0 }}>
-                        <option value="">Select major…</option>
-                        {(MAJORS_BY_FACULTY[draft.secondFaculty] || []).map(m => <option key={m}>{m}</option>)}
-                      </select>
+                      <PfDropdown value={draft.secondMajor} options={MAJORS_BY_FACULTY[draft.secondFaculty] || []} placeholder="Select major…" onChange={v => set("secondMajor", v)} mb={0} />
                     </div>
                   </div>
                 )}
@@ -1338,12 +1327,12 @@ const refetchSemesters = () =>
               <label style={pf.label}>Academic Status</label>
               <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:16 }}>
                 {STUDENT_STATUSES.map(s => (
-                  <button key={s.id} className="pf-status" onClick={() => set("status", s.id)} style={{
+                  <button key={s.id} className="pf-status" data-active={String(draft.status === s.id)} onClick={() => set("status", s.id)} style={{
                     padding:"8px 14px", borderRadius:10, border:"1px solid",
                     cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
-                    borderColor: draft.status === s.id ? "var(--accent)" : "var(--border)",
-                    background:  draft.status === s.id ? "var(--accent)" : "var(--surface2)",
-                    color:       draft.status === s.id ? "#ffffff" : "var(--accent2)",
+                    borderColor: draft.status === s.id ? "var(--primary)" : "var(--border)",
+                    background:  draft.status === s.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--surface2)",
+                    color:       draft.status === s.id ? "var(--primary)" : "var(--text2)",
                     fontWeight:  draft.status === s.id ? 600 : 400,
                   }}>
                     <div style={{ fontSize:13 }}>{s.label}</div>
@@ -1383,10 +1372,7 @@ const refetchSemesters = () =>
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:4 }}>
                 <div>
                   <label style={pf.label}>Expected Graduation Year</label>
-                  <select className="pf-input" value={draft.graduationYear} onChange={e => set("graduationYear", e.target.value)} style={{ ...pf.input, cursor:"pointer" }}>
-                    <option value="">Select year…</option>
-                    {["2025","2026","2027","2028","2029","2030"].map(y => <option key={y}>{y}</option>)}
-                  </select>
+                  <PfDropdown value={draft.graduationYear} options={["2025","2026","2027","2028","2029","2030"]} placeholder="Select year…" onChange={v => set("graduationYear", v)} />
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:12, paddingTop:22 }}>
                   <span style={{ fontSize:13, fontWeight:500, color:"var(--accent2)" }}>Open to study groups</span>
@@ -1419,7 +1405,7 @@ const refetchSemesters = () =>
               {(profile.graduationYear || profile.linkedin || profile.github || profile.openToStudyGroups || profile.interests) && (
                 <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginTop:4 }}>
                   {profile.graduationYear && <span style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20, background:"var(--surface2)", color:"var(--primary)", border:"1px solid var(--border)" }}>Class of {profile.graduationYear}</span>}
-                  {profile.openToStudyGroups && <span style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20, background:"#eef7f0", color:"#2d7a4a", border:"1px solid #b6e5c8" }}>Open to study groups</span>}
+                  {profile.openToStudyGroups && <span style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20, background:"var(--success-bg)", color:"var(--success)", border:"1px solid color-mix(in srgb,var(--success) 30%,transparent)" }}>Open to study groups</span>}
                   {profile.linkedin && <a href={profile.linkedin.startsWith("http") ? profile.linkedin : `https://${profile.linkedin}`} target="_blank" rel="noreferrer" style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20, background:"var(--surface2)", color:"var(--accent)", border:"1px solid var(--border)", textDecoration:"none" }}>LinkedIn</a>}
                   {profile.github && <a href={profile.github.startsWith("http") ? profile.github : `https://${profile.github}`} target="_blank" rel="noreferrer" style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20, background:"var(--surface2)", color:"var(--accent)", border:"1px solid var(--border)", textDecoration:"none" }}>GitHub</a>}
                   {profile.interests && profile.interests.split(",").map(t => t.trim()).filter(Boolean).map(tag => (
@@ -1560,13 +1546,13 @@ const refetchSemesters = () =>
 
       {/* My Semesters */}
       <div className="pf-anim" style={{ animationDelay:"0.12s", background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", marginTop:20, overflow:"hidden" }}>
-        <div onClick={() => toggleSect("semesters")} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", cursor:"pointer", userSelect:"none" }}>
+        <div className="kk-tab" onClick={() => toggleSect("semesters")} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", cursor:"pointer", userSelect:"none", transition:"background .15s", borderRadius:"16px 16px 0 0" }}>
           <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)" }}>My Semesters</div>
           <div style={{ display:"flex", alignItems:"center", gap:10 }} onClick={e => e.stopPropagation()}>
             {sectOpen.semesters && !creating && (
               <div style={{ display:"flex", gap:8 }}>
                 {!transcriptInfo && (
-                  <button onClick={() => setTranscriptModal(true)} style={{ background:"var(--surface2)", color:"var(--primary)", border:"1px solid var(--border)", borderRadius:10, padding:"6px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                  <button className="kk-pill" onClick={() => setTranscriptModal(true)} style={{ background:"var(--surface2)", color:"var(--primary)", border:"1px solid var(--border)", borderRadius:10, padding:"6px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
                     Upload Transcript
                   </button>
                 )}
@@ -1732,7 +1718,7 @@ const refetchSemesters = () =>
                               setSyllabusEditProf(courseData.professor || "");
                               setSyllabusEditOH(oh.length ? oh : []);
                               setSyllabusEditCourse(c.code);
-                            }} style={{ fontSize:11, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>Edit syllabus info</button>
+                            }} style={{ fontSize:11, color:"var(--primary)", background:"color-mix(in srgb,var(--primary) 12%,transparent)", border:"1px solid color-mix(in srgb,var(--primary) 25%,transparent)", borderRadius:6, cursor:"pointer", padding:"2px 8px", fontWeight:600, fontFamily:"inherit", transition:"all .15s" }} className="kk-pill">Edit syllabus info</button>
                             <button onClick={() => removeSyllabus(c.code)} style={{ fontSize:11, color:"var(--error)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600, marginLeft:8 }}>Remove syllabus</button>
                           </div>
                         )}
@@ -1788,7 +1774,7 @@ function StatChip({ label, value, color, bg }) {
 const pf = {
   label:     { display:"block", fontSize:12, fontWeight:600, color:"var(--text)", marginBottom:6 },
   input:     { width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", marginBottom:14, display:"block", transition:"border-color .15s", outline:"none" },
-  editBtn:   { padding:"8px 18px", background:"var(--surface)", color:"var(--primary)", border:"1.5px solid var(--border)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
-  saveBtn:   { padding:"8px 20px", background:"color-mix(in srgb, var(--primary) 14%, var(--surface))", color:"var(--primary)", border:"1.5px solid var(--border)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
-  cancelBtn: { padding:"8px 16px", background:"var(--surface)", color:"var(--text2)", border:"1.5px solid var(--border)", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  editBtn:   { padding:"8px 18px", background:"var(--surface)", color:"var(--primary)", border:"1.5px solid var(--border)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s" },
+  saveBtn:   { padding:"8px 20px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1.5px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s" },
+  cancelBtn: { padding:"8px 16px", background:"var(--surface)", color:"var(--text2)", border:"1.5px solid var(--border)", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s" },
 };

@@ -214,7 +214,7 @@ function MyGroupCard({ group, onOpen }) {
         </div>
       )}
 
-      <button
+      <button className="kk-pill"
         onClick={() => onOpen(group)}
         style={{
           marginTop: 2,
@@ -222,7 +222,7 @@ function MyGroupCard({ group, onOpen }) {
           padding: "8px 0", borderRadius: 9, border: "1px solid var(--border)",
           background: "var(--surface2)", color: "var(--primary)",
           fontSize: 13, fontWeight: 600, cursor: "pointer",
-          fontFamily: "'DM Sans',sans-serif",
+          fontFamily: "'DM Sans',sans-serif", transition: "all .15s",
         }}
       >
         Open Group <ArrowRight size={14} />
@@ -507,7 +507,7 @@ export default function StudyGroupFinder({ courses = [] }) {
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
-        <button
+        <button className="kk-pill"
           onClick={() => setShowCreate(true)}
           style={{
             display: "flex", alignItems: "center", gap: 6,
@@ -515,12 +515,12 @@ export default function StudyGroupFinder({ courses = [] }) {
             border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
             background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)",
             fontSize: 13, fontWeight: 600, cursor: "pointer",
-            fontFamily: "'DM Sans',sans-serif", transition: "background .15s",
+            fontFamily: "'DM Sans',sans-serif", transition: "all .15s",
           }}
         >
           <Plus size={15} /> Host a Group
         </button>
-        <button
+        <button className="kk-pill"
           onClick={() => setShowJoinPrivate(true)}
           style={{
             display: "flex", alignItems: "center", gap: 6,
@@ -528,7 +528,7 @@ export default function StudyGroupFinder({ courses = [] }) {
             border: "1px solid var(--border)",
             background: "var(--surface)", color: "var(--primary)",
             fontSize: 13, fontWeight: 600, cursor: "pointer",
-            fontFamily: "'DM Sans',sans-serif", transition: "background .15s",
+            fontFamily: "'DM Sans',sans-serif", transition: "all .15s",
           }}
         >
           <Lock size={13} /> Enter Invite Code
