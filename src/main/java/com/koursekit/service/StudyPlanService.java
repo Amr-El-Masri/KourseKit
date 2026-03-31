@@ -431,12 +431,20 @@ public class StudyPlanService {
     }
 
     @org.springframework.transaction.annotation.Transactional
-    public List<AvailabilitySlot> getSlots(Long userId, LocalDate weekStart) {
+    public List<AvailabilitySlot> getSlots(Long userId, LocalDate weekStart, String semester) {
         List<AvailabilitySlot> existing = slotRepository.findByUserIdAndWeekStart(userId, weekStart);
-        if (!existing.isEmpty()) return existing;
+        if (!existing.isEmpty()) {
+            boolean wrongSemester = semester != null && !semester.isBlank() &&
+                    existing.stream().anyMatch(s -> !semester.equals(s.getSemesterName()));
+            if (!wrongSemester) return existing;
+            slotRepository.deleteByUserIdAndWeekStart(userId, weekStart);
+            existing = java.util.Collections.emptyList();
+        }
 
         // No slots for this week — seed from the user's default schedule
-        List<DefaultScheduleSlot> defaults = defaultSlotRepository.findByUserId(userId);
+        List<DefaultScheduleSlot> defaults = (semester != null && !semester.isBlank())
+                ? defaultSlotRepository.findByUserIdAndSemesterName(userId, semester)
+                : defaultSlotRepository.findByUserId(userId);
         if (defaults.isEmpty()) return existing;
 
         User user = entityManager.getReference(User.class, userId);
@@ -448,13 +456,14 @@ public class StudyPlanService {
             slot.setStartTime(def.getStartTime());
             slot.setEndTime(def.getEndTime());
             slot.setWeekStart(weekStart);
+            slot.setSemesterName(semester);
             seeded.add(slot);
         }
         return slotRepository.saveAll(seeded);
     }
 
     @org.springframework.transaction.annotation.Transactional
-    public List<AvailabilitySlot> saveSlots(Long userId, LocalDate weekStart, List<java.util.Map<String, Object>> slots) {
+    public List<AvailabilitySlot> saveSlots(Long userId, LocalDate weekStart, String semester, List<java.util.Map<String, Object>> slots) {
         slotRepository.deleteByUserIdAndWeekStart(userId, weekStart);
         entityManager.flush();
         com.koursekit.model.User user = entityManager.getReference(com.koursekit.model.User.class, userId);
@@ -466,6 +475,7 @@ public class StudyPlanService {
             slot.setStartTime(java.time.LocalTime.parse((String) s.get("startTime")));
             slot.setEndTime(java.time.LocalTime.parse((String) s.get("endTime")));
             slot.setWeekStart(weekStart);
+            slot.setSemesterName(semester);
             toSave.add(slot);
         }
         return slotRepository.saveAll(toSave);

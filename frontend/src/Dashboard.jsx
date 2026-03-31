@@ -579,15 +579,26 @@ export default function Dashboard({ onLogout }) {
   }, []);
   useEffect(() => {
     const email = localStorage.getItem("kk_email") || "";
+    const token = localStorage.getItem("kk_token") || "";
     if (!email) return;
     if (localStorage.getItem(`kk_schedule_onboarded_${email}`)) return;
-    setShowOnboarding(true);
+    // Check if they already have a default schedule — if so, silently mark as onboarded
+    fetch(`http://localhost:8080/api/profile/default-schedule`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : [])
+      .then(slots => {
+        localStorage.setItem(`kk_schedule_onboarded_${email}`, "true");
+        if (!Array.isArray(slots) || slots.length > 0) return; // already has slots, don't show
+        setShowOnboarding(true);
+      })
+      .catch(() => {});
   }, []);
+
   useEffect(() => {
     localStorage.setItem("kk_activePage", activePage);
     if (activePage === "grades" || activePage === "dashboard" || activePage === "profile") fetchSemesters();
   }, [activePage]);
-  const [semester,       setSemester]      = useState("");
+  const [semester,       setSemesterState] = useState(() => localStorage.getItem("kk_activeSemester") || "");
+  const setSemester = (val) => { setSemesterState(val); localStorage.setItem("kk_activeSemester", val); };
   const [apiSemesters,   setApiSemesters]  = useState([]);
 
   const knownIds = new Set(ALL_WIDGETS.map(w => w.id));
@@ -994,7 +1005,7 @@ export default function Dashboard({ onLogout }) {
           if (Array.isArray(data)) {
             const sorted = sortSemesters(data);
             setApiSemesters(sorted);
-            setSemester(s => s || (sorted[sorted.length - 1]?.semesterName ?? ""));
+            setSemesterState(s => { const next = s || (sorted[sorted.length - 1]?.semesterName ?? ""); if (!s) localStorage.setItem("kk_activeSemester", next); return next; });
             return sorted;
           }
           return []; })
@@ -1967,11 +1978,11 @@ export default function Dashboard({ onLogout }) {
           )}
           {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
           {activePage === "forum" && <Forum initialCourseTag={forumCourseTag} initialProfTag={forumProfTag} />}
-          {activePage === "planner" && <StudyPlanner enrolledSections={semCourseList.map(c => ({ crn: c.id, courseCode: c.name, section: c.section }))} />}
+          {activePage === "planner" && <StudyPlanner enrolledSections={semCourseList.map(c => ({ crn: c.id, courseCode: c.name, section: c.section }))} semester={semester} />}
           {activePage === "groups" && <StudyGroupFinder courses={[...new Map(semCourseList.map(c => [c.name, { id: c.name, name: c.name }])).values()]} />}
           {activePage === "students" && <StudentDirectory />}
           {activePage === "profile" && (
-              <Profile onProfileSave={p => setProfile(p)} onSemestersUpdated={fetchSemesters} />
+              <Profile onProfileSave={p => setProfile(p)} onSemestersUpdated={fetchSemesters} activeSemester={semester} />
           )}
           {activePage === "settings" && <Settings onLogout={handleLogout} />}
 
@@ -1988,13 +1999,14 @@ export default function Dashboard({ onLogout }) {
         {showOnboarding && (
           <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:"32px 24px" }}>
             <div style={{ background:"var(--surface)", borderRadius:24, padding:"28px 32px", maxWidth:880, width:"100%", boxShadow:"0 8px 40px rgba(0,0,0,0.18)" }}>
-              <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:22, color:"var(--primary)", marginBottom:6 }}>Welcome to KourseKit!</div>
+              <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:22, color:"var(--primary)", marginBottom:6 }}>Mark your availability</div>
               <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16, lineHeight:1.5 }}>
-                Set your weekly availability so the Study Planner knows when you're free to study. Drag on the grid below to mark your free time.
+                Drag on the grid to mark when you're free to study. The Study Planner uses this to schedule your sessions.
               </div>
               <div style={{ marginBottom: -20 }}>
                 <DefaultScheduleEditor
                   token={localStorage.getItem("kk_token")}
+                  semesterName={semester}
                   onDone={dismissOnboarding}
                   extraAction={
                     <button onClick={dismissOnboarding} style={{ background:"none", border:"none", color:"var(--text2)", fontSize:13, cursor:"pointer", padding:"6px 0", textDecoration:"underline", fontFamily:"'DM Sans',sans-serif" }}>
@@ -2207,7 +2219,7 @@ const sd = {
   togglePanel: { position:"absolute", top:"calc(100% + 8px)", right:0, width:220, background:"var(--surface)", borderRadius:14, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:"14px" },
   smallAddBtn: { fontSize:12, fontWeight:600, padding:"5px 12px", borderRadius:8, border:"1px solid var(--border)", background:"var(--surface2)", color:"var(--primary)", cursor:"pointer" },
   addEventForm: { display:"flex", gap:6, flexWrap:"wrap", marginBottom:12, padding:"12px", background:"var(--surface2)", borderRadius:10, border:"1px solid var(--border)", alignItems:"center" },
-  miniSelect: { padding:"6px 8px", border:"1px solid var(--border)", borderRadius:8, fontSize:12, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", cursor:"pointer", outline:"none" },
+  miniSelect: { padding:"6px 8px", border:"1px      solid var(--border)", borderRadius:8, fontSize:12, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", cursor:"pointer", outline:"none" },
   miniInput: { padding:"6px 10px", border:"1px solid var(--border)", borderRadius:8, fontSize:12, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", outline:"none" },
   miniSaveBtn: { padding:"6px 14px", background:"var(--primary)", color:"white", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer" },
 };

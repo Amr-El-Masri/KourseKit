@@ -21,7 +21,8 @@ public class AvailabilitySlot {
     private String dayKey;
     private LocalTime startTime;
     private LocalTime endTime;
-    private LocalDate weekStart; // which week this slot belongs to
+    private LocalDate weekStart;    // which week this slot belongs to
+    private String semesterName;    // which semester's default this was seeded from
 
     public AvailabilitySlot() {}
 
@@ -32,6 +33,7 @@ public class AvailabilitySlot {
     public LocalTime getStartTime() { return startTime; }
     public LocalTime getEndTime() { return endTime; }
     public LocalDate getWeekStart() { return weekStart; }
+    public String getSemesterName() { return semesterName; }
 
     // Setters
     public void setUser(User user) { this.user = user; }
@@ -39,4 +41,5 @@ public class AvailabilitySlot {
     public void setStartTime(LocalTime startTime) { this.startTime = startTime; }
     public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
     public void setWeekStart(LocalDate weekStart) { this.weekStart = weekStart; }
+    public void setSemesterName(String semesterName) { this.semesterName = semesterName; }
 }

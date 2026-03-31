@@ -234,15 +234,17 @@ public class StudyPlanController {
 
     @GetMapping("/slots")
     public ResponseEntity<List<AvailabilitySlot>> getSlots(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
-        return ResponseEntity.ok(studyPlanService.getSlots(currentUserId(), weekStart));
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
+            @RequestParam(required = false) String semester) {
+        return ResponseEntity.ok(studyPlanService.getSlots(currentUserId(), weekStart, semester));
     }
 
     @PostMapping("/slots")
     public ResponseEntity<List<AvailabilitySlot>> saveSlots(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
+            @RequestParam(required = false) String semester,
             @RequestBody List<Map<String, Object>> slots) {
-        return ResponseEntity.ok(studyPlanService.saveSlots(currentUserId(), weekStart, slots));
+        return ResponseEntity.ok(studyPlanService.saveSlots(currentUserId(), weekStart, semester, slots));
     }
 
     @DeleteMapping("/slots")
