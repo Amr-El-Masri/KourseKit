@@ -129,7 +129,18 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
   const [err,  setErr]  = useState("");
   const [formCourseDropOpen, setFormCourseDropOpen] = useState(false);
   const [formTypeDropOpen,   setFormTypeDropOpen]   = useState(false);
+  const courseRef = useRef(null);
+  const typeRef   = useRef(null);
   const set = (k, v) => { setForm(p => ({ ...p, [k]:v })); setErr(""); };
+
+  useEffect(() => {
+    const handler = e => {
+      if (courseRef.current && !courseRef.current.contains(e.target)) setFormCourseDropOpen(false);
+      if (typeRef.current   && !typeRef.current.contains(e.target))   setFormTypeDropOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const save = () => {
     if (!form.title.trim()) { setErr("Please enter a task title."); return; }
@@ -156,7 +167,7 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
           <div style={{ flex:1, minWidth:140 }}>
             <label style={tm.label}>Course</label>
             {courses.length > 0 ? (
-                <div style={{ position:"relative", marginBottom:14 }}>
+                <div ref={courseRef} style={{ position:"relative", marginBottom:14 }}>
                   <button onClick={() => setFormCourseDropOpen(o => !o)} style={{
                     padding:"10px 14px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
                     display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
@@ -189,7 +200,7 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
           </div>
           <div style={{ flex:1, minWidth:140 }}>
             <label style={tm.label}>Type</label>
-            <div style={{ position:"relative", marginBottom:14 }}>
+            <div ref={typeRef} style={{ position:"relative", marginBottom:14 }}>
               <button onClick={() => setFormTypeDropOpen(o => !o)} style={{
                 padding:"10px 14px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
                 display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
@@ -262,6 +273,16 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
   const [savedCourses, setSavedCourses] = useState([]);
   const [undoTask, setUndoTask] = useState(null); // { task, timer }
   const undoTimerRef = useRef(null);
+  const composeRef   = useRef(null);
+
+  useEffect(() => {
+    if (!composing) return;
+    const handler = e => {
+      if (composeRef.current && !composeRef.current.contains(e.target)) setComposing(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [composing]);
 
   useEffect(() => {
     const token = localStorage.getItem("kk_token");
@@ -456,12 +477,14 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
         </div>
 
         {composing && (
-            <TaskForm
-                initial={null}
-                onSave={saveTask}
-                onCancel={() => setComposing(false)}
-                courses={savedCourses}
-            />
+            <div ref={composeRef}>
+              <TaskForm
+                  initial={null}
+                  onSave={saveTask}
+                  onCancel={() => setComposing(false)}
+                  courses={savedCourses}
+              />
+            </div>
         )}
 
         <div style={{
