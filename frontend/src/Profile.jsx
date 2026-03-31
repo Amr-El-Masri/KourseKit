@@ -198,40 +198,84 @@ function dsFmtISO(h) {
 }
 function dsParseHour(t) { const [h, m] = t.split(":"); return parseInt(h) + parseInt(m) / 60; }
 
-function DsMiniSlot({ slot, dayKey, onDelete, onResize, readonly }) {
-  const [liveEnd, setLiveEnd] = useState(null);
-  const liveRef = useRef(null);
-  const dragRef = useRef(null);
+function DsMiniSlot({ slot, dayKey, onDelete, onResize, onMove, readonly, colRef, scrollRef }) {
+  const [liveEnd, setLiveEnd]   = useState(null);
+  const [livePos, setLivePos]   = useState(null); // { startHour, endHour } during move
+  const liveRef    = useRef(null);
+  const livePosRef = useRef(null);
+  const dragRef    = useRef(null);
+  const moveDragRef = useRef(null);
   const endH = liveEnd ?? slot.endHour;
+  const dispStart = livePos?.startHour ?? slot.startHour;
+  const dispEnd   = livePos?.endHour   ?? endH;
 
   const handleResizeStart = useCallback((e) => {
     if (readonly) return;
     e.stopPropagation(); e.preventDefault();
     dragRef.current = { startY: e.clientY, startEnd: slot.endHour };
     liveRef.current = slot.endHour;
-    const onMove = (ev) => {
+    const onMv = (ev) => {
       const diff = (ev.clientY - dragRef.current.startY) / DS_HOUR_H;
-      const ne = Math.min(Math.max(dsSnap(dragRef.current.startEnd + diff), slot.startHour + 0.25), DS_END);
+      const ne = Math.min(Math.max(dsSnap(dragRef.current.startEnd + diff), slot.startHour + 0.5), DS_END);
       liveRef.current = ne;
       setLiveEnd(ne);
     };
     const onUp = () => {
       if (dragRef.current) { onResize(dayKey, slot.id, liveRef.current); setLiveEnd(null); liveRef.current = null; }
       dragRef.current = null;
-      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mousemove", onMv);
       window.removeEventListener("mouseup", onUp);
     };
-    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mousemove", onMv);
     window.addEventListener("mouseup", onUp);
   }, [slot, dayKey, onResize, readonly]);
+
+  const handleMoveStart = useCallback((e) => {
+    if (readonly) return;
+    if (e.target.closest(".ds-slot-del") || e.target.closest(".ds-slot-resize")) return;
+    e.stopPropagation(); e.preventDefault();
+    const duration = slot.endHour - slot.startHour;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const offsetPx = e.clientY - rect.top;
+    moveDragRef.current = { offsetPx, duration };
+    livePosRef.current = { startHour: slot.startHour, endHour: slot.endHour };
+    const onMv = (ev) => {
+      if (!moveDragRef.current || !colRef?.current) return;
+      const colRect = colRef.current.getBoundingClientRect();
+      const rawStart = dsPxToHour(ev.clientY - colRect.top - moveDragRef.current.offsetPx);
+      const newStart = Math.min(Math.max(dsSnap(rawStart), DS_START), DS_END - moveDragRef.current.duration);
+      const newEnd = newStart + moveDragRef.current.duration;
+      livePosRef.current = { startHour: newStart, endHour: newEnd };
+      setLivePos({ startHour: newStart, endHour: newEnd });
+      const scrollEl = scrollRef?.current;
+      if (scrollEl) {
+        const { top, bottom } = scrollEl.getBoundingClientRect();
+        const ZONE = 60;
+        if (ev.clientY > bottom - ZONE) scrollEl.scrollTop += Math.round((ZONE - (bottom - ev.clientY)) / 4);
+        else if (ev.clientY < top + ZONE) scrollEl.scrollTop -= Math.round((ZONE - (ev.clientY - top)) / 4);
+      }
+    };
+    const onUp = () => {
+      if (moveDragRef.current && livePosRef.current) {
+        onMove(dayKey, slot.id, livePosRef.current.startHour, livePosRef.current.endHour);
+        setLivePos(null);
+        livePosRef.current = null;
+      }
+      moveDragRef.current = null;
+      window.removeEventListener("mousemove", onMv);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMv);
+    window.addEventListener("mouseup", onUp);
+  }, [slot, dayKey, onMove, readonly, colRef]);
 
   return (
     <div
       className="ds-slot"
-      style={{ top: dsHourToPx(slot.startHour) + 1, height: Math.max((endH - slot.startHour) * DS_HOUR_H - 2, 10) }}
-      onMouseDown={e => e.stopPropagation()}
+      style={{ top: dsHourToPx(dispStart) + 1, height: Math.max((dispEnd - dispStart) * DS_HOUR_H - 2, 10), cursor: readonly ? "default" : livePos ? "grabbing" : "grab" }}
+      onMouseDown={handleMoveStart}
     >
-      <span className="ds-slot-time">{dsFmt(slot.startHour)}–{dsFmt(endH)}</span>
+      <span className="ds-slot-time">{dsFmt(dispStart)}–{dsFmt(dispEnd)}</span>
       {!readonly && (
         <button className="ds-slot-del" onClick={e => { e.stopPropagation(); onDelete(dayKey, slot.id); }}>×</button>
       )}
@@ -244,14 +288,14 @@ function DsMiniSlot({ slot, dayKey, onDelete, onResize, readonly }) {
   );
 }
 
-function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scrollRef, courseBlocks }) {
+function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, onMove, readonly, scrollRef, courseBlocks }) {
   const colRef  = useRef(null);
   const dragRef = useRef(null);
   const [dragging, setDragging] = useState(null);
 
   const getHour = useCallback((e, allowEnd = false) => {
     const rect = colRef.current.getBoundingClientRect();
-    return Math.min(Math.max(dsSnap(dsPxToHour(e.clientY - rect.top)), DS_START), allowEnd ? DS_END : DS_END - 0.25);
+    return Math.min(Math.max(dsSnap(dsPxToHour(e.clientY - rect.top)), DS_START), allowEnd ? DS_END : DS_END - 0.5);
   }, []);
 
   const onDown = useCallback((e) => {
@@ -259,13 +303,13 @@ function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scro
     if (e.target.closest(".ds-slot")) return;
     e.preventDefault();
     const sh = getHour(e);
-    dragRef.current = { startHour: sh, endHour: sh + 0.25 };
-    setDragging({ startHour: sh, endHour: sh + 0.25 });
+    dragRef.current = { startHour: sh, endHour: sh + 0.5 };
+    setDragging({ startHour: sh, endHour: sh + 0.5 });
   }, [getHour, readonly]);
 
-  const onMove = useCallback((e) => {
+  const onMouseMove = useCallback((e) => {
     if (!dragRef.current) return;
-    const eh = Math.min(Math.max(dsSnap(getHour(e, true)), dragRef.current.startHour + 0.25), DS_END);
+    const eh = Math.min(Math.max(dsSnap(getHour(e, true)), dragRef.current.startHour + 0.5), DS_END);
     dragRef.current.endHour = eh;
     setDragging({ startHour: dragRef.current.startHour, endHour: eh });
     const scrollEl = scrollRef?.current;
@@ -280,7 +324,7 @@ function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scro
   const onUp = useCallback(() => {
     if (!dragRef.current) return;
     const { startHour, endHour } = dragRef.current;
-    if (endHour - startHour >= 0.25) {
+    if (endHour - startHour >= 0.5) {
       const overlapsSlot = (slots || []).some(s => startHour < s.endHour && endHour > s.startHour);
       const overlapsCourse = (courseBlocks || []).some(cb => startHour < cb.endHour && endHour > cb.startHour);
       if (!overlapsSlot && !overlapsCourse) onAdd(dayKey, { startHour, endHour, id: Date.now() + Math.random() });
@@ -291,9 +335,9 @@ function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scro
 
   useEffect(() => {
     window.addEventListener("mouseup", onUp);
-    window.addEventListener("mousemove", onMove);
-    return () => { window.removeEventListener("mouseup", onUp); window.removeEventListener("mousemove", onMove); };
-  }, [onMove, onUp]);
+    window.addEventListener("mousemove", onMouseMove);
+    return () => { window.removeEventListener("mouseup", onUp); window.removeEventListener("mousemove", onMouseMove); };
+  }, [onMouseMove, onUp]);
 
   return (
     <div className={`ds-day-col${readonly ? " ds-day-readonly" : ""}`} ref={colRef} onMouseDown={onDown}>
@@ -301,7 +345,7 @@ function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scro
         <div key={i} className="ds-hour-line" style={{ top: i * DS_HOUR_H }} />
       ))}
       {(slots || []).map(slot => (
-        <DsMiniSlot key={slot.id} slot={slot} dayKey={dayKey} onDelete={onDelete} onResize={onResize} readonly={readonly} />
+        <DsMiniSlot key={slot.id} slot={slot} dayKey={dayKey} onDelete={onDelete} onResize={onResize} onMove={onMove} readonly={readonly} colRef={colRef} scrollRef={scrollRef} />
       ))}
       {(courseBlocks || []).map((cb, i) => (
         <div key={`cb-${i}`} style={{ position:"absolute", left:2, right:2, top:dsHourToPx(cb.startHour)+1, height:Math.max((cb.endHour-cb.startHour)*DS_HOUR_H-2,10), background:cb.color, borderRadius:5, zIndex:3, padding:"2px 4px", overflow:"hidden", pointerEvents:"none", boxShadow:`0 1px 4px ${cb.color}55` }}>
@@ -318,7 +362,7 @@ function DsMiniDayCol({ dayKey, slots, onAdd, onDelete, onResize, readonly, scro
   );
 }
 
-export function DefaultScheduleEditor({ token, onDone, extraAction }) {
+export function DefaultScheduleEditor({ token, onDone, extraAction, showSectionNudge, semesterName, refreshKey }) {
   const [availability, setAvailability] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [snapshot,  setSnapshot]  = useState({});
@@ -326,52 +370,81 @@ export function DefaultScheduleEditor({ token, onDone, extraAction }) {
   const [hasSaved,       setHasSaved]       = useState(false);
   const [confirmDelete,  setConfirmDelete]  = useState(false);
   const [enrolledSections, setEnrolledSections] = useState([]);
+  const [sectionsLoaded,   setSectionsLoaded]   = useState(false);
   const scrollRef = useRef(null);
 
   const authH = () => ({ "Content-Type": "application/json", "Authorization": `Bearer ${token}` });
 
+  const saveAvailability = useCallback(async (av) => {
+    const payload = [];
+    for (const [dk, slots] of Object.entries(av)) {
+      for (const s of slots) payload.push({ dayKey: dk, startTime: dsFmtISO(s.startHour), endTime: dsFmtISO(s.endHour) });
+    }
+    const url = semesterName
+      ? `${API}/api/profile/default-schedule?semester=${encodeURIComponent(semesterName)}`
+      : `${API}/api/profile/default-schedule`;
+    try { await fetch(url, { method: "PUT", headers: authH(), body: JSON.stringify(payload) }); } catch {}
+  }, [semesterName, token]);
+
   useEffect(() => {
-    fetch(`${API}/api/profile/default-schedule`, { headers: authH() })
-      .then(r => r.ok ? r.json() : [])
-      .then(data => {
-        if (!Array.isArray(data)) return;
-        const av = {};
-        data.forEach(s => {
+    setHasSaved(false);
+    setSectionsLoaded(false);
+    const slotsUrl = semesterName
+      ? `${API}/api/profile/default-schedule?semester=${encodeURIComponent(semesterName)}`
+      : `${API}/api/profile/default-schedule`;
+    Promise.all([
+      fetch(slotsUrl, { headers: authH() }).then(r => r.ok ? r.json() : []).catch(() => []),
+      fetch(`${API}/api/grades/saved`, { headers: authH() }).then(r => r.ok ? r.json() : []).catch(() => []),
+    ]).then(([slotsData, gradesData]) => {
+      // Parse slots
+      const av = {};
+      if (Array.isArray(slotsData)) {
+        slotsData.forEach(s => {
           if (!av[s.dayKey]) av[s.dayKey] = [];
           av[s.dayKey].push({ id: s.id || Date.now() + Math.random(), startHour: dsParseHour(s.startTime), endHour: dsParseHour(s.endTime) });
         });
-        setAvailability(av);
-        const hasAny = Object.values(av).some(arr => arr.length > 0);
-        setHasSaved(hasAny);
-        setIsEditing(!hasAny);
-      })
-      .catch(() => {});
-  }, []);
-
-  // Auto-scroll to 8AM on mount
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = 8 * DS_HOUR_H;
-    }
-  }, []);
-
-  // Fetch enrolled sections to display as course blocks on the schedule
-  useEffect(() => {
-    fetch(`${API}/api/grades/saved`, { headers: authH() })
-      .then(r => r.ok ? r.json() : [])
-      .then(data => {
-        if (!Array.isArray(data) || data.length === 0) return;
-        const latest = data[0]; // API returns DESC order, so first = most recent
+      }
+      // Parse sections
+      let mapped = [];
+      if (Array.isArray(gradesData) && gradesData.length > 0) {
+        const latest = semesterName
+          ? (gradesData.find(s => s.semesterName === semesterName) ?? gradesData[0])
+          : gradesData[0];
         const courses = (latest?.courses || []).filter(c => c.section);
         const savedColors = (() => { try { return JSON.parse(localStorage.getItem("kk_course_section_colors") || "{}"); } catch { return {}; } })();
-        setEnrolledSections(courses.map((c, i) => ({
+        mapped = courses.map((c, i) => ({
           courseCode: c.courseCode,
           sectionNumber: c.section.sectionNumber || c.sectioncrn,
           section: c.section,
           color: savedColors[c.sectioncrn] || COURSE_COLORS[i % COURSE_COLORS.length],
-        })));
-      })
-      .catch(() => {});
+        }));
+      }
+      setEnrolledSections(mapped);
+      setSectionsLoaded(true);
+      // Overlap check — both datasets available at the same time, no race
+      const sectionBlocks = [];
+      mapped.forEach(({ section }) => getSectionSlots(section).forEach(b => sectionBlocks.push(b)));
+      let finalAv = av;
+      if (sectionBlocks.length > 0) {
+        const next = {};
+        let changed = false;
+        for (const [dk, slots] of Object.entries(av)) {
+          const filtered = slots.filter(s => !sectionBlocks.some(b => b.dayKey === dk && s.startHour < b.endHour && s.endHour > b.startHour));
+          if (filtered.length !== slots.length) changed = true;
+          next[dk] = filtered;
+        }
+        if (changed) { finalAv = next; saveAvailability(next); }
+      }
+      setAvailability(finalAv);
+      const hasAny = Object.values(finalAv).some(arr => arr.length > 0);
+      setHasSaved(hasAny);
+      setIsEditing(!hasAny);
+    });
+  }, [semesterName, refreshKey]);
+
+  // Auto-scroll to 8AM on mount
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = 8 * DS_HOUR_H;
   }, []);
 
   const handleAdd = useCallback((dayKey, slot) => {
@@ -389,6 +462,13 @@ export function DefaultScheduleEditor({ token, onDone, extraAction }) {
     }));
   }, []);
 
+  const handleMove = useCallback((dayKey, id, newStart, newEnd) => {
+    setAvailability(prev => ({
+      ...prev,
+      [dayKey]: (prev[dayKey] || []).map(s => s.id === id ? { ...s, startHour: newStart, endHour: newEnd } : s),
+    }));
+  }, []);
+
   const startEditing = () => {
     setSnapshot(JSON.parse(JSON.stringify(availability)));
     setIsEditing(true);
@@ -401,7 +481,10 @@ export function DefaultScheduleEditor({ token, onDone, extraAction }) {
 
   const handleDeleteSchedule = async () => {
     try {
-      await fetch(`${API}/api/profile/default-schedule`, {
+      const delUrl = semesterName
+        ? `${API}/api/profile/default-schedule?semester=${encodeURIComponent(semesterName)}`
+        : `${API}/api/profile/default-schedule`;
+      await fetch(delUrl, {
         method: "PUT", headers: authH(), body: JSON.stringify([]),
       });
       await fetch(`${API}/api/study-plan/slots/all`, {
@@ -416,16 +499,15 @@ export function DefaultScheduleEditor({ token, onDone, extraAction }) {
 
   const handleSave = async () => {
     setSaving(true);
-    const payload = [];
-    for (const [dayKey, slots] of Object.entries(availability)) {
-      for (const s of slots) {
-        payload.push({ dayKey, startTime: dsFmtISO(s.startHour), endTime: dsFmtISO(s.endHour) });
-      }
-    }
     try {
-      const res = await fetch(`${API}/api/profile/default-schedule`, {
-        method: "PUT", headers: authH(), body: JSON.stringify(payload),
-      });
+      const payload = [];
+      for (const [dayKey, slots] of Object.entries(availability)) {
+        for (const s of slots) payload.push({ dayKey, startTime: dsFmtISO(s.startHour), endTime: dsFmtISO(s.endHour) });
+      }
+      const saveUrl = semesterName
+        ? `${API}/api/profile/default-schedule?semester=${encodeURIComponent(semesterName)}`
+        : `${API}/api/profile/default-schedule`;
+      const res = await fetch(saveUrl, { method: "PUT", headers: authH(), body: JSON.stringify(payload) });
       if (!res.ok) throw new Error();
       const data = await res.json();
       const av = {};
@@ -440,6 +522,13 @@ export function DefaultScheduleEditor({ token, onDone, extraAction }) {
     } catch {}
     setSaving(false);
   };
+
+  const totalFreeHours = (() => {
+    const mins = Object.values(availability).reduce((acc, slots) =>
+      acc + slots.reduce((a, s) => a + (s.endHour - s.startHour) * 60, 0), 0);
+    const h = Math.floor(mins / 60), m = Math.round(mins % 60);
+    return m ? `${h}h ${m}m` : `${h}h`;
+  })();
 
   return (
     <div style={{ background: "var(--surface)", borderRadius: 20, border: "1px solid var(--border)", boxShadow: "0 2px 14px rgba(49,72,122,0.07)", overflow: "hidden", marginBottom: 20 }}>
@@ -460,10 +549,18 @@ export function DefaultScheduleEditor({ token, onDone, extraAction }) {
         .ds-drag-preview { position:absolute; left:2px; right:2px; background:rgba(123,94,167,0.15); border:1px dashed var(--accent); border-radius:5px; z-index:10; display:flex; align-items:center; justify-content:center; font-size:9px; color:var(--accent); pointer-events:none; }
       `}</style>
       <div style={{ padding: "20px 28px 24px" }}>
+        {showSectionNudge && sectionsLoaded && enrolledSections.length === 0 && (
+          <div style={{ fontSize: 12, color: "var(--text2)", background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 10, padding: "9px 14px", marginBottom: 14 }}>
+            Go to your <strong>Profile → My Semesters</strong> and select your course sections to see them as blocks on your schedule.
+          </div>
+        )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-<div>
-  <div style={{ fontSize: 12, color: "var(--text2)" }}>Drag to mark your free time each week.</div>
-</div>
+          <div>
+            <div style={{ fontSize: 12, color: "var(--text2)" }}>Drag to mark your free time each week.</div>
+            {Object.values(availability).some(a => a.length > 0) && (
+              <div style={{ fontSize: 11, color: "var(--accent)", marginTop: 2, fontWeight: 600 }}>{totalFreeHours} marked</div>
+            )}
+          </div>
           {hasSaved && !isEditing && (
             <div style={{ display: "flex", gap: 8 }}>
               {!confirmDelete && (
@@ -536,6 +633,7 @@ export function DefaultScheduleEditor({ token, onDone, extraAction }) {
                       onAdd={handleAdd}
                       onDelete={handleDelete}
                       onResize={handleResize}
+                      onMove={handleMove}
                       readonly={!isEditing}
                       scrollRef={scrollRef}
                       courseBlocks={courseBlocksPerDay[dayKey] || []}
@@ -594,7 +692,7 @@ function PfDropdown({ value, options, onChange, placeholder = "Select…", mb = 
   );
 }
 
-export default function Profile({ onProfileSave, onSemestersUpdated }) {
+export default function Profile({ onProfileSave, onSemestersUpdated, activeSemester }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const isAdmin = getTokenRole() === "ADMIN";
   const [section, setSection] = useState("profile");
@@ -623,6 +721,7 @@ export default function Profile({ onProfileSave, onSemestersUpdated }) {
   const [profilepic, setProfilepic] = useState(false);
 
   // my semesters
+  const [sectionVersion, setSectionVersion] = useState(0);
   const [semesters,    setSemesters]    = useState([]);
   const [creating,     setCreating]     = useState(false);
   const [newSemName,   setNewSemName]   = useState("");
@@ -747,7 +846,7 @@ const sortSemesters = (list) => {
 const refetchSemesters = () =>
   fetch(`${API}/api/grades/saved`, { headers: semAuthHeaders() })
     .then(r => r.json())
-    .then(data => { if (Array.isArray(data)) { setSemesters(sortSemesters(data)); onSemestersUpdated?.(); } })
+    .then(data => { if (Array.isArray(data)) { setSemesters(sortSemesters(data)); onSemestersUpdated?.(); setSectionVersion(v => v + 1); } })
     .catch(() => {});
 
   const createSemester = async () => {
@@ -1752,7 +1851,7 @@ const refetchSemesters = () =>
         </div>
         {sectOpen.schedule && (
           <div style={{ padding:"0 28px 24px" }}>
-            <DefaultScheduleEditor token={localStorage.getItem("kk_token")} />
+            <DefaultScheduleEditor token={localStorage.getItem("kk_token")} showSectionNudge semesterName={activeSemester || semesters[semesters.length - 1]?.semesterName} refreshKey={sectionVersion} />
           </div>
         )}
       </div>
