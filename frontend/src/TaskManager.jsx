@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { NotebookPen, Notebook, Pencil, Search, ListChecks } from "lucide-react";
+import { Pencil, Search, ListChecks, X } from "lucide-react";
 
 const API_BASE = "http://localhost:8080";
 
@@ -73,17 +73,21 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
   const [expanded, setExpanded] = useState(false);
   const p = priority(task.priority);
   const over = isOverdue(task.due, task.done);
+  const hasPriority = task.priority && task.priority !== "none" && task.priority !== "low";
 
   return (
-      <div style={{
-        background: task.done ? "var(--surface2)" : "var(--surface)",
-        border: `1px solid ${over && !task.done ? "var(--error-border)" : "var(--border)"}`,
-        borderLeft: `3px solid ${task.done ? "var(--border)" : p.dot}`,
-        borderRadius:12, padding:"13px 16px", transition:"box-shadow .15s",
-        opacity: task.done ? 0.6 : 1,
-      }} className="task-row">
+      <div
+        onClick={() => task.notes && setExpanded(e => !e)}
+        style={{
+          background: task.done ? "var(--surface2)" : "var(--surface)",
+          border: `1px solid ${over && !task.done ? "var(--error-border)" : "var(--border)"}`,
+          borderLeft: hasPriority ? `3px solid ${p.dot}` : `1px solid ${over && !task.done ? "var(--error-border)" : "var(--border)"}`,
+          borderRadius:12, padding:"13px 16px", transition:"box-shadow .15s",
+          opacity: task.done ? 0.6 : 1,
+          cursor: task.notes ? "pointer" : "default",
+        }} className="task-row">
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-          <button className="tm-check" onClick={() => onToggle(task.id)} style={{
+          <button className="tm-check" onClick={e => { e.stopPropagation(); onToggle(task.id); }} style={{
             width:20, height:20, borderRadius:6, border:`2px solid ${task.done?"var(--success)":"var(--border)"}`,
             background: task.done?"var(--success)":"var(--surface)", cursor:"pointer", flexShrink:0,
             display:"flex", alignItems:"center", justifyContent:"center", transition:"all .15s",
@@ -93,11 +97,11 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
 
           <div style={{ flex:1, minWidth:0 }}>
             <div style={{ display:"flex", alignItems:"center", gap:2, flexWrap:"wrap" }}>
-            <span style={{ fontSize:14, fontWeight:600, color: task.done?"var(--text3)":"var(--text)", textDecoration: task.done?"line-through":"none" }}>
-              {task.title || <em style={{ color:"var(--text3)" }}>Untitled task</em>}
-            </span>
+              <span style={{ fontSize:14, fontWeight:600, color: task.done?"var(--text3)":"var(--text)", textDecoration: task.done?"line-through":"none" }}>
+                {task.title || <em style={{ color:"var(--text3)" }}>Untitled task</em>}
+              </span>
               <span style={{ fontSize:11, background:"var(--divider)", color:"var(--accent)", padding:"2px 8px", borderRadius:6, fontWeight:600, flexShrink:0 }}>{task.course}</span>
-              <span style={{ fontSize:11, background:"var(--bg)", color:"var(--text2)", padding:"2px 8px", borderRadius:6, flexShrink:0 }}>{task.type}</span>
+              {task.type && <span style={{ fontSize:11, background:"var(--bg)", color:"var(--text2)", padding:"2px 8px", borderRadius:6, flexShrink:0 }}>{task.type}</span>}
               <DueBadge due={task.due} done={task.done} />
             </div>
             {task.due && (
@@ -106,17 +110,14 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
           </div>
 
           <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-            <button onClick={() => setExpanded(e=>!e)} style={tm.iconBtn} title="Notes">
-              {task.notes ? <NotebookPen size={15} color="var(--text)" /> : <Notebook size={15} color="var(--text)" />}
-            </button>
-            <button onClick={() => onEdit(task)} style={tm.iconBtn} title="Edit"><Pencil size={15} color="var(--text)" /></button>
-            <button onClick={() => onDelete(task.id)} style={{ ...tm.iconBtn, color:"var(--error)" }} title="Delete">✕</button>
+            <button onClick={e => { e.stopPropagation(); onEdit(task); }} style={tm.iconBtn} title="Edit"><Pencil size={15} color="var(--text2)" /></button>
+            <button onClick={e => { e.stopPropagation(); onDelete(task.id); }} style={{ ...tm.iconBtn, color:"var(--error)" }} title="Delete"><X size={15} /></button>
           </div>
         </div>
 
-        {expanded && (
+        {expanded && task.notes && (
             <div style={{ marginTop:10, paddingTop:10, borderTop:"1px solid var(--border)", fontSize:13, color:"var(--accent2)", lineHeight:1.6 }}>
-              {task.notes || <span style={{ color:"var(--text3)" }}>No notes added.</span>}
+              {task.notes}
             </div>
         )}
       </div>
@@ -636,6 +637,6 @@ const tm = {
   saveBtn:   { padding:"10px 24px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
   cancelBtn: { padding:"10px 18px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
   newBtn:    { padding:"10px 20px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s" },
-  iconBtn:   { background:"none", border:"none", cursor:"pointer", fontSize:15, borderRadius:6, padding:"3px 5px", transition:"background .15s" },
+  iconBtn:   { background:"none", border:"none", cursor:"pointer", fontSize:15, borderRadius:6, padding:"3px 5px", transition:"background .15s", display:"flex", alignItems:"center", justifyContent:"center" },
   badge:     (color, bg) => ({ fontSize:11, fontWeight:600, padding:"2px 8px", borderRadius:6, color, background:bg, flexShrink:0 }),
 };
