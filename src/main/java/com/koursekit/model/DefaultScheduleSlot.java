@@ -20,6 +20,7 @@ public class DefaultScheduleSlot {
     private String dayKey;       // "MONDAY", "TUESDAY", etc.
     private LocalTime startTime;
     private LocalTime endTime;
+    private String semesterName; 
 
     public DefaultScheduleSlot() {}
 
@@ -28,9 +29,11 @@ public class DefaultScheduleSlot {
     public String getDayKey() { return dayKey; }
     public LocalTime getStartTime() { return startTime; }
     public LocalTime getEndTime() { return endTime; }
+    public String getSemesterName() { return semesterName; }
 
     public void setUser(User user) { this.user = user; }
     public void setDayKey(String dayKey) { this.dayKey = dayKey; }
     public void setStartTime(LocalTime startTime) { this.startTime = startTime; }
     public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
+    public void setSemesterName(String semesterName) { this.semesterName = semesterName; }
 }

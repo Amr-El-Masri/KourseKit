@@ -12,7 +12,13 @@ public interface DefaultScheduleSlotRepository extends JpaRepository<DefaultSche
 
     List<DefaultScheduleSlot> findByUserId(Long userId);
 
+    List<DefaultScheduleSlot> findByUserIdAndSemesterName(Long userId, String semesterName);
+
     @Modifying
     @Query("DELETE FROM DefaultScheduleSlot s WHERE s.user.id = :userId")
     void deleteByUserId(@Param("userId") Long userId);
+
+    @Modifying
+    @Query("DELETE FROM DefaultScheduleSlot s WHERE s.user.id = :userId AND s.semesterName = :semesterName")
+    void deleteByUserIdAndSemesterName(@Param("userId") Long userId, @Param("semesterName") String semesterName);
 }

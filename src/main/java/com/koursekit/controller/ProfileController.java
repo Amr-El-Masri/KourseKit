@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -120,9 +121,12 @@ public class ProfileController {
     }
 
     @GetMapping("/default-schedule")
-    public ResponseEntity<List<Map<String, Object>>> getDefaultSchedule() {
+    public ResponseEntity<List<Map<String, Object>>> getDefaultSchedule(
+            @RequestParam(required = false) String semester) {
         User user = getAuthenticatedUser();
-        List<DefaultScheduleSlot> slots = defaultSlotRepo.findByUserId(user.getId());
+        List<DefaultScheduleSlot> slots = (semester != null && !semester.isBlank())
+                ? defaultSlotRepo.findByUserIdAndSemesterName(user.getId(), semester)
+                : defaultSlotRepo.findByUserId(user.getId());
         List<Map<String, Object>> result = new ArrayList<>();
         for (DefaultScheduleSlot s : slots) {
             Map<String, Object> m = new HashMap<>();
@@ -130,6 +134,7 @@ public class ProfileController {
             m.put("dayKey", s.getDayKey());
             m.put("startTime", s.getStartTime().toString());
             m.put("endTime", s.getEndTime().toString());
+            m.put("semesterName", s.getSemesterName());
             result.add(m);
         }
         return ResponseEntity.ok(result);
@@ -138,9 +143,14 @@ public class ProfileController {
     @PutMapping("/default-schedule")
     @Transactional
     public ResponseEntity<List<Map<String, Object>>> saveDefaultSchedule(
+            @RequestParam(required = false) String semester,
             @RequestBody List<Map<String, Object>> slots) {
         User user = getAuthenticatedUser();
-        defaultSlotRepo.deleteByUserId(user.getId());
+        if (semester != null && !semester.isBlank()) {
+            defaultSlotRepo.deleteByUserIdAndSemesterName(user.getId(), semester);
+        } else {
+            defaultSlotRepo.deleteByUserId(user.getId());
+        }
         List<DefaultScheduleSlot> toSave = new ArrayList<>();
         for (Map<String, Object> s : slots) {
             DefaultScheduleSlot slot = new DefaultScheduleSlot();
@@ -148,6 +158,7 @@ public class ProfileController {
             slot.setDayKey((String) s.get("dayKey"));
             slot.setStartTime(LocalTime.parse((String) s.get("startTime")));
             slot.setEndTime(LocalTime.parse((String) s.get("endTime")));
+            slot.setSemesterName(semester != null ? semester : (String) s.get("semesterName"));
             toSave.add(slot);
         }
         List<DefaultScheduleSlot> saved = defaultSlotRepo.saveAll(toSave);
@@ -158,6 +169,7 @@ public class ProfileController {
             m.put("dayKey", s.getDayKey());
             m.put("startTime", s.getStartTime().toString());
             m.put("endTime", s.getEndTime().toString());
+            m.put("semesterName", s.getSemesterName());
             result.add(m);
         }
         // Clear slots for weeks with no generated plan so they re-seed from the new default
