@@ -56,6 +56,7 @@ export default function Register({ onGoToLogin }) {
       });
       const data = await res.json();
       if (data.success) {
+        localStorage.setItem("kk_theme", "light");
         setRegToken(data.token || "");
         setSemStep(true);
       } else {

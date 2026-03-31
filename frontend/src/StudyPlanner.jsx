@@ -1081,7 +1081,7 @@ function CoursesPanel({ enrolledSections, courseColorOverrides, onColorChange, d
     );
 }
 
-export default function StudyPlanner({ enrolledSections = [] }) {
+export default function StudyPlanner({ enrolledSections = [], semester = "" }) {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [weekBlocks, setWeekBlocks] = useState({});
     const [availability, setAvailability] = useState({});
@@ -1248,7 +1248,10 @@ export default function StudyPlanner({ enrolledSections = [] }) {
     }, [weekStart]);
 
     const loadSlots = useCallback(async () => {
-        const data = await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`);
+        const slotUrl = semester
+            ? `/api/study-plan/slots?weekStart=${weekStart}&semester=${encodeURIComponent(semester)}`
+            : `/api/study-plan/slots?weekStart=${weekStart}`;
+        const data = await apiFetch(slotUrl);
         if (data) {
             const today = new Date(); today.setHours(0,0,0,0);
             const weekStartDate = new Date(weekStart);
@@ -1271,13 +1274,16 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                 const toTime = h => { const hrs = Math.floor(h); const mins = Math.round((h - hrs) * 60); return `${String(hrs).padStart(2,"0")}:${String(mins).padStart(2,"0")}:00`; };
                 const slots = [];
                 Object.entries(map).forEach(([dk, daySlots]) => daySlots.forEach(s => slots.push({ dayKey: dk, startTime: toTime(s.startHour), endTime: toTime(s.endHour) })));
-                apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`, { method: "POST", body: JSON.stringify(slots) }).catch(() => {});
+                const cleanUrl = semester
+                    ? `/api/study-plan/slots?weekStart=${weekStart}&semester=${encodeURIComponent(semester)}`
+                    : `/api/study-plan/slots?weekStart=${weekStart}`;
+                apiFetch(cleanUrl, { method: "POST", body: JSON.stringify(slots) }).catch(() => {});
             }
             setAvailability(map);
             return map;
         }
         return null;
-    }, [weekStart]);
+    }, [weekStart, semester]);
 
     // Restore per-week generated state when week changes
     useEffect(() => {
@@ -1299,7 +1305,10 @@ export default function StudyPlanner({ enrolledSections = [] }) {
             daySlots.forEach(s => slots.push({ dayKey, startTime: toTime(s.startHour), endTime: toTime(s.endHour) }));
         });
         try {
-            await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`, {
+            const saveUrl = semester
+                ? `/api/study-plan/slots?weekStart=${weekStart}&semester=${encodeURIComponent(semester)}`
+                : `/api/study-plan/slots?weekStart=${weekStart}`;
+            await apiFetch(saveUrl, {
                 method: "POST",
                 body: JSON.stringify(slots),
             });
@@ -1308,7 +1317,7 @@ export default function StudyPlanner({ enrolledSections = [] }) {
         } catch (e) {
             console.error("Failed to persist slots:", e.message);
         }
-    }, [weekStart, showToast]);
+    }, [weekStart, semester, showToast]);
 
     useEffect(() => {
         loadEntries();
@@ -2608,6 +2617,12 @@ export default function StudyPlanner({ enrolledSections = [] }) {
                         )}
                     </div>
                 </div>
+
+                {slotCount === 0 && !loading && (
+                    <div style={{ background: "var(--surface2)", borderBottom: "1px solid var(--border)", padding: "9px 16px", fontSize: 12, color: "var(--text2)", flexShrink: 0 }}>
+                        No availability slots set. Go to <strong>Profile → Default Schedule</strong> to mark your free time so a plan can be generated.
+                    </div>
+                )}
 
                 {postGenWarnings.length > 0 && (
                     <div style={{
