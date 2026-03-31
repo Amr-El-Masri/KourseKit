@@ -1059,8 +1059,8 @@ export default function Dashboard({ onLogout }) {
                 <button onClick={() => setActivePage("profile")} style={{fontSize:12,fontWeight:600,color:"var(--accent)",background:"none",border:"1px solid var(--border)",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontFamily:"inherit"}}>Go to Profile →</button>
               </div>
             : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
-              {semCourseList.map(c => (
-                <div key={c.id} className="course-card" onClick={()=>setCourseDetailsTarget(c.name)} style={{...s.courseCard, border:"1px solid var(--border2)", borderLeft:"3px solid var(--primary)", cursor:"pointer"}}>
+              {semCourseList.map((c, i) => (
+                <div key={c.sectioncrn ?? `${c.name}-${i}`} className="course-card" onClick={()=>setCourseDetailsTarget(c.name)} style={{...s.courseCard, border:"1px solid var(--border2)", borderLeft:"3px solid var(--primary)", cursor:"pointer"}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <div>
                       <div style={{fontWeight:700,fontSize:15,color:"var(--primary)"}}>{c.name}</div>
