@@ -1980,7 +1980,7 @@ export default function Dashboard({ onLogout }) {
           {activePage === "forum" && <Forum initialCourseTag={forumCourseTag} initialProfTag={forumProfTag} />}
           {activePage === "planner" && <StudyPlanner enrolledSections={semCourseList.map(c => ({ crn: c.id, courseCode: c.name, section: c.section }))} semester={semester} />}
           {activePage === "groups" && <StudyGroupFinder courses={[...new Map(semCourseList.map(c => [c.name, { id: c.name, name: c.name }])).values()]} />}
-          {activePage === "students" && <StudentDirectory />}
+          {activePage === "students" && <StudentDirectory onClose={() => setActivePage("dashboard")} />}
           {activePage === "profile" && (
               <Profile onProfileSave={p => setProfile(p)} onSemestersUpdated={fetchSemesters} activeSemester={semester} />
           )}
