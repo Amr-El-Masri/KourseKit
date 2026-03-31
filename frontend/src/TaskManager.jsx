@@ -253,6 +253,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
   const [composing,    setComposing]    = useState(false);
   const [editing,      setEditing]      = useState(initialEditTask || null);
   const [courseFilterDropOpen, setCourseFilterDropOpen] = useState(false);
+  const [confirmDeleteDone, setConfirmDeleteDone] = useState(false);
 
   const USER_ID = getUserId();
 
@@ -351,6 +352,13 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
     setUndoTask(null);
   };
 
+  const deleteAllDone = async () => {
+    const doneTasks = tasks.filter(t => t.done);
+    setTasks(p => p.filter(t => !t.done));
+    setConfirmDeleteDone(false);
+    await Promise.all(doneTasks.map(t => apiFetch(`/api/tasks/delete/${t.id}`, { method: "DELETE" })));
+  };
+
   const saveTask = async (task, onError) => {
     const isEdit = tasks.some(t => t.id === task.id);
     const resolvedType = task.type === "Other" ? (task.customType?.trim() || "Other") : task.type;
@@ -397,8 +405,10 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
   };
 
   const displayed = tasks.filter(filterFn);
-  const syllabusDisplayed = displayed.filter(t => t.fromSyllabus);
-  const manualDisplayed   = displayed.filter(t => !t.fromSyllabus);
+  // In "All" tab: split done out into a combined section at the bottom
+  const syllabusDisplayed = displayed.filter(t => t.fromSyllabus  && (filter !== "All" || !t.done));
+  const manualDisplayed   = displayed.filter(t => !t.fromSyllabus && (filter !== "All" || !t.done));
+  const allTabDone        = filter === "All" ? displayed.filter(t => t.done) : [];
 
 
 
@@ -531,6 +541,19 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
             )}
           </div>
 
+          {counts.done > 0 && (
+            confirmDeleteDone ? (
+              <div style={{ display:"flex", gap:6, alignItems:"center", flexShrink:0 }}>
+                <button onClick={deleteAllDone} style={{ padding:"8px 14px", background:"color-mix(in srgb,var(--error) 15%,transparent)", color:"var(--error)", border:"1px solid color-mix(in srgb,var(--error) 30%,transparent)", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Yes, delete</button>
+                <button onClick={() => setConfirmDeleteDone(false)} style={{ padding:"8px 14px", background:"var(--surface)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:12, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Cancel</button>
+              </div>
+            ) : (
+              <button onClick={() => setConfirmDeleteDone(true)} style={{ padding:"8px 14px", background:"var(--surface)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s", flexShrink:0, whiteSpace:"nowrap" }}>
+                Delete All Done
+              </button>
+            )
+          )}
+
         </div>
 
 
@@ -569,6 +592,23 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 {manualDisplayed.map((t, i) => (
                   <div key={t.id} className="tm-anim" style={{ animationDelay: `${(syllabusDisplayed.length + i) * 0.05}s` }}>
+                    <TaskRow task={t} onToggle={toggleDone} onDelete={handleDeleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
+                    {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {allTabDone.length > 0 && (
+            <div style={{ marginTop: manualDisplayed.length > 0 || syllabusDisplayed.length > 0 ? 20 : 0 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+                <div style={{ width:3, height:16, background:"var(--text3)", borderRadius:2 }} />
+                <span style={{ fontSize:13, fontWeight:700, color:"var(--text2)", fontFamily:"'DM Sans',sans-serif" }}>Completed</span>
+                <span style={{ fontSize:12, color:"var(--text3)" }}>{allTabDone.length}</span>
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {allTabDone.map((t, i) => (
+                  <div key={t.id} className="tm-anim" style={{ animationDelay: `${(syllabusDisplayed.length + manualDisplayed.length + i) * 0.05}s` }}>
                     <TaskRow task={t} onToggle={toggleDone} onDelete={handleDeleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
                     {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
                   </div>
