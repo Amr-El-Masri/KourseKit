@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Pencil, Search, ListChecks, X } from "lucide-react";
 
 const API_BASE = "http://localhost:8080";
+const COURSE_COLORS = ["#c0392b","#e67e22","#f1c40f","#27ae60","#2980b9","#8e44ad","#d81b60"];
 
 function getToken() { return localStorage.getItem("kk_token"); }
 function getUserId() {
@@ -69,11 +70,10 @@ function DueBadge({ due, done }) {
   return <span style={tm.badge("var(--accent2)","var(--divider)")}>{d}d left</span>;
 }
 
-function TaskRow({ task, onToggle, onDelete, onEdit }) {
+function TaskRow({ task, onToggle, onDelete, onEdit, courseColors = {} }) {
   const [expanded, setExpanded] = useState(false);
-  const p = priority(task.priority);
   const over = isOverdue(task.due, task.done);
-  const hasPriority = task.priority && task.priority !== "none" && task.priority !== "low";
+  const courseColor = courseColors[task.course];
 
   return (
       <div
@@ -81,7 +81,7 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
         style={{
           background: task.done ? "var(--surface2)" : "var(--surface)",
           border: `1px solid ${over && !task.done ? "var(--error-border)" : "var(--border)"}`,
-          borderLeft: hasPriority ? `3px solid ${p.dot}` : `1px solid ${over && !task.done ? "var(--error-border)" : "var(--border)"}`,
+          borderLeft: courseColor ? `3px solid ${courseColor}` : `1px solid ${over && !task.done ? "var(--error-border)" : "var(--border)"}`,
           borderRadius:12, padding:"13px 16px", transition:"box-shadow .15s",
           opacity: task.done ? 0.6 : 1,
           cursor: task.notes ? "pointer" : "default",
@@ -271,6 +271,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
 
   const [allCourses,   setAllCourses]   = useState([]);
   const [savedCourses, setSavedCourses] = useState([]);
+  const [courseColors, setCourseColors] = useState({});
   const [undoTask, setUndoTask] = useState(null); // { task, timer }
   const undoTimerRef = useRef(null);
   const composeRef   = useRef(null);
@@ -288,19 +289,23 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
     const token = localStorage.getItem("kk_token");
     fetch(`${API_BASE}/api/grades/saved`, {
       headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-    })
-        .then(r => r.json())
-        .then(data => {
-          if (Array.isArray(data) && data.length > 0) {
-            const match = semester
-              ? data.find(s => s.semesterName === semester)
-              : null;
-            const sem = match || data[0];
-            const names = (sem.courses || []).map(c => c.courseCode).filter(Boolean).sort();
-            setSavedCourses(names);
-          }
-        })
-        .catch(() => {});
+    }).then(r => r.json()).then(data => {
+      if (Array.isArray(data) && data.length > 0) {
+        const match = semester ? data.find(s => s.semesterName === semester) : null;
+        const sem = match || data[0];
+        const names = (sem.courses || []).map(c => c.courseCode).filter(Boolean).sort();
+        setSavedCourses(names);
+        try {
+          const stored = JSON.parse(localStorage.getItem("kk_course_section_colors") || "{}");
+          const colorMap = {};
+          (sem.courses || []).forEach((c, i) => {
+            const color = stored[c.sectioncrn] || COURSE_COLORS[i % COURSE_COLORS.length];
+            if (c.courseCode) colorMap[c.courseCode] = color;
+          });
+          setCourseColors(colorMap);
+        } catch {}
+      }
+    }).catch(() => {});
   }, [semester]);
 
   const semParam = semester ? `&semester=${encodeURIComponent(semester)}` : "";
@@ -592,7 +597,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 {syllabusDisplayed.map((t, i) => (
                   <div key={t.id} className="tm-anim" style={{ animationDelay: `${i * 0.05}s` }}>
-                    <TaskRow task={t} onToggle={toggleDone} onDelete={handleDeleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
+                    <TaskRow task={t} onToggle={toggleDone} onDelete={handleDeleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} courseColors={courseColors} />
                     {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
                   </div>
                 ))}
@@ -608,7 +613,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 {manualDisplayed.map((t, i) => (
                   <div key={t.id} className="tm-anim" style={{ animationDelay: `${(syllabusDisplayed.length + i) * 0.05}s` }}>
-                    <TaskRow task={t} onToggle={toggleDone} onDelete={handleDeleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
+                    <TaskRow task={t} onToggle={toggleDone} onDelete={handleDeleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} courseColors={courseColors} />
                     {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
                   </div>
                 ))}
@@ -625,7 +630,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 {allTabDone.map((t, i) => (
                   <div key={t.id} className="tm-anim" style={{ animationDelay: `${(syllabusDisplayed.length + manualDisplayed.length + i) * 0.05}s` }}>
-                    <TaskRow task={t} onToggle={toggleDone} onDelete={handleDeleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} />
+                    <TaskRow task={t} onToggle={toggleDone} onDelete={handleDeleteTask} onEdit={task => { setEditing(prev => prev?.id === task.id ? null : task); setComposing(false); }} courseColors={courseColors} />
                     {editing?.id === t.id && <div style={{marginTop:5}}><TaskForm initial={editing} onSave={saveTask} onCancel={() => setEditing(null)} courses={savedCourses} /></div>}
                   </div>
                 ))}
