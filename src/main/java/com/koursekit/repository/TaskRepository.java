@@ -29,6 +29,19 @@ public interface TaskRepository  extends JpaRepository<Task, Long> {
             "(LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(t.course) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     List<Task> searchByUserIdAndKeyword(@Param("userId") Long userId, @Param("keyword") String keyword);
 
+    @Query("SELECT t FROM Task t WHERE t.user.id = :userId AND t.semesterName = :semesterName AND " +
+            "(LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(t.course) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    List<Task> searchByUserIdAndSemesterNameAndKeyword(@Param("userId") Long userId, @Param("semesterName") String semesterName, @Param("keyword") String keyword);
+
+    @Query("SELECT t FROM Task t WHERE t.user.id = :userId AND t.semesterName = :semesterName ORDER BY t.deadline ASC, t.course ASC, t.title ASC")
+    List<Task> findByUserIdAndSemesterNameOrderByDeadlineAscCourseAscTitleAsc(@Param("userId") Long userId, @Param("semesterName") String semesterName);
+
+    @Query("SELECT t FROM Task t WHERE t.user.id = :userId AND t.semesterName = :semesterName AND t.course = :course ORDER BY t.deadline ASC, t.title ASC")
+    List<Task> findByUserIdAndSemesterNameAndCourseOrderByDeadlineAscTitleAsc(@Param("userId") Long userId, @Param("semesterName") String semesterName, @Param("course") String course);
+
+    @Query("SELECT t FROM Task t WHERE t.user.id = :userId AND t.semesterName IS NULL")
+    List<Task> findByUserIdAndSemesterNameIsNull(@Param("userId") Long userId);
+
     @Query("SELECT DISTINCT t.user.id FROM Task t WHERE t.deadline < :now")
     List<Long> findDistinctUserIdsWithExpiredTasks(@Param("now") LocalDateTime now);
 

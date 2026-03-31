@@ -15,6 +15,7 @@ public record TaskResponseDTO(
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
         LocalDateTime deadline,
         boolean completed,
-        boolean fromSyllabus
+        boolean fromSyllabus,
+        String semesterName
 ) {
 }

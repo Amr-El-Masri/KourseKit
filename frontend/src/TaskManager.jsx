@@ -246,7 +246,7 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
   );
 }
 
-export default function TaskManager({ initialEditTask, onNavigate }) {
+export default function TaskManager({ initialEditTask, onNavigate, semester }) {
   const [tasks,        setTasks]        = useState([]);
   const [filter,       setFilter]       = useState("All");
   const [search,       setSearch]       = useState("");
@@ -271,42 +271,34 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
         .then(r => r.json())
         .then(data => {
           if (Array.isArray(data) && data.length > 0) {
-            const TERM_ORDER = { spring: 2, summer: 1, fall: 0 };
-            const parse = name => {
-              if (!name) return { year: 0, term: 0 };
-              const lower = name.toLowerCase();
-              const yearMatch = name.match(/(\d{2,4})/g);
-              const year = yearMatch ? parseInt(yearMatch[yearMatch.length - 1]) : 0;
-              const term = Object.entries(TERM_ORDER).find(([k]) => lower.includes(k))?.[1] ?? -1;
-              return { year, term };
-            };
-            const sorted = [...data].sort((a, b) => {
-              const pa = parse(a.semesterName), pb = parse(b.semesterName);
-              return pa.year !== pb.year ? pa.year - pb.year : pa.term - pb.term;
-            });
-            const current = sorted[sorted.length - 1];
-            const names = (current.courses || []).map(c => c.courseCode).filter(Boolean).sort();
+            const match = semester
+              ? data.find(s => s.semesterName === semester)
+              : null;
+            const sem = match || data[0];
+            const names = (sem.courses || []).map(c => c.courseCode).filter(Boolean).sort();
             setSavedCourses(names);
           }
         })
         .catch(() => {});
-  }, []);
+  }, [semester]);
+
+  const semParam = semester ? `&semester=${encodeURIComponent(semester)}` : "";
 
   const loadTasks = useCallback(async () => {
-    const data = await apiFetch(`/api/tasks/list-all`);
+    const data = await apiFetch(`/api/tasks/list-all${semester ? `?semester=${encodeURIComponent(semester)}` : ""}`);
     if (data) {
       const mapped = data.map(t => ({ ...t, due: t.deadline, done: t.completed }));
       setTasks(mapped);
       setAllCourses([...new Set(mapped.map(t => t.course).filter(Boolean))].sort());
     }
-  }, [USER_ID]);
+  }, [USER_ID, semester]);
 
   useEffect(() => { loadTasks(); }, [loadTasks]);
 
   useEffect(() => {
     if (!search.trim()) { loadTasks(); return; }
     const timeout = setTimeout(async () => {
-      const data = await apiFetch(`/api/tasks/search?keyword=${encodeURIComponent(search)}`);
+      const data = await apiFetch(`/api/tasks/search?keyword=${encodeURIComponent(search)}${semParam}`);
       if (data) setTasks(data.map(t => ({ ...t, due: t.deadline, done: t.completed })));
     }, 400);
     return () => clearTimeout(timeout);
@@ -315,7 +307,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
   useEffect(() => {
     if (!courseFilter) { loadTasks(); return; }
     const fetchByCourse = async () => {
-      const data = await apiFetch(`/api/tasks/list?course=${encodeURIComponent(courseFilter)}`);
+      const data = await apiFetch(`/api/tasks/list?course=${encodeURIComponent(courseFilter)}${semParam}`);
       if (data) setTasks(data.map(t => ({ ...t, due: t.deadline, done: t.completed })));
     };
     fetchByCourse();
@@ -363,7 +355,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
   const saveTask = async (task, onError) => {
     const isEdit = tasks.some(t => t.id === task.id);
     const resolvedType = task.type === "Other" ? (task.customType?.trim() || "Other") : task.type;
-    const payload = { title: task.title, course: task.course, type: resolvedType, deadline: task.due, notes: task.notes };
+    const payload = { title: task.title, course: task.course, type: resolvedType, deadline: task.due, notes: task.notes, semesterName: semester || null };
     if (isEdit) {
       const res = await fetch(`${API_BASE}/api/tasks/edit/${task.id}`, {
         method: "PATCH",

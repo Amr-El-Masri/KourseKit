@@ -1974,6 +1974,7 @@ export default function Dashboard({ onLogout }) {
                   initialEditTask={editingTask}
                   key={editingTask?.id || "tasks"}
                   onNavigate={setActivePage}
+                  semester={semester}
               />
           )}
           {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
