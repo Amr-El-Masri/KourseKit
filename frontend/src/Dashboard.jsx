@@ -802,6 +802,19 @@ export default function Dashboard({ onLogout }) {
     return { token, userId };
   };
 
+  const timeAgo = (dateStr) => {
+    if (!dateStr) return "";
+    const [datePart, timePart] = dateStr.split(" ");
+    const [day, month, year] = datePart.split("-");
+    const parsed = new Date(`${year}-${month}-${day}T${timePart}`);
+    const mins = Math.floor((Date.now() - parsed.getTime()) / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    return `${Math.floor(hrs / 24)}d ago`;
+  };
+
   const loadNotifications = useCallback(() => {
     const { token, userId } = getAuthInfo();
     if (!userId) return;
@@ -854,7 +867,7 @@ export default function Dashboard({ onLogout }) {
 
   useEffect(() => {
     loadNotifications();
-    const interval = setInterval(loadNotifications, 5000);
+    const interval = setInterval(loadNotifications, 30000);
     return () => clearInterval(interval);
   }, [loadNotifications]);
 
@@ -1815,7 +1828,7 @@ export default function Dashboard({ onLogout }) {
               </button>
               <div ref={notifRef} style={{position:"relative"}}>
                 <button
-                    onClick={() => { setShowNotifPanel(p => !p); if (unreadCount > 0) markAllAsRead(); }}
+                    onClick={() => { setShowNotifPanel(p => { if (p && unreadCount > 0) markAllAsRead(); return !p; }); }}
                     className="kk-pill" style={{...s.bell, position:"relative", border:"1px solid var(--border)", cursor:"pointer"}}
                     title="Notifications"
                 >
@@ -1852,14 +1865,14 @@ export default function Dashboard({ onLogout }) {
                                       Overdue
                                     </div>
                                     {notifications.filter(n => n.urgency === "overdue").map((n, i, arr) => (
-                                        <div key={i} style={{
+                                        <div key={`${n.taskDeadline}-${n.urgency}`} style={{
                                           padding:"9px 16px 10px",
                                           background:"var(--error-fg)",
                                           borderBottom: i < arr.length - 1 ? "1px solid var(--error-border)" : "1px solid var(--border)"
                                         }}>
                                           <div style={{fontSize:12, color:"var(--primary)", lineHeight:1.5}}>{n.message}</div>
                                           <div style={{fontSize:10, color:"var(--text3)", marginTop:3}}>
-                                            {n.createdAt}
+                                            {timeAgo(n.createdAt)}
                                           </div>
                                         </div>
                                     ))}
@@ -1872,14 +1885,14 @@ export default function Dashboard({ onLogout }) {
                                       Due Today
                                     </div>
                                     {notifications.filter(n => n.urgency === "today").map((n, i, arr) => (
-                                        <div key={i} style={{
+                                        <div key={`${n.taskDeadline}-${n.urgency}`} style={{
                                           padding:"9px 16px 10px",
                                           background:"var(--surface)",
                                           borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "1px solid var(--border)"
                                         }}>
                                           <div style={{fontSize:12, color:"var(--primary)", lineHeight:1.5}}>{n.message}</div>
                                           <div style={{fontSize:10, color:"var(--text3)", marginTop:3}}>
-                                            {n.createdAt}
+                                            {timeAgo(n.createdAt)}
                                           </div>
                                         </div>
                                     ))}
@@ -1892,14 +1905,14 @@ export default function Dashboard({ onLogout }) {
                                       Due Tomorrow
                                     </div>
                                     {notifications.filter(n => n.urgency === "tomorrow").map((n, i, arr) => (
-                                        <div key={i} style={{
+                                        <div key={`${n.taskDeadline}-${n.urgency}`} style={{
                                           padding:"9px 16px 10px",
                                           background:"var(--surface)",
                                           borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "1px solid var(--border)"
                                         }}>
                                           <div style={{fontSize:12, color:"var(--primary)", lineHeight:1.5}}>{n.message}</div>
                                           <div style={{fontSize:10, color:"var(--text3)", marginTop:3}}>
-                                            {n.createdAt}
+                                            {timeAgo(n.createdAt)}
                                           </div>
                                         </div>
                                     ))}
@@ -1912,14 +1925,14 @@ export default function Dashboard({ onLogout }) {
                                       Due in 3 Days
                                     </div>
                                     {notifications.filter(n => n.urgency === "3day").map((n, i, arr) => (
-                                        <div key={i} style={{
+                                        <div key={`${n.taskDeadline}-${n.urgency}`} style={{
                                           padding:"9px 16px 10px",
                                           background:"var(--surface)",
                                           borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "none"
                                         }}>
                                           <div style={{fontSize:12, color:"var(--primary)", lineHeight:1.5}}>{n.message}</div>
                                           <div style={{fontSize:10, color:"var(--text3)", marginTop:3}}>
-                                            {n.createdAt}
+                                            {timeAgo(n.createdAt)}
                                           </div>
                                         </div>
                                     ))}

@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+
 public interface TaskRepository  extends JpaRepository<Task, Long> {
 
     @Query("SELECT t FROM Task t WHERE t.deadline BETWEEN :from AND :to AND t.completed = false")
