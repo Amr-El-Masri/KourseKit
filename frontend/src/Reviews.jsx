@@ -15,6 +15,55 @@ const ANON_NAMES = [
 ];
 const randomAnon = () => ANON_NAMES[Math.floor(Math.random() * ANON_NAMES.length)];
 
+function RatingStats({ reviews }) {
+  if (!reviews || reviews.length === 0) return null;
+  const avg = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
+  const counts = [5,4,3,2,1].map(star => ({
+    star,
+    count: reviews.filter(r => r.rating === star).length,
+  }));
+  return (
+    <div style={{
+      display:"flex", alignItems:"center", gap:24, flexWrap:"wrap",
+      background:"var(--surface2)", borderRadius:14, padding:"16px 20px",
+      marginBottom:20, border:"1px solid var(--border)",
+    }}>
+      {/* Average + stars */}
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4, minWidth:60 }}>
+        <div style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:2 }}>
+          Avg. Rating
+        </div>
+        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:36, color:"var(--primary)", lineHeight:1 }}>
+          {avg}
+        </div>
+        <div style={{ display:"inline-flex", gap:2 }}>
+          {[1,2,3,4,5].map(i => (
+            <span key={i} style={{ color: i <= Math.round(avg) ? "#f5a623" : "var(--border)", fontSize:14 }}>★</span>
+          ))}
+        </div>
+        <div style={{ fontSize:11, color:"var(--text3)" }}>{reviews.length} review{reviews.length !== 1 ? "s" : ""}</div>
+      </div>
+
+      {/* Bar breakdown */}
+      <div style={{ flex:1, minWidth:160, display:"flex", flexDirection:"column", gap:5 }}>
+        {counts.map(({ star, count }) => {
+          const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+          return (
+            <div key={star} style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ fontSize:11, color:"var(--text3)", width:10, textAlign:"right" }}>{star}</span>
+              <span style={{ color:"#f5a623", fontSize:11 }}>★</span>
+              <div style={{ flex:1, height:6, background:"var(--border)", borderRadius:4, overflow:"hidden" }}>
+                <div style={{ width:`${pct}%`, height:"100%", background:"#f5a623", borderRadius:4, transition:"width 0.4s ease" }} />
+              </div>
+              <span style={{ fontSize:11, color:"var(--text3)", width:18, textAlign:"right" }}>{count}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const timeAgo = ts => {
   const s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
   if (s < 60)    return "just now";
@@ -588,6 +637,7 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
       )}
 
       {loading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading reviews…</div>}
+      {!loading && activeCourse && reviews.length > 0 && <RatingStats reviews={reviews} />}
 
       {!loading && activeCourse && displayed.length === 0 && !composing && (
         <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
@@ -856,6 +906,7 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
           )}
 
           {loading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading reviews…</div>}
+          {!loading && reviews.length > 0 && <RatingStats reviews={reviews} />}
 
           {!loading && displayed.length === 0 && !composing && (
             <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
