@@ -143,7 +143,8 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
     if (!form.title.trim()) { setErr("Please enter a task title."); return; }
     if (!form.course.trim()) { setErr("Please select a course."); return; }
     if (!form.due) { setErr("Please select a due date."); return; }
-    if (new Date(form.due) < new Date()) { setErr("Deadline cannot be in the past."); return; }
+    const deadlineChanged = !initial?.id || form.due !== initial?.due;
+    if (deadlineChanged && new Date(form.due) < new Date()) { setErr("Deadline cannot be in the past."); return; }
     onSave({ ...form, id: initial?.id || Date.now(), done: initial?.done || false }, setErr);
   };
 
