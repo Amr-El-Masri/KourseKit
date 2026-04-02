@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { MessageSquare, Plus, ArrowLeft, Trash2, Flag, Search, ChevronUp, BookOpen, GraduationCap, LayoutGrid, Check } from "lucide-react";
+import { MessageSquare, Plus, ArrowLeft, Trash2, Flag, Search, ChevronUp, BookOpen, GraduationCap, LayoutGrid, Check, User } from "lucide-react";
 
 const API = "http://localhost:8080";
 
@@ -486,7 +486,7 @@ function CreatePost({ token, userEmail, userId, displayName, onDone, initialCate
         <>
           <label style={f.label}>
             Tag a Course <span style={{ color: "var(--danger, #c0392b)" }}>*</span>
-            <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)", marginLeft: 6 }}>Select from the dropdown</span>
+            <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)", marginLeft: 6 }}>Select from the list below</span>
           </label>
           <div style={{ marginBottom: 16 }}>
             <CourseTagSearch onSelect={setCourseTag} initialValue="" />
@@ -503,7 +503,7 @@ function CreatePost({ token, userEmail, userId, displayName, onDone, initialCate
         <>
           <label style={f.label}>
             Tag a Professor <span style={{ color: "var(--danger, #c0392b)" }}>*</span>
-            <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)", marginLeft: 6 }}>Select from the dropdown</span>
+            <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)", marginLeft: 6 }}>Select from the list below</span>
           </label>
           <div style={{ marginBottom: 16 }}>
             <ProfTagSearch onSelect={setProfTag} initialValue="" />
@@ -578,7 +578,7 @@ function PostCard({ post, onOpenComments, token, userEmail }) {
   return (
     <div style={{ ...f.card, transition: "box-shadow 0.2s" }}
       onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 24px rgba(49,72,122,0.13)"; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 2px 10px rgba(49,72,122,0.06)"; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 2px 14px rgba(49,72,122,0.07)"; }}
     >
       <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
         <span style={{ ...f.chip, color: categoryColor[post.category] || "var(--text2)", background: "var(--surface2)" }}>
@@ -638,6 +638,110 @@ function PostCard({ post, onOpenComments, token, userEmail }) {
   );
 }
 
+function MyPostsPanel({ token, userEmail, onOpenPost }) {
+  const [posts,   setPosts]   = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    setLoading(true);
+    fetch(`${API}/api/forum/my-posts`, {
+      headers: { "Authorization": `Bearer ${token}` }
+    })
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setPosts(data); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  const STATUS_STYLE = {
+    APPROVED: { bg:"var(--surface2)",  color:"var(--text2)",   label:"Approved"           },
+    PENDING:  { bg:"#fff8ec",          color:"#b7680a",        label:"Pending moderation" },
+    FLAGGED:  { bg:"#fef0f0",          color:"#c0392b",        label:"Flagged"            },
+  };
+
+  const categoryColor = { COURSE: "var(--primary)", PROFESSOR: "var(--accent2)", GENERAL: "var(--accent)" };
+
+  if (loading) return <div style={{ textAlign:"center", padding:60, color:"var(--text3)" }}>Loading your posts…</div>;
+
+  if (posts.length === 0) return (
+    <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+      <MessageSquare size={40} color="var(--border)" style={{ marginBottom:12 }} />
+      <div style={{ fontFamily:"'Fraunces', serif", fontSize:18, color:"var(--primary)", marginBottom:6 }}>
+        No posts yet
+      </div>
+      <div style={{ fontSize:13 }}>Your forum posts will appear here.</div>
+    </div>
+  );
+
+  const sorted = [...posts].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+      {sorted.map(post => {
+        const s = STATUS_STYLE[post.status] || STATUS_STYLE.PENDING;
+        const CatIcon = CATEGORIES.find(c => c.id === post.category)?.icon || MessageSquare;
+        return (
+          <div key={post.id} style={{
+            ...f.card,
+            opacity: post.status === "FLAGGED" ? 0.7 : 1,
+            cursor: post.status === "APPROVED" ? "pointer" : "default",
+          }}
+            onClick={() => post.status === "APPROVED" && onOpenPost(post)}
+            onMouseEnter={e => { if (post.status === "APPROVED") e.currentTarget.style.boxShadow = "0 6px 24px rgba(49,72,122,0.13)"; }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 2px 10px rgba(49,72,122,0.06)"; }}
+          >
+            {/* Header row */}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:10 }}>
+              <div style={{ display:"flex", gap:6, flexWrap:"wrap", alignItems:"center" }}>
+                <span style={{ ...f.chip, color: categoryColor[post.category] || "var(--text2)", background:"var(--surface2)" }}>
+                  <CatIcon size={11} /> {post.category}
+                </span>
+                {post.courseTag    && <span style={{ ...f.chip, background:"var(--blue-light-bg, #eef2fb)", color:"var(--primary)" }}>{post.courseTag}</span>}
+                {post.professorTag && <span style={{ ...f.chip, background:"var(--surface3)", color:"var(--accent2)" }}>{post.professorTag}</span>}
+              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ fontSize:11, color:"var(--text3)" }}>{timeAgo(post.createdAt)}</span>
+                <span style={{ fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:6, background:s.bg, color:s.color }}>
+                  {s.label}
+                </span>
+              </div>
+            </div>
+
+            {/* Title + body */}
+            <div style={{ fontWeight:700, fontSize:14, color:"var(--primary)", marginBottom:4 }}>{post.title}</div>
+            <p style={{
+              fontSize:13, color:"var(--text2)", lineHeight:1.55, margin:"0 0 10px",
+              display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical", overflow:"hidden",
+            }}>{post.body}</p>
+
+            {/* Stats + status message */}
+            <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+              <span style={{ fontSize:12, color:"var(--text3)", display:"flex", alignItems:"center", gap:4 }}>
+                <ChevronUp size={13} /> {post.relateCount ?? 0}
+              </span>
+              <span style={{ fontSize:12, color:"var(--text3)", display:"flex", alignItems:"center", gap:4 }}>
+                <MessageSquare size={13} /> {post.commentCount ?? 0} comment{(post.commentCount ?? 0) !== 1 ? "s" : ""}
+              </span>
+            </div>
+
+            {post.status === "PENDING" && (
+              <div style={{ fontSize:12, color:"#b7680a", marginTop:10 }}>
+                Your post is awaiting moderator approval and is not yet visible to others.
+              </div>
+            )}
+            {post.status === "FLAGGED" && (
+              <div style={{ fontSize:12, color:"#c0392b", marginTop:10 }}>
+                Your post has been flagged and is under review by an admin.
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 //Main Forum page
 export default function Forum({ initialCourseTag, initialProfTag }) {
   const token     = localStorage.getItem("kk_token");
@@ -667,15 +771,19 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
       }).catch(() => {});
   }, []);
 
-  const initCat = initialCourseTag ? "COURSE" : initialProfTag ? "PROFESSOR" : "ALL";
+  const initCat = initialCourseTag ? "COURSE" : initialProfTag ? "PROFESSOR"
+    : (() => { try { return sessionStorage.getItem("kk_forum_category") || "ALL"; } catch { return "ALL"; } })();
 
   const [posts,      setPosts]      = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [category,   setCategory]   = useState(initCat);
-  const [sort,       setSort]       = useState("new");
+  const [sort,       setSort]       = useState(() => {
+    try { return sessionStorage.getItem("kk_forum_sort") || "new"; } catch { return "new"; }
+  });
   const [search,     setSearch]     = useState("");
   const [composing,  setComposing]  = useState(false);
   const [activePost, setActivePost] = useState(null);
+  const [showMyPosts,  setShowMyPosts]  = useState(false);
 
   const loadPosts = useCallback(async (cat) => {
       setLoading(true);
@@ -769,7 +877,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
         {CATEGORIES.map(c => {
           const Icon = c.icon;
           return (
-            <button key={c.id} className="kk-tab" data-active={category === c.id} onClick={() => { setCategory(c.id); setComposing(false); }} style={{
+            <button key={c.id} className="kk-tab" data-active={category === c.id} onClick={() => { setCategory(c.id); sessionStorage.setItem("kk_forum_category", c.id); setComposing(false); setShowMyPosts(false); }} style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "8px 18px", borderRadius: 9,
               fontSize: 13, fontWeight: category === c.id ? 600 : 400, cursor: "pointer",
@@ -782,7 +890,28 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
             </button>
           );
         })}
+        {token && (
+          <button onClick={() => { setShowMyPosts(p => !p); setComposing(false); }} style={{
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "8px 16px", border: "none", borderRadius: 10,
+            fontSize: 13, fontWeight: 600, cursor: "pointer",
+            fontFamily: "'DM Sans', sans-serif", transition: "all .15s",
+            background: showMyPosts ? "var(--accent2)" : "transparent",
+            color:      showMyPosts ? "white" : "var(--text2)",
+          }}>
+            <User size={14} /> My Posts
+          </button>
+        )}
       </div>
+
+      {/* My Posts panel */}
+      {showMyPosts && (
+          <MyPostsPanel
+            token={token}
+            userEmail={userEmail}
+            onOpenPost={post => { setActivePost(post); setShowMyPosts(false); }}
+          />
+      )}
 
       {/* Create post form */}
       {composing && (
@@ -794,7 +923,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
           onDone={() => { setComposing(false); loadPosts(category); }}
         />
       )}
-
+      {!showMyPosts && <>
       {/* Search + sort bar */}
       <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
         <div style={{ flex: 1, display: "flex", alignItems: "center", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "8px 14px", minWidth: 200 }}>
@@ -805,7 +934,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
         </div>
         <div style={{ display: "flex", gap: 4, background: "var(--surface2)", padding: 4, borderRadius: 10 }}>
           {[{ id: "new", label: "New" }, { id: "top", label: "Top" }].map(s => (
-            <button key={s.id} className="kk-tab" data-active={sort===s.id} onClick={() => setSort(s.id)} style={{
+            <button key={s.id} className="kk-tab" data-active={sort===s.id} onClick={() => { setSort(s.id); sessionStorage.setItem("kk_forum_sort", s.id); }} style={{
               padding: "6px 14px", border: "none", borderRadius: 8,
               fontSize: 12, fontWeight: sort===s.id ? 600 : 400, cursor: "pointer", transition: "all .15s",
               background: sort === s.id ? "var(--surface)" : "transparent",
@@ -864,6 +993,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
           ))}
         </div>
       )}
+      </>}
     </div>
   );
 }
@@ -875,7 +1005,7 @@ const f = {
       border: "1px solid var(--border)",
       borderRadius: 16,
       padding: "20px 22px",
-      boxShadow: "0 2px 10px rgba(49,72,122,0.06)",
+      boxShadow: "0 2px 14px rgba(49,72,122,0.07)",
       overflow: "visible",
       position: "relative",
   },
@@ -911,11 +1041,11 @@ const f = {
   },
   primaryBtn: {
     padding: "10px 22px", background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)",
-    border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius: 10, fontSize: 13, fontWeight: 600,
+    border: "1.5px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius: 10, fontSize: 13, fontWeight: 600,
     cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all .15s",
   },
   cancelBtn: {
-    padding: "10px 18px", background: "var(--surface2)", color: "var(--text2)",
+    padding: "8px 16px", background: "var(--surface2)", color: "var(--text2)",
     border: "1px solid var(--border)", borderRadius: 10, fontSize: 13,
     cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
   },

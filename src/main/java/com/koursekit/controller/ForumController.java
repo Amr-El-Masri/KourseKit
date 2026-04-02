@@ -167,4 +167,12 @@ public class ForumController {
         }
         return null;
     }
+
+    // GET /api/forum/my-posts
+    @GetMapping("/my-posts")
+    public ResponseEntity<?> getMyPosts(HttpServletRequest request) {
+        String userId = getEmailFromRequest(request);
+        if (userId == null) return ResponseEntity.status(401).build();
+        return ResponseEntity.ok(forumService.getPostsByUser(userId));
+    }
 }

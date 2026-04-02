@@ -148,7 +148,7 @@ function inferType(name) {
 }
 
 // Grade Calculator page
-export default function GradeCalculator({ dashboardCourses = [], savedSemesters = [], selectedSemester = "" }) {
+export default function GradeCalculator({ dashboardCourses = [], savedSemesters = [], selectedSemester = "", onNavigate }) {
   const [activeTab, setActiveTab] = useState("semester");
 
   // Row helpers (UI only)
@@ -506,7 +506,18 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
     return () => document.removeEventListener("keydown", handler);
   }, [activeTab]);
 
-
+  // Clear in-memory state when a syllabus is removed from Profile
+  const selectedCourseRef = useRef(selectedCourse);
+  selectedCourseRef.current = selectedCourse;
+  useEffect(() => {
+    const handler = (e) => {
+      const removed = e.detail?.courseCode;
+      if (!removed || removed !== selectedCourseRef.current) return;
+      switchCourse(removed); // reloads from localStorage (now empty)
+    };
+    window.addEventListener("kk_syllabus_changed", handler);
+    return () => window.removeEventListener("kk_syllabus_changed", handler);
+  }, []);
 
   const TABS = [
     { id:"semester",   label:"Semester GPA"    },
@@ -594,6 +605,13 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
           <p style={{ fontSize:13, color:"var(--text2)", marginTop:6, marginBottom:18 }}>
             Enter each course, your grade (letter or GPA point), and its credit hours.
           </p>
+
+          {savedSemesters.length === 0 && dashboardCourses.length === 0 && onNavigate && (
+            <div style={{ display:"flex", alignItems:"center", gap:10, background:"color-mix(in srgb, var(--primary) 8%, var(--surface))", border:"1px solid var(--border)", borderRadius:10, padding:"10px 14px", marginBottom:18 }}>
+              <span style={{ fontSize:13, color:"var(--text2)" }}>Add your courses in My Semesters to auto-fill this calculator.</span>
+              <button onClick={() => onNavigate("profile")} style={{ marginLeft:"auto", fontSize:12, fontWeight:600, color:"var(--primary)", background:"none", border:"1px solid var(--primary)", borderRadius:7, padding:"4px 10px", cursor:"pointer", whiteSpace:"nowrap" }}>Go to My Semesters →</button>
+            </div>
+          )}
 
           {savedSemesters.length > 0 && (
             <div style={{ marginBottom:18 }}>
@@ -1331,11 +1349,11 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 const gc = {
   tabBar:    { display:"flex", gap:4, background:"var(--surface)", padding:5, borderRadius:14, border:"1px solid var(--border)", marginBottom:24, flexWrap:"wrap" },
   tab:       { padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s, color .15s", display:"flex", alignItems:"center" },
-  card:      { background:"var(--surface)", borderRadius:18, padding:"24px 26px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid var(--border)" },
+  card:      { background:"var(--surface)", borderRadius:16, padding:"24px 26px", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", border:"1px solid var(--border)" },
   headerRow: { display:"flex", gap:12, marginBottom:8, paddingBottom:8, borderBottom:"1px solid var(--border)" },
   colHead:   { fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", flex:1 },
   row:       { display:"flex", gap:12, marginBottom:8, alignItems:"center" },
-  input:     { flex:1, padding:"9px 12px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", outline:"none", transition:"border-color .15s" },
+  input:     { flex:1, padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", outline:"none", transition:"border-color .15s" },
   removeBtn: { width:28, height:28, border:"none", background:"none", color:"var(--text3)", cursor:"pointer", fontSize:14, borderRadius:6, flexShrink:0 },
   addRowBtn: { padding:"7px 14px", background:"var(--divider)", color:"var(--accent)", border:"1px solid var(--border)", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", marginTop:4, transition:"background .15s" },
   calcBtn:   { padding:"10px 22px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s" },

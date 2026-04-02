@@ -8,6 +8,6 @@ public record StudyGroupRequestDTO (
     @NotBlank String name,
     @NotNull String courseCode,
     @NotNull Boolean isPrivate,
-    @NotNull @Min(2) int maxMembers
+    @Min(2) int maxMembers
 
 ) {}

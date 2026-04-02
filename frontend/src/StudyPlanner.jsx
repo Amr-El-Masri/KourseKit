@@ -62,7 +62,6 @@ function slotsOverlap(a, b) {
 }
 
 const COURSE_COLORS = ["#c0392b","#e67e22","#f1c40f","#27ae60","#2980b9","#8e44ad","#d81b60"];
-const COURSE_PICKER_COLORS = PALETTE.slice(0, 7);
 const SECTION_DAY_MAP = { M:"MONDAY", T:"TUESDAY", W:"WEDNESDAY", R:"THURSDAY", F:"FRIDAY", S:"SATURDAY", U:"SUNDAY" };
 function parseSectionTime(t) {
     if (!t || t === "0000" || !t.trim() || t.trim() === ".") return null;
@@ -682,7 +681,7 @@ function DayColumn({
     );
 }
 
-function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColorChange, userId, weekStart, isPastWeek, entriesLoading, onCarryOver }) {
+function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColorChange, userId, weekStart, isPastWeek, entriesLoading, onCarryOver, onNavigate }) {
     const [tasks, setTasks] = useState([]);
     const [selectedTaskId, setSelectedTaskId] = useState("");
     const [hoursPerWeek, setHoursPerWeek] = useState("");
@@ -743,8 +742,9 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
 
             {!isPastWeek && <div className="sp-entry-form">
                 {availableTasks.length === 0 && tasks.length === 0 && (
-                    <div className="sp-empty-hint" style={{ marginBottom: 8 }}>
-                        No tasks found. Add tasks in the Task Manager first.
+                    <div className="sp-empty-hint" style={{ marginBottom: 8, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                        <span>No tasks found. Add tasks in the Task Manager first.</span>
+                        {onNavigate && <button onClick={() => onNavigate("tasks")} style={{ fontSize:11, fontWeight:600, color:"var(--primary)", background:"none", border:"1px solid var(--primary)", borderRadius:6, padding:"3px 8px", cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Go to Task Manager →</button>}
                     </div>
                 )}
                 {availableTasks.length === 0 && tasks.length > 0 && (
@@ -970,16 +970,7 @@ function SlotPanel({ availability, onDeleteSlot, onClearAll }) {
     );
 }
 
-function CoursesPanel({ enrolledSections, courseColorOverrides, onColorChange, dismissedSections, onRestore, weekDateStrings }) {
-    const [openCrn, setOpenCrn] = useState(null);
-
-    useEffect(() => {
-        if (!openCrn) return;
-        const close = () => setOpenCrn(null);
-        const timer = setTimeout(() => window.addEventListener("click", close), 0);
-        return () => { clearTimeout(timer); window.removeEventListener("click", close); };
-    }, [openCrn]);
-
+function CoursesPanel({ enrolledSections, globalCourseColors, dismissedSections, onRestore, weekDateStrings }) {
     if (enrolledSections.length === 0) {
         return (
             <div className="sp-slot-panel">
@@ -1009,7 +1000,7 @@ function CoursesPanel({ enrolledSections, courseColorOverrides, onColorChange, d
                     const crn = crnParts.join("_");
                     const es = enrolledSections.find(e => e.crn === crn);
                     const esIdx = enrolledSections.findIndex(e => e.crn === crn);
-                    const color = courseColorOverrides[crn] || (esIdx >= 0 ? COURSE_COLORS[esIdx % COURSE_COLORS.length] : "var(--text3)");
+                    const color = (es && globalCourseColors[es.courseCode]) || (esIdx >= 0 ? COURSE_COLORS[esIdx % COURSE_COLORS.length] : "var(--text3)");
                     const d = new Date(dateStr + "T00:00:00");
                     const label = d.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
                     return (
@@ -1024,31 +1015,21 @@ function CoursesPanel({ enrolledSections, courseColorOverrides, onColorChange, d
                     );
                 })}
             </div>
-            {/* Divider */}
+            {/* Section 2: Course list (read-only, colors from Profile) */}
             <div style={{ borderTop:"1px solid var(--border)", marginBottom:14 }} />
-            {/* Section 2: Course colors */}
-            <div className="sp-panel-title" style={{ marginBottom:8 }}>Course Colors</div>
-            <div style={{ fontSize:10, color:"var(--text3)", marginBottom:10, lineHeight:1.4 }}>Click the color circle to change a course color.</div>
+            <div className="sp-panel-title" style={{ marginBottom:8 }}>My Courses</div>
             {enrolledSections.map((es, idx) => {
-                const color = courseColorOverrides[es.crn] || COURSE_COLORS[idx % COURSE_COLORS.length];
+                const color = globalCourseColors[es.courseCode] || COURSE_COLORS[idx % COURSE_COLORS.length];
                 const slots = getSectionTimeSlots(es.section);
-                const isOpen = openCrn === es.crn;
                 return (
                     <div key={es.crn} style={{ marginBottom:12, background:"var(--surface2)", borderRadius:10, overflow:"hidden", border:"1px solid var(--border)" }}>
-                        {/* Course row */}
                         <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px" }}>
-                            {/* Color swatch — click to open picker */}
-                            <button
-                                onClick={() => setOpenCrn(isOpen ? null : es.crn)}
-                                style={{ width:18, height:18, borderRadius:"50%", background:color, border: isOpen ? "2px solid var(--text)" : "2px solid transparent", cursor:"pointer", padding:0, flexShrink:0, boxShadow:`0 1px 4px ${color}66` }}
-                                title="Change color"
-                            />
+                            <div style={{ width:18, height:18, borderRadius:"50%", background:color, flexShrink:0, boxShadow:`0 1px 4px ${color}66` }} />
                             <div style={{ flex:1, minWidth:0 }}>
                                 <div style={{ fontSize:12, fontWeight:700, color:"var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{es.courseCode}</div>
                                 <div style={{ fontSize:10, color:"var(--text2)" }}>Section {es.section?.sectionNumber}</div>
                             </div>
                         </div>
-                        {/* Schedule times */}
                         {slots.length > 0 && (
                             <div style={{ padding:"0 10px 8px", display:"flex", flexDirection:"column", gap:2 }}>
                                 {slots.map((sl, si) => (
@@ -1059,21 +1040,6 @@ function CoursesPanel({ enrolledSections, courseColorOverrides, onColorChange, d
                                 ))}
                             </div>
                         )}
-                        {/* Color picker */}
-                        {isOpen && (
-                            <div style={{ padding:"8px 10px 10px", borderTop:"1px solid var(--border)", display:"flex", flexWrap:"nowrap", gap:4, alignItems:"center" }}>
-                                {COURSE_PICKER_COLORS.map(c => (
-                                    <button key={c} onClick={e => { e.stopPropagation(); onColorChange(es.crn, c); }}
-                                        style={{ width:18, height:18, borderRadius:"50%", background:c, border: c === color ? "2px solid var(--text)" : "2px solid transparent", cursor:"pointer", padding:0, outline:"none", flexShrink:0 }} />
-                                ))}
-                                {/* Custom color — native OS picker */}
-                                <label title="Custom color" style={{ width:18, height:18, borderRadius:"50%", border:"2px dashed var(--text3)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", position:"relative", flexShrink:0 }}>
-                                    <span style={{ fontSize:12, color:"var(--text3)", lineHeight:1, pointerEvents:"none" }}>+</span>
-                                    <input type="color" value={color} onChange={e => onColorChange(es.crn, e.target.value)}
-                                        style={{ position:"absolute", opacity:0, width:"100%", height:"100%", cursor:"pointer", top:0, left:0 }} />
-                                </label>
-                            </div>
-                        )}
                     </div>
                 );
             })}
@@ -1081,7 +1047,7 @@ function CoursesPanel({ enrolledSections, courseColorOverrides, onColorChange, d
     );
 }
 
-export default function StudyPlanner({ enrolledSections = [], semester = "" }) {
+export default function StudyPlanner({ enrolledSections = [], semester = "", onNavigate }) {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [weekBlocks, setWeekBlocks] = useState({});
     const [availability, setAvailability] = useState({});
@@ -1150,15 +1116,15 @@ export default function StudyPlanner({ enrolledSections = [], semester = "" }) {
             }, 5000),
         };
     }, [clearUndo, restoreSection]);
-    const [courseColorOverrides, setCourseColorOverrides] = useState(() => {
-        try { return JSON.parse(localStorage.getItem("kk_course_section_colors") || "{}"); } catch { return {}; }
+    const [globalCourseColors, setGlobalCourseColors] = useState(() => {
+        try { return JSON.parse(localStorage.getItem("kk_course_colors") || "{}"); } catch { return {}; }
     });
-    const setCourseColor = useCallback((crn, color) => {
-        setCourseColorOverrides(prev => {
-            const next = { ...prev, [crn]: color };
-            localStorage.setItem("kk_course_section_colors", JSON.stringify(next));
-            return next;
-        });
+    useEffect(() => {
+        const handler = () => {
+            try { setGlobalCourseColors(JSON.parse(localStorage.getItem("kk_course_colors") || "{}")); } catch {}
+        };
+        window.addEventListener("kk_course_colors_changed", handler);
+        return () => window.removeEventListener("kk_course_colors_changed", handler);
     }, []);
 
     const calBodyRef = useCallback((el) => {
@@ -1182,14 +1148,14 @@ export default function StudyPlanner({ enrolledSections = [], semester = "" }) {
     const courseBlocksPerDay = useMemo(() => {
         const map = {};
         enrolledSections.forEach((es, idx) => {
-            const color = courseColorOverrides[es.crn] || COURSE_COLORS[idx % COURSE_COLORS.length];
+            const color = globalCourseColors[es.courseCode] || COURSE_COLORS[idx % COURSE_COLORS.length];
             getSectionTimeSlots(es.section).forEach(({ dayKey, startHour, endHour }) => {
                 if (!map[dayKey]) map[dayKey] = [];
                 map[dayKey].push({ startHour, endHour, courseCode: es.courseCode, sectionNumber: es.sectionNumber, color, crn: es.crn });
             });
         });
         return map;
-    }, [enrolledSections, courseColorOverrides]);
+    }, [enrolledSections, globalCourseColors]);
 
     const showToast = useCallback((msg, type = "info") => {
         setToast({ msg, type });
@@ -2619,8 +2585,9 @@ export default function StudyPlanner({ enrolledSections = [], semester = "" }) {
                 </div>
 
                 {slotCount === 0 && !loading && (
-                    <div style={{ background: "var(--surface2)", borderBottom: "1px solid var(--border)", padding: "9px 16px", fontSize: 12, color: "var(--text2)", flexShrink: 0 }}>
-                        No availability slots set. Go to <strong>Profile → Default Schedule</strong> to mark your free time so a plan can be generated.
+                    <div style={{ background: "var(--surface2)", borderBottom: "1px solid var(--border)", padding: "9px 16px", fontSize: 12, color: "var(--text2)", flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
+                        <span>No availability slots set. Mark your free time so a plan can be generated.</span>
+                        {onNavigate && <button onClick={() => { localStorage.setItem("kk_profile_jump_section", "schedule"); onNavigate("profile"); }} style={{ marginLeft: "auto", fontSize: 11, fontWeight: 600, color: "var(--primary)", background: "none", border: "1px solid var(--primary)", borderRadius: 7, padding: "3px 10px", cursor: "pointer", whiteSpace: "nowrap", fontFamily: "'DM Sans',sans-serif" }}>Go to Default Schedule →</button>}
                     </div>
                 )}
 
@@ -2687,6 +2654,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "" }) {
                                     isPastWeek={weekDates.every(d => { const c = new Date(d); c.setHours(0,0,0,0); const t = new Date(); t.setHours(0,0,0,0); return c < t; })}
                                     entriesLoading={entriesLoading}
                                     onCarryOver={handleCarryOver}
+                                    onNavigate={onNavigate}
                                 />
                             </div>
                             <div style={{ display: activePanel === "slots" ? "contents" : "none" }}>
@@ -2699,8 +2667,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "" }) {
                             <div style={{ display: activePanel === "courses" ? "contents" : "none" }}>
                                 <CoursesPanel
                                     enrolledSections={enrolledSections}
-                                    courseColorOverrides={courseColorOverrides}
-                                    onColorChange={setCourseColor}
+                                    globalCourseColors={globalCourseColors}
                                     dismissedSections={dismissedSections}
                                     onRestore={restoreSection}
                                     weekDateStrings={weekDates.map(toLocalDateString)}

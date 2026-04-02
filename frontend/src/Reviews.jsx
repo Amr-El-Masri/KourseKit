@@ -15,6 +15,55 @@ const ANON_NAMES = [
 ];
 const randomAnon = () => ANON_NAMES[Math.floor(Math.random() * ANON_NAMES.length)];
 
+function RatingStats({ reviews }) {
+  if (!reviews || reviews.length === 0) return null;
+  const avg = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
+  const counts = [5,4,3,2,1].map(star => ({
+    star,
+    count: reviews.filter(r => r.rating === star).length,
+  }));
+  return (
+    <div style={{
+      display:"flex", alignItems:"center", gap:24, flexWrap:"wrap",
+      background:"var(--surface2)", borderRadius:14, padding:"16px 20px",
+      marginBottom:20, border:"1px solid var(--border)",
+    }}>
+      {/* Average + stars */}
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4, minWidth:60 }}>
+        <div style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:2 }}>
+          Avg. Rating
+        </div>
+        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:36, color:"var(--primary)", lineHeight:1 }}>
+          {avg}
+        </div>
+        <div style={{ display:"inline-flex", gap:2 }}>
+          {[1,2,3,4,5].map(i => (
+            <span key={i} style={{ color: i <= Math.round(avg) ? "#f5a623" : "var(--border)", fontSize:14 }}>★</span>
+          ))}
+        </div>
+        <div style={{ fontSize:11, color:"var(--text3)" }}>{reviews.length} review{reviews.length !== 1 ? "s" : ""}</div>
+      </div>
+
+      {/* Bar breakdown */}
+      <div style={{ flex:1, minWidth:160, display:"flex", flexDirection:"column", gap:5 }}>
+        {counts.map(({ star, count }) => {
+          const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+          return (
+            <div key={star} style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ fontSize:11, color:"var(--text3)", width:10, textAlign:"right" }}>{star}</span>
+              <span style={{ color:"#f5a623", fontSize:11 }}>★</span>
+              <div style={{ flex:1, height:6, background:"var(--border)", borderRadius:4, overflow:"hidden" }}>
+                <div style={{ width:`${pct}%`, height:"100%", background:"#f5a623", borderRadius:4, transition:"width 0.4s ease" }} />
+              </div>
+              <span style={{ fontSize:11, color:"var(--text3)", width:18, textAlign:"right" }}>{count}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const timeAgo = ts => {
   const s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
   if (s < 60)    return "just now";
@@ -348,7 +397,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
 
       {!preselectedCourse && (
         <>
-          <label style={rv.label}>Search for a Course</label>
+          <label style={rv.label}>Select a Course</label>
           <CourseSearch onSelect={selectCourse} />
         </>
       )}
@@ -359,7 +408,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
             Selected: <strong style={{ color:"var(--accent)" }}>{selectedCourse.courseCode}</strong> — {selectedCourse.title}
           </div>
 
-          <label style={rv.label}>Select Section</label>
+          <label style={rv.label}>Select a Section</label>
           <div style={{ position:"relative", marginBottom:16 }}>
             <button type="button" onClick={() => setSectionDropOpen(o => !o)} style={{
               width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10,
@@ -368,8 +417,8 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
               textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between",
             }}>
               {selectedSection
-                ? (() => { const s = sections.find(s => String(s.id) === String(selectedSection)); return s ? `Section ${s.sectionNumber} — ${s.professorName}` : "— pick a section —"; })()
-                : "— pick a section —"}
+                ? (() => { const s = sections.find(s => String(s.id) === String(selectedSection)); return s ? `Section ${s.sectionNumber} — ${s.professorName}` : "Select a section…"; })()
+                : "Select a section…"}
               <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: sectionDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
             </button>
             {sectionDropOpen && (
@@ -380,7 +429,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
                     transition:"background .15s",
                     background: !selectedSection ? "var(--divider)" : "transparent",
                     color: !selectedSection ? "var(--accent)" : "var(--primary)" }}>
-                  — pick a section —
+                  Select a section…
                 </div>
                 {sections.map(s => (
                   <div key={s.id} onClick={() => { setSelectedSection(s.id); setSectionDropOpen(false); }}
@@ -404,7 +453,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
           <label style={rv.label}>Your Review</label>
           <textarea
             value={comment} onChange={e => { setComment(e.target.value); setErr(""); }}
-            placeholder="Share your honest experience..."
+            placeholder="Share your honest experience…"
             rows={4}
             style={{ ...rv.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
           />
@@ -422,17 +471,33 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
   );
 }
 
-export default function Reviews({ initialCourse, onNavigateToForum }) {
+export default function Reviews({ onNavigateToForum }) {
   const token = localStorage.getItem("kk_token");
   const userEmail = localStorage.getItem("kk_email");
   const [detailsCourse, setDetailsCourse] = useState(null);
-  const [tab, setTab] = useState("course");
+  const [tab, setTab] = useState(() => {
+    try { return sessionStorage.getItem("kk_reviews_tab") || "course"; } catch { return "course"; }
+  });
   const [reviews,   setReviews]   = useState([]);
   const [loading,   setLoading]   = useState(false);
   const [sort,      setSort]      = useState("new");
   const [search,    setSearch]    = useState("");
   const [composing, setComposing] = useState(false);
-  const [activeCourse, setActiveCourse] = useState(null);
+  const [activeCourse, setActiveCourse] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem("kk_reviews_course") || "null"); } catch { return null; }
+  });
+
+  const [recentReviews,  setRecentReviews]  = useState([]);
+  const [recentLoading,  setRecentLoading]  = useState(false);
+
+  useEffect(() => {
+      setRecentLoading(true);
+      fetch(`${API}/api/reviews/recent?limit=8`)
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setRecentReviews(data); })
+        .catch(() => {})
+        .finally(() => setRecentLoading(false));
+  }, []);
 
   const loadReviews = useCallback(async (courseId) => {
     setLoading(true);
@@ -444,10 +509,23 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
     finally { setLoading(false); }
   }, []);
 
+
+  useEffect(() => {
+    if (activeCourse) loadReviews(activeCourse.id);
+  }, []);
+
   const selectCourse = (course) => {
     setActiveCourse(course);
     loadReviews(course.id);
     setComposing(false);
+    sessionStorage.setItem("kk_reviews_course", JSON.stringify(course));
+  };
+
+  const clearCourse = () => {
+    setActiveCourse(null);
+    setReviews([]);
+    setComposing(false);
+    sessionStorage.removeItem("kk_reviews_course");
   };
 
   let displayed = reviews
@@ -475,8 +553,9 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
         {[
           { id:"course",    label:"Course Reviews"    },
           { id:"professor", label:"Professor Reviews" },
+          ...(token ? [{ id:"mine", label:"My Reviews" }] : []),
         ].map(t => (
-          <button key={t.id} className="kk-tab" data-active={tab===t.id} onClick={() => setTab(t.id)} style={{
+          <button key={t.id} className="kk-tab" data-active={tab===t.id} onClick={() => { setTab(t.id); sessionStorage.setItem("kk_reviews_tab", t.id); }} style={{
             padding:"8px 18px", borderRadius:9, fontSize:13,
             fontWeight: tab===t.id ? 600 : 400,
             cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
@@ -490,13 +569,21 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
       </div>
 
       {tab === "professor" && <ProfessorReviewsTab token={token} userEmail={userEmail} onNavigateToForum={onNavigateToForum} />}
+      {tab === "mine" && <MyReviewsTab token={token} userEmail={userEmail} />}
 
       {tab === "course" && <>
-      {/* Course search to browse reviews */}
-      <div style={{ marginBottom:20 }}>
-        <label style={{ ...rv.label, fontSize:13, fontWeight:400, color:"var(--text2)" }}>Browse reviews by course</label>
-        <CourseSearch onSelect={selectCourse} />
-      </div>
+      {/* Course search or back button */}
+      {!activeCourse ? (
+        <div style={{ marginBottom:20 }}>
+          <label style={{ ...rv.label, fontSize:13, fontWeight:400, color:"var(--text2)" }}>Browse reviews by course</label>
+          <CourseSearch onSelect={selectCourse} />
+          <p style={{ fontSize:12, color:"var(--text3)", marginTop:6 }}>Search for any course to read and write student reviews.</p>
+        </div>
+      ) : (
+        <button onClick={clearCourse} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"var(--text2)", fontSize:13, fontWeight:600, cursor:"pointer", padding:"0 0 20px", fontFamily:"'DM Sans',sans-serif" }}>
+          ← Back to search
+        </button>
+      )}
 
       {activeCourse && (
         <>
@@ -576,6 +663,7 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
       )}
 
       {loading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading reviews…</div>}
+      {!loading && activeCourse && reviews.length > 0 && <RatingStats reviews={reviews} />}
 
       {!loading && activeCourse && displayed.length === 0 && !composing && (
         <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
@@ -585,12 +673,33 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
         </div>
       )}
 
-      {!loading && !activeCourse && (
-        <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
-          <div style={{ fontSize:40, marginBottom:12 }}></div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>Search for a course above</div>
-          <div style={{ fontSize:13, marginTop:6 }}>to view or submit reviews</div>
-        </div>
+      {!activeCourse && (
+          <>
+            <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>
+              Recent Course Reviews
+            </div>
+            {recentLoading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
+            {!recentLoading && recentReviews.length === 0 && (
+              <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+                <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>No reviews yet</div>
+                <div style={{ fontSize:13, marginTop:6 }}>Search for a course above to be the first!</div>
+              </div>
+            )}
+            {!recentLoading && recentReviews.length > 0 && (
+              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                {recentReviews.map(r => (
+                  <div key={r.id}>
+                    {r.section?.course && (
+                      <div style={{ fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>
+                        {r.section.course.courseCode} — {r.section.course.title}
+                      </div>
+                    )}
+                    <ReviewCard review={r} token={token} userEmail={userEmail} reviewType="course" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
       )}
 
       {!loading && displayed.length > 0 && (
@@ -712,7 +821,7 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
       </div>
       <label style={rv.label}>Your Review</label>
       <textarea value={comment} onChange={e => { setComment(e.target.value); setErr(""); }}
-        placeholder="Share your honest experience with this professor..."
+        placeholder="Share your honest experience with this professor…"
         rows={4}
         style={{ ...rv.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
       />
@@ -727,6 +836,124 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
   );
 }
 
+function MyReviewsTab({ token, userEmail }) {
+  const [courseReviews,    setCourseReviews]    = useState([]);
+  const [profReviews,      setProfReviews]      = useState([]);
+  const [loading,          setLoading]          = useState(false);
+
+  useEffect(() => {
+    if (!token || !userEmail) return;
+    setLoading(true);
+    const headers = { "Authorization": `Bearer ${token}` };
+    Promise.all([
+      fetch(`${API}/api/reviews/my?userId=${encodeURIComponent(userEmail)}`, { headers }).then(r => r.json()),
+      fetch(`${API}/api/professor-reviews/my?userId=${encodeURIComponent(userEmail)}`, { headers }).then(r => r.json()),
+    ])
+      .then(([cr, pr]) => {
+        setCourseReviews(Array.isArray(cr) ? cr : []);
+        setProfReviews(Array.isArray(pr) ? pr : []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [token, userEmail]);
+
+  const STATUS_STYLE = {
+    APPROVED: { bg:"#eef7f0", color:"#2d7a4a", label:"Approved"  },
+    PENDING:  { bg:"#fff8ec", color:"#b7680a", label:"Pending moderation" },
+    FLAGGED:  { bg:"#fef0f0", color:"#c0392b", label:"Flagged"   },
+  };
+
+  const StatusBadge = ({ status }) => {
+    const s = STATUS_STYLE[status] || STATUS_STYLE.PENDING;
+    return (
+      <span style={{ fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:6, background:s.bg, color:s.color }}>
+        {s.label}
+      </span>
+    );
+  };
+
+  const ReviewRow = ({ review, type }) => {
+    const label = type === "course"
+      ? `${review.section?.course?.courseCode || ""} — Section ${review.section?.sectionNumber || ""}, ${review.section?.professorName || ""}`
+      : review.professorName || "";
+    return (
+      <div style={{
+        background:"var(--surface)", border:"1px solid var(--border)",
+        borderRadius:14, padding:"16px 20px",
+        boxShadow:"0 2px 8px rgba(49,72,122,0.06)",
+        opacity: review.status === "FLAGGED" ? 0.7 : 1,
+      }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:10 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+            <span style={{ fontSize:12, fontWeight:700, color:"var(--primary)" }}>{label}</span>
+            <span style={{ fontSize:11, color:"var(--text3)" }}>· {timeAgo(review.createdAt)}</span>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ display:"inline-flex", gap:2 }}>
+              {[1,2,3,4,5].map(i => (
+                <span key={i} style={{ color: i <= review.rating ? "#f5a623" : "var(--border)", fontSize:14 }}>★</span>
+              ))}
+            </span>
+            <StatusBadge status={review.status} />
+          </div>
+        </div>
+        <p style={{ fontSize:14, color:"var(--text)", lineHeight:1.65, margin:0 }}>{review.comment}</p>
+        {review.status === "PENDING" && (
+          <div style={{ fontSize:12, color:"#b7680a", marginTop:10 }}>
+            Your review is awaiting moderator approval and is not yet visible to others.
+          </div>
+        )}
+        {review.status === "FLAGGED" && (
+          <div style={{ fontSize:12, color:"#c0392b", marginTop:10 }}>
+            Your review has been flagged and is under review by an admin.
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (loading) return <div style={{ textAlign:"center", padding:60, color:"var(--text3)" }}>Loading your reviews…</div>;
+
+  const total = courseReviews.length + profReviews.length;
+
+  if (total === 0) return (
+    <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+      <Inbox size={40} color="var(--text3)" style={{ marginBottom:12 }} />
+      <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)", marginBottom:6 }}>
+        No reviews yet
+      </div>
+      <div style={{ fontSize:13 }}>Your submitted reviews will appear here.</div>
+    </div>
+  );
+
+  return (
+    <div>
+      {courseReviews.length > 0 && (
+        <>
+          <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>
+            Course Reviews ({courseReviews.length})
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:28 }}>
+            {[...courseReviews].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+              .map(r => <ReviewRow key={r.id} review={r} type="course" />)}
+          </div>
+        </>
+      )}
+      {profReviews.length > 0 && (
+        <>
+          <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>
+            Professor Reviews ({profReviews.length})
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            {[...profReviews].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+              .map(r => <ReviewRow key={r.id} review={r} type="professor" />)}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
   const [selected,  setSelected]  = useState(null);
   const [reviews,   setReviews]   = useState([]);
@@ -734,6 +961,17 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
   const [composing, setComposing] = useState(false);
   const [sort,      setSort]      = useState("new");
   const [search,    setSearch]    = useState("");
+  const [recentReviews, setRecentReviews] = useState([]);
+  const [recentLoading, setRecentLoading] = useState(false);
+
+  useEffect(() => {
+      setRecentLoading(true);
+      fetch(`${API}/api/professor-reviews/recent?limit=8`)
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setRecentReviews(data); })
+        .catch(() => {})
+        .finally(() => setRecentLoading(false));
+  }, []);
 
   const selectProfessor = async (name) => {
     setSelected(name);
@@ -812,6 +1050,7 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
           )}
 
           {loading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading reviews…</div>}
+          {!loading && reviews.length > 0 && <RatingStats reviews={reviews} />}
 
           {!loading && displayed.length === 0 && !composing && (
             <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
@@ -830,11 +1069,30 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
       )}
 
       {!selected && (
-        <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
-          <div style={{ fontSize:40, marginBottom:12 }}></div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>Search for a professor above</div>
-          <div style={{ fontSize:13, marginTop:6 }}>to view or submit reviews</div>
-        </div>
+          <>
+            <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>
+              Recent Professor Reviews
+            </div>
+            {recentLoading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
+            {!recentLoading && recentReviews.length === 0 && (
+              <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+                <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>No reviews yet</div>
+                <div style={{ fontSize:13, marginTop:6 }}>Search for a professor above to be the first!</div>
+              </div>
+            )}
+            {!recentLoading && recentReviews.length > 0 && (
+              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                {recentReviews.map(r => (
+                  <div key={r.id}>
+                    <div style={{ fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>
+                      {r.professorName}
+                    </div>
+                    <ReviewCard review={r} token={token} userEmail={userEmail} reviewType="professor" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
       )}
     </div>
   );
@@ -843,7 +1101,7 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
 const rv = {
   card: {
     display:"flex", gap:14, background:"var(--surface)", borderRadius:16, padding:"18px 20px",
-    border:"1px solid var(--border)", boxShadow:"0 2px 10px rgba(49,72,122,0.06)",
+    border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)",
   },
   composeCard: {
     background:"var(--surface)", borderRadius:18, padding:"24px 26px",
@@ -857,6 +1115,6 @@ const rv = {
   },
   label:     { display:"block", fontSize:12, fontWeight:600, color:"var(--text)", marginBottom:6 },
   input:     { width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", marginBottom:16, display:"block" },
-  submitBtn: { padding:"10px 24px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
-  cancelBtn: { padding:"10px 18px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  submitBtn: { padding:"10px 22px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1.5px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  cancelBtn: { padding:"8px 16px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
 };
