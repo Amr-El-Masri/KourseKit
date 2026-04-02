@@ -90,8 +90,8 @@ function StudyGroupCard({ group, onJoin, isMyGroup }) {
   return (
     <div className="sg-card" style={{
       background: "var(--surface)", border: "1px solid var(--border)",
-      borderRadius: 16, padding: "16px 18px",
-      boxShadow: "0 2px 14px rgba(49,72,122,0.07)",
+      borderRadius: 14, padding: "16px 18px",
+      boxShadow: "0 2px 10px rgba(49,72,122,0.06)",
       display: "flex", flexDirection: "column", gap: 10,
     }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
@@ -126,18 +126,17 @@ function StudyGroupCard({ group, onJoin, isMyGroup }) {
       {!isMyGroup && (
         <button
           onClick={handleJoin}
-          disabled={joining || group.memberCount >= group.maxMembers}
+          disabled={joining}
           style={{
             marginTop: 4,
             display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-            padding: "8px 0", borderRadius: 9,
-            border: group.memberCount >= group.maxMembers ? "1px solid var(--border)" : "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
-            background: group.memberCount >= group.maxMembers ? "var(--surface2)" : "color-mix(in srgb, var(--primary) 15%, transparent)",
-            color: group.memberCount >= group.maxMembers ? "var(--text2)" : "var(--primary)",
+            padding: "8px 0", borderRadius: 9, border: "none",
+            background: group.memberCount >= group.maxMembers ? "var(--border)" : "var(--primary)",
+            color: group.memberCount >= group.maxMembers ? "var(--text2)" : "#fff",
             fontSize: 13, fontWeight: 600, cursor: group.memberCount >= group.maxMembers ? "not-allowed" : "pointer",
             fontFamily: "'DM Sans',sans-serif",
             opacity: joining ? 0.7 : 1,
-            transition: "background 0.15s",
+            transition: "opacity 0.15s",
           }}
         >
           {joining ? "Joining…" : group.memberCount >= group.maxMembers ? "Full" : <><ArrowRight size={14} /> Join Group</>}
@@ -166,8 +165,8 @@ function MyGroupCard({ group, onOpen }) {
   return (
     <div className="sg-card" style={{
       background: "var(--surface)", border: "1px solid var(--border)",
-      borderRadius: 16, padding: "16px 18px",
-      boxShadow: "0 2px 14px rgba(49,72,122,0.07)",
+      borderRadius: 14, padding: "16px 18px",
+      boxShadow: "0 2px 10px rgba(49,72,122,0.06)",
       display: "flex", flexDirection: "column", gap: 10,
     }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
@@ -214,7 +213,7 @@ function MyGroupCard({ group, onOpen }) {
         </div>
       )}
 
-      <button className="kk-pill"
+      <button
         onClick={() => onOpen(group)}
         style={{
           marginTop: 2,
@@ -222,7 +221,7 @@ function MyGroupCard({ group, onOpen }) {
           padding: "8px 0", borderRadius: 9, border: "1px solid var(--border)",
           background: "var(--surface2)", color: "var(--primary)",
           fontSize: 13, fontWeight: 600, cursor: "pointer",
-          fontFamily: "'DM Sans',sans-serif", transition: "all .15s",
+          fontFamily: "'DM Sans',sans-serif",
         }}
       >
         Open Group <ArrowRight size={14} />
@@ -281,7 +280,7 @@ function CreateGroupModal({ courses, onClose, onCreated }) {
 
           <div>
             <div style={labelStyle}>Course</div>
-            <select className="sg-select" value={courseId} onChange={e => setCourseId(e.target.value)} style={inputStyle}>
+            <select value={courseId} onChange={e => setCourseId(e.target.value)} style={inputStyle}>
               {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
@@ -322,13 +321,11 @@ function CreateGroupModal({ courses, onClose, onCreated }) {
             onClick={handleSubmit}
             disabled={loading}
             style={{
-              marginTop: 4, padding: "11px 0", borderRadius: 10,
-              border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
-              background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)",
+              marginTop: 4, padding: "11px 0", borderRadius: 10, border: "none",
+              background: "var(--primary)", color: "#fff",
               fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer",
               fontFamily: "'DM Sans',sans-serif", opacity: loading ? 0.7 : 1,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              transition: "background .15s",
             }}
           >
             {loading ? "Creating…" : <><Plus size={15} /> Create Group</>}
@@ -386,12 +383,10 @@ function JoinPrivateModal({ onClose, onJoined }) {
           onClick={handleJoin}
           disabled={loading}
           style={{
-            marginTop: 8, width: "100%", padding: "11px 0", borderRadius: 10,
-            border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
-            background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)",
+            marginTop: 8, width: "100%", padding: "11px 0", borderRadius: 10, border: "none",
+            background: "var(--primary)", color: "#fff",
             fontSize: 14, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer",
             fontFamily: "'DM Sans',sans-serif", opacity: loading ? 0.7 : 1,
-            transition: "background .15s",
           }}
         >
           {loading ? "Joining…" : "Join Group"}
@@ -403,11 +398,10 @@ function JoinPrivateModal({ onClose, onJoined }) {
 
 const inputStyle = {
   width: "100%", boxSizing: "border-box",
-  border: "1px solid var(--border)", borderRadius: 10,
-  padding: "10px 14px", fontSize: 13,
+  border: "1px solid var(--border)", borderRadius: 9,
+  padding: "9px 12px", fontSize: 13,
   background: "var(--surface2)", color: "var(--text)",
   fontFamily: "'DM Sans',sans-serif", outline: "none",
-  transition: "border-color .15s",
 };
 
 const labelStyle = {
@@ -415,25 +409,18 @@ const labelStyle = {
   textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6,
 };
 
-export default function StudyGroupFinder({ courses = [], onNavigate }) {
+export default function StudyGroupFinder({ courses = [] }) {
   const [tab,             setTab]             = useState("find");    
   const [publicGroups,    setPublicGroups]    = useState([]);
   const [myGroups,        setMyGroups]        = useState([]);
-  const [selectedCourse,  setSelectedCourse]  = useState(() => {
-    try {
-      const last = JSON.parse(localStorage.getItem("kk_last_course") || "null");
-      const match = last && courses.find(c => c.id === last.courseCode);
-      return match ? match.id : (courses[0]?.id?.toString() || null);
-    } catch { return courses[0]?.id?.toString() || null; }
-  });
+  const [selectedCourse,  setSelectedCourse]  = useState(courses[0]?.id?.toString() || null);
   const [search,          setSearch]          = useState("");
-  const [loadingPublic,   setLoadingPublic]   = useState(!!courses[0]?.id);
-  const [loadingMine,     setLoadingMine]     = useState(true);
+  const [loadingPublic,   setLoadingPublic]   = useState(false);
+  const [loadingMine,     setLoadingMine]     = useState(false);
   const [error,           setError]           = useState("");
   const [showCreate,      setShowCreate]      = useState(false);
   const [showJoinPrivate, setShowJoinPrivate] = useState(false);
   const [openGroup, setOpenGroup] = useState(null);
-  const [courseDropOpen, setCourseDropOpen] = useState(false);
 
 
   useEffect(() => {
@@ -493,17 +480,16 @@ export default function StudyGroupFinder({ courses = [], onNavigate }) {
     return <GroupRoomPage group={openGroup} onBack={() => setOpenGroup(null)} />; }
 
   return (
-    <div style={{ padding: "28px 28px 60px", fontFamily: "'DM Sans',sans-serif" }}>
+    <div style={{ padding: "28px 28px 60px", maxWidth: 960, fontFamily: "'DM Sans',sans-serif" }}>
       <style>{`
         @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
         @keyframes spin { to { transform: rotate(360deg); } }
         .sg-card { animation: fadeUp 0.32s ease both; transition: box-shadow 0.2s; }
         .sg-card:hover { box-shadow: 0 6px 24px rgba(49,72,122,0.13) !important; }
-        .sg-tab:hover:not([data-active="true"]) { background: var(--surface3) !important; }
-        .sg-select { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='16' viewBox='0 0 10 16' fill='none'%3E%3Cpolyline points='1,6 5,2 9,6' stroke='%238899aa' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpolyline points='1,10 5,14 9,10' stroke='%238899aa' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 34px !important; }
+        .sg-tab:hover { background: var(--surface2) !important; }
       `}</style>
 
-      <div style={{ marginBottom: 28 }}>
+      <div style={{ marginBottom: 24 }}>
         <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 26, color: "var(--primary)", marginBottom: 4 }}>
           Study Groups
         </div>
@@ -513,20 +499,19 @@ export default function StudyGroupFinder({ courses = [], onNavigate }) {
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
-        <button className="kk-pill"
+        <button
           onClick={() => setShowCreate(true)}
           style={{
             display: "flex", alignItems: "center", gap: 6,
-            padding: "9px 18px", borderRadius: 10,
-            border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)",
-            background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)",
+            padding: "9px 18px", borderRadius: 10, border: "none",
+            background: "var(--primary)", color: "#fff",
             fontSize: 13, fontWeight: 600, cursor: "pointer",
-            fontFamily: "'DM Sans',sans-serif", transition: "all .15s",
+            fontFamily: "'DM Sans',sans-serif",
           }}
         >
           <Plus size={15} /> Host a Group
         </button>
-        <button className="kk-pill"
+        <button
           onClick={() => setShowJoinPrivate(true)}
           style={{
             display: "flex", alignItems: "center", gap: 6,
@@ -534,31 +519,30 @@ export default function StudyGroupFinder({ courses = [], onNavigate }) {
             border: "1px solid var(--border)",
             background: "var(--surface)", color: "var(--primary)",
             fontSize: 13, fontWeight: 600, cursor: "pointer",
-            fontFamily: "'DM Sans',sans-serif", transition: "all .15s",
+            fontFamily: "'DM Sans',sans-serif",
           }}
         >
           <Lock size={13} /> Enter Invite Code
         </button>
       </div>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 24, width: "fit-content" }}>
+      <div style={{ display: "flex", gap: 4, marginBottom: 24, background: "var(--surface2)", borderRadius: 12, padding: 4, width: "fit-content" }}>
         {[
           { id: "find", label: "Find Groups" },
           { id: "mine", label: `My Groups${myGroups.length > 0 ? ` (${myGroups.length})` : ""}` },
         ].map(t => (
           <button
             key={t.id}
-            className="sg-tab kk-tab"
-            data-active={tab === t.id}
+            className="sg-tab"
             onClick={() => setTab(t.id)}
             style={{
-              padding: "8px 18px", borderRadius: 9,
-              background: tab === t.id ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
+              padding: "8px 20px", borderRadius: 9, border: "none",
+              background: tab === t.id ? "var(--surface)" : "transparent",
               color: tab === t.id ? "var(--primary)" : "var(--text2)",
-              border: tab === t.id ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
               fontWeight: tab === t.id ? 600 : 400,
               fontSize: 13, cursor: "pointer",
               fontFamily: "'DM Sans',sans-serif",
+              boxShadow: tab === t.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
               transition: "all 0.15s",
             }}
           >
@@ -569,44 +553,17 @@ export default function StudyGroupFinder({ courses = [], onNavigate }) {
 
       <ErrorBanner message={error} onDismiss={() => setError("")} />
 
-      {courses.length === 0 && onNavigate && (
-        <div style={{ display:"flex", alignItems:"center", gap:10, background:"color-mix(in srgb, var(--primary) 8%, var(--surface))", border:"1px solid var(--border)", borderRadius:10, padding:"10px 14px", marginBottom:16 }}>
-          <span style={{ fontSize:13, color:"var(--text2)" }}>Add your courses in My Semesters to find study groups.</span>
-          <button onClick={() => onNavigate("profile")} style={{ marginLeft:"auto", fontSize:12, fontWeight:600, color:"var(--primary)", background:"none", border:"1px solid var(--primary)", borderRadius:7, padding:"4px 10px", cursor:"pointer", whiteSpace:"nowrap", fontFamily:"'DM Sans',sans-serif" }}>Go to My Semesters →</button>
-        </div>
-      )}
-
       {tab === "find" && (
         <div>
-          <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
-            <div style={{ position: "relative", minWidth: 200, width: "auto" }}>
-              <button className="kk-select" onClick={() => setCourseDropOpen(o => !o)} style={{
-                padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 6, width: "100%", justifyContent: "space-between",
-                background: "var(--surface2)", border: "1px solid var(--border)",
-                color: selectedCourse ? "var(--text)" : "var(--text3)",
-                fontFamily: "'DM Sans',sans-serif", transition: "background .15s, border-color .15s",
-              }}>
-                {courses.find(c => c.id === selectedCourse)?.name || "Select course"}
-                <span style={{ fontSize: 7, opacity: 0.6, display: "inline-block", transform: courseDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s" }}>▼</span>
-              </button>
-              {courseDropOpen && (
-                <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: "var(--surface)", borderRadius: 12, boxShadow: "0 8px 32px rgba(49,72,122,0.15)", border: "1px solid var(--border)", zIndex: 200, padding: 6, minWidth: "100%", maxHeight: 220, overflowY: "auto" }}>
-                  {courses.length === 0
-                    ? <div style={{ padding: "9px 14px", fontSize: 13, color: "var(--text3)" }}>No courses found.</div>
-                    : courses.map(c => (
-                      <div key={c.id} className="kk-option" onClick={() => { setSelectedCourse(c.id); setCourseDropOpen(false); localStorage.setItem("kk_last_course", JSON.stringify({ courseCode: c.id })); }}
-                        style={{ padding: "9px 14px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600,
-                          background: selectedCourse === c.id ? "var(--divider)" : "transparent",
-                          color: selectedCourse === c.id ? "var(--accent)" : "var(--primary)",
-                          transition: "background .15s" }}>
-                        {c.name}
-                      </div>
-                    ))
-                  }
-                </div>
-              )}
-            </div>
+          <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+            <select
+              value={selectedCourse || ""}
+              onChange={e => setSelectedCourse(e.target.value)}
+              style={{ ...inputStyle, width: "auto", minWidth: 180 }}
+            >
+              {courses.length === 0 && <option value="">No courses found</option>}
+              {courses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
 
             <div style={{ position: "relative", flex: 1, minWidth: 180 }}>
               <Search size={14} style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)", color: "var(--text3)" }} />

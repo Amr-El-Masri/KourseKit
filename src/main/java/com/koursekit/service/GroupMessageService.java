@@ -71,17 +71,11 @@ public class GroupMessageService {
             Map<String, List<Long>> reactions = (msg.getReactionsJson() != null && !msg.getReactionsJson().isBlank())
                 ? objectMapper.readValue(msg.getReactionsJson(), new TypeReference<>() {})
                 : new HashMap<>();
+            reactions.forEach((key, users) -> users.remove(userId));
             List<Long> users = reactions.getOrDefault(emoji, new ArrayList<>());
-            if (users.contains(userId)) {
-                users.remove(userId);  // toggle OFF
-            } else {
-                users.add(userId);     // toggle ON
-            }
-            if (users.isEmpty()) {
-                reactions.remove(emoji);
-            } else {
-                reactions.put(emoji, users);
-            }
+            if (!users.contains(userId)) users.add(userId);
+            reactions.put(emoji, users);
+            reactions.entrySet().removeIf(e -> e.getValue().isEmpty());
             msg.setReactionsJson(objectMapper.writeValueAsString(reactions));
         } catch (Exception e) { msg.setReactionsJson("{}"); }
         return groupMessageRepo.save(msg);
