@@ -13,4 +13,5 @@ public interface ProfessorReviewRepository extends JpaRepository<ProfessorReview
     List<ProfessorReview> findByStatus(ReviewStatus status);
     List<ProfessorReview> findByStatusIn(List<ReviewStatus> statuses);
     List<ProfessorReview> findByUserId(String userId);
+    List<ProfessorReview> findByStatusOrderByCreatedAtDesc(ReviewStatus status);
 }

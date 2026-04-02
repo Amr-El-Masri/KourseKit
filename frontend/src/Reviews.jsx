@@ -434,6 +434,18 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
   const [composing, setComposing] = useState(false);
   const [activeCourse, setActiveCourse] = useState(null);
 
+  const [recentReviews,  setRecentReviews]  = useState([]);
+  const [recentLoading,  setRecentLoading]  = useState(false);
+
+  useEffect(() => {
+      setRecentLoading(true);
+      fetch(`${API}/api/reviews/recent?limit=8`)
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setRecentReviews(data); })
+        .catch(() => {})
+        .finally(() => setRecentLoading(false));
+  }, []);
+
   const loadReviews = useCallback(async (courseId) => {
     setLoading(true);
     try {
@@ -585,12 +597,33 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
         </div>
       )}
 
-      {!loading && !activeCourse && (
-        <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
-          <div style={{ fontSize:40, marginBottom:12 }}></div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>Search for a course above</div>
-          <div style={{ fontSize:13, marginTop:6 }}>to view or submit reviews</div>
-        </div>
+      {!activeCourse && (
+          <>
+            <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>
+              Recent Course Reviews
+            </div>
+            {recentLoading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
+            {!recentLoading && recentReviews.length === 0 && (
+              <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+                <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>No reviews yet</div>
+                <div style={{ fontSize:13, marginTop:6 }}>Search for a course above to be the first!</div>
+              </div>
+            )}
+            {!recentLoading && recentReviews.length > 0 && (
+              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                {recentReviews.map(r => (
+                  <div key={r.id}>
+                    {r.section?.course && (
+                      <div style={{ fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>
+                        {r.section.course.courseCode} — {r.section.course.title}
+                      </div>
+                    )}
+                    <ReviewCard review={r} token={token} userEmail={userEmail} reviewType="course" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
       )}
 
       {!loading && displayed.length > 0 && (
@@ -734,6 +767,17 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
   const [composing, setComposing] = useState(false);
   const [sort,      setSort]      = useState("new");
   const [search,    setSearch]    = useState("");
+  const [recentReviews, setRecentReviews] = useState([]);
+  const [recentLoading, setRecentLoading] = useState(false);
+
+  useEffect(() => {
+      setRecentLoading(true);
+      fetch(`${API}/api/professor-reviews/recent?limit=8`)
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setRecentReviews(data); })
+        .catch(() => {})
+        .finally(() => setRecentLoading(false));
+  }, []);
 
   const selectProfessor = async (name) => {
     setSelected(name);
@@ -830,11 +874,30 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
       )}
 
       {!selected && (
-        <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
-          <div style={{ fontSize:40, marginBottom:12 }}></div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>Search for a professor above</div>
-          <div style={{ fontSize:13, marginTop:6 }}>to view or submit reviews</div>
-        </div>
+          <>
+            <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>
+              Recent Professor Reviews
+            </div>
+            {recentLoading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
+            {!recentLoading && recentReviews.length === 0 && (
+              <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+                <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>No reviews yet</div>
+                <div style={{ fontSize:13, marginTop:6 }}>Search for a professor above to be the first!</div>
+              </div>
+            )}
+            {!recentLoading && recentReviews.length > 0 && (
+              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                {recentReviews.map(r => (
+                  <div key={r.id}>
+                    <div style={{ fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>
+                      {r.professorName}
+                    </div>
+                    <ReviewCard review={r} token={token} userEmail={userEmail} reviewType="professor" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
       )}
     </div>
   );

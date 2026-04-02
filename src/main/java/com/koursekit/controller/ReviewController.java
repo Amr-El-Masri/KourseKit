@@ -53,4 +53,10 @@ public class ReviewController {
     public List<Review> getReviewsBySection(@PathVariable Long sectionId) {
         return reviewService.getApprovedReviewsForSection(sectionId);
     }
+
+    // GET /api/reviews/recent?limit=10
+    @GetMapping("/recent")
+    public List<Review> getRecentReviews(@RequestParam(defaultValue = "10") int limit) {
+        return reviewService.getRecentApprovedReviews(limit);
+    }
 }

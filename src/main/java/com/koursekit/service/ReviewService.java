@@ -53,4 +53,9 @@ public class ReviewService {
     public List<Review> getApprovedReviewsForSection(Long sectionId) {
         return reviewRepo.findBySectionIdAndStatusIn(sectionId, List.of(ReviewStatus.APPROVED, ReviewStatus.PENDING));
     }
+
+    public List<Review> getRecentApprovedReviews(int limit) {
+        return reviewRepo.findByStatusOrderByCreatedAtDesc(ReviewStatus.APPROVED)
+                .stream().limit(limit).collect(java.util.stream.Collectors.toList());
+    }
 }

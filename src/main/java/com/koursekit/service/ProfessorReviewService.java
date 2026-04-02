@@ -37,4 +37,9 @@ public class ProfessorReviewService {
     public List<ProfessorReview> getReviewsForProfessor(String professorName) {
         return professorReviewRepo.findByProfessorNameAndStatus(professorName, ReviewStatus.APPROVED);
     }
+
+    public List<ProfessorReview> getRecentApprovedReviews(int limit) {
+        return professorReviewRepo.findByStatusOrderByCreatedAtDesc(ReviewStatus.APPROVED)
+                .stream().limit(limit).collect(java.util.stream.Collectors.toList());
+    }
 }

@@ -34,4 +34,10 @@ public class ProfessorReviewController {
     public List<ProfessorReview> getReviews(@RequestParam String professorName) {
         return professorReviewService.getReviewsForProfessor(professorName);
     }
+
+    // GET /api/professor-reviews/recent?limit=10
+    @GetMapping("/recent")
+    public List<ProfessorReview> getRecentProfessorReviews(@RequestParam(defaultValue = "10") int limit) {
+        return professorReviewService.getRecentApprovedReviews(limit);
+    }
 }
