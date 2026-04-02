@@ -3,6 +3,7 @@ import StudentDirectoryPanel from "./StudentDirectoryPanel";
 import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle, TriangleAlert } from "lucide-react";
 import AdminDashboard from "./AdminDashboard";
 import TranscriptModal from "./TranscriptModal";
+import SyllabusModal from "./SyllabusModal";
 import StudentCourses from "./StudentCourses";
 
 function getTokenRole() {
@@ -763,6 +764,7 @@ export default function Profile({ onProfileSave, onSemestersUpdated, activeSemes
   const [syllabusUndoToast, setSyllabusUndoToast] = useState(null);
   const syllabusUndoTimerRef = useRef(null);
   const [showFollowList, setShowFollowList] = useState(null);
+  const [syllabusUploadCourse, setSyllabusUploadCourse] = useState(null); // courseCode for upload modal
   const [syllabusEditCourse, setSyllabusEditCourse] = useState(null); // courseCode being edited
   const [syllabusEditProf, setSyllabusEditProf] = useState("");
   const [syllabusEditOH, setSyllabusEditOH] = useState([]);
@@ -1586,6 +1588,63 @@ const refetchSemesters = () =>
         </div>
       )}
 
+      {/* Syllabus upload modal (from My Semesters edit) */}
+      {syllabusUploadCourse && (
+        <SyllabusModal
+          courseName={syllabusUploadCourse}
+          existingData={syllabi[syllabusUploadCourse] ? {
+            ...syllabi[syllabusUploadCourse],
+            professor: JSON.parse(localStorage.getItem("kk_course_data") || "{}")[syllabusUploadCourse]?.professor || syllabi[syllabusUploadCourse]?.professor || "",
+            officeHours: JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}")[syllabusUploadCourse] || [],
+          } : null}
+          onClose={() => setSyllabusUploadCourse(null)}
+          onApply={data => {
+            const name = syllabusUploadCourse;
+            setSyllabusUploadCourse(null);
+            if (!data) return;
+            const t = localStorage.getItem("kk_token");
+            // Save to kk_course_syllabus
+            const allSyllabi = JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}");
+            const existing = allSyllabi[name] || {};
+            const payload = {
+              ...existing,
+              assessments: data.assessments ?? existing.assessments ?? [],
+              finalExamWeight: data.finalExamWeight !== undefined ? data.finalExamWeight : (existing.finalExamWeight ?? null),
+              professor: data.professor || existing.professor || null,
+              uploaded: true,
+            };
+            allSyllabi[name] = payload;
+            localStorage.setItem("kk_course_syllabus", JSON.stringify(allSyllabi));
+            setSyllabi(allSyllabi);
+            // Save to kk_course_data (grade calculator)
+            const gcTypes = ["Midterm Exam","Final Exam","Assignment","Project","Quiz","Lab","Presentation","Attendance","Participation","Other"];
+            const inferType = n => { const l = (n||"").toLowerCase(); if(/midterm/.test(l)) return "Midterm Exam"; if(/final/.test(l)) return "Final Exam"; if(/quiz/.test(l)) return "Quiz"; if(/project/.test(l)) return "Project"; if(/lab/.test(l)) return "Lab"; if(/presentation/.test(l)) return "Presentation"; if(/^attendance$/.test(l)) return "Attendance"; if(/^participation$/.test(l)) return "Participation"; return gcTypes.find(x=>x.toLowerCase()===l)||"Other"; };
+            const dm = JSON.parse(localStorage.getItem("kk_course_data") || "{}");
+            const ex = dm[name] || {};
+            const updates = { ...ex };
+            if (data.professor) updates.professor = data.professor;
+            if (data.assessments?.length) {
+              updates.components = data.assessments.map((a, i) => { const tp = inferType(a.name); return { id: Date.now()+i, type: tp, weight: parseFloat(a.weight)||0, grade: ex.components?.find(c=>c.type===tp)?.grade ?? "", customType: tp==="Other"?(a.name||""):"" }; });
+            }
+            dm[name] = updates;
+            localStorage.setItem("kk_course_data", JSON.stringify(dm));
+            // Save office hours
+            if (data.officeHours?.length) {
+              const ohMap = JSON.parse(localStorage.getItem("kk_course_office_hours") || "{}");
+              ohMap[name] = data.officeHours;
+              localStorage.setItem("kk_course_office_hours", JSON.stringify(ohMap));
+            }
+            // Persist to backend
+            fetch(`${API}/api/user-syllabi/${encodeURIComponent(name)}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${t}` },
+              body: JSON.stringify(payload),
+            }).catch(() => {});
+            window.dispatchEvent(new Event("kk_syllabus_changed"));
+          }}
+        />
+      )}
+
       {/* Syllabus edit modal */}
       {syllabusEditCourse && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.35)", zIndex:10000, display:"flex", alignItems:"center", justifyContent:"center" }}
@@ -1846,7 +1905,7 @@ const refetchSemesters = () =>
                           </div>
                           <button onClick={() => setEditCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
                         </div>
-                        {syllabi[c.code] && (
+                        {syllabi[c.code] ? (
                           <div style={{ marginBottom:4, paddingLeft:2 }}>
                             <button onClick={() => {
                               const courseData = JSON.parse(localStorage.getItem("kk_course_data") || "{}")[c.code] || {};
@@ -1857,7 +1916,11 @@ const refetchSemesters = () =>
                             }} style={{ fontSize:11, color:"var(--primary)", background:"color-mix(in srgb,var(--primary) 12%,transparent)", border:"1px solid color-mix(in srgb,var(--primary) 25%,transparent)", borderRadius:6, cursor:"pointer", padding:"2px 8px", fontWeight:600, fontFamily:"inherit", transition:"all .15s" }} className="kk-pill">Edit syllabus info</button>
                             <button onClick={() => removeSyllabus(c.code)} style={{ fontSize:11, color:"var(--error)", background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600, marginLeft:8 }}>Remove syllabus</button>
                           </div>
-                        )}
+                        ) : c.code ? (
+                          <div style={{ marginBottom:4, paddingLeft:2 }}>
+                            <button onClick={() => setSyllabusUploadCourse(c.code)} style={{ fontSize:11, color:"var(--primary)", background:"color-mix(in srgb,var(--primary) 12%,transparent)", border:"1px solid color-mix(in srgb,var(--primary) 25%,transparent)", borderRadius:6, cursor:"pointer", padding:"2px 8px", fontWeight:600, fontFamily:"inherit", transition:"all .15s" }} className="kk-pill">+ Upload Syllabus</button>
+                          </div>
+                        ) : null}
                         {(c.components||[]).map(comp => (
                           <div key={comp.id} style={{ display:"grid", gridTemplateColumns:"1fr 32px", gap:6, marginTop:4, paddingLeft:16 }}>
                             <StudentCourses value={comp} lockedCourse={c.courseId ? { id:c.courseId, courseCode:c.code } : null} onSelect={data => { const sec = (data.sectionNumber||"").toUpperCase(); const type = sec.startsWith("BL") ? "Lab Lecture" : sec.startsWith("B") ? "Lab" : "Recitation"; setEditCourses(p => p.map(r => r.id===c.id ? {...r, components: r.components.map(x => x.id===comp.id ? {...x, code:data.code, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, type} : x)} : r)); }} filterPrefix={["B","E"]} autoOpen={!comp.sectioncrn} />
