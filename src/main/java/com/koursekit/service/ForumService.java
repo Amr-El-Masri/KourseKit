@@ -159,4 +159,8 @@ public class ForumService {
 
         return postRepo.save(post);
     }
+
+    public List<ForumPost> getPostsByUser(String userId) {
+        return postRepo.findByUserId(userId);
+    }
 }

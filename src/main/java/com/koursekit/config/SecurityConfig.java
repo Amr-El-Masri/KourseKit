@@ -40,6 +40,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/forum/**").authenticated() // must be logged in to delete
                 .requestMatchers(HttpMethod.GET, "/api/reviews/recent", "/api/professor-reviews/recent").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/reviews/my", "/api/professor-reviews/my").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/forum/my-posts").authenticated()
                 .requestMatchers("/ws/**").permitAll()
                 .anyRequest().authenticated()
             )
