@@ -19,6 +19,9 @@ public interface TaskRepository  extends JpaRepository<Task, Long> {
     @Query("SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END FROM Task t WHERE t.course = :course AND t.title = :title AND t.user.id = :userId")
     boolean existsByCourseAndTitleAndUserId(@Param("course") String course, @Param("title") String title, @Param("userId") Long userId);
 
+    @Query("SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END FROM Task t WHERE t.course = :course AND t.title = :title AND t.user.id = :userId AND t.id <> :excludeId")
+    boolean existsByCourseAndTitleAndUserIdExcluding(@Param("course") String course, @Param("title") String title, @Param("userId") Long userId, @Param("excludeId") Long excludeId);
+
     @Modifying
     @Transactional
     @Query("DELETE FROM Task t WHERE t.deadline < :now AND t.user.id = :userId " +
@@ -48,7 +51,6 @@ public interface TaskRepository  extends JpaRepository<Task, Long> {
     List<Long> findDistinctUserIdsWithExpiredTasks(@Param("now") LocalDateTime now);
 
 
-    // Do this:
     @Query("SELECT t FROM Task t WHERE t.user.id = :userId ORDER BY t.deadline ASC, t.course ASC, t.title ASC")
     List<Task> findByUserIdOrderByDeadlineAscCourseAscTitleAsc(@Param("userId") Long userId);
 

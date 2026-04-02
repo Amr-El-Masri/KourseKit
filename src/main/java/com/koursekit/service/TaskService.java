@@ -73,6 +73,13 @@ public class TaskService {
         if (!task.getUserId().equals(userId)) {
             throw new TaskNotFoundException("Task not found");
         }
+        String newTitle  = dto.title()  != null ? dto.title()  : task.getTitle();
+        String newCourse = dto.course() != null ? dto.course() : task.getCourse();
+        if (!newTitle.equals(task.getTitle()) || !newCourse.equals(task.getCourse())) {
+            if (taskRepository.existsByCourseAndTitleAndUserIdExcluding(newCourse, newTitle, userId, taskId)) {
+                throw new DuplicateTaskException("Task with same course and title already exists");
+            }
+        }
         if (dto.title() != null) task.setTitle(dto.title());
         if (dto.course() != null) task.setCourse(dto.course());
         if (dto.deadline() != null) task.setDeadline(dto.deadline());
