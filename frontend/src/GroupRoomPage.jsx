@@ -100,8 +100,9 @@ function MemberProfilePanel({ member, onClose }) {
   );
 }
 
-function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUserId }) {
-  const [showMenu, setShowMenu] = useState(false);
+function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUserId, selectedMessageId, setSelectedMessageId}) {
+  const showMenu = selectedMessageId === message.id;
+  const setShowMenu = (val) => setSelectedMessageId(val ? message.id : null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
@@ -123,7 +124,7 @@ function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUse
     } else {
       clickTimer.current = setTimeout(() => {
         clickTimer.current = null;
-        setShowMenu(v => !v);
+        setShowMenu(!showMenu);
       }, 220);
     }
   };
@@ -286,6 +287,7 @@ export default function GroupRoomPage({ group, onBack }) {
   const [viewingMember, setViewingMember] = useState(null);
   const [showReports, setShowReports] = useState(false);
   const [reports, setReports] = useState([]);
+  const [selectedMessageId, setSelectedMessageId] = useState(null);
 
   const stompClient = useRef(null);
   const messagesEndRef = useRef(null);
@@ -479,6 +481,8 @@ export default function GroupRoomPage({ group, onBack }) {
                     onReact={reactToMessage}
                     onReport={reportMessage}
                     currentUserId={currentUserId}
+                    selectedMessageId={selectedMessageId}
+                    setSelectedMessageId={setSelectedMessageId}
                 /> ))}
             <div ref={messagesEndRef} />
 
