@@ -90,8 +90,10 @@ public class TaskService {
             long hoursUntil = java.time.temporal.ChronoUnit.HOURS.between(
                     LocalDateTime.now(), saved.getDeadline());
             if (hoursUntil > 0 && hoursUntil <= 78) {
+                long hoursLeft = java.time.temporal.ChronoUnit.HOURS.between(LocalDateTime.now(), saved.getDeadline());
+                String tier = hoursLeft <= 6 ? "today" : hoursLeft <= 48 ? "tomorrow" : "3day";
                 notificationRepository.save(
-                        new com.koursekit.model.Notification(saved, "", LocalDateTime.now())
+                        new com.koursekit.model.Notification(saved, "", tier, LocalDateTime.now())
                 );
             }
         }
