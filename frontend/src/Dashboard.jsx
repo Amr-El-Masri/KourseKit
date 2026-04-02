@@ -789,6 +789,12 @@ export default function Dashboard({ onLogout }) {
     return () => window.removeEventListener("kk_syllabus_changed", refresh);
   }, []);
 
+  useEffect(() => {
+    const refresh = () => { try { setCourseColors(JSON.parse(localStorage.getItem("kk_course_colors") || "{}")); } catch {} };
+    window.addEventListener("kk_course_colors_changed", refresh);
+    return () => window.removeEventListener("kk_course_colors_changed", refresh);
+  }, []);
+
   const saveCourseOfficeHours = (courseName, hours) => {
     const next = { ...courseOfficeHours, [courseName]: hours };
     setCourseOfficeHours(next);
@@ -873,6 +879,9 @@ export default function Dashboard({ onLogout }) {
   const [schedColorMap, setSchedColorMap] = useState(() => {
     try { const s = localStorage.getItem("kk_colorMap"); return s ? JSON.parse(s) : {}; } catch { return {}; }
   });
+  const [courseColors, setCourseColors] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("kk_course_colors") || "{}"); } catch { return {}; }
+  });
   const [schedWeekOffset, setSchedWeekOffset] = useState(0);
   const [calTab, setCalTab] = useState("calendar");
   const [gradesTab, setGradesTab] = useState("grades");
@@ -925,6 +934,7 @@ export default function Dashboard({ onLogout }) {
     if (!userId) return;
     const weekStart = getWeekStartForOffset(offset);
     try { const s = localStorage.getItem("kk_colorMap"); if (s) setSchedColorMap(JSON.parse(s)); } catch {}
+    try { const s = localStorage.getItem("kk_course_colors"); if (s) setCourseColors(JSON.parse(s)); } catch {}
     fetch(`http://localhost:8080/api/study-plan/weekly?weekStart=${weekStart}`, {
       headers: { "Authorization": `Bearer ${token}` }
     }).then(r => r.json()).then(data => { if (data) setStudyBlocks(data); }).catch(() => {});
@@ -1059,11 +1069,13 @@ export default function Dashboard({ onLogout }) {
                 <button onClick={() => setActivePage("profile")} style={{fontSize:12,fontWeight:600,color:"var(--accent)",background:"none",border:"1px solid var(--border)",borderRadius:8,padding:"6px 14px",cursor:"pointer",fontFamily:"inherit"}}>Go to Profile →</button>
               </div>
             : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
-              {semCourseList.map((c, i) => (
-                <div key={c.sectioncrn ?? `${c.name}-${i}`} className="course-card" onClick={()=>setCourseDetailsTarget(c.name)} style={{...s.courseCard, border:"1px solid var(--border2)", borderLeft:"3px solid var(--primary)", cursor:"pointer"}}>
+              {semCourseList.map((c, i) => {
+                const cc = courseColors[c.name] || "var(--primary)";
+                return (
+                <div key={c.sectioncrn ?? `${c.name}-${i}`} className="course-card" onClick={()=>setCourseDetailsTarget(c.name)} style={{...s.courseCard, border:"1px solid var(--border2)", borderLeft:`3px solid ${cc}`, cursor:"pointer"}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <div>
-                      <div style={{fontWeight:700,fontSize:15,color:"var(--primary)"}}>{c.name}</div>
+                      <div style={{fontWeight:700,fontSize:15,color:cc}}>{c.name}</div>
                       {(courseData[c.name]?.professor || courseSyllabi[c.name]?.professor) && (
                         <div style={{fontSize:11,color:"var(--text2)",marginTop:2,fontWeight:500}}>{courseData[c.name]?.professor || courseSyllabi[c.name]?.professor}</div>
                       )}
@@ -1085,7 +1097,8 @@ export default function Dashboard({ onLogout }) {
                     </div>
                   )}
                 </div>
-              ))}
+              );
+              })}
             </div>
           }
         </>
@@ -1146,7 +1159,7 @@ export default function Dashboard({ onLogout }) {
           </div>
           {todoError && <div style={{fontSize:12,color:"var(--error)",marginTop:4}}>Please type a task first, then add.</div>}
           <div style={{marginTop:10,maxHeight:160,overflowY:"auto",display:"flex",flexDirection:"column",gap:5}}>
-            {todos.length===0 && <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"16px 0"}}>No tasks yet!</div>}
+            {todos.length===0 && <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"16px 0"}}>No tasks yet.</div>}
             {todos.map(t=>(
               <div key={t.id} className="todo-row" style={s.todoRow}>
                 <span onClick={()=>toggleTodo(t.id)} style={{fontSize:13,flex:1,cursor:"pointer",textDecoration:t.done?"line-through":"none",color:t.done?"var(--text3)":"var(--text)"}}>{t.done?"":<LayoutList size={13} style={{verticalAlign:"middle",marginRight:4}}/>}{t.text}</span>
@@ -1190,7 +1203,7 @@ export default function Dashboard({ onLogout }) {
                 const semCourses = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.section);
                 const mainCourses = semCourses.filter(c => !c.componenttype);
                 const courseColorMap = {};
-                mainCourses.forEach((c, ci) => { courseColorMap[c.courseCode] = ci % 7; });
+                mainCourses.forEach((c, ci) => { courseColorMap[c.courseCode] = courseColors[c.courseCode] || ci % 7; });
                 const classByDay = {};
                 DAYS.forEach(d => { classByDay[d] = []; });
                 semCourses.forEach((c) => {
@@ -1243,7 +1256,8 @@ export default function Dashboard({ onLogout }) {
                                   if (!cl.startH || cl.startH >= SCH_END || cl.endH <= SCH_START) return null;
                                   const top = (Math.max(cl.startH, SCH_START) - SCH_START) * SCH_H;
                                   const height = (Math.min(cl.endH, SCH_END) - Math.max(cl.startH, SCH_START)) * SCH_H - 2;
-                                  return <div key={`cl${ci}`} style={{ '--c':`var(--sched${cl.colorIdx+1})`, position:"absolute", top:top+1, left:1, right:1, height, background:"color-mix(in srgb, var(--c) 20%, transparent)", borderLeft:"2px solid var(--c)", borderRadius:3, overflow:"hidden", padding:"2px 6px", zIndex:2 }}>
+                                  const schedC = typeof cl.colorIdx === "string" ? cl.colorIdx : `var(--sched${cl.colorIdx+1})`;
+                                  return <div key={`cl${ci}`} style={{ '--c':schedC, position:"absolute", top:top+1, left:1, right:1, height, background:"color-mix(in srgb, var(--c) 20%, transparent)", borderLeft:"2px solid var(--c)", borderRadius:3, overflow:"hidden", padding:"2px 6px", zIndex:2 }}>
                                     <div style={{ fontSize:11, fontWeight:700, color:"var(--c)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{cl.label}</div>
                                     <div style={{ fontSize:10, color:"var(--text3)" }}>{fmtT(cl.startH)}–{fmtT(cl.endH)}</div>
                                   </div>;
@@ -1964,7 +1978,7 @@ export default function Dashboard({ onLogout }) {
               </div>
           )}
 
-          {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} selectedSemester={semester} />}
+          {activePage === "grades" && <GradeCalculator dashboardCourses={dashboardCourses} savedSemesters={apiSemesters} selectedSemester={semester} onNavigate={setActivePage} />}
           {activePage === "tasks" && (
               <TaskManager
                   tasks={tasks}
@@ -1976,13 +1990,13 @@ export default function Dashboard({ onLogout }) {
                   onNavigate={setActivePage}
               />
           )}
-          {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
-          {activePage === "forum" && <Forum initialCourseTag={forumCourseTag} initialProfTag={forumProfTag} />}
-          {activePage === "planner" && <StudyPlanner enrolledSections={semCourseList.map(c => ({ crn: c.id, courseCode: c.name, section: c.section }))} semester={semester} />}
-          {activePage === "groups" && <StudyGroupFinder courses={[...new Map(semCourseList.map(c => [c.name, { id: c.name, name: c.name }])).values()]} />}
+          {activePage === "reviews" && <Reviews />}
+          {activePage === "forum" && <Forum initialCourseTag={forumCourseTag} initialProfTag={forumProfTag} onNavigate={setActivePage} />}
+          {activePage === "planner" && <StudyPlanner enrolledSections={semCourseList.map(c => ({ crn: c.id, courseCode: c.name, section: c.section }))} semester={semester} onNavigate={setActivePage} />}
+          {activePage === "groups" && <StudyGroupFinder courses={[...new Map(semCourseList.map(c => [c.name, { id: c.name, name: c.name }])).values()]} onNavigate={setActivePage} />}
           {activePage === "students" && <StudentDirectory onClose={() => setActivePage("dashboard")} />}
           {activePage === "profile" && (
-              <Profile onProfileSave={p => setProfile(p)} onSemestersUpdated={fetchSemesters} activeSemester={semester} />
+              <Profile onProfileSave={p => setProfile(p)} onSemestersUpdated={fetchSemesters} activeSemester={semester} onNavigate={setActivePage} />
           )}
           {activePage === "settings" && <Settings onLogout={handleLogout} />}
 

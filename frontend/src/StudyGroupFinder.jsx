@@ -90,8 +90,8 @@ function StudyGroupCard({ group, onJoin, isMyGroup }) {
   return (
     <div className="sg-card" style={{
       background: "var(--surface)", border: "1px solid var(--border)",
-      borderRadius: 14, padding: "16px 18px",
-      boxShadow: "0 2px 10px rgba(49,72,122,0.06)",
+      borderRadius: 16, padding: "16px 18px",
+      boxShadow: "0 2px 14px rgba(49,72,122,0.07)",
       display: "flex", flexDirection: "column", gap: 10,
     }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
@@ -166,8 +166,8 @@ function MyGroupCard({ group, onOpen }) {
   return (
     <div className="sg-card" style={{
       background: "var(--surface)", border: "1px solid var(--border)",
-      borderRadius: 14, padding: "16px 18px",
-      boxShadow: "0 2px 10px rgba(49,72,122,0.06)",
+      borderRadius: 16, padding: "16px 18px",
+      boxShadow: "0 2px 14px rgba(49,72,122,0.07)",
       display: "flex", flexDirection: "column", gap: 10,
     }}>
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 }}>
@@ -404,7 +404,7 @@ function JoinPrivateModal({ onClose, onJoined }) {
 const inputStyle = {
   width: "100%", boxSizing: "border-box",
   border: "1px solid var(--border)", borderRadius: 10,
-  padding: "9px 12px", fontSize: 13,
+  padding: "10px 14px", fontSize: 13,
   background: "var(--surface2)", color: "var(--text)",
   fontFamily: "'DM Sans',sans-serif", outline: "none",
   transition: "border-color .15s",
@@ -415,11 +415,17 @@ const labelStyle = {
   textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6,
 };
 
-export default function StudyGroupFinder({ courses = [] }) {
+export default function StudyGroupFinder({ courses = [], onNavigate }) {
   const [tab,             setTab]             = useState("find");    
   const [publicGroups,    setPublicGroups]    = useState([]);
   const [myGroups,        setMyGroups]        = useState([]);
-  const [selectedCourse,  setSelectedCourse]  = useState(courses[0]?.id?.toString() || null);
+  const [selectedCourse,  setSelectedCourse]  = useState(() => {
+    try {
+      const last = JSON.parse(localStorage.getItem("kk_last_course") || "null");
+      const match = last && courses.find(c => c.id === last.courseCode);
+      return match ? match.id : (courses[0]?.id?.toString() || null);
+    } catch { return courses[0]?.id?.toString() || null; }
+  });
   const [search,          setSearch]          = useState("");
   const [loadingPublic,   setLoadingPublic]   = useState(!!courses[0]?.id);
   const [loadingMine,     setLoadingMine]     = useState(true);
@@ -563,12 +569,19 @@ export default function StudyGroupFinder({ courses = [] }) {
 
       <ErrorBanner message={error} onDismiss={() => setError("")} />
 
+      {courses.length === 0 && onNavigate && (
+        <div style={{ display:"flex", alignItems:"center", gap:10, background:"color-mix(in srgb, var(--primary) 8%, var(--surface))", border:"1px solid var(--border)", borderRadius:10, padding:"10px 14px", marginBottom:16 }}>
+          <span style={{ fontSize:13, color:"var(--text2)" }}>Add your courses in My Semesters to find study groups.</span>
+          <button onClick={() => onNavigate("profile")} style={{ marginLeft:"auto", fontSize:12, fontWeight:600, color:"var(--primary)", background:"none", border:"1px solid var(--primary)", borderRadius:7, padding:"4px 10px", cursor:"pointer", whiteSpace:"nowrap", fontFamily:"'DM Sans',sans-serif" }}>Go to My Semesters →</button>
+        </div>
+      )}
+
       {tab === "find" && (
         <div>
           <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap", alignItems: "center" }}>
             <div style={{ position: "relative", minWidth: 200, width: "auto" }}>
               <button className="kk-select" onClick={() => setCourseDropOpen(o => !o)} style={{
-                padding: "9px 12px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                padding: "10px 14px", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer",
                 display: "flex", alignItems: "center", gap: 6, width: "100%", justifyContent: "space-between",
                 background: "var(--surface2)", border: "1px solid var(--border)",
                 color: selectedCourse ? "var(--text)" : "var(--text3)",
@@ -580,9 +593,9 @@ export default function StudyGroupFinder({ courses = [] }) {
               {courseDropOpen && (
                 <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, background: "var(--surface)", borderRadius: 12, boxShadow: "0 8px 32px rgba(49,72,122,0.15)", border: "1px solid var(--border)", zIndex: 200, padding: 6, minWidth: "100%", maxHeight: 220, overflowY: "auto" }}>
                   {courses.length === 0
-                    ? <div style={{ padding: "9px 14px", fontSize: 13, color: "var(--text3)" }}>No courses found</div>
+                    ? <div style={{ padding: "9px 14px", fontSize: 13, color: "var(--text3)" }}>No courses found.</div>
                     : courses.map(c => (
-                      <div key={c.id} className="kk-option" onClick={() => { setSelectedCourse(c.id); setCourseDropOpen(false); }}
+                      <div key={c.id} className="kk-option" onClick={() => { setSelectedCourse(c.id); setCourseDropOpen(false); localStorage.setItem("kk_last_course", JSON.stringify({ courseCode: c.id })); }}
                         style={{ padding: "9px 14px", borderRadius: 8, cursor: "pointer", fontSize: 13, fontWeight: 600,
                           background: selectedCourse === c.id ? "var(--divider)" : "transparent",
                           color: selectedCourse === c.id ? "var(--accent)" : "var(--primary)",

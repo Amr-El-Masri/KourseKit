@@ -411,12 +411,12 @@ export function DefaultScheduleEditor({ token, onDone, extraAction, showSectionN
           ? (gradesData.find(s => s.semesterName === semesterName) ?? gradesData[0])
           : gradesData[0];
         const courses = (latest?.courses || []).filter(c => c.section);
-        const savedColors = (() => { try { return JSON.parse(localStorage.getItem("kk_course_section_colors") || "{}"); } catch { return {}; } })();
+        const courseColors = (() => { try { return JSON.parse(localStorage.getItem("kk_course_colors") || "{}"); } catch { return {}; } })();
         mapped = courses.map((c, i) => ({
           courseCode: c.courseCode,
           sectionNumber: c.section.sectionNumber || c.sectioncrn,
           section: c.section,
-          color: savedColors[c.sectioncrn] || COURSE_COLORS[i % COURSE_COLORS.length],
+          color: courseColors[c.courseCode] || COURSE_COLORS[i % COURSE_COLORS.length],
         }));
       }
       setEnrolledSections(mapped);
@@ -445,6 +445,19 @@ export function DefaultScheduleEditor({ token, onDone, extraAction, showSectionN
   // Auto-scroll to 8AM on mount
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = 8 * DS_HOUR_H;
+  }, []);
+
+  // Re-apply course colors when changed in My Semesters
+  useEffect(() => {
+    const handler = () => {
+      const courseColors = (() => { try { return JSON.parse(localStorage.getItem("kk_course_colors") || "{}"); } catch { return {}; } })();
+      setEnrolledSections(prev => prev.map((es, i) => ({
+        ...es,
+        color: courseColors[es.courseCode] || COURSE_COLORS[i % COURSE_COLORS.length],
+      })));
+    };
+    window.addEventListener("kk_course_colors_changed", handler);
+    return () => window.removeEventListener("kk_course_colors_changed", handler);
   }, []);
 
   const handleAdd = useCallback((dayKey, slot) => {
@@ -531,7 +544,7 @@ export function DefaultScheduleEditor({ token, onDone, extraAction, showSectionN
   })();
 
   return (
-    <div style={{ background: "var(--surface)", borderRadius: 20, border: "1px solid var(--border)", boxShadow: "0 2px 14px rgba(49,72,122,0.07)", overflow: "hidden", marginBottom: 20 }}>
+    <div style={{ background: "var(--surface)", borderRadius: 16, border: "1px solid var(--border)", boxShadow: "0 2px 14px rgba(49,72,122,0.07)", overflow: "hidden", marginBottom: 20 }}>
       <style>{`
         .ds-grid-wrap { display:flex; user-select:none; }
         .ds-gutter { width:56px; flex-shrink:0; position:relative; height:${DS_TOTAL * DS_HOUR_H + 20}px; border-right:1px solid var(--border); background:var(--surface); }
@@ -696,6 +709,13 @@ export default function Profile({ onProfileSave, onSemestersUpdated, activeSemes
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const isAdmin = getTokenRole() === "ADMIN";
   const [section, setSection] = useState("profile");
+  const [courseColors, setCourseColors] = useState(() => { try { return JSON.parse(localStorage.getItem("kk_course_colors") || "{}"); } catch { return {}; } });
+  const saveCourseColor = (code, color) => {
+    const next = { ...courseColors, [code]: color };
+    setCourseColors(next);
+    localStorage.setItem("kk_course_colors", JSON.stringify(next));
+    window.dispatchEvent(new Event("kk_course_colors_changed"));
+  };
   const [syllabi, setSyllabi] = useState(() => { try { return JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"); } catch { return {}; } });
 
   useEffect(() => {
@@ -711,7 +731,11 @@ export default function Profile({ onProfileSave, onSemestersUpdated, activeSemes
       })
       .catch(() => {});
   }, []);
-  const [sectOpen, setSectOpen] = useState({ profile: false, transcript: false, semesters: false, schedule: false });
+  const [sectOpen, setSectOpen] = useState(() => {
+    const jump = localStorage.getItem("kk_profile_jump_section");
+    if (jump) { localStorage.removeItem("kk_profile_jump_section"); return { profile: false, transcript: false, semesters: false, schedule: jump === "schedule" }; }
+    return { profile: false, transcript: false, semesters: false, schedule: false };
+  });
   const toggleSect = k => setSectOpen(p => ({ ...p, [k]: !p[k] }));
 
   const [profile,    setProfile]    = useState(() => ({ ...DEFAULT_PROFILE, email, emailRemindersEnabled: localStorage.getItem("kk_email_reminders") !== "false" }));
@@ -920,24 +944,40 @@ const refetchSemesters = () =>
     delete next[courseCode];
     setSyllabi(next);
     localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
-    window.dispatchEvent(new Event("kk_syllabus_changed"));
+    window.dispatchEvent(new CustomEvent("kk_syllabus_changed", { detail: { courseCode } }));
     delete dataMap[courseCode]; localStorage.setItem("kk_course_data", JSON.stringify(dataMap));
     delete ohMap[courseCode]; localStorage.setItem("kk_course_office_hours", JSON.stringify(ohMap));
     setSyllabusUndoToast({ courseCode, snapshot, ohSnapshot, dataSnapshot });
     if (syllabusUndoTimerRef.current) clearTimeout(syllabusUndoTimerRef.current);
     syllabusUndoTimerRef.current = setTimeout(async () => {
       const token = localStorage.getItem("kk_token");
+      if (token) {
+        // Fetch all tasks for this course and delete those imported from syllabus
+        const courseTasks = await fetch(`${API}/api/tasks/list?course=${encodeURIComponent(courseCode)}`, { headers:{ "Authorization":`Bearer ${token}` } })
+          .then(r => r.ok ? r.json() : []).catch(() => []);
+        const syllabusTasks = courseTasks.filter(t => t.fromSyllabus);
+        if (syllabusTasks.length > 0) {
+          const sylTaskIds = new Set(syllabusTasks.map(t => Number(t.id)));
+          // Delete study plan entries linked to these tasks first
+          const entries = await fetch(`${API}/api/study-plan/entries`, { headers:{ "Authorization":`Bearer ${token}` } })
+            .then(r => r.ok ? r.json() : []).catch(() => []);
+          await Promise.all(
+            entries
+              .filter(e => e.task?.id && sylTaskIds.has(Number(e.task.id)))
+              .map(e => fetch(`${API}/api/study-plan/entries/${e.id}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{}))
+          );
+          // Delete the tasks
+          await Promise.all(syllabusTasks.map(t =>
+            fetch(`${API}/api/tasks/delete/${t.id}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{})
+          ));
+        }
+        fetch(`${API}/api/user-syllabi/${encodeURIComponent(courseCode)}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{});
+      }
+      // Clean up tracked IDs from localStorage
       const raw = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "{}");
       const map = Array.isArray(raw) ? {} : raw;
-      const courseTaskIds = [...(map[courseCode] || [])];
-      if (token && courseTaskIds.length > 0) {
-        await Promise.all(courseTaskIds.map(id =>
-          fetch(`${API}/api/tasks/delete/${id}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{})
-        ));
-      }
       delete map[courseCode];
       localStorage.setItem("kk_syllabus_task_ids", JSON.stringify(map));
-      if (token) fetch(`${API}/api/user-syllabi/${encodeURIComponent(courseCode)}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{});
       setSyllabusUndoToast(null);
     }, 5000);
   };
@@ -982,14 +1022,10 @@ const refetchSemesters = () =>
 
   const removeTranscript = async () => {
     const ids = (() => { try { return JSON.parse(localStorage.getItem("kk_transcript_sem_ids") || "[]"); } catch { return []; } })();
-    // Keep the current (most recent) semester
-    const currentSemId = semesters.length > 0 ? String(semesters[semesters.length - 1].id) : null;
-    const idsToDelete = ids.filter(id => id !== currentSemId);
+    const idsToDelete = ids.map(String);
     const snapshots = semesters.filter(s => idsToDelete.includes(String(s.id)));
     // Collect all course codes from the semesters being deleted
-    const currentSem = semesters.find(s => String(s.id) === currentSemId);
-    const currentCodes = new Set((currentSem?.courses || []).map(c => c.courseCode));
-    const codesToDelete = [...new Set(snapshots.flatMap(s => (s.courses || []).map(c => c.courseCode)))].filter(c => !currentCodes.has(c));
+    const codesToDelete = [...new Set(snapshots.flatMap(s => (s.courses || []).map(c => c.courseCode)))];
     // Clean up localStorage per-course data
     const syllabusMap = (() => { try { return JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"); } catch { return {}; } })();
     const dataMap     = (() => { try { return JSON.parse(localStorage.getItem("kk_course_data")    || "{}"); } catch { return {}; } })();
@@ -1156,7 +1192,7 @@ const refetchSemesters = () =>
         <div style={{ fontSize:13, color:"var(--text2)" }}>Your info shows up on the dashboard greeting and affects how KourseKit personalizes your experience.</div>
       </div>
 
-      <div className="pf-anim" style={{ animationDelay:"0s", background:"var(--surface)", borderRadius:20, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", overflow:"hidden", marginBottom:20 }}>
+      <div className="pf-anim" style={{ animationDelay:"0s", background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", overflow:"hidden", marginBottom:20 }}>
         <div style={{ padding:"24px 28px 24px" }}>
 
           <div style={{ display:"flex", alignItems:"flex-end", gap:16, marginBottom:20 }}>
@@ -1274,7 +1310,7 @@ const refetchSemesters = () =>
                         {f.email && <div style={{ fontSize:11, color:"var(--text3)", marginTop:1 }}>{f.email}</div>}
                       </div>
                       <button onClick={() => { const next = friends.filter(x => x.id !== f.id); setFriends(next); localStorage.setItem("kk_friends", JSON.stringify(next)); }} style={{ fontSize:11, color:"var(--error)", background:"none", border:"1px solid var(--border)", borderRadius:7, padding:"3px 8px", cursor:"pointer", fontFamily:"inherit", flexShrink:0 }}>
-                        Unfollow </button>
+                        Unfollow</button>
                     </div>
                   ))}
                 </div>
@@ -1459,7 +1495,7 @@ const refetchSemesters = () =>
 
               <label style={pf.label}>Bio <span style={{ color:"var(--text3)", fontWeight:400 }}>(optional)</span></label>
               <textarea className="pf-input" value={draft.bio} onChange={e => set("bio", e.target.value)}
-                placeholder="A short description about yourself..."
+                placeholder="A short description about yourself…"
                 rows={3}
                 style={{ ...pf.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
               />
@@ -1648,17 +1684,15 @@ const refetchSemesters = () =>
         <div className="kk-tab" onClick={() => toggleSect("semesters")} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", cursor:"pointer", userSelect:"none", transition:"background .15s", borderRadius:"16px 16px 0 0" }}>
           <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)" }}>My Semesters</div>
           <div style={{ display:"flex", alignItems:"center", gap:10 }} onClick={e => e.stopPropagation()}>
+            {!transcriptInfo && !creating && (
+              <button className="kk-pill" onClick={() => setTranscriptModal(true)} style={{ background:"var(--surface2)", color:"var(--primary)", border:"1px solid var(--border)", borderRadius:10, padding:"6px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                Upload Transcript
+              </button>
+            )}
             {sectOpen.semesters && !creating && (
-              <div style={{ display:"flex", gap:8 }}>
-                {!transcriptInfo && (
-                  <button className="kk-pill" onClick={() => setTranscriptModal(true)} style={{ background:"var(--surface2)", color:"var(--primary)", border:"1px solid var(--border)", borderRadius:10, padding:"6px 12px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
-                    Upload Transcript
-                  </button>
-                )}
-                <button onClick={() => { setCreating(true); setEditingId(null); }} style={{ background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, padding:"6px 14px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
-                  + New Semester
-                </button>
-              </div>
+              <button onClick={() => { setCreating(true); setEditingId(null); }} style={{ background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, padding:"6px 14px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                + New Semester
+              </button>
             )}
             <span onClick={() => toggleSect("semesters")} style={{ fontSize:16, color:"var(--text3)", cursor:"pointer" }}>{sectOpen.semesters ? "▾" : "▸"}</span>
           </div>
@@ -1736,7 +1770,7 @@ const refetchSemesters = () =>
                   </div>
                   <div style={{ display:"flex", gap:6 }}>
                     <button onClick={() => editingId === sem.id ? setEditingId(null) : startEdit(sem)} style={{ fontSize:12, fontWeight:600, padding:"5px 12px", border:"1px solid var(--border)", borderRadius:8, background:"var(--surface)", color:"var(--primary)", cursor:"pointer" }}>
-                      {editingId === sem.id ? "Close" : "Edit"}
+                      {editingId === sem.id ? "Done" : "Edit"}
                     </button>
                     <button onClick={() => deleteSemester(sem.id)} style={{ fontSize:12, padding:"5px 10px", border:"1px solid var(--error-border)", borderRadius:8, background:"var(--surface)", color:"var(--error)", cursor:"pointer" }}>Delete</button>
                   </div>
@@ -1754,6 +1788,7 @@ const refetchSemesters = () =>
                       return grouped.map((c,i) => (
                         <div key={i}>
                           <div style={{ display:"flex", gap:12, fontSize:13, color:"var(--text-body)", alignItems:"center" }}>
+                            <div style={{ width:13, height:13, borderRadius:"50%", background: courseColors[c.courseCode] || COURSE_COLORS[i % COURSE_COLORS.length], border:"1.5px solid rgba(0,0,0,0.12)", flexShrink:0 }} />
                             <span style={{ fontWeight:600, minWidth:100 }}>{c.courseCode}</span>
                             <span style={{ color:"var(--text2)" }}>{c.credits} cr</span>
                             <span style={{ color:"var(--accent)", fontWeight:600 }}>{c.grade}</span>
@@ -1784,7 +1819,8 @@ const refetchSemesters = () =>
                         </div>
                       )}
                     </div>
-                    <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
+                    <div style={{ display:"grid", gridTemplateColumns:"24px 1fr 80px 100px 32px", gap:6, marginBottom:6 }}>
+                      <span />
                       <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Course Name</span>
                       <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Credits</span>
                       <span style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase" }}>Grade</span>
@@ -1792,7 +1828,8 @@ const refetchSemesters = () =>
                     </div>
                     {editCourses.map(c => (
                       <div key={c.id} style={{ marginBottom:6 }}>
-                        <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6, marginBottom: syllabi[c.code] ? 4 : 0 }}>
+                        <div style={{ display:"grid", gridTemplateColumns:"24px 1fr 80px 100px 32px", gap:6, marginBottom: syllabi[c.code] ? 4 : 0 }}>
+                          <input type="color" value={courseColors[c.code] || COURSE_COLORS[editCourses.indexOf(c) % COURSE_COLORS.length]} onChange={e => saveCourseColor(c.code, e.target.value)} style={{ width:24, height:32, padding:2, border:"1px solid var(--border)", borderRadius:6, background:"none", cursor:"pointer" }} title="Pick course color" />
                           <StudentCourses value={c} onSelect={async data => { setEditCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, courseId:data.courseId, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r)); if (data.courseId) { const secs = await fetch(`${API}/api/courses/${data.courseId}/sections`).then(r=>r.json()).catch(()=>[]); const hasLabRec = secs.some(s => /^[BE]/i.test(s.sectionNumber||"")); setEditCourses(p => p.map(r => r.id===c.id ? {...r, hasLabRec, components: hasLabRec && !(r.components||[]).some(x=>x.sectioncrn) ? [{id:Date.now(), code:data.code, sectioncrn:null, type:"Lab"}] : (r.components||[])} : r)); } }} />
                           <input value={c.credits} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                           <div style={{ position:"relative" }}>

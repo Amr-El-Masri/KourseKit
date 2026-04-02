@@ -486,7 +486,7 @@ function CreatePost({ token, userEmail, userId, displayName, onDone, initialCate
         <>
           <label style={f.label}>
             Tag a Course <span style={{ color: "var(--danger, #c0392b)" }}>*</span>
-            <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)", marginLeft: 6 }}>Select from the dropdown</span>
+            <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)", marginLeft: 6 }}>Select from the list below</span>
           </label>
           <div style={{ marginBottom: 16 }}>
             <CourseTagSearch onSelect={setCourseTag} initialValue="" />
@@ -503,7 +503,7 @@ function CreatePost({ token, userEmail, userId, displayName, onDone, initialCate
         <>
           <label style={f.label}>
             Tag a Professor <span style={{ color: "var(--danger, #c0392b)" }}>*</span>
-            <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)", marginLeft: 6 }}>Select from the dropdown</span>
+            <span style={{ fontSize: 11, fontWeight: 400, color: "var(--text3)", marginLeft: 6 }}>Select from the list below</span>
           </label>
           <div style={{ marginBottom: 16 }}>
             <ProfTagSearch onSelect={setProfTag} initialValue="" />
@@ -578,7 +578,7 @@ function PostCard({ post, onOpenComments, token, userEmail }) {
   return (
     <div style={{ ...f.card, transition: "box-shadow 0.2s" }}
       onMouseEnter={e => { e.currentTarget.style.boxShadow = "0 6px 24px rgba(49,72,122,0.13)"; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 2px 10px rgba(49,72,122,0.06)"; }}
+      onMouseLeave={e => { e.currentTarget.style.boxShadow = "0 2px 14px rgba(49,72,122,0.07)"; }}
     >
       <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
         <span style={{ ...f.chip, color: categoryColor[post.category] || "var(--text2)", background: "var(--surface2)" }}>
@@ -667,12 +667,15 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
       }).catch(() => {});
   }, []);
 
-  const initCat = initialCourseTag ? "COURSE" : initialProfTag ? "PROFESSOR" : "ALL";
+  const initCat = initialCourseTag ? "COURSE" : initialProfTag ? "PROFESSOR"
+    : (() => { try { return sessionStorage.getItem("kk_forum_category") || "ALL"; } catch { return "ALL"; } })();
 
   const [posts,      setPosts]      = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [category,   setCategory]   = useState(initCat);
-  const [sort,       setSort]       = useState("new");
+  const [sort,       setSort]       = useState(() => {
+    try { return sessionStorage.getItem("kk_forum_sort") || "new"; } catch { return "new"; }
+  });
   const [search,     setSearch]     = useState("");
   const [composing,  setComposing]  = useState(false);
   const [activePost, setActivePost] = useState(null);
@@ -769,7 +772,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
         {CATEGORIES.map(c => {
           const Icon = c.icon;
           return (
-            <button key={c.id} className="kk-tab" data-active={category === c.id} onClick={() => { setCategory(c.id); setComposing(false); }} style={{
+            <button key={c.id} className="kk-tab" data-active={category === c.id} onClick={() => { setCategory(c.id); sessionStorage.setItem("kk_forum_category", c.id); setComposing(false); }} style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "8px 18px", borderRadius: 9,
               fontSize: 13, fontWeight: category === c.id ? 600 : 400, cursor: "pointer",
@@ -805,7 +808,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
         </div>
         <div style={{ display: "flex", gap: 4, background: "var(--surface2)", padding: 4, borderRadius: 10 }}>
           {[{ id: "new", label: "New" }, { id: "top", label: "Top" }].map(s => (
-            <button key={s.id} className="kk-tab" data-active={sort===s.id} onClick={() => setSort(s.id)} style={{
+            <button key={s.id} className="kk-tab" data-active={sort===s.id} onClick={() => { setSort(s.id); sessionStorage.setItem("kk_forum_sort", s.id); }} style={{
               padding: "6px 14px", border: "none", borderRadius: 8,
               fontSize: 12, fontWeight: sort===s.id ? 600 : 400, cursor: "pointer", transition: "all .15s",
               background: sort === s.id ? "var(--surface)" : "transparent",
@@ -875,7 +878,7 @@ const f = {
       border: "1px solid var(--border)",
       borderRadius: 16,
       padding: "20px 22px",
-      boxShadow: "0 2px 10px rgba(49,72,122,0.06)",
+      boxShadow: "0 2px 14px rgba(49,72,122,0.07)",
       overflow: "visible",
       position: "relative",
   },
@@ -911,11 +914,11 @@ const f = {
   },
   primaryBtn: {
     padding: "10px 22px", background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)",
-    border: "1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius: 10, fontSize: 13, fontWeight: 600,
+    border: "1.5px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius: 10, fontSize: 13, fontWeight: 600,
     cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all .15s",
   },
   cancelBtn: {
-    padding: "10px 18px", background: "var(--surface2)", color: "var(--text2)",
+    padding: "8px 16px", background: "var(--surface2)", color: "var(--text2)",
     border: "1px solid var(--border)", borderRadius: 10, fontSize: 13,
     cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
   },
