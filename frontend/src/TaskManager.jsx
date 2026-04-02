@@ -230,14 +230,14 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
 
         <label style={tm.label}>Notes <span style={{ color:"var(--text3)", fontWeight:400 }}>(optional)</span></label>
         <textarea value={form.notes} onChange={e=>set("notes",e.target.value)}
-                  placeholder="Any extra details..."
+                  placeholder="Any extra details…"
                   rows={3}
                   style={{ ...tm.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6, marginBottom:0 }}
         />
 
         <div style={{ display:"flex", gap:10, marginTop:4 }}>
           <button onClick={save} style={tm.saveBtn}>
-            {initial?.id ? "Save Changes" : "Add Task"}
+            {initial?.id ? "Save Changes" : "Save"}
           </button>
           <button onClick={onCancel} style={tm.cancelBtn}>Cancel</button>
         </div>
@@ -300,6 +300,31 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
   }, [USER_ID]);
 
   useEffect(() => { loadTasks(); }, [loadTasks]);
+
+  // Delete fromSyllabus tasks whose syllabus has been removed
+  useEffect(() => {
+    const cleanup = async () => {
+      const currentSyllabi = (() => { try { return JSON.parse(localStorage.getItem("kk_course_syllabus") || "{}"); } catch { return {}; } })();
+      const data = await apiFetch("/api/tasks/list-all");
+      if (!data) return;
+      const orphaned = data.filter(t => t.fromSyllabus && t.course && !currentSyllabi[t.course]);
+      if (orphaned.length === 0) return;
+      const token = getToken();
+      if (!token) return;
+      const orphanedIds = new Set(orphaned.map(t => Number(t.id)));
+      const entries = await fetch(`${API_BASE}/api/study-plan/entries`, { headers: { "Authorization": `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : []).catch(() => []);
+      await Promise.all(
+        entries.filter(e => e.task?.id && orphanedIds.has(Number(e.task.id)))
+          .map(e => fetch(`${API_BASE}/api/study-plan/entries/${e.id}`, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } }).catch(() => {}))
+      );
+      await Promise.all(orphaned.map(t =>
+        fetch(`${API_BASE}/api/tasks/delete/${t.id}`, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } }).catch(() => {})
+      ));
+      loadTasks();
+    };
+    cleanup();
+  }, []);
 
   useEffect(() => {
     if (!search.trim()) { loadTasks(); return; }
@@ -541,6 +566,7 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
                 {filter==="Done" ? "No completed tasks yet." : filter==="Overdue" ? "Nothing overdue!" : "No tasks found."}
               </div>
               {filter==="All" && <div style={{ fontSize:13, marginTop:6 }}>Hit "+ New Task" to add one.</div>}
+              {filter==="All" && onNavigate && <button onClick={() => onNavigate("planner")} style={{ marginTop:10, fontSize:12, fontWeight:600, color:"var(--primary)", background:"none", border:"1px solid var(--primary)", borderRadius:7, padding:"5px 12px", cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Go to Study Planner →</button>}
             </div>
         ) : (<>
           {syllabusDisplayed.length > 0 && (
@@ -590,11 +616,11 @@ export default function TaskManager({ initialEditTask, onNavigate }) {
 }
 
 const tm = {
-  formCard:  { background:"var(--surface)", borderRadius:18, padding:"24px 26px", border:"1px solid var(--border)", boxShadow:"0 4px 20px rgba(49,72,122,0.09)", marginBottom:0 },
+  formCard:  { background:"var(--surface)", borderRadius:16, padding:"24px 26px", border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", marginBottom:0 },
   label:     { display:"block", fontSize:12, fontWeight:600, color:"var(--text)", marginBottom:6 },
   input:     { width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", marginBottom:14, display:"block", transition:"border-color .15s", outline:"none" },
-  saveBtn:   { padding:"10px 24px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
-  cancelBtn: { padding:"10px 18px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  saveBtn:   { padding:"10px 22px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1.5px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  cancelBtn: { padding:"8px 16px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
   newBtn:    { padding:"10px 20px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s" },
   iconBtn:   { background:"none", border:"none", cursor:"pointer", fontSize:15, borderRadius:6, padding:"3px 5px", transition:"background .15s" },
   badge:     (color, bg) => ({ fontSize:11, fontWeight:600, padding:"2px 8px", borderRadius:6, color, background:bg, flexShrink:0 }),

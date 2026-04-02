@@ -397,7 +397,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
 
       {!preselectedCourse && (
         <>
-          <label style={rv.label}>Search for a Course</label>
+          <label style={rv.label}>Select a Course</label>
           <CourseSearch onSelect={selectCourse} />
         </>
       )}
@@ -408,7 +408,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
             Selected: <strong style={{ color:"var(--accent)" }}>{selectedCourse.courseCode}</strong> — {selectedCourse.title}
           </div>
 
-          <label style={rv.label}>Select Section</label>
+          <label style={rv.label}>Select a Section</label>
           <div style={{ position:"relative", marginBottom:16 }}>
             <button type="button" onClick={() => setSectionDropOpen(o => !o)} style={{
               width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10,
@@ -417,8 +417,8 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
               textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between",
             }}>
               {selectedSection
-                ? (() => { const s = sections.find(s => String(s.id) === String(selectedSection)); return s ? `Section ${s.sectionNumber} — ${s.professorName}` : "— pick a section —"; })()
-                : "— pick a section —"}
+                ? (() => { const s = sections.find(s => String(s.id) === String(selectedSection)); return s ? `Section ${s.sectionNumber} — ${s.professorName}` : "Select a section…"; })()
+                : "Select a section…"}
               <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: sectionDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
             </button>
             {sectionDropOpen && (
@@ -429,7 +429,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
                     transition:"background .15s",
                     background: !selectedSection ? "var(--divider)" : "transparent",
                     color: !selectedSection ? "var(--accent)" : "var(--primary)" }}>
-                  — pick a section —
+                  Select a section…
                 </div>
                 {sections.map(s => (
                   <div key={s.id} onClick={() => { setSelectedSection(s.id); setSectionDropOpen(false); }}
@@ -453,7 +453,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
           <label style={rv.label}>Your Review</label>
           <textarea
             value={comment} onChange={e => { setComment(e.target.value); setErr(""); }}
-            placeholder="Share your honest experience..."
+            placeholder="Share your honest experience…"
             rows={4}
             style={{ ...rv.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
           />
@@ -471,17 +471,21 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
   );
 }
 
-export default function Reviews({ initialCourse, onNavigateToForum }) {
+export default function Reviews({ onNavigateToForum }) {
   const token = localStorage.getItem("kk_token");
   const userEmail = localStorage.getItem("kk_email");
   const [detailsCourse, setDetailsCourse] = useState(null);
-  const [tab, setTab] = useState("course");
+  const [tab, setTab] = useState(() => {
+    try { return sessionStorage.getItem("kk_reviews_tab") || "course"; } catch { return "course"; }
+  });
   const [reviews,   setReviews]   = useState([]);
   const [loading,   setLoading]   = useState(false);
   const [sort,      setSort]      = useState("new");
   const [search,    setSearch]    = useState("");
   const [composing, setComposing] = useState(false);
-  const [activeCourse, setActiveCourse] = useState(null);
+  const [activeCourse, setActiveCourse] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem("kk_reviews_course") || "null"); } catch { return null; }
+  });
 
   const [recentReviews,  setRecentReviews]  = useState([]);
   const [recentLoading,  setRecentLoading]  = useState(false);
@@ -505,10 +509,23 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
     finally { setLoading(false); }
   }, []);
 
+
+  useEffect(() => {
+    if (activeCourse) loadReviews(activeCourse.id);
+  }, []);
+
   const selectCourse = (course) => {
     setActiveCourse(course);
     loadReviews(course.id);
     setComposing(false);
+    sessionStorage.setItem("kk_reviews_course", JSON.stringify(course));
+  };
+
+  const clearCourse = () => {
+    setActiveCourse(null);
+    setReviews([]);
+    setComposing(false);
+    sessionStorage.removeItem("kk_reviews_course");
   };
 
   let displayed = reviews
@@ -538,7 +555,7 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
           { id:"professor", label:"Professor Reviews" },
           ...(token ? [{ id:"mine", label:"My Reviews" }] : []),
         ].map(t => (
-          <button key={t.id} className="kk-tab" data-active={tab===t.id} onClick={() => setTab(t.id)} style={{
+          <button key={t.id} className="kk-tab" data-active={tab===t.id} onClick={() => { setTab(t.id); sessionStorage.setItem("kk_reviews_tab", t.id); }} style={{
             padding:"8px 18px", borderRadius:9, fontSize:13,
             fontWeight: tab===t.id ? 600 : 400,
             cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
@@ -555,11 +572,18 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
       {tab === "mine" && <MyReviewsTab token={token} userEmail={userEmail} />}
 
       {tab === "course" && <>
-      {/* Course search to browse reviews */}
-      <div style={{ marginBottom:20 }}>
-        <label style={{ ...rv.label, fontSize:13, fontWeight:400, color:"var(--text2)" }}>Browse reviews by course</label>
-        <CourseSearch onSelect={selectCourse} />
-      </div>
+      {/* Course search or back button */}
+      {!activeCourse ? (
+        <div style={{ marginBottom:20 }}>
+          <label style={{ ...rv.label, fontSize:13, fontWeight:400, color:"var(--text2)" }}>Browse reviews by course</label>
+          <CourseSearch onSelect={selectCourse} />
+          <p style={{ fontSize:12, color:"var(--text3)", marginTop:6 }}>Search for any course to read and write student reviews.</p>
+        </div>
+      ) : (
+        <button onClick={clearCourse} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"var(--text2)", fontSize:13, fontWeight:600, cursor:"pointer", padding:"0 0 20px", fontFamily:"'DM Sans',sans-serif" }}>
+          ← Back to search
+        </button>
+      )}
 
       {activeCourse && (
         <>
@@ -797,7 +821,7 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
       </div>
       <label style={rv.label}>Your Review</label>
       <textarea value={comment} onChange={e => { setComment(e.target.value); setErr(""); }}
-        placeholder="Share your honest experience with this professor..."
+        placeholder="Share your honest experience with this professor…"
         rows={4}
         style={{ ...rv.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
       />
@@ -1077,7 +1101,7 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
 const rv = {
   card: {
     display:"flex", gap:14, background:"var(--surface)", borderRadius:16, padding:"18px 20px",
-    border:"1px solid var(--border)", boxShadow:"0 2px 10px rgba(49,72,122,0.06)",
+    border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)",
   },
   composeCard: {
     background:"var(--surface)", borderRadius:18, padding:"24px 26px",
@@ -1091,6 +1115,6 @@ const rv = {
   },
   label:     { display:"block", fontSize:12, fontWeight:600, color:"var(--text)", marginBottom:6 },
   input:     { width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", marginBottom:16, display:"block" },
-  submitBtn: { padding:"10px 24px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
-  cancelBtn: { padding:"10px 18px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  submitBtn: { padding:"10px 22px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1.5px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  cancelBtn: { padding:"8px 16px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
 };
