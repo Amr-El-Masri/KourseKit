@@ -873,8 +873,10 @@ export default function Dashboard({ onLogout }) {
 
   useEffect(() => {
     const handler = (e) => {
-      if (notifRef.current && !notifRef.current.contains(e.target))
+      if (notifRef.current && !notifRef.current.contains(e.target)) {
+        if (unreadCount > 0) markAllAsRead();
         setShowNotifPanel(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
