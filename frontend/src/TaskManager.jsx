@@ -45,9 +45,11 @@ const fmt       = iso => {
 const isOverdue = (iso, done) => !done && iso && new Date(iso) < new Date();
 const daysLeft  = iso => {
   if (!iso) return null;
-  const today = new Date(); today.setHours(0,0,0,0);
-  const due   = new Date(iso); due.setHours(0,0,0,0);
-  return Math.round((due - today) / 86400000);
+  const now = new Date();
+  const due = new Date(iso);
+  const todayUTC = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const dueUTC   = Date.UTC(due.getFullYear(), due.getMonth(), due.getDate());
+  return Math.round((dueUTC - todayUTC) / 86400000);
 };
 
 const EMPTY = { course:"", type:"", customType:"", title:"", due:"", notes:"" };
