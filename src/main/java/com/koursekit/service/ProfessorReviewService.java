@@ -42,4 +42,8 @@ public class ProfessorReviewService {
         return professorReviewRepo.findByStatusOrderByCreatedAtDesc(ReviewStatus.APPROVED)
                 .stream().limit(limit).collect(java.util.stream.Collectors.toList());
     }
+
+    public List<ProfessorReview> getReviewsByUser(String userId) {
+        return professorReviewRepo.findByUserId(userId);
+    }
 }

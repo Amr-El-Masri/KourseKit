@@ -58,4 +58,8 @@ public class ReviewService {
         return reviewRepo.findByStatusOrderByCreatedAtDesc(ReviewStatus.APPROVED)
                 .stream().limit(limit).collect(java.util.stream.Collectors.toList());
     }
+
+    public List<Review> getReviewsByUser(String userId) {
+        return reviewRepo.findByUserId(userId);
+    }
 }

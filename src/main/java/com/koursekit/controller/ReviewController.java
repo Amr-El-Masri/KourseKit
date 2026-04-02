@@ -59,4 +59,10 @@ public class ReviewController {
     public List<Review> getRecentReviews(@RequestParam(defaultValue = "10") int limit) {
         return reviewService.getRecentApprovedReviews(limit);
     }
+
+    // GET /api/reviews/my?userId=...
+    @GetMapping("/my")
+    public List<Review> getMyReviews(@RequestParam String userId) {
+        return reviewService.getReviewsByUser(userId);
+    }
 }

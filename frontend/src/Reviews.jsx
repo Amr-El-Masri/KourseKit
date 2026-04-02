@@ -536,6 +536,7 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
         {[
           { id:"course",    label:"Course Reviews"    },
           { id:"professor", label:"Professor Reviews" },
+          ...(token ? [{ id:"mine", label:"My Reviews" }] : []),
         ].map(t => (
           <button key={t.id} className="kk-tab" data-active={tab===t.id} onClick={() => setTab(t.id)} style={{
             padding:"8px 18px", borderRadius:9, fontSize:13,
@@ -551,6 +552,7 @@ export default function Reviews({ initialCourse, onNavigateToForum }) {
       </div>
 
       {tab === "professor" && <ProfessorReviewsTab token={token} userEmail={userEmail} onNavigateToForum={onNavigateToForum} />}
+      {tab === "mine" && <MyReviewsTab token={token} userEmail={userEmail} />}
 
       {tab === "course" && <>
       {/* Course search to browse reviews */}
@@ -806,6 +808,124 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
         </button>
         <button onClick={onDone} style={rv.cancelBtn}>Cancel</button>
       </div>
+    </div>
+  );
+}
+
+function MyReviewsTab({ token, userEmail }) {
+  const [courseReviews,    setCourseReviews]    = useState([]);
+  const [profReviews,      setProfReviews]      = useState([]);
+  const [loading,          setLoading]          = useState(false);
+
+  useEffect(() => {
+    if (!token || !userEmail) return;
+    setLoading(true);
+    const headers = { "Authorization": `Bearer ${token}` };
+    Promise.all([
+      fetch(`${API}/api/reviews/my?userId=${encodeURIComponent(userEmail)}`, { headers }).then(r => r.json()),
+      fetch(`${API}/api/professor-reviews/my?userId=${encodeURIComponent(userEmail)}`, { headers }).then(r => r.json()),
+    ])
+      .then(([cr, pr]) => {
+        setCourseReviews(Array.isArray(cr) ? cr : []);
+        setProfReviews(Array.isArray(pr) ? pr : []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [token, userEmail]);
+
+  const STATUS_STYLE = {
+    APPROVED: { bg:"#eef7f0", color:"#2d7a4a", label:"Approved"  },
+    PENDING:  { bg:"#fff8ec", color:"#b7680a", label:"Pending moderation" },
+    FLAGGED:  { bg:"#fef0f0", color:"#c0392b", label:"Flagged"   },
+  };
+
+  const StatusBadge = ({ status }) => {
+    const s = STATUS_STYLE[status] || STATUS_STYLE.PENDING;
+    return (
+      <span style={{ fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:6, background:s.bg, color:s.color }}>
+        {s.label}
+      </span>
+    );
+  };
+
+  const ReviewRow = ({ review, type }) => {
+    const label = type === "course"
+      ? `${review.section?.course?.courseCode || ""} — Section ${review.section?.sectionNumber || ""}, ${review.section?.professorName || ""}`
+      : review.professorName || "";
+    return (
+      <div style={{
+        background:"var(--surface)", border:"1px solid var(--border)",
+        borderRadius:14, padding:"16px 20px",
+        boxShadow:"0 2px 8px rgba(49,72,122,0.06)",
+        opacity: review.status === "FLAGGED" ? 0.7 : 1,
+      }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:10 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+            <span style={{ fontSize:12, fontWeight:700, color:"var(--primary)" }}>{label}</span>
+            <span style={{ fontSize:11, color:"var(--text3)" }}>· {timeAgo(review.createdAt)}</span>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ display:"inline-flex", gap:2 }}>
+              {[1,2,3,4,5].map(i => (
+                <span key={i} style={{ color: i <= review.rating ? "#f5a623" : "var(--border)", fontSize:14 }}>★</span>
+              ))}
+            </span>
+            <StatusBadge status={review.status} />
+          </div>
+        </div>
+        <p style={{ fontSize:14, color:"var(--text)", lineHeight:1.65, margin:0 }}>{review.comment}</p>
+        {review.status === "PENDING" && (
+          <div style={{ fontSize:12, color:"#b7680a", marginTop:10 }}>
+            Your review is awaiting moderator approval and is not yet visible to others.
+          </div>
+        )}
+        {review.status === "FLAGGED" && (
+          <div style={{ fontSize:12, color:"#c0392b", marginTop:10 }}>
+            Your review has been flagged and is under review by an admin.
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (loading) return <div style={{ textAlign:"center", padding:60, color:"var(--text3)" }}>Loading your reviews…</div>;
+
+  const total = courseReviews.length + profReviews.length;
+
+  if (total === 0) return (
+    <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+      <Inbox size={40} color="var(--text3)" style={{ marginBottom:12 }} />
+      <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)", marginBottom:6 }}>
+        No reviews yet
+      </div>
+      <div style={{ fontSize:13 }}>Your submitted reviews will appear here.</div>
+    </div>
+  );
+
+  return (
+    <div>
+      {courseReviews.length > 0 && (
+        <>
+          <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>
+            Course Reviews ({courseReviews.length})
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:28 }}>
+            {[...courseReviews].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+              .map(r => <ReviewRow key={r.id} review={r} type="course" />)}
+          </div>
+        </>
+      )}
+      {profReviews.length > 0 && (
+        <>
+          <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>
+            Professor Reviews ({profReviews.length})
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            {[...profReviews].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+              .map(r => <ReviewRow key={r.id} review={r} type="professor" />)}
+          </div>
+        </>
+      )}
     </div>
   );
 }
