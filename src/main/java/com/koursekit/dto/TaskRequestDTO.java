@@ -15,6 +15,7 @@ public record TaskRequestDTO(
         @NotNull LocalDateTime deadline,
         boolean completed,
         boolean fromSyllabus,
-        boolean allowPastDeadline
+        boolean allowPastDeadline,
+        String semesterName
 ) {
 }

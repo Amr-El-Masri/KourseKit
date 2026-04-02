@@ -21,8 +21,8 @@ public class NotificationService {
         this.notificationMapper = notificationMapper;
     }
 
-    public Notification createNotification(Task task, String message) {
-        Notification notification = new Notification(task, message, LocalDateTime.now());
+    public Notification createNotification(Task task, String urgency) {
+        Notification notification = new Notification(task, "", urgency, LocalDateTime.now());
         return notificationRepository.save(notification);
     }
 
