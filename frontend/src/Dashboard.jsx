@@ -880,7 +880,7 @@ export default function Dashboard({ onLogout }) {
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, []);
+  }, [unreadCount, markAllAsRead]);
 
   const [studyBlocks, setStudyBlocks] = useState({});
   const [studySlots, setStudySlots] = useState({});
