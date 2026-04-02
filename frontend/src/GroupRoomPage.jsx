@@ -100,8 +100,9 @@ function MemberProfilePanel({ member, onClose }) {
   );
 }
 
-function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUserId }) {
-  const [showMenu, setShowMenu] = useState(false);
+function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUserId, selectedMessageId, setSelectedMessageId }) {
+  const showMenu = selectedMessageId === message.id;
+  const setShowMenu = (val) => setSelectedMessageId(val ? message.id : null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
   const [submittingReport, setSubmittingReport] = useState(false);
@@ -123,7 +124,7 @@ function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUse
     } else {
       clickTimer.current = setTimeout(() => {
         clickTimer.current = null;
-        setShowMenu(v => !v);
+        setShowMenu(!showMenu);
       }, 220);
     }
   };
@@ -286,6 +287,7 @@ export default function GroupRoomPage({ group, onBack }) {
   const [viewingMember, setViewingMember] = useState(null);
   const [showReports, setShowReports] = useState(false);
   const [reports, setReports] = useState([]);
+  const [selectedMessageId, setSelectedMessageId] = useState(null);
 
   const stompClient = useRef(null);
   const messagesEndRef = useRef(null);
@@ -391,6 +393,52 @@ export default function GroupRoomPage({ group, onBack }) {
     };
 
   const isHost = members.some(m => String(m.userId) === String(currentUserId) && m.role === "HOST");
+  const [sessions, setSessions] = useState([]);
+  const [showSessionPanel, setShowSessionPanel] = useState(false);
+  const [sessionForm, setSessionForm] = useState({ date: "", startTime: "", duration: 1 });
+  const [sessionLoading, setSessionLoading] = useState(false);
+  const [syncedSessions, setSyncedSessions] = useState({});
+  
+  const loadSessions = async () => {
+    try {
+      const data = await apiFetch(`/api/group-sessions/${group.id}`);
+      setSessions(data || []);
+    } catch (e) {}
+  };
+
+  useEffect(() => { loadSessions(); }, [group.id]);
+
+  const submitSession = async () => {
+    if (!sessionForm.date || !sessionForm.startTime) return;
+    setSessionLoading(true);
+    try {
+      await apiFetch(`/api/group-sessions/${group.id}/create`, {
+        method: "POST",
+        body: JSON.stringify({
+          date: sessionForm.date,
+          startTime: sessionForm.startTime,
+          duration: Number(sessionForm.duration),
+          endTime: sessionForm.startTime,
+        }),
+      });
+      setSessionForm({ date: "", startTime: "", duration: 1 });
+      setShowSessionPanel(false);
+      await loadSessions();
+    } catch (e) {
+      setError(e.message || "Could not schedule session.");
+    }
+    setSessionLoading(false);
+  };
+
+  const syncToPlanner = async (sessionId) => {
+    try {
+      await apiFetch(`/api/group-sessions/${sessionId}/sync`, { method: "POST" });
+      setSyncedSessions(prev => ({ ...prev, [sessionId]: true }));
+    } catch (e) {
+      setError(e.message || "Could not add to planner.");
+    }
+  };
+
 
   return (
     <div style={{ padding: "28px 28px 0", maxWidth: 1100, fontFamily: "'DM Sans',sans-serif", height: "calc(100vh - 56px)", display: "flex", flexDirection: "column" }}>
@@ -415,13 +463,74 @@ export default function GroupRoomPage({ group, onBack }) {
         </div>
         <div style={{ fontSize: 13, color: "var(--accent2)" }}>{group.courseName}</div>
 
-        {isHost && (
-        <button
-            onClick={() => { setShowReports(true); loadReports(); }}
-            style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface)", color:"var(--error)", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", marginTop:8 }}
-        >
-            <Flag size={13} /> View Reports {reports.length > 0 && `(${reports.length})`}
-        </button> )}
+        <div style={{ display:"flex", gap:8, marginTop:8, flexWrap:"wrap" }}>
+          {isHost && (
+          <button
+              onClick={() => setShowSessionPanel(v => !v)}
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface)", color:"var(--primary)", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}
+          >
+                {showSessionPanel ? "Hide Scheduler" : "Schedule Session"}
+          </button>
+          )}
+          {isHost && (
+          <button
+              onClick={() => { setShowReports(true); loadReports(); }}
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface)", color:"var(--error)", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", marginTop:0 }}
+          >
+              <Flag size={13} /> View Reports {reports.length > 0 && `(${reports.length})`}
+          </button> )}
+        </div>
+      {showSessionPanel && isHost && (
+          <div style={{ marginTop:12, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"16px 18px", maxWidth:420 }}>
+            <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:14, color:"var(--primary)", marginBottom:12 }}>Schedule Next Study Session</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+              <div>
+                <label style={{ fontSize:11, fontWeight:600, color:"var(--text2)", display:"block", marginBottom:4 }}>Date</label>
+                <input type="date" value={sessionForm.date}
+                  onChange={e => setSessionForm(f => ({ ...f, date: e.target.value }))}
+                  style={{ width:"100%", padding:"8px 10px", border:"1px solid var(--border)", borderRadius:8, fontSize:13, fontFamily:"inherit", background:"var(--surface2)", color:"var(--text)", outline:"none" }} />
+              </div>
+              <div>
+                <label style={{ fontSize:11, fontWeight:600, color:"var(--text2)", display:"block", marginBottom:4 }}>Start Time</label>
+                <input type="time" value={sessionForm.startTime}
+                  onChange={e => setSessionForm(f => ({ ...f, startTime: e.target.value }))}
+                  style={{ width:"100%", padding:"8px 10px", border:"1px solid var(--border)", borderRadius:8, fontSize:13, fontFamily:"inherit", background:"var(--surface2)", color:"var(--text)", outline:"none" }} />
+              </div>
+              <div>
+                <label style={{ fontSize:11, fontWeight:600, color:"var(--text2)", display:"block", marginBottom:4 }}>Duration (hours)</label>
+                <input type="number" min="0.5" max="8" step="0.5" value={sessionForm.duration}
+                  onChange={e => setSessionForm(f => ({ ...f, duration: e.target.value }))}
+                  style={{ width:"100%", padding:"8px 10px", border:"1px solid var(--border)", borderRadius:8, fontSize:13, fontFamily:"inherit", background:"var(--surface2)", color:"var(--text)", outline:"none" }} />
+              </div>
+              <button onClick={submitSession} disabled={sessionLoading || !sessionForm.date || !sessionForm.startTime}
+                style={{ padding:"9px 0", borderRadius:9, border:"none", background:"var(--primary)", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", opacity: sessionLoading ? 0.7 : 1 }}>
+                {sessionLoading ? "Scheduling…" : "Schedule Session"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {sessions.length > 0 && (
+          <div style={{ marginTop:10 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:8 }}>Upcoming Sessions</div>
+            {sessions.map(s => (
+              <div key={s.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:10, padding:"10px 14px", marginBottom:6, flexWrap:"wrap", gap:8 }}>
+                <div>
+                  <div style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>
+                    {new Date(s.date).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" })} — {s.startTime?.slice(0,5)} ({s.duration}h)
+                  </div>
+                  <div style={{ fontSize:11, color:"var(--text2)" }}>Set by {s.createdByFirstName} {s.createdByLastName}</div>
+                </div>
+                <button
+                  onClick={() => syncToPlanner(s.id)}
+                  disabled={syncedSessions[s.id]}
+                  style={{ padding:"6px 13px", borderRadius:8, border:"1px solid var(--border)", background: syncedSessions[s.id] ? "var(--surface2)" : "var(--blue-light-bg)", color: syncedSessions[s.id] ? "var(--text3)" : "var(--primary)", fontSize:12, fontWeight:600, cursor: syncedSessions[s.id] ? "default" : "pointer", fontFamily:"inherit" }}>
+                  {syncedSessions[s.id] ? "✓ Added to Planner" : "Add to My Planner"}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {error && (
@@ -479,6 +588,8 @@ export default function GroupRoomPage({ group, onBack }) {
                     onReact={reactToMessage}
                     onReport={reportMessage}
                     currentUserId={currentUserId}
+                    selectedMessageId={selectedMessageId}
+                    setSelectedMessageId={setSelectedMessageId}
                 /> ))}
             <div ref={messagesEndRef} />
 
