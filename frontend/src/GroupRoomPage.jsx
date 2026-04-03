@@ -403,6 +403,9 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
   const [sessionForm, setSessionForm] = useState({ date: "", startTime: "", duration: 1 });
   const [sessionLoading, setSessionLoading] = useState(false);
   const [syncedSessions, setSyncedSessions] = useState({});
+  const [editingSession, setEditingSession] = useState(null);
+  const [editForm, setEditForm] = useState({ date: "", startTime: "", duration: 1 });
+  const [editLoading, setEditLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [renameValue, setRenameValue] = useState(group.name);
   const [renameLoading, setRenameLoading] = useState(false);
@@ -446,6 +449,40 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
     } catch (e) {
       setError(e.message || "Could not add to planner.");
     }
+  };
+
+  const deleteSession = async (sessionId) => {
+    if (!window.confirm("Delete this session?")) return;
+    try {
+      await apiFetch(`/api/group-sessions/${sessionId}`, { method: "DELETE" });
+      setSessions(prev => prev.filter(s => s.id !== sessionId));
+    } catch (e) { setError(e.message); }
+  };
+
+  const openEditSession = (s) => {
+    setEditingSession(s.id);
+    setEditForm({ date: s.date, startTime: s.startTime?.slice(0,5), duration: s.duration });
+  };
+
+  const submitEditSession = async () => {
+    if (!editForm.date || !editForm.startTime) return;
+    setEditLoading(true);
+
+    try {
+      const updated = await apiFetch(`/api/group-sessions/${editingSession}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          date: editForm.date,
+          startTime: editForm.startTime,
+          duration: Number(editForm.duration),
+          endTime: editForm.startTime,
+        }),
+      });
+
+      setSessions(prev => prev.map(s => s.id === editingSession ? updated : s));
+      setEditingSession(null);
+    } catch (e) { setError(e.message); }
+    setEditLoading(false);
   };
 
   const removeMember = async (memberId) => {
@@ -703,14 +740,49 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
           )}
           {sessions.map(s => (
             <div key={s.id} style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10, padding:"10px 12px" }}>
-              <div style={{ fontSize:12, fontWeight:600, color:"var(--primary)", marginBottom:2 }}>
-                {new Date(s.date).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" })}
-              </div>
-              <div style={{ fontSize:11, color:"var(--text2)", marginBottom:6 }}>{s.startTime?.slice(0,5)} · {s.duration}h</div>
-              <button onClick={() => syncToPlanner(s.id)} disabled={syncedSessions[s.id]}
-                style={{ width:"100%", padding:"5px 0", borderRadius:7, border:"1px solid var(--border)", background: syncedSessions[s.id] ? "var(--surface2)" : "var(--blue-light-bg)", color: syncedSessions[s.id] ? "var(--text3)" : "var(--primary)", fontSize:11, fontWeight:600, cursor: syncedSessions[s.id] ? "default" : "pointer", fontFamily:"inherit" }}>
-                {syncedSessions[s.id] ? "✓ Added" : "+ Planner"}
-              </button>
+              {editingSession === s.id ? (
+                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                  <input type="date" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))}
+                    style={{ width:"100%", padding:"5px 8px", border:"1px solid var(--border)", borderRadius:7, fontSize:11, fontFamily:"inherit", background:"var(--surface)", color:"var(--text)", outline:"none" }} />
+                  <input type="time" value={editForm.startTime} onChange={e => setEditForm(f => ({ ...f, startTime: e.target.value }))}
+                    style={{ width:"100%", padding:"5px 8px", border:"1px solid var(--border)", borderRadius:7, fontSize:11, fontFamily:"inherit", background:"var(--surface)", color:"var(--text)", outline:"none" }} />
+                  <input type="number" min="0.5" max="8" step="0.5" value={editForm.duration} onChange={e => setEditForm(f => ({ ...f, duration: e.target.value }))}
+                    style={{ width:"100%", padding:"5px 8px", border:"1px solid var(--border)", borderRadius:7, fontSize:11, fontFamily:"inherit", background:"var(--surface)", color:"var(--text)", outline:"none" }} />
+                  <div style={{ display:"flex", gap:4 }}>
+                    <button onClick={submitEditSession} disabled={editLoading}
+                      style={{ flex:1, padding:"5px 0", borderRadius:7, border:"none", background:"var(--primary)", color:"#fff", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                      {editLoading ? "Saving…" : "Save"}
+                    </button>
+                    <button onClick={() => setEditingSession(null)}
+                      style={{ padding:"5px 8px", borderRadius:7, border:"1px solid var(--border)", background:"var(--surface)", color:"var(--text2)", fontSize:11, cursor:"pointer", fontFamily:"inherit" }}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize:12, fontWeight:600, color:"var(--primary)", marginBottom:2 }}>
+                    {new Date(s.date).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" })}
+                  </div>
+                  <div style={{ fontSize:11, color:"var(--text2)", marginBottom:6 }}>{s.startTime?.slice(0,5)} · {s.duration}h</div>
+                  <button onClick={() => syncToPlanner(s.id)} disabled={syncedSessions[s.id]}
+                    style={{ width:"100%", padding:"5px 0", borderRadius:7, border:"1px solid var(--border)", background: syncedSessions[s.id] ? "var(--surface2)" : "var(--blue-light-bg)", color: syncedSessions[s.id] ? "var(--text3)" : "var(--primary)", fontSize:11, fontWeight:600, cursor: syncedSessions[s.id] ? "default" : "pointer", fontFamily:"inherit", marginBottom:4 }}>
+                    {syncedSessions[s.id] ? "✓ Added" : "+ Planner"}
+                  </button>
+                  {isHost && (
+                    <div style={{ display:"flex", gap:4, marginTop:2 }}>
+                      <button onClick={() => openEditSession(s)}
+                        style={{ flex:1, padding:"4px 0", borderRadius:7, border:"1px solid var(--border)", background:"var(--surface)", color:"var(--text2)", fontSize:10, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                        Edit
+                      </button>
+                      <button onClick={() => deleteSession(s.id)}
+                        style={{ flex:1, padding:"4px 0", borderRadius:7, border:"none", background:"var(--error-bg)", color:"var(--error)", fontSize:10, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                        Delete
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           ))}
         </div>
@@ -738,88 +810,124 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
 
               {isHost && (
                 <div>
-            <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.06em" }}>Rename Group</div>
-            <div style={{ display:"flex", gap:8 }}>
-              <input value={renameValue} onChange={e => setRenameValue(e.target.value)}
-                style={{ flex:1, padding:"8px 10px", border:"1px solid var(--border)", borderRadius:8, fontSize:13, fontFamily:"inherit", background:"var(--surface2)", color:"var(--text)", outline:"none" }} />
-                <button onClick={renameGroup} disabled={renameLoading}
-                  style={{ padding:"8px 14px", borderRadius:8, border:"none", background:"var(--primary)", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
-                  {renameLoading ? "Saving…" : "Save"} </button>
-                      </div>
-                    </div>
-                )}
-
-                <div>
-          <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.06em" }}>Members — {members.length}</div>
-          {members.map(m => (
-            <div key={m.userId} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid var(--border)" }}>
-              <div className="member-row" onClick={() => { setViewingMember(m); setShowSettings(false); }}
-                style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", flex:1 }}>
-                <div style={{ width:30, height:30, borderRadius:"50%", background:"var(--blue-light-bg)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"var(--primary)", flexShrink:0 }}>
-                  {m.firstName?.[0]}{m.lastName?.[0]}
-                </div>
-                <div>
-                  <div style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>{m.firstName} {m.lastName}</div>
-                  <div style={{ fontSize:11, color:"var(--text2)", textTransform:"capitalize" }}>{m.role?.toLowerCase()}</div>
-                </div>
-              </div>
-              {isHost && String(m.userId) !== String(currentUserId) && (
-                <div style={{ display:"flex", gap:6, marginLeft:8 }}>
-                  {m.role !== "HOST" && (
-                    <button onClick={() => assignHost(m.userId)}
-                      style={{ padding:"5px 10px", borderRadius:7, border:"1px solid var(--border)", background:"var(--blue-light-bg)", color:"var(--primary)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
-                      Make Host
+                  <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.06em" }}>Rename Group</div>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <input value={renameValue} onChange={e => setRenameValue(e.target.value)}
+                      style={{ flex:1, padding:"8px 10px", border:"1px solid var(--border)", borderRadius:8, fontSize:13, fontFamily:"inherit", background:"var(--surface2)", color:"var(--text)", outline:"none" }} />
+                    <button onClick={renameGroup} disabled={renameLoading}
+                      style={{ padding:"8px 14px", borderRadius:8, border:"none", background:"var(--primary)", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                      {renameLoading ? "Saving…" : "Save"}
                     </button>
-                  )}
-                  <button onClick={() => removeMember(m.userId)}
-                    style={{ padding:"5px 10px", borderRadius:7, border:"none", background:"var(--error-bg)", color:"var(--error)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
-                    Remove
-                  </button>
+                  </div>
                 </div>
               )}
-            </div>
-          ))}
-        </div>
 
-        {sessions.length > 0 && (
-          <div>
-            <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.06em" }}>Upcoming Sessions</div>
-            {sessions.map(s => (
-              <div key={s.id} style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10, padding:"10px 14px", marginBottom:6 }}>
-                <div style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>
-                  {new Date(s.date).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" })} — {s.startTime?.slice(0,5)} ({s.duration}h)
+              <div>
+                <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.06em" }}>Members — {members.length}</div>
+                {members.map(m => (
+                  <div key={m.userId} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid var(--border)" }}>
+                    <div className="member-row" onClick={() => { setViewingMember(m); setShowSettings(false); }}
+                      style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", flex:1 }}>
+                      <div style={{ width:30, height:30, borderRadius:"50%", background:"var(--blue-light-bg)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"var(--primary)", flexShrink:0 }}>
+                        {m.firstName?.[0]}{m.lastName?.[0]}
+                      </div>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>{m.firstName} {m.lastName}</div>
+                        <div style={{ fontSize:11, color:"var(--text2)", textTransform:"capitalize" }}>{m.role?.toLowerCase()}</div>
+                      </div>
+                    </div>
+                    {isHost && String(m.userId) !== String(currentUserId) && (
+                      <div style={{ display:"flex", gap:6, marginLeft:8 }}>
+                        {m.role !== "HOST" && (
+                          <button onClick={() => assignHost(m.userId)}
+                            style={{ padding:"5px 10px", borderRadius:7, border:"1px solid var(--border)", background:"var(--blue-light-bg)", color:"var(--primary)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                            Make Host
+                          </button>
+                        )}
+                        <button onClick={() => removeMember(m.userId)}
+                          style={{ padding:"5px 10px", borderRadius:7, border:"none", background:"var(--error-bg)", color:"var(--error)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                          Remove
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {sessions.length > 0 && (
+                <div>
+                  <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.06em" }}>Upcoming Sessions</div>
+                  {sessions.map(s => (
+                    <div key={s.id} style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10, padding:"10px 14px", marginBottom:6 }}>
+                      {editingSession === s.id ? (
+                        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                          <input type="date" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))}
+                            style={{ width:"100%", padding:"6px 8px", border:"1px solid var(--border)", borderRadius:7, fontSize:12, fontFamily:"inherit", background:"var(--surface)", color:"var(--text)", outline:"none" }} />
+                          <input type="time" value={editForm.startTime} onChange={e => setEditForm(f => ({ ...f, startTime: e.target.value }))}
+                            style={{ width:"100%", padding:"6px 8px", border:"1px solid var(--border)", borderRadius:7, fontSize:12, fontFamily:"inherit", background:"var(--surface)", color:"var(--text)", outline:"none" }} />
+                          <input type="number" min="0.5" max="8" step="0.5" value={editForm.duration} onChange={e => setEditForm(f => ({ ...f, duration: e.target.value }))}
+                            style={{ width:"100%", padding:"6px 8px", border:"1px solid var(--border)", borderRadius:7, fontSize:12, fontFamily:"inherit", background:"var(--surface)", color:"var(--text)", outline:"none" }} />
+                          <div style={{ display:"flex", gap:6 }}>
+                            <button onClick={submitEditSession} disabled={editLoading}
+                              style={{ flex:1, padding:"6px 0", borderRadius:7, border:"none", background:"var(--primary)", color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                              {editLoading ? "Saving…" : "Save"}
+                            </button>
+                            <button onClick={() => setEditingSession(null)}
+                              style={{ padding:"6px 12px", borderRadius:7, border:"1px solid var(--border)", background:"var(--surface)", color:"var(--text2)", fontSize:12, cursor:"pointer", fontFamily:"inherit" }}>
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>
+                            {new Date(s.date).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" })} — {s.startTime?.slice(0,5)} ({s.duration}h)
+                          </div>
+                          <div style={{ fontSize:11, color:"var(--text2)", marginBottom:8 }}>Set by {s.createdByFirstName} {s.createdByLastName}</div>
+                          <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                            <button onClick={() => syncToPlanner(s.id)} disabled={syncedSessions[s.id]}
+                              style={{ padding:"5px 12px", borderRadius:7, border:"1px solid var(--border)", background: syncedSessions[s.id] ? "var(--surface2)" : "var(--blue-light-bg)", color: syncedSessions[s.id] ? "var(--text3)" : "var(--primary)", fontSize:11, fontWeight:600, cursor: syncedSessions[s.id] ? "default" : "pointer", fontFamily:"inherit" }}>
+                              {syncedSessions[s.id] ? "✓ Added" : "Add to Planner"}
+                            </button>
+                            {isHost && (
+                              <>
+                                <button onClick={() => openEditSession(s)}
+                                  style={{ padding:"5px 12px", borderRadius:7, border:"1px solid var(--border)", background:"var(--surface)", color:"var(--text2)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                                  Edit
+                                </button>
+                                <button onClick={() => deleteSession(s.id)}
+                                  style={{ padding:"5px 12px", borderRadius:7, border:"none", background:"var(--error-bg)", color:"var(--error)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                                  Delete
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ))}
                 </div>
-                <div style={{ fontSize:11, color:"var(--text2)", marginBottom:8 }}>Set by {s.createdByFirstName} {s.createdByLastName}</div>
-                <button onClick={() => syncToPlanner(s.id)} disabled={syncedSessions[s.id]}
-                  style={{ padding:"5px 12px", borderRadius:7, border:"1px solid var(--border)", background: syncedSessions[s.id] ? "var(--surface2)" : "var(--blue-light-bg)", color: syncedSessions[s.id] ? "var(--text3)" : "var(--primary)", fontSize:11, fontWeight:600, cursor: syncedSessions[s.id] ? "default" : "pointer", fontFamily:"inherit" }}>
-                  {syncedSessions[s.id] ? "✓ Added to Planner" : "Add to My Planner"}
+              )}
+
+              <button onClick={async () => {
+                try { await apiFetch(`/api/study-groups/${group.id}/leave`, { method: "DELETE" }); onBack(); }
+                catch (e) { setError(e.message); }
+              }}
+                style={{ padding:"10px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface2)", color:"var(--text2)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                Leave Group
+              </button>
+
+              {isHost && (
+                <button onClick={deleteGroup}
+                  style={{ padding:"10px", borderRadius:9, border:"none", background:"var(--error-bg)", color:"var(--error)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                  Delete Group
                 </button>
-              </div>
-            ))}
-          </div>
-        )}
+              )}
 
-                {(
-                  <button onClick={async () => {
-                    try { await apiFetch(`/api/study-groups/${group.id}/leave`, { method: "DELETE" }); onBack(); }
-                    catch (e) { setError(e.message); }
-                  }}
-                    style={{ padding:"10px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface2)", color:"var(--text2)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
-                    Leave Group
-                  </button>
-                )}
-
-                {isHost && (
-                  <button onClick={deleteGroup}
-                    style={{ padding:"10px", borderRadius:9, border:"none", background:"var(--error-bg)", color:"var(--error)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
-                    Delete Group
-                  </button>
-                )}
-
-              </div>
             </div>
-          </>
-        )}
+          </div>
+        </>
+      )}
 
         {showGroupInfo && (
         <>
@@ -863,7 +971,7 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
               <div>
                 <div style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:10 }}>Media, Links & Docs</div>
                 <div style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10, padding:"16px", textAlign:"center", color:"var(--text3)", fontSize:12 }}>
-                  no media had been shared yet.
+                  No media had been shared yet.
                 </div>
               </div>
 

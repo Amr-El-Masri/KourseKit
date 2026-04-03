@@ -25,6 +25,12 @@ public class GroupStudySessionService {
 
     @Transactional
     public GroupStudySession createSession(Long hostId, Long groupId, java.time.LocalDate date, java.time.LocalTime startTime, double duration) {
+
+        if (date.isBefore(java.time.LocalDate.now()))
+            throw new IllegalArgumentException("Cannot schedule a session in the past");
+        if (date.isEqual(java.time.LocalDate.now()) && startTime.isBefore(java.time.LocalTime.now()))
+            throw new IllegalArgumentException("Cannot schedule a session in the past");
+
         StudyGroup group = studyGroupRepo.findById(groupId)
             .orElseThrow(() -> new IllegalArgumentException("Group not found"));
         if (!group.getHost().getId().equals(hostId))
@@ -65,5 +71,37 @@ public class GroupStudySessionService {
         task.setUserId(userId);
         task.setPriority(Task.calculatePriority(deadline));
         return taskRepository.save(task);
+    }
+
+    @Transactional
+    public GroupStudySession editSession(Long sessionId, Long hostId, java.time.LocalDate date, java.time.LocalTime startTime, double duration) {
+        if (date.isBefore(java.time.LocalDate.now()))
+            throw new IllegalArgumentException("Cannot schedule a session in the past");
+        
+        if (date.isEqual(java.time.LocalDate.now()) && startTime.isBefore(java.time.LocalTime.now()))
+            throw new IllegalArgumentException("Cannot schedule a session in the past");
+
+        GroupStudySession session = sessionRepo.findById(sessionId)
+            .orElseThrow(() -> new IllegalArgumentException("Session not found"));
+
+        if (!memberRepo.existsByStudyGroup_IdAndUser_IdAndRole(session.getStudyGroup().getId(), hostId, StudyGroupMember.Role.HOST))
+            throw new IllegalStateException("Only the host can edit sessions");
+        
+        session.setDate(date);
+        session.setStartTime(startTime);
+        session.setDuration(duration);
+        session.setEndTime(startTime.plusMinutes((long)(duration * 60)));
+        return sessionRepo.save(session);
+    }
+
+    @Transactional
+    public void deleteSession(Long sessionId, Long hostId) {
+        GroupStudySession session = sessionRepo.findById(sessionId)
+            .orElseThrow(() -> new IllegalArgumentException("Session not found"));
+
+        if (!memberRepo.existsByStudyGroup_IdAndUser_IdAndRole(session.getStudyGroup().getId(), hostId, StudyGroupMember.Role.HOST))
+            throw new IllegalStateException("Only the host(s) can delete sessions");
+
+        sessionRepo.deleteById(sessionId);
     }
 }

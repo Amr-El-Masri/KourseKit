@@ -59,4 +59,24 @@ public class GroupStudySessionController {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
+
+    @PatchMapping("/{sessionId}")
+    public ResponseEntity<?> editSession(@PathVariable Long sessionId, @RequestBody GroupStudySessionRequestDTO dto) {
+        try {
+            GroupStudySession session = sessionService.editSession(sessionId, currentUserId(), dto.date(), dto.startTime(), dto.duration());
+            return ResponseEntity.ok(sessionMapper.toResponseDTO(session));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{sessionId}")
+    public ResponseEntity<?> deleteSession(@PathVariable Long sessionId) {
+        try {
+            sessionService.deleteSession(sessionId, currentUserId());
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
 }
