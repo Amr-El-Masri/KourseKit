@@ -1004,13 +1004,15 @@ function CoursesPanel({ enrolledSections, globalCourseColors, dismissedSections,
                     const d = new Date(dateStr + "T00:00:00");
                     const label = d.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"numeric" });
                     return (
-                        <div key={key} style={{ display:"flex", alignItems:"center", gap:8, padding:"5px 8px", background:"var(--surface2)", borderRadius:8, marginBottom:4 }}>
-                            <div style={{ width:8, height:8, borderRadius:"50%", background:color, flexShrink:0 }} />
-                            <div style={{ flex:1, minWidth:0 }}>
-                                <span style={{ fontSize:11, fontWeight:600, color:"var(--text)" }}>{es?.courseCode}</span>
-                                <span style={{ fontSize:10, color:"var(--text3)", marginLeft:6 }}>{label}</span>
+                        <div key={key} style={{ marginBottom:8, background:"var(--surface2)", borderRadius:10, overflow:"hidden", border:"1px solid var(--border)" }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px" }}>
+                                <div style={{ width:18, height:18, borderRadius:"50%", background:color, flexShrink:0, boxShadow:`0 1px 4px ${color}66` }} />
+                                <div style={{ flex:1, minWidth:0 }}>
+                                    <div style={{ fontSize:12, fontWeight:700, color:"var(--text)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{es?.courseCode}</div>
+                                    <div style={{ fontSize:10, color:"var(--text2)" }}>{label}</div>
+                                </div>
+                                <button onClick={() => onRestore(key)} style={{ fontSize:10, background:"var(--blue-light-bg)", color:"var(--primary)", border:"none", borderRadius:5, padding:"2px 7px", cursor:"pointer", fontWeight:600, flexShrink:0 }}>Restore</button>
                             </div>
-                            <button onClick={() => onRestore(key)} style={{ fontSize:10, background:"var(--blue-light-bg)", color:"var(--primary)", border:"none", borderRadius:5, padding:"2px 7px", cursor:"pointer", fontWeight:600 }}>Restore</button>
                         </div>
                     );
                 })}
