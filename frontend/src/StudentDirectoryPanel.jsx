@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle, X, UserPlus, UserCheck } from "lucide-react";
+import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle, X } from "lucide-react";
 
 const API = "http://localhost:8080";
 const AVATAR_ICONS = [
@@ -22,7 +22,7 @@ function AvatarIcon({ avatarId, size = 38 }) {
   );
 }
 
-export function StudentProfileView({ student, onBack, isFriend, onFriendToggle }) {
+export function StudentProfileView({ student, onBack }) {
   const fullName = [student.firstName, student.lastName].filter(Boolean).join(" ") || "Student";
   return (
     <div>
@@ -36,9 +36,6 @@ export function StudentProfileView({ student, onBack, isFriend, onFriendToggle }
           <div style={{ fontSize:12, color:"rgba(255,255,255,0.7)", marginTop:3 }}>{STATUS_LABELS[student.status] || student.status || "Student"}</div>
           {student.email && <div style={{ fontSize:12, color:"rgba(255,255,255,0.6)", marginTop:2 }}>{student.email}</div>}
         </div>
-        <button onClick={() => onFriendToggle(student)} style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px", borderRadius:10, border:"none", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit", background:isFriend?"rgba(255,255,255,0.2)":"white", color:isFriend?"white":"#31487A" }}>
-          {isFriend ? <><UserCheck size={13}/> Following</> : <><UserPlus size={13}/> Follow</>}
-        </button>
       </div>
 
       {student.bio && (
@@ -64,7 +61,7 @@ export function StudentProfileView({ student, onBack, isFriend, onFriendToggle }
   );
 }
 
-export default function StudentDirectoryPanel({ onClose, friends, onFriendToggle }) {
+export default function StudentDirectoryPanel({ onClose }) {
     const [query,   setQuery]   = useState("");
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -117,8 +114,6 @@ export default function StudentDirectoryPanel({ onClose, friends, onFriendToggle
             <StudentProfileView
               student={viewing}
               onBack={() => setViewing(null)}
-              isFriend={!!friends.find(f => f.id === viewing.id)}
-              onFriendToggle={onFriendToggle}
             />
           ) : (
             <>
@@ -137,7 +132,6 @@ export default function StudentDirectoryPanel({ onClose, friends, onFriendToggle
               )}
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
                 {results.map(s => {
-                  const isFriend = !!friends.find(f => f.id === s.id);
                   const fullName = [s.firstName, s.lastName].filter(Boolean).join(" ") || "Student";
                   return (
                     <div key={s.id} onClick={() => setViewing(s)} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px", background:"var(--surface)", borderRadius:12, border:"1px solid var(--border)", cursor:"pointer" }}
@@ -149,9 +143,6 @@ export default function StudentDirectoryPanel({ onClose, friends, onFriendToggle
                         <div style={{ fontSize:11, color:"var(--text2)", marginTop:1 }}>{s.major || "—"} · {STATUS_LABELS[s.status] || s.status || "—"}</div>
                         {s.email && <div style={{ fontSize:11, color:"var(--text3)", marginTop:1 }}>{s.email}</div>}
                       </div>
-                       <button onClick={e => { e.stopPropagation(); onFriendToggle(s); }} style={{ padding:"5px 10px", borderRadius:8, border:"1px solid var(--border)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit", flexShrink:0, background:isFriend?"var(--primary)":"var(--surface2)", color:isFriend?"white":"var(--text2)" }}>
-                        {isFriend ? "✓ Following" : "+ Follow"}
-                      </button>
                     </div>
                   );
                 })}

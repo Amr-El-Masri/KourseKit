@@ -586,9 +586,7 @@ export default function Profile({ onProfileSave, onSemestersUpdated }) {
   const [editCourses,  setEditCourses]  = useState([]);
   const [semSaveLoad,  setSemSaveLoad]  = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
-  const [showFollowList, setShowFollowList] = useState(null);
   const [showDirectory, setShowDirectory] = useState(false);
-  const [friends, setFriends] = useState(() => { try { return JSON.parse(localStorage.getItem("kk_friends") || "[]"); } catch { return []; } });
 
   // Transcript uploader
   const [transcriptModal, setTranscriptModal] = useState(false);
@@ -810,13 +808,6 @@ const refetchSemesters = () =>
       {showDirectory &&
         <StudentDirectoryPanel
           onClose={() => setShowDirectory(false)}
-          friends={friends}
-          onFriendToggle={student => {
-            const exists = friends.find(f => f.id === student.id);
-            const updated = exists ? friends.filter(f => f.id !== student.id) : [...friends, student];
-            setFriends(updated);
-            localStorage.setItem("kk_friends", JSON.stringify(updated));
-          }}
         />
       }
       <style>{`
@@ -937,40 +928,6 @@ const refetchSemesters = () =>
             <StatChip label="Cumulative GPA" value={profile.cumGPA || "—"} color={gpaColor(profile.cumGPA)} bg="var(--bg)" />
             {profile.totalCredits && <StatChip label="Credits" value={`${profile.totalCredits} cr`} color="var(--accent2)" bg="var(--surface3)" />}
           </div>
-
-          <div style={{ display:"flex", gap:16, marginTop:16 }}>
-            <button onClick={() => setShowFollowList("following")} style={{ background:"none", border:"none", cursor:"pointer", padding:0, fontFamily:"inherit", textAlign:"left" }}>
-              <span style={{ fontSize:18, fontWeight:700, color:"var(--primary)" }}>{friends.length}</span>
-              <span style={{ fontSize:12, color:"var(--text2)", marginLeft:5 }}>Following</span>
-            </button>
-          </div>
-
-          {showFollowList && (
-            <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", zIndex:1001, display:"flex", alignItems:"center", justifyContent:"center" }}>
-              <div style={{ background:"var(--bg)", borderRadius:18, width:360, maxHeight:"70vh", display:"flex", flexDirection:"column", boxShadow:"0 8px 40px rgba(0,0,0,0.18)" }}>
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 22px", borderBottom:"1px solid var(--border)" }}>
-                  <div style={{ fontFamily:"'Fraunces',serif", fontSize:16, fontWeight:700, color:"var(--primary)" }}>Following</div>
-                  <button onClick={() => setShowFollowList(null)} style={{ background:"none", border:"1px solid var(--border)", borderRadius:8, width:30, height:30, cursor:"pointer", fontSize:16, color:"var(--text2)" }}>✕</button>
-                </div>
-                <div style={{ overflowY:"auto", padding:"12px 16px", display:"flex", flexDirection:"column", gap:8 }}>
-                  {friends.length === 0 && <div style={{ fontSize:13, color:"var(--text3)", textAlign:"center", padding:"24px 0" }}>Not following anyone yet.</div>}
-                  {friends.map(f => (
-                    <div key={f.id} onClick={() => { setShowFollowList(null); setShowDirectory(true); }} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 12px", background:"var(--surface2)", borderRadius:12, border:"1px solid var(--border)", cursor:"pointer" }}>
-                      <div style={{ width:36, height:36, borderRadius:"50%", background:"linear-gradient(135deg,#8FB3E2,#A59AC9)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                        <span style={{ fontWeight:700, fontSize:13, color:"white" }}>{(f.firstName?.[0] || "?").toUpperCase()}</span>
-                      </div>
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontWeight:600, fontSize:13, color:"var(--primary)" }}>{[f.firstName, f.lastName].filter(Boolean).join(" ") || "Student"}</div>
-                        {f.email && <div style={{ fontSize:11, color:"var(--text3)", marginTop:1 }}>{f.email}</div>}
-                      </div>
-                      <button onClick={() => { const next = friends.filter(x => x.id !== f.id); setFriends(next); localStorage.setItem("kk_friends", JSON.stringify(next)); }} style={{ fontSize:11, color:"var(--error)", background:"none", border:"1px solid var(--border)", borderRadius:7, padding:"3px 8px", cursor:"pointer", fontFamily:"inherit", flexShrink:0 }}>
-                        Unfollow </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
 
           {editing && (
             <div style={{ borderTop:"1px solid #F4F4F8", paddingTop:24 }}>
