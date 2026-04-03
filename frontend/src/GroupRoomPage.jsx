@@ -52,17 +52,22 @@ function MemberProfilePanel({ member, onClose }) {
   const currentUserId = getUserId();
   const isMe = String(member.userId) === String(currentUserId);
 
-  useEffect(() => {
+   useEffect(() => {
     setLoading(true);
-    fetch(`http://localhost:8080/api/students/search?query=${encodeURIComponent(member.firstName)}`, {
-      headers: { "Authorization": `Bearer ${token}` }
-    })
-      .then(r => r.json())
-      .then(data => {
+    Promise.all([
+      fetch(`http://localhost:8080/api/students/search?query=${encodeURIComponent(member.firstName)}`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      }).then(r => r.json()),
+      fetch(`http://localhost:8080/api/students/${member.userId}/is-following`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      }).then(r => r.json()).catch(() => false)
+    ])
+      .then(([data, isFollowing]) => {
         const found = Array.isArray(data)
           ? data.find(s => String(s.id) === String(member.userId))
           : null;
         setProfile(found || null);
+        setFollowing(!!isFollowing);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -278,7 +283,7 @@ function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUse
   );
 }
 
-export default function GroupRoomPage({ group, onBack }) {
+export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGroup }) {
   const [members,  setMembers]  = useState([]);
   const [messages, setMessages] = useState([]);
   const [input,    setInput]    = useState("");
@@ -401,6 +406,7 @@ export default function GroupRoomPage({ group, onBack }) {
   const [showSettings, setShowSettings] = useState(false);
   const [renameValue, setRenameValue] = useState(group.name);
   const [renameLoading, setRenameLoading] = useState(false);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
     
   const loadSessions = async () => {
     try {
@@ -481,7 +487,7 @@ export default function GroupRoomPage({ group, onBack }) {
   };
 
   return (
-    <div style={{ padding: "28px 28px 0", maxWidth: 1100, fontFamily: "'DM Sans',sans-serif", height: "calc(100vh - 56px)", display: "flex", flexDirection: "column" }}>
+    <div style={{ padding: "28px 28px 0", maxWidth: "100%", fontFamily: "'DM Sans',sans-serif", height: "calc(100vh - 56px)", display: "flex", flexDirection: "column" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing: border-box; }
@@ -498,12 +504,21 @@ export default function GroupRoomPage({ group, onBack }) {
           <ArrowLeft size={15} /> Back to Study Groups
         </button>
 
-        <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 22, color: "var(--primary)", marginBottom: 2 }}>
+        <div onClick={() => setShowGroupInfo(true)} style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 22, color: "var(--primary)", marginBottom: 2, cursor:"pointer", display:"inline-flex", alignItems:"center", gap:8 }}>
           {group.name}
+          <span style={{ fontSize:12, fontWeight:500, color:"var(--text3)", fontFamily:"'DM Sans',sans-serif" }}>ⓘ</span>
         </div>
         <div style={{ fontSize: 13, color: "var(--accent2)" }}>{group.courseName}</div>
 
         <div style={{ display:"flex", gap:8, marginTop:8, flexWrap:"wrap" }}>
+          {isHost && (
+          <button
+              onClick={() => setShowSettings(true)}
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface)", color:"var(--text2)", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}
+          >
+              Settings
+          </button>
+          )}
           {isHost && (
           <button
               onClick={() => setShowSessionPanel(v => !v)}
@@ -558,18 +573,15 @@ export default function GroupRoomPage({ group, onBack }) {
 
       <div style={{ display: "flex", gap: 16, flex: 1, minHeight: 0, paddingBottom: 28 }}>
 
-        <div style={{ width: 160, flexShrink: 0, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "16px 14px", display:"flex", flexDirection:"column", gap:10 }}>
-          <button onClick={() => setShowSettings(true)}
-            style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10, padding:"10px 12px", cursor:"pointer", fontFamily:"inherit" }}>
-            <span style={{ fontSize:12, fontWeight:700, color:"var(--primary)" }}>Members</span>
-            <span style={{ fontSize:12, fontWeight:700, color:"var(--primary)", background:"var(--blue-light-bg)", borderRadius:99, padding:"2px 8px" }}>{members.length}</span>
-          </button>
-          {isHost && (
-            <button onClick={() => { setShowSettings(true); }}
-              style={{ display:"flex", alignItems:"center", gap:6, width:"100%", background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10, padding:"10px 12px", cursor:"pointer", fontFamily:"inherit", fontSize:12, fontWeight:600, color:"var(--text2)" }}>
-              ⚙️ Settings
+        <div style={{ width: 160, flexShrink: 0, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "12px 10px", display:"flex", flexDirection:"column", gap:6, overflowY:"auto" }}>
+          <div style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.07em", padding:"4px 6px", marginBottom:4 }}>My Groups</div>
+          {myGroups.map(g => (
+            <button key={g.id} onClick={() => onSwitchGroup(g)}
+              style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", padding:"8px 10px", borderRadius:10, border:"none", background: g.id === group.id ? "var(--blue-light-bg)" : "var(--surface2)", cursor:"pointer", fontFamily:"inherit", textAlign:"left", borderLeft: g.id === group.id ? "3px solid var(--primary)" : "3px solid transparent", transition:"all 0.15s" }}>
+              <span style={{ fontSize:12, fontWeight:700, color:"var(--primary)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", width:"100%" }}>{g.name}</span>
+              <span style={{ fontSize:10, color:"var(--text2)", marginTop:2 }}>{g.courseName}</span>
             </button>
-          )}
+          ))}
         </div>
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden" }}>
@@ -683,6 +695,26 @@ export default function GroupRoomPage({ group, onBack }) {
             </button>
           </div>
         </div>
+
+        <div style={{ width: 200, flexShrink: 0, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "14px 12px", display:"flex", flexDirection:"column", gap:10, overflowY:"auto" }}>
+          <div style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.07em" }}>Sessions</div>
+          {sessions.length === 0 && (
+            <div style={{ fontSize:12, color:"var(--text3)", textAlign:"center", paddingTop:12 }}>No sessions yet</div>
+          )}
+          {sessions.map(s => (
+            <div key={s.id} style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10, padding:"10px 12px" }}>
+              <div style={{ fontSize:12, fontWeight:600, color:"var(--primary)", marginBottom:2 }}>
+                {new Date(s.date).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" })}
+              </div>
+              <div style={{ fontSize:11, color:"var(--text2)", marginBottom:6 }}>{s.startTime?.slice(0,5)} · {s.duration}h</div>
+              <button onClick={() => syncToPlanner(s.id)} disabled={syncedSessions[s.id]}
+                style={{ width:"100%", padding:"5px 0", borderRadius:7, border:"1px solid var(--border)", background: syncedSessions[s.id] ? "var(--surface2)" : "var(--blue-light-bg)", color: syncedSessions[s.id] ? "var(--text3)" : "var(--primary)", fontSize:11, fontWeight:600, cursor: syncedSessions[s.id] ? "default" : "pointer", fontFamily:"inherit" }}>
+                {syncedSessions[s.id] ? "✓ Added" : "+ Planner"}
+              </button>
+            </div>
+          ))}
+        </div>
+
       </div>
 
       {viewingMember && (
@@ -788,6 +820,57 @@ export default function GroupRoomPage({ group, onBack }) {
             </div>
           </>
         )}
+
+        {showGroupInfo && (
+        <>
+          <div onClick={() => setShowGroupInfo(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.3)", zIndex:200, backdropFilter:"blur(2px)" }} />
+          <div style={{ position:"fixed", top:0, right:0, bottom:0, width:340, background:"var(--bg)", boxShadow:"-8px 0 32px rgba(0,0,0,0.15)", zIndex:201, display:"flex", flexDirection:"column" }}>
+            
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 22px", borderBottom:"1px solid var(--border)" }}>
+              <div style={{ fontFamily:"'Fraunces',serif", fontSize:17, fontWeight:700, color:"var(--primary)" }}>Group Info</div>
+              <button onClick={() => setShowGroupInfo(false)} style={{ background:"none", border:"1px solid var(--border)", borderRadius:8, width:32, height:32, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text2)" }}>
+                <X size={15}/>
+              </button>
+            </div>
+
+            <div style={{ flex:1, overflowY:"auto", padding:"22px" }}>
+
+              <div style={{ display:"flex", flexDirection:"column", alignItems:"center", marginBottom:24, gap:10 }}>
+                <div style={{ width:72, height:72, borderRadius:"50%", background:"linear-gradient(135deg,var(--primary),var(--accent))", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, fontWeight:700, color:"#fff" }}>
+                  {group.name?.[0]?.toUpperCase()}
+                </div>
+                <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:20, color:"var(--primary)", textAlign:"center" }}>{group.name}</div>
+                <div style={{ fontSize:12, color:"var(--text2)" }}>{group.courseName}</div>
+                <div style={{ fontSize:12, color:"var(--text3)" }}>{members.length} member{members.length !== 1 ? "s" : ""}</div>
+              </div>
+
+              <div style={{ marginBottom:24 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:10 }}>Members</div>
+                {members.map(m => (
+                  <div key={m.userId} className="member-row" onClick={() => { setViewingMember(m); setShowGroupInfo(false); }}
+                    style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 6px", borderBottom:"1px solid var(--border)", cursor:"pointer", borderRadius:8 }}>
+                    <div style={{ width:34, height:34, borderRadius:"50%", background:"var(--blue-light-bg)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"var(--primary)", flexShrink:0 }}>
+                      {m.firstName?.[0]}{m.lastName?.[0]}
+                    </div>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>{m.firstName} {m.lastName}</div>
+                      <div style={{ fontSize:11, color:"var(--text2)", textTransform:"capitalize" }}>{m.role?.toLowerCase()}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <div style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:10 }}>Media, Links & Docs</div>
+                <div style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10, padding:"16px", textAlign:"center", color:"var(--text3)", fontSize:12 }}>
+                  no media had been shared yet.
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </>
+      )}
 
     </div>
   );

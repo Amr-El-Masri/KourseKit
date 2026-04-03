@@ -477,7 +477,12 @@ export default function StudyGroupFinder({ courses = [] }) {
   );
 
   if (openGroup) {
-    return <GroupRoomPage group={openGroup} onBack={() => setOpenGroup(null)} />; }
+    return <GroupRoomPage
+      group={openGroup}
+      onBack={() => setOpenGroup(null)}
+      myGroups={myGroups}
+      onSwitchGroup={(g) => setOpenGroup(g)}
+    />; }
 
   return (
     <div style={{ padding: "28px 28px 60px", maxWidth: 960, fontFamily: "'DM Sans',sans-serif" }}>
