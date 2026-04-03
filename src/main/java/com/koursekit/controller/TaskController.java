@@ -54,17 +54,21 @@ public class TaskController {
     }
 
     @GetMapping("/list-all")
-    public ResponseEntity<List<TaskResponseDTO>> listAll() {
-        return ResponseEntity.ok(taskService.listByOrderByDeadline(currentUserId()));
+    public ResponseEntity<List<TaskResponseDTO>> listAll(@RequestParam(required = false) String semester) {
+        return ResponseEntity.ok(taskService.listByOrderByDeadline(currentUserId(), semester));
     }
 
     @GetMapping("/list")
-    public ResponseEntity<List<TaskResponseDTO>> listByCourse(@RequestParam String course) {
-        return ResponseEntity.ok(taskService.listByCourse(currentUserId(), course));
+    public ResponseEntity<List<TaskResponseDTO>> listByCourse(
+            @RequestParam String course,
+            @RequestParam(required = false) String semester) {
+        return ResponseEntity.ok(taskService.listByCourse(currentUserId(), course, semester));
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<TaskResponseDTO>> searchTasks(@RequestParam String keyword) {
-        return ResponseEntity.ok(taskService.searchTasks(currentUserId(), keyword));
+    public ResponseEntity<List<TaskResponseDTO>> searchTasks(
+            @RequestParam String keyword,
+            @RequestParam(required = false) String semester) {
+        return ResponseEntity.ok(taskService.searchTasks(currentUserId(), keyword, semester));
     }
 }

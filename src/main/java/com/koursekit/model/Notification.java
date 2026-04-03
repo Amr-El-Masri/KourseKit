@@ -13,6 +13,7 @@ public class Notification {
     private Long id;
 
     private String message;
+    private String urgency;
 
     @JsonFormat(pattern = "dd-MM-yyyy HH:mm")
     private LocalDateTime createdAt;
@@ -25,9 +26,10 @@ public class Notification {
 
     public Notification() {}
 
-    public Notification(Task task, String message, LocalDateTime createdAt) {
+    public Notification(Task task, String message, String urgency, LocalDateTime createdAt) {
         this.task = task;
         this.message = message;
+        this.urgency = urgency;
         this.createdAt = createdAt;
         this.isRead = false;
     }
@@ -36,12 +38,14 @@ public class Notification {
     public Long getId() { return id; }
     public Task getTask() { return task; }
     public String getMessage() { return message; }
+    public String getUrgency() { return urgency; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public boolean isRead() { return isRead; }
 
     // setters
     public void setTask(Task task) { this.task = task; }
     public void setMessage(String message) { this.message = message; }
+    public void setUrgency(String urgency) { this.urgency = urgency; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public void setRead(boolean read) { this.isRead = read; }
 }

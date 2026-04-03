@@ -27,6 +27,7 @@ public class Task {
     private String type;
     private String notes;
     private boolean completed = false;
+    private String semesterName;
 
     @Column(name = "from_syllabus")
     private Boolean fromSyllabus = false;
@@ -93,6 +94,8 @@ public class Task {
     public boolean isCompleted() { return completed; }
     public boolean isFromSyllabus() { return Boolean.TRUE.equals(fromSyllabus); }
     public void setFromSyllabus(Boolean fromSyllabus) { this.fromSyllabus = fromSyllabus; }
+    public String getSemesterName() { return semesterName; }
+    public void setSemesterName(String semesterName) { this.semesterName = semesterName; }
     public Long getUserId() { return user.getId(); }
 
     @Override

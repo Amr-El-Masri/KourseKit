@@ -16,15 +16,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     long countByTask_User_IdAndIsReadFalse(Long userId);
 
-    boolean existsByTask_IdAndCreatedAtAfter(Long taskId, LocalDateTime after);
-
-    @Query("SELECT COUNT(n) > 0 FROM Notification n WHERE n.task.id = :taskId AND n.message LIKE '%overdue%'")
-    boolean existsOverdueByTaskId(@Param("taskId") Long taskId);
-
-    @Modifying
-    @Transactional
-    @Query("DELETE FROM Notification n WHERE n.task.id = :taskId AND n.message LIKE '%overdue%'")
-    void deleteOverdueByTaskId(@Param("taskId") Long taskId);
+    @Query("SELECT COUNT(n) > 0 FROM Notification n WHERE n.task.id = :taskId AND n.urgency = :urgency")
+    boolean existsByTask_IdAndUrgency(@Param("taskId") Long taskId, @Param("urgency") String urgency);
 
     @Modifying
     @Transactional
@@ -48,6 +41,6 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     @Modifying
     @Transactional
-    @Query("DELETE FROM Notification n WHERE n.createdAt < :cutoff AND n.task.deadline >= CURRENT_TIMESTAMP")
+    @Query("DELETE FROM Notification n WHERE n.createdAt < :cutoff AND n.urgency <> 'overdue'")
     void deleteOlderThanAndNotOverdue(@Param("cutoff") LocalDateTime cutoff);
 }

@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 
 @Component
 public class NotificationMapper {
@@ -15,12 +14,12 @@ public class NotificationMapper {
         Task task = notification.getTask();
         LocalDateTime now = LocalDateTime.now();
 
-        long hoursUntilDeadline = ChronoUnit.HOURS.between(now, task.getDeadline());
-
-        String urgency = hoursUntilDeadline < 0 ? "overdue"
-                : hoursUntilDeadline <= 6 ? "today"
-                : hoursUntilDeadline <= 30 ? "tomorrow"
-                : "3day";
+        // Read stored urgency tier; fall back to recalculating for old notifications without it
+        String urgency = notification.getUrgency();
+        if (urgency == null) {
+            long hours = java.time.temporal.ChronoUnit.HOURS.between(now, task.getDeadline());
+            urgency = hours < 0 ? "overdue" : hours <= 6 ? "today" : hours <= 48 ? "tomorrow" : "3day";
+        }
 
         Duration timeLeft = Duration.between(now, task.getDeadline());
 

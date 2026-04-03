@@ -35,13 +35,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/professor-reviews").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/professor-reviews/submit").authenticated()//only aauthenticated users can post prof reviews
                 .requestMatchers(HttpMethod.POST, "/api/reports/**").authenticated()
-                .requestMatchers(HttpMethod.GET, "/api/forum/**").permitAll()       // anyone can read
-                .requestMatchers(HttpMethod.POST, "/api/forum/**").authenticated()  // must be logged in to post
-                .requestMatchers(HttpMethod.DELETE, "/api/forum/**").authenticated() // must be logged in to delete
-                .requestMatchers(HttpMethod.GET, "/api/reviews/recent", "/api/professor-reviews/recent").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/reviews/my", "/api/professor-reviews/my").authenticated()
-                .requestMatchers(HttpMethod.GET, "/api/forum/my-posts").authenticated()
                 .requestMatchers("/ws/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/group-sessions/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/group-sessions/**").authenticated()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session

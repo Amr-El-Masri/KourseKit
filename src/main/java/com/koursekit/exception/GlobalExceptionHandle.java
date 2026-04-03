@@ -59,13 +59,13 @@ public class GlobalExceptionHandle {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleGeneric(Exception ex) {
-        ex.printStackTrace(); // Print full stack trace to backend console
+        ex.printStackTrace();
         return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of(
                         "timestamp", LocalDateTime.now(),
-                        "status", 400,
-                        "message", "Bad request: " + ex.getMessage()
+                        "status", 500,
+                        "message", "An unexpected error occurred"
                 ));
     }
 }

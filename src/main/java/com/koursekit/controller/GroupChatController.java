@@ -3,6 +3,7 @@ package com.koursekit.controller;
 import com.koursekit.model.GroupMessage;
 import com.koursekit.dto.GroupMessageResponseDTO;
 import com.koursekit.mappers.GroupMessageMapper;
+import com.koursekit.model.GroupMessage;
 import com.koursekit.model.User;
 import com.koursekit.service.GroupMessageService;
 import org.springframework.http.ResponseEntity;

@@ -3,18 +3,23 @@ package com.koursekit.service;
 import com.koursekit.dto.TaskRequestDTO;
 import com.koursekit.dto.TaskResponseDTO;
 import com.koursekit.exception.InvalidDeadlineException;
+import com.koursekit.model.SavedCourse;
+import com.koursekit.model.SavedSemester;
 import com.koursekit.model.Task;
 import com.koursekit.exception.DuplicateTaskException;
 import com.koursekit.exception.TaskNotFoundException;
 import com.koursekit.mappers.TaskMapper;
 import com.koursekit.repository.NotificationRepository;
+import com.koursekit.repository.SavedSemesterRepository;
 import com.koursekit.repository.StudyPlanRepository;
 import com.koursekit.repository.TaskRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class TaskService {
@@ -22,15 +27,18 @@ public class TaskService {
     private final NotificationRepository notificationRepository;
     private final TaskMapper taskMapper;
     private final StudyPlanRepository studyPlanRepository;
+    private final SavedSemesterRepository savedSemesterRepository;
 
     public TaskService(TaskRepository taskRepository,
                        NotificationRepository notificationRepository,
                        TaskMapper taskMapper,
-                       StudyPlanRepository studyPlanRepository) {
+                       StudyPlanRepository studyPlanRepository,
+                       SavedSemesterRepository savedSemesterRepository) {
         this.taskRepository = taskRepository;
         this.notificationRepository = notificationRepository;
         this.taskMapper = taskMapper;
         this.studyPlanRepository = studyPlanRepository;
+        this.savedSemesterRepository = savedSemesterRepository;
     }
 
     public TaskResponseDTO addTask(Long userId, TaskRequestDTO dto) {
@@ -65,6 +73,13 @@ public class TaskService {
         if (!task.getUserId().equals(userId)) {
             throw new TaskNotFoundException("Task not found");
         }
+        String newTitle  = dto.title()  != null ? dto.title()  : task.getTitle();
+        String newCourse = dto.course() != null ? dto.course() : task.getCourse();
+        if (!newTitle.equals(task.getTitle()) || !newCourse.equals(task.getCourse())) {
+            if (taskRepository.existsByCourseAndTitleAndUserIdExcluding(newCourse, newTitle, userId, taskId)) {
+                throw new DuplicateTaskException("Task with same course and title already exists");
+            }
+        }
         if (dto.title() != null) task.setTitle(dto.title());
         if (dto.course() != null) task.setCourse(dto.course());
         if (dto.deadline() != null) task.setDeadline(dto.deadline());
@@ -82,8 +97,10 @@ public class TaskService {
             long hoursUntil = java.time.temporal.ChronoUnit.HOURS.between(
                     LocalDateTime.now(), saved.getDeadline());
             if (hoursUntil > 0 && hoursUntil <= 78) {
+                long hoursLeft = java.time.temporal.ChronoUnit.HOURS.between(LocalDateTime.now(), saved.getDeadline());
+                String tier = hoursLeft <= 6 ? "today" : hoursLeft <= 48 ? "tomorrow" : "3day";
                 notificationRepository.save(
-                        new com.koursekit.model.Notification(saved, "", LocalDateTime.now())
+                        new com.koursekit.model.Notification(saved, "", tier, LocalDateTime.now())
                 );
             }
         }
@@ -91,19 +108,54 @@ public class TaskService {
         return taskMapper.toDto(saved);
     }
 
-    public List<TaskResponseDTO> listByOrderByDeadline(Long userId) {
+    @Transactional
+    public List<TaskResponseDTO> listByOrderByDeadline(Long userId, String semester) {
+        migrateTaskSemesters(userId);
+        if (semester != null && !semester.isBlank()) {
+            return taskRepository.findByUserIdAndSemesterNameOrderByDeadlineAscCourseAscTitleAsc(userId, semester)
+                    .stream().map(taskMapper::toDto).toList();
+        }
         return taskRepository.findByUserIdOrderByDeadlineAscCourseAscTitleAsc(userId)
                 .stream().map(taskMapper::toDto).toList();
     }
 
-    public List<TaskResponseDTO> listByCourse(Long userId, String course) {
+    @Transactional
+    public List<TaskResponseDTO> listByCourse(Long userId, String course, String semester) {
+        if (semester != null && !semester.isBlank()) {
+            return taskRepository.findByUserIdAndSemesterNameAndCourseOrderByDeadlineAscTitleAsc(userId, semester, course)
+                    .stream().map(taskMapper::toDto).toList();
+        }
         return taskRepository.findByUserIdAndCourseOrderByDeadlineAscTitleAsc(userId, course)
                 .stream().map(taskMapper::toDto).toList();
     }
 
-    public List<TaskResponseDTO> searchTasks(Long userId, String keyword) {
+    @Transactional
+    public List<TaskResponseDTO> searchTasks(Long userId, String keyword, String semester) {
+        if (semester != null && !semester.isBlank()) {
+            return taskRepository.searchByUserIdAndSemesterNameAndKeyword(userId, semester, keyword)
+                    .stream().map(taskMapper::toDto).toList();
+        }
         return taskRepository.searchByUserIdAndKeyword(userId, keyword)
                 .stream().map(taskMapper::toDto).toList();
+    }
+
+    private void migrateTaskSemesters(Long userId) {
+        List<Task> unmigrated = taskRepository.findByUserIdAndSemesterNameIsNull(userId);
+        if (unmigrated.isEmpty()) return;
+
+        List<SavedSemester> semesters = savedSemesterRepository.findByUserIdWithCourses(userId);
+        Map<String, String> courseToSemester = new HashMap<>();
+        for (SavedSemester sem : semesters) {
+            for (SavedCourse c : sem.getCourses()) {
+                courseToSemester.put(c.getCourseCode().trim().toUpperCase(), sem.getName());
+            }
+        }
+
+        for (Task task : unmigrated) {
+            String semName = courseToSemester.get(task.getCourse().trim().toUpperCase());
+            if (semName != null) task.setSemesterName(semName);
+        }
+        taskRepository.saveAll(unmigrated);
     }
 
     public List<Task> findByDeadlineBetween(LocalDateTime from, LocalDateTime to) {
