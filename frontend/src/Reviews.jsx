@@ -486,7 +486,7 @@ export default function Reviews({ onNavigateToForum }) {
   const [activeCourse, setActiveCourse] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem("kk_reviews_course") || "null"); } catch { return null; }
   });
-
+  const [visibleCount,   setVisibleCount]   = useState(10);
   const [recentReviews,  setRecentReviews]  = useState([]);
   const [recentLoading,  setRecentLoading]  = useState(false);
 
@@ -518,6 +518,7 @@ export default function Reviews({ onNavigateToForum }) {
     setActiveCourse(course);
     loadReviews(course.id);
     setComposing(false);
+    setVisibleCount(10);
     sessionStorage.setItem("kk_reviews_course", JSON.stringify(course));
   };
 
@@ -533,6 +534,8 @@ export default function Reviews({ onNavigateToForum }) {
   displayed = sort === "top"
     ? [...displayed].sort((a,b) => b.rating - a.rating)
     : [...displayed].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const hasMoreCourse = displayed.length > visibleCount;
+  const visibleReviews = displayed.slice(0, visibleCount);
 
   if (detailsCourse) {
     return <CourseDetails course={detailsCourse} onBack={() => setDetailsCourse(null)} />;
@@ -702,10 +705,21 @@ export default function Reviews({ onNavigateToForum }) {
           </>
       )}
 
-      {!loading && displayed.length > 0 && (
-        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-          {displayed.map((r, i) => <ReviewCard key={r.id} review={r} token={token} userEmail={userEmail} reviewType="course" animDelay={i * 0.05} />)}
-        </div>
+      {!loading && visibleReviews.length > 0 && (
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            {visibleReviews.map((r, i) => <ReviewCard key={r.id} review={r} token={token} userEmail={userEmail} reviewType="course" animDelay={i * 0.05} />)}
+          </div>
+      )}
+      {!loading && hasMoreCourse && (
+          <div style={{ textAlign:"center", marginTop:20 }}>
+            <button onClick={() => setVisibleCount(c => c + 10)} style={{
+              padding:"10px 32px", background:"var(--surface)", border:"1px solid var(--border)",
+              borderRadius:10, fontSize:13, fontWeight:600, color:"var(--primary)",
+              cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+            }}>
+              Load More ({displayed.length - visibleCount} remaining)
+            </button>
+          </div>
       )}
       </>}
     </div>
@@ -858,9 +872,9 @@ function MyReviewsTab({ token, userEmail }) {
   }, [token, userEmail]);
 
   const STATUS_STYLE = {
-    APPROVED: { bg:"#eef7f0", color:"#2d7a4a", label:"Approved"  },
-    PENDING:  { bg:"#fff8ec", color:"#b7680a", label:"Pending moderation" },
-    FLAGGED:  { bg:"#fef0f0", color:"#c0392b", label:"Flagged"   },
+      APPROVED: { bg:"var(--surface2)",  color:"var(--text2)",   label:"Approved"            },
+      PENDING:  { bg:"#fff8ec",          color:"#b7680a",        label:"Pending moderation" },
+      FLAGGED:  { bg:"#fef0f0",          color:"#c0392b",        label:"Flagged"            },
   };
 
   const StatusBadge = ({ status }) => {
@@ -963,6 +977,7 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
   const [search,    setSearch]    = useState("");
   const [recentReviews, setRecentReviews] = useState([]);
   const [recentLoading, setRecentLoading] = useState(false);
+  const [visibleCount,   setVisibleCount]   = useState(10);
 
   useEffect(() => {
       setRecentLoading(true);
@@ -977,6 +992,7 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
     setSelected(name);
     setComposing(false);
     setLoading(true);
+    setVisibleCount(10);
     try {
       const res = await fetch(`${API}/api/professor-reviews?professorName=${encodeURIComponent(name)}`);
       const data = await res.json();
@@ -990,12 +1006,15 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
   displayed = sort === "top"
     ? [...displayed].sort((a,b) => b.rating - a.rating)
     : [...displayed].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const hasMoreProf = displayed.length > visibleCount;
+  const visibleProfReviews = displayed.slice(0, visibleCount);
 
   return (
     <div>
       <div style={{ marginBottom:20 }}>
         <label style={{ ...rv.label, fontSize:13, fontWeight:400, color:"var(--text2)" }}>Browse reviews by professor</label>
         <ProfessorSearch onSelect={selectProfessor} />
+        <p style={{ fontSize:12, color:"var(--text3)", marginTop:6 }}>Search for any professor to read and write student reviews.</p>
       </div>
 
       {selected && (
@@ -1060,10 +1079,21 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
             </div>
           )}
 
-          {!loading && displayed.length > 0 && (
-            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              {displayed.map((r, i) => <ReviewCard key={r.id} review={r} token={token} userEmail={userEmail} reviewType="professor" animDelay={i * 0.05} />)}
-            </div>
+          {!loading && visibleProfReviews.length > 0 && (
+              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                {visibleProfReviews.map((r, i) => <ReviewCard key={r.id} review={r} token={token} userEmail={userEmail} reviewType="professor" animDelay={i * 0.05} />)}
+              </div>
+          )}
+          {!loading && hasMoreProf && (
+              <div style={{ textAlign:"center", marginTop:20 }}>
+                <button onClick={() => setVisibleCount(c => c + 10)} style={{
+                  padding:"10px 32px", background:"var(--surface)", border:"1px solid var(--border)",
+                  borderRadius:10, fontSize:13, fontWeight:600, color:"var(--primary)",
+                  cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                }}>
+                  Load More ({displayed.length - visibleCount} remaining)
+                </button>
+              </div>
           )}
         </>
       )}

@@ -781,9 +781,11 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
     try { return sessionStorage.getItem("kk_forum_sort") || "new"; } catch { return "new"; }
   });
   const [search,     setSearch]     = useState("");
+  useEffect(() => { setVisibleCount(10); }, [search, sort]);
   const [composing,  setComposing]  = useState(false);
   const [activePost, setActivePost] = useState(null);
   const [showMyPosts,  setShowMyPosts]  = useState(false);
+  const [visibleCount, setVisibleCount] = useState(10);
 
   const loadPosts = useCallback(async (cat) => {
       setLoading(true);
@@ -807,7 +809,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
   }, [category]);
 
   useEffect(() => { loadPosts(initCat); }, []);
-  useEffect(() => { loadPosts(category); }, [category]);
+  useEffect(() => { loadPosts(category); setVisibleCount(10); }, [category]);
 
   const deletePost = async (postId) => {
       if (!window.confirm("Delete this post?")) return;
@@ -835,6 +837,8 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
   displayed = sort === "top"
     ? [...displayed].sort((a, b) => b.relateCount - a.relateCount)
     : [...displayed].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const hasMorePosts = displayed.length > visibleCount;
+  const visiblePosts = displayed.slice(0, visibleCount);
 
   if (activePost) {
     return (
@@ -893,11 +897,12 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
         {token && (
           <button onClick={() => { setShowMyPosts(p => !p); setComposing(false); }} style={{
             display: "flex", alignItems: "center", gap: 6,
-            padding: "8px 16px", border: "none", borderRadius: 10,
-            fontSize: 13, fontWeight: 600, cursor: "pointer",
+            padding: "8px 18px", borderRadius: 9,
+            fontSize: 13, fontWeight: showMyPosts ? 600 : 400, cursor: "pointer",
             fontFamily: "'DM Sans', sans-serif", transition: "all .15s",
-            background: showMyPosts ? "var(--accent2)" : "transparent",
-            color:      showMyPosts ? "white" : "var(--text2)",
+            background: showMyPosts ? "color-mix(in srgb, var(--accent2) 14%, var(--surface))" : "var(--surface)",
+            color:      showMyPosts ? "var(--accent2)" : "var(--text2)",
+            border:     showMyPosts ? "1.5px solid var(--accent2)" : "1.5px solid var(--border)",
           }}>
             <User size={14} /> My Posts
           </button>
@@ -979,19 +984,30 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
         </div>
       )}
 
-      {!loading && displayed.length > 0 && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {displayed.map((p, i) => (
-            <div key={p.id} className="post-anim" style={{ animationDelay: `${i * 0.04}s`, position: "relative", zIndex: displayed.length - i }}>
+      {!loading && visiblePosts.length > 0 && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {visiblePosts.map((p, i) => (
+              <div key={p.id} className="post-anim" style={{ animationDelay: `${i * 0.04}s`, position: "relative", zIndex: visiblePosts.length - i }}>
                 <PostCard
-                post={p}
-                onOpenComments={() => setActivePost(p)}
-                token={token}
-                userEmail={userEmail}
-              />
-            </div>
-          ))}
-        </div>
+                  post={p}
+                  onOpenComments={() => setActivePost(p)}
+                  token={token}
+                  userEmail={userEmail}
+                />
+              </div>
+            ))}
+          </div>
+      )}
+      {!loading && hasMorePosts && (
+          <div style={{ textAlign:"center", marginTop:20 }}>
+            <button onClick={() => setVisibleCount(c => c + 10)} style={{
+              padding:"10px 32px", background:"var(--surface)", border:"1px solid var(--border)",
+              borderRadius:10, fontSize:13, fontWeight:600, color:"var(--primary)",
+              cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+            }}>
+              Load More ({displayed.length - visibleCount} remaining)
+            </button>
+          </div>
       )}
       </>}
     </div>
