@@ -398,7 +398,10 @@ export default function GroupRoomPage({ group, onBack }) {
   const [sessionForm, setSessionForm] = useState({ date: "", startTime: "", duration: 1 });
   const [sessionLoading, setSessionLoading] = useState(false);
   const [syncedSessions, setSyncedSessions] = useState({});
-  
+  const [showSettings, setShowSettings] = useState(false);
+  const [renameValue, setRenameValue] = useState(group.name);
+  const [renameLoading, setRenameLoading] = useState(false);
+    
   const loadSessions = async () => {
     try {
       const data = await apiFetch(`/api/group-sessions/${group.id}`);
@@ -439,6 +442,43 @@ export default function GroupRoomPage({ group, onBack }) {
     }
   };
 
+  const removeMember = async (memberId) => {
+    try {
+      await apiFetch(`/api/study-groups/${group.id}/remove-member/${memberId}`, { method: "DELETE" });
+      setMembers(prev => prev.filter(m => m.userId !== memberId));
+    } catch (e) { setError(e.message); }
+  };
+
+  const assignHost = async (memberId) => {
+    try {
+      await apiFetch(`/api/study-groups/${group.id}/assign-host/${memberId}`, { method: "PATCH" });
+      setMembers(prev => prev.map(m => ({
+        ...m,
+        role: m.userId === memberId ? "HOST" : m.role
+      })));
+    } catch (e) { setError(e.message); }
+  };
+
+  const renameGroup = async () => {
+    if (!renameValue.trim()) return;
+    setRenameLoading(true);
+    try {
+      await apiFetch(`/api/study-groups/${group.id}/rename`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: renameValue.trim() }),
+      });
+      group.name = renameValue.trim();
+    } catch (e) { setError(e.message); }
+    setRenameLoading(false);
+  };
+
+  const deleteGroup = async () => {
+    if (!window.confirm("Are you sure you want to delete this group? This cannot be undone.")) return;
+    try {
+      await apiFetch(`/api/study-groups/${group.id}`, { method: "DELETE" });
+      onBack();
+    } catch (e) { setError(e.message); }
+  };
 
   return (
     <div style={{ padding: "28px 28px 0", maxWidth: 1100, fontFamily: "'DM Sans',sans-serif", height: "calc(100vh - 56px)", display: "flex", flexDirection: "column" }}>
@@ -470,8 +510,7 @@ export default function GroupRoomPage({ group, onBack }) {
               style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface)", color:"var(--primary)", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}
           >
                 {showSessionPanel ? "Hide Scheduler" : "Schedule Session"}
-          </button>
-          )}
+          </button> )}
           {isHost && (
           <button
               onClick={() => { setShowReports(true); loadReports(); }}
@@ -509,28 +548,6 @@ export default function GroupRoomPage({ group, onBack }) {
             </div>
           </div>
         )}
-
-        {sessions.length > 0 && (
-          <div style={{ marginTop:10 }}>
-            <div style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:8 }}>Upcoming Sessions</div>
-            {sessions.map(s => (
-              <div key={s.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:10, padding:"10px 14px", marginBottom:6, flexWrap:"wrap", gap:8 }}>
-                <div>
-                  <div style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>
-                    {new Date(s.date).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" })} — {s.startTime?.slice(0,5)} ({s.duration}h)
-                  </div>
-                  <div style={{ fontSize:11, color:"var(--text2)" }}>Set by {s.createdByFirstName} {s.createdByLastName}</div>
-                </div>
-                <button
-                  onClick={() => syncToPlanner(s.id)}
-                  disabled={syncedSessions[s.id]}
-                  style={{ padding:"6px 13px", borderRadius:8, border:"1px solid var(--border)", background: syncedSessions[s.id] ? "var(--surface2)" : "var(--blue-light-bg)", color: syncedSessions[s.id] ? "var(--text3)" : "var(--primary)", fontSize:12, fontWeight:600, cursor: syncedSessions[s.id] ? "default" : "pointer", fontFamily:"inherit" }}>
-                  {syncedSessions[s.id] ? "✓ Added to Planner" : "Add to My Planner"}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       {error && (
@@ -541,31 +558,18 @@ export default function GroupRoomPage({ group, onBack }) {
 
       <div style={{ display: "flex", gap: 16, flex: 1, minHeight: 0, paddingBottom: 28 }}>
 
-        <div style={{ width: 200, flexShrink: 0, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "16px 14px", overflowY: "auto" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 12 }}>
-            Members — {members.length}
-          </div>
-          {members.map(m => (
-            <div
-                key={m.userId}
-                className="member-row"
-                onClick={() => setViewingMember(m)}
-                title="View profile"
-                style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 6px", borderBottom: "1px solid var(--border)", borderRadius: 8, transition: "background 0.15s" }}
-            >
-                <div style={{ width: 30, height: 30, borderRadius: "50%", background: "var(--blue-light-bg)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "var(--primary)", flexShrink: 0 }}>
-                {m.firstName?.[0]}{m.lastName?.[0]}
-                </div>
-                <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--primary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {m.firstName} {m.lastName}
-                </div>
-                <div style={{ fontSize: 10, color: "var(--text2)", textTransform: "capitalize" }}>
-                    {m.role?.toLowerCase()}
-                </div>
-                </div>
-            </div>
-            ))}
+        <div style={{ width: 160, flexShrink: 0, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "16px 14px", display:"flex", flexDirection:"column", gap:10 }}>
+          <button onClick={() => setShowSettings(true)}
+            style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%", background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10, padding:"10px 12px", cursor:"pointer", fontFamily:"inherit" }}>
+            <span style={{ fontSize:12, fontWeight:700, color:"var(--primary)" }}>Members</span>
+            <span style={{ fontSize:12, fontWeight:700, color:"var(--primary)", background:"var(--blue-light-bg)", borderRadius:99, padding:"2px 8px" }}>{members.length}</span>
+          </button>
+          {isHost && (
+            <button onClick={() => { setShowSettings(true); }}
+              style={{ display:"flex", alignItems:"center", gap:6, width:"100%", background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10, padding:"10px 12px", cursor:"pointer", fontFamily:"inherit", fontSize:12, fontWeight:600, color:"var(--text2)" }}>
+              ⚙️ Settings
+            </button>
+          )}
         </div>
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden" }}>
@@ -687,6 +691,104 @@ export default function GroupRoomPage({ group, onBack }) {
             onClose={() => setViewingMember(null)}
         />
         )}
+
+      {showSettings && (
+        <>
+          <div onClick={() => setShowSettings(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.3)", zIndex:200, backdropFilter:"blur(2px)" }} />
+          <div style={{ position:"fixed", top:0, right:0, bottom:0, width:380, background:"var(--bg)", boxShadow:"-8px 0 32px rgba(0,0,0,0.15)", zIndex:201, display:"flex", flexDirection:"column" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 22px", borderBottom:"1px solid var(--border)" }}>
+              <div style={{ fontFamily:"'Fraunces',serif", fontSize:17, fontWeight:700, color:"var(--primary)" }}>Group Settings</div>
+              <button onClick={() => setShowSettings(false)} style={{ background:"none", border:"1px solid var(--border)", borderRadius:8, width:32, height:32, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text2)" }}>
+                <X size={15}/>
+              </button>
+            </div>
+            <div style={{ flex:1, overflowY:"auto", padding:"18px 22px", display:"flex", flexDirection:"column", gap:24 }}>
+
+              {isHost && (
+                <div>
+            <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.06em" }}>Rename Group</div>
+            <div style={{ display:"flex", gap:8 }}>
+              <input value={renameValue} onChange={e => setRenameValue(e.target.value)}
+                style={{ flex:1, padding:"8px 10px", border:"1px solid var(--border)", borderRadius:8, fontSize:13, fontFamily:"inherit", background:"var(--surface2)", color:"var(--text)", outline:"none" }} />
+                <button onClick={renameGroup} disabled={renameLoading}
+                  style={{ padding:"8px 14px", borderRadius:8, border:"none", background:"var(--primary)", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                  {renameLoading ? "Saving…" : "Save"} </button>
+                      </div>
+                    </div>
+                )}
+
+                <div>
+          <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.06em" }}>Members — {members.length}</div>
+          {members.map(m => (
+            <div key={m.userId} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid var(--border)" }}>
+              <div className="member-row" onClick={() => { setViewingMember(m); setShowSettings(false); }}
+                style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", flex:1 }}>
+                <div style={{ width:30, height:30, borderRadius:"50%", background:"var(--blue-light-bg)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"var(--primary)", flexShrink:0 }}>
+                  {m.firstName?.[0]}{m.lastName?.[0]}
+                </div>
+                <div>
+                  <div style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>{m.firstName} {m.lastName}</div>
+                  <div style={{ fontSize:11, color:"var(--text2)", textTransform:"capitalize" }}>{m.role?.toLowerCase()}</div>
+                </div>
+              </div>
+              {isHost && String(m.userId) !== String(currentUserId) && (
+                <div style={{ display:"flex", gap:6, marginLeft:8 }}>
+                  {m.role !== "HOST" && (
+                    <button onClick={() => assignHost(m.userId)}
+                      style={{ padding:"5px 10px", borderRadius:7, border:"1px solid var(--border)", background:"var(--blue-light-bg)", color:"var(--primary)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                      Make Host
+                    </button>
+                  )}
+                  <button onClick={() => removeMember(m.userId)}
+                    style={{ padding:"5px 10px", borderRadius:7, border:"none", background:"var(--error-bg)", color:"var(--error)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                    Remove
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {sessions.length > 0 && (
+          <div>
+            <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.06em" }}>Upcoming Sessions</div>
+            {sessions.map(s => (
+              <div key={s.id} style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10, padding:"10px 14px", marginBottom:6 }}>
+                <div style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>
+                  {new Date(s.date).toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" })} — {s.startTime?.slice(0,5)} ({s.duration}h)
+                </div>
+                <div style={{ fontSize:11, color:"var(--text2)", marginBottom:8 }}>Set by {s.createdByFirstName} {s.createdByLastName}</div>
+                <button onClick={() => syncToPlanner(s.id)} disabled={syncedSessions[s.id]}
+                  style={{ padding:"5px 12px", borderRadius:7, border:"1px solid var(--border)", background: syncedSessions[s.id] ? "var(--surface2)" : "var(--blue-light-bg)", color: syncedSessions[s.id] ? "var(--text3)" : "var(--primary)", fontSize:11, fontWeight:600, cursor: syncedSessions[s.id] ? "default" : "pointer", fontFamily:"inherit" }}>
+                  {syncedSessions[s.id] ? "✓ Added to Planner" : "Add to My Planner"}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+                {(
+                  <button onClick={async () => {
+                    try { await apiFetch(`/api/study-groups/${group.id}/leave`, { method: "DELETE" }); onBack(); }
+                    catch (e) { setError(e.message); }
+                  }}
+                    style={{ padding:"10px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface2)", color:"var(--text2)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                    Leave Group
+                  </button>
+                )}
+
+                {isHost && (
+                  <button onClick={deleteGroup}
+                    style={{ padding:"10px", borderRadius:9, border:"none", background:"var(--error-bg)", color:"var(--error)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                    Delete Group
+                  </button>
+                )}
+
+              </div>
+            </div>
+          </>
+        )}
+
     </div>
   );
 }

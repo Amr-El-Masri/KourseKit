@@ -118,4 +118,42 @@ public class StudyGroupController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage())); }
     }
+
+    @DeleteMapping("/{groupId}/remove-member/{memberId}")
+    public ResponseEntity<?> removeMember(@PathVariable Long groupId, @PathVariable Long memberId) {
+        try {
+            studyGroupService.removeMember(currentUserId(), groupId, memberId);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage())); }
+    }
+
+    @PatchMapping("/{groupId}/assign-host/{memberId}")
+    public ResponseEntity<?> assignHost(@PathVariable Long groupId, @PathVariable Long memberId) {
+        try {
+            studyGroupService.assignHost(currentUserId(), groupId, memberId);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage())); }
+    }
+
+    @PatchMapping("/{groupId}/rename")
+    public ResponseEntity<?> renameGroup(@PathVariable Long groupId, @RequestBody Map<String, String> body) {
+        try {
+            StudyGroup updated = studyGroupService.renameGroup(currentUserId(), groupId, body.get("name"));
+            int memberCount = studyGroupService.getMemberCount(groupId);
+            return ResponseEntity.ok(studyGroupMapper.toResponseDTO(updated, memberCount, true));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage())); }
+    }
+
+    @DeleteMapping("/{groupId}")
+    public ResponseEntity<?> deleteGroup(@PathVariable Long groupId) {
+        try {
+            studyGroupService.deleteGroup(currentUserId(), groupId);
+            return ResponseEntity.noContent().build();
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage())); }
+    }
 }
+    
