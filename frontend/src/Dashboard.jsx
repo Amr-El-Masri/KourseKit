@@ -1562,13 +1562,10 @@ export default function Dashboard({ onLogout }) {
               </button>
               <div ref={notifRef} style={{position:"relative"}}>
                 <button
-<<<<<<< feature/task-manager
+
                     onClick={() => { setShowNotifPanel(p => { if (p && unreadCount > 0) markAllAsRead(); return !p; }); }}
                     className="kk-pill" style={{...s.bell, position:"relative", border:"1px solid var(--border)", cursor:"pointer"}}
-=======
-                    onClick={() => { setShowNotifPanel(p => !p); if (unreadCount > 0) markAllAsRead(); }}
-                    style={{...s.bell, position:"relative", border:"1px solid var(--border)", cursor:"pointer"}}
->>>>>>> main
+
                     title="Notifications"
                 >
                   <Bell size={18} color="var(--primary)" />
