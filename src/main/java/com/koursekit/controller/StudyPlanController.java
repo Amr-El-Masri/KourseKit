@@ -110,15 +110,45 @@ public class StudyPlanController {
 
         Long userId = currentUserId();
         List<StudyPlanEntry> entriesBefore = studyPlanService.getActiveEntries(userId, weekStart);
+
+        // Read all lazy-loaded task data eagerly while the transaction is still open
         Map<Long, Double> remainingPerEntry = new HashMap<>();
+        Map<Long, String> entryCourse      = new HashMap<>();
+        Map<Long, String> entryTitle       = new HashMap<>();
         for (StudyPlanEntry e : entriesBefore) {
-            double rem = Math.max(0, e.getEstimatedWorkload() - e.getCompletedHours());
-            remainingPerEntry.put(e.getId(), rem);
+            remainingPerEntry.put(e.getId(), Math.max(0, e.getEstimatedWorkload() - e.getCompletedHours()));
+            entryCourse.put(e.getId(), e.getTask() != null ? e.getTask().getCourse() : "");
+            entryTitle.put(e.getId(),  e.getTask() != null ? e.getTask().getTitle()  : "");
         }
 
         studyPlanService.rebalance(userId, settings, weekStart);
-        SchedulerResult result = new SchedulerResult(new ArrayList<>(), new ArrayList<>());
-        return ResponseEntity.ok(buildPlanResponse(userId, result, entriesBefore, remainingPerEntry, weekStart));
+
+        // Query actual uncompleted blocks after rebalance to compute real shortfalls
+        Map<DayOfWeek, List<StudyBlock>> weeklyView = studyPlanService.getWeeklyView(userId, weekStart);
+        Map<Long, Double> scheduledHours = new HashMap<>();
+        for (List<StudyBlock> dayBlocks : weeklyView.values()) {
+            for (StudyBlock block : dayBlocks) {
+                if (!block.isCompleted()) {
+                    Long entryId = block.getStudyPlanEntry().getId();
+                    scheduledHours.merge(entryId, block.getDuration(), Double::sum);
+                }
+            }
+        }
+
+        List<ScheduleWarning> warnings = new ArrayList<>();
+        for (StudyPlanEntry entry : entriesBefore) {
+            double remaining = remainingPerEntry.getOrDefault(entry.getId(), 0.0);
+            double scheduled = scheduledHours.getOrDefault(entry.getId(), 0.0);
+            if (remaining - scheduled > 0.25) {
+                warnings.add(new ScheduleWarning(
+                        entry.getId(),
+                        entryCourse.getOrDefault(entry.getId(), ""),
+                        entryTitle.getOrDefault(entry.getId(), ""),
+                        scheduled, remaining));
+            }
+        }
+
+        return ResponseEntity.ok(new PlanResponse(weeklyView, warnings));
     }
 
     @PostMapping("/blocks/complete-past")
@@ -204,15 +234,17 @@ public class StudyPlanController {
 
     @GetMapping("/slots")
     public ResponseEntity<List<AvailabilitySlot>> getSlots(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
-        return ResponseEntity.ok(studyPlanService.getSlots(currentUserId(), weekStart));
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
+            @RequestParam(required = false) String semester) {
+        return ResponseEntity.ok(studyPlanService.getSlots(currentUserId(), weekStart, semester));
     }
 
     @PostMapping("/slots")
     public ResponseEntity<List<AvailabilitySlot>> saveSlots(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
+            @RequestParam(required = false) String semester,
             @RequestBody List<Map<String, Object>> slots) {
-        return ResponseEntity.ok(studyPlanService.saveSlots(currentUserId(), weekStart, slots));
+        return ResponseEntity.ok(studyPlanService.saveSlots(currentUserId(), weekStart, semester, slots));
     }
 
     @DeleteMapping("/slots")

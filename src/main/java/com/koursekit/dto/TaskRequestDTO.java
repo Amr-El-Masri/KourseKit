@@ -13,6 +13,9 @@ public record TaskRequestDTO(
         String notes,
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
         @NotNull LocalDateTime deadline,
-        boolean completed
+        boolean completed,
+        boolean fromSyllabus,
+        boolean allowPastDeadline,
+        String semesterName
 ) {
 }

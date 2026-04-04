@@ -13,6 +13,8 @@ public class TaskMapper {
         task.setType(dto.type());
         task.setNotes(dto.notes());
         task.setCompleted(dto.completed());
+        task.setFromSyllabus(dto.fromSyllabus());
+        task.setSemesterName(dto.semesterName());
         return task;
     }
 
@@ -25,7 +27,9 @@ public class TaskMapper {
                 task.getNotes(),
                 task.getPriority(),
                 task.getDeadline(),
-                task.isCompleted()
+                task.isCompleted(),
+                task.isFromSyllabus(),
+                task.getSemesterName()
         );
     }
 }

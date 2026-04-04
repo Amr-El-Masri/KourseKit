@@ -73,6 +73,30 @@ public class User {
     private String theme = "light";
     @Column(name = "email_reminders_enabled", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 1")
     private boolean emailRemindersEnabled = true;
+    @Column(name = "notification_prefs", columnDefinition = "TEXT")
+    private String notificationPrefsJson;
+    @Column(name = "graduation_year")
+    private String graduationYear;
+    @Column(name = "linkedin")
+    private String linkedin;
+    @Column(name = "github")
+    private String github;
+    @Column(name = "open_to_study_groups", columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean openToStudyGroups = false;
+    @Column(name = "interests", columnDefinition = "TEXT")
+    private String interests;
+
+    @Column(name = "report_count", nullable = false, columnDefinition = "INT DEFAULT 0")
+    private int reportCount = 0;
+
+    @Column(name = "is_flagged", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private boolean flagged = false;
+
+    @Column(name = "flag_reason", columnDefinition = "TEXT")
+    private String flagReason;
+
+    @Column(name = "strike_count", nullable = false, columnDefinition = "INT DEFAULT 0")
+    private int strikeCount = 0;
 
     public User() {}
     public User(String email, String pass) {
@@ -170,5 +194,33 @@ public class User {
     public boolean isEmailRemindersEnabled() { return emailRemindersEnabled; }
     public void setEmailRemindersEnabled(boolean emailRemindersEnabled) { this.emailRemindersEnabled = emailRemindersEnabled; }
 
-    // integrate microsoft login?
+    public String getNotificationPrefsJson() { return notificationPrefsJson; }
+    public void setNotificationPrefsJson(String notificationPrefsJson) { this.notificationPrefsJson = notificationPrefsJson; }
+
+    public String getGraduationYear() { return graduationYear; }
+    public void setGraduationYear(String graduationYear) { this.graduationYear = graduationYear; }
+
+    public String getLinkedin() { return linkedin; }
+    public void setLinkedin(String linkedin) { this.linkedin = linkedin; }
+
+    public String getGithub() { return github; }
+    public void setGithub(String github) { this.github = github; }
+
+    public boolean isOpenToStudyGroups() { return openToStudyGroups; }
+    public void setOpenToStudyGroups(boolean openToStudyGroups) { this.openToStudyGroups = openToStudyGroups; }
+
+    public String getInterests() { return interests; }
+    public void setInterests(String interests) { this.interests = interests; }
+
+    public int getReportCount() { return reportCount; }
+    public void setReportCount(int reportCount) { this.reportCount = reportCount; }
+
+    public boolean isFlagged() { return flagged; }
+    public void setFlagged(boolean flagged) { this.flagged = flagged; }
+
+    public String getFlagReason() { return flagReason; }
+    public void setFlagReason(String flagReason) { this.flagReason = flagReason; }
+
+    public int getStrikeCount() { return strikeCount; }
+    public void setStrikeCount(int strikeCount) { this.strikeCount = strikeCount; }
 }

@@ -14,7 +14,8 @@ import jakarta.mail.internet.MimeMessage;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class DeadlineEmailScheduler {
@@ -43,13 +44,18 @@ public class DeadlineEmailScheduler {
 
         // Only send if due within 6 hours
         List<Task> urgentTasks = taskService.findByDeadlineBetween(now, now.plusHours(6));
+        if (urgentTasks.isEmpty()) return;
+
+        List<Long> userIds = urgentTasks.stream().map(Task::getUserId).distinct().toList();
+        Map<Long, User> userMap = userRepository.findAllById(userIds)
+                .stream().collect(Collectors.toMap(User::getId, u -> u));
+
         for (Task task : urgentTasks) {
-            if (task.isCompleted()) continue;
-            Optional<User> userOpt = userRepository.findById(task.getUserId());
-            if (userOpt.isEmpty() || !userOpt.get().isEmailRemindersEnabled()) continue;
+            User user = userMap.get(task.getUserId());
+            if (user == null || !user.isEmailRemindersEnabled()) continue;
             LocalDateTime lastSent = task.getEmailSentAt();
             if (lastSent == null || lastSent.isBefore(now.minusHours(DEDUP_HOURS))) {
-                sendEmail(userOpt.get(), task);
+                sendEmail(user, task);
                 task.setEmailSentAt(now);
                 taskRepository.save(task);
             }

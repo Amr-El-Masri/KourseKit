@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { PartyPopper } from "lucide-react";
 import TranscriptModal from "./TranscriptModal";
+import StudentCourses from "./StudentCourses";
 
 const requirements = [
   { label: "At least 8 characters",       test: p => p.length >= 8 },
@@ -55,6 +56,7 @@ export default function Register({ onGoToLogin }) {
       });
       const data = await res.json();
       if (data.success) {
+        localStorage.setItem("kk_theme", "light");
         setRegToken(data.token || "");
         setSemStep(true);
       } else {
@@ -75,7 +77,7 @@ export default function Register({ onGoToLogin }) {
       await fetch("http://localhost:8080/api/grades/saved", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${regToken}` },
-        body: JSON.stringify({ semesterName: semName, courses: courses.map(c => ({ courseCode: c.name.trim(), grade: "", credits: 0 })) }),
+        body: JSON.stringify({ semesterName: semName, courses: courses.map(c => ({ courseCode: c.name.trim(), grade: "", credits: c.credits || 0, sectioncrn: c.sectioncrn || null })) }),
       });
     } catch {}
     finally { setSemSaving(false); }
@@ -88,7 +90,7 @@ export default function Register({ onGoToLogin }) {
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'DM Sans', sans-serif; }
-        .reg-btn:hover { background: var(--primary2) !important; }
+        .reg-btn:hover { background: color-mix(in srgb, var(--primary) 25%, transparent) !important; }
         .reg-btn { transition: background 0.15s; }
         .reg-input:focus { border-color: var(--border2) !important; outline: none; }
       `}</style>
@@ -147,10 +149,13 @@ export default function Register({ onGoToLogin }) {
               <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:8 }}>
                 {semCourses.map(c => (
                   <div key={c.id} style={{ display:"flex", gap:8, alignItems:"center" }}>
-                    <input className="reg-input" value={c.name}
-                      onChange={e => setSemCourses(p => p.map(r => r.id===c.id ? {...r, name:e.target.value} : r))}
-                      placeholder="e.g. CMPS 200"
-                      style={{ ...s.input, marginBottom:0, flex:1 }} />
+                    <div style={{ flex:1 }}>
+                      <StudentCourses
+                        value={{ code: c.name, sectioncrn: c.sectioncrn, sectionNumber: c.sectionNumber }}
+                        onSelect={data => setSemCourses(p => p.map(r => r.id===c.id ? {...r, name:data.code, sectioncrn:data.sectioncrn, sectionNumber:data.sectionno, professorName:data.profname, credits:data.credits||0} : r))}
+                        inputStyle={{ ...s.input, marginBottom:0 }}
+                      />
+                    </div>
                     {semCourses.length > 1 && (
                       <button onClick={() => setSemCourses(p => p.filter(r => r.id !== c.id))}
                         style={{ background:"none", border:"none", cursor:"pointer", color:"var(--error)", fontSize:20, lineHeight:1, padding:"0 4px" }}>×</button>
@@ -342,7 +347,7 @@ const s = {
     fontSize: 12, fontWeight: 500, padding: "2px 0", display: "flex", alignItems: "center",
   },
   btn: {
-    width: "100%", padding: "13px", background: "var(--primary)", color: "white",
+    width: "100%", padding: "13px", background: "color-mix(in srgb, var(--primary) 15%, transparent)", color: "var(--primary)",
     border: "none", borderRadius: 10, fontSize: 15, fontWeight: 600,
     cursor: "pointer", fontFamily: "'DM Sans', sans-serif", marginTop: 4,
   },

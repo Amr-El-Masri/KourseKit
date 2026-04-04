@@ -93,8 +93,8 @@ export default function StudentDirectoryPanel({ onClose }) {
         return () => clearTimeout(debounceRef.current); }, [query]);
 
     return (
-    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", zIndex:1000, display:"flex", justifyContent:"flex-end" }}>
-      <div style={{ width:420, height:"100%", background:"var(--bg)", display:"flex", flexDirection:"column", boxShadow:"-8px 0 32px rgba(0,0,0,0.15)" }}>
+    <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", zIndex:1000, display:"flex", justifyContent:"flex-end" }} onClick={onClose}>
+      <div style={{ width:420, height:"100%", background:"var(--bg)", display:"flex", flexDirection:"column", boxShadow:"-8px 0 32px rgba(0,0,0,0.15)" }} onClick={e => e.stopPropagation()}>
 
         {/* Header */}
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 22px", borderBottom:"1px solid var(--border)" }}>

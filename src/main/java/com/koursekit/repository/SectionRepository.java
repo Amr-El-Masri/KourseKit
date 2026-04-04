@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface SectionRepository extends JpaRepository<Section, Long> {
     boolean existsByCrn(String crn);
+    java.util.Optional<Section> findByCrn(String crn);
     List<Section> findByCourseId(Long courseId);
 
     @Query("SELECT DISTINCT s.professorName FROM Section s WHERE LOWER(s.professorName) LIKE LOWER(CONCAT('%', :query, '%'))")

@@ -61,18 +61,18 @@ public class StudyPlanService {
     @Transactional
     public SchedulerResult generatePlan(Long userId, SchedulerSettings settings, LocalDate weekStart) {
         List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStart(userId, weekStart);
+        if (entries.isEmpty()) return new SchedulerResult(Collections.emptyList(), Collections.emptyList());
 
-        // Delete only uncompleted blocks for this week
+        List<Long> entryIds = entries.stream().map(StudyPlanEntry::getId).toList();
+
+        // Bulk-delete uncompleted blocks for this week
         LocalDate weekEnd = weekStart.plusDays(6);
-        for (StudyPlanEntry entry : entries) {
-            blockRepository.deleteByStudyPlanEntryAndCompletedFalseAndDayBetween(entry, weekStart, weekEnd);
-        }
+        blockRepository.deleteUncompletedByEntryIdsAndDayBetween(entryIds, weekStart, weekEnd);
+        // Bulk-reset completedHours to 0
+        entryRepository.resetCompletedHoursByIds(entryIds);
         entityManager.flush();
-        for (StudyPlanEntry entry : entries) {
-            entry.setCompletedHours(0);
-            entryRepository.save(entry);
-            entityManager.refresh(entry);
-        }
+        // Sync in-memory state so the scheduler sees completedHours = 0
+        entries.forEach(e -> e.setCompletedHours(0));
 
         // Start from today if current week, otherwise from weekStart (Monday)
         LocalDate startDate = weekStart.isAfter(LocalDate.now()) ? weekStart : LocalDate.now();
@@ -87,26 +87,35 @@ public class StudyPlanService {
         try {
             LocalDate today = weekStart.isAfter(LocalDate.now()) ? weekStart : LocalDate.now();
             List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStart(userId, weekStart);
+            if (entries.isEmpty()) return new SchedulerResult(Collections.emptyList(), Collections.emptyList());
 
+            List<Long> entryIds = entries.stream().map(StudyPlanEntry::getId).toList();
+
+            // Load completed and pinned blocks in 2 bulk queries instead of 2×N
             Map<Long, List<StudyBlock>> completedBlocksByEntry = new HashMap<>();
             Map<Long, Double> completedHoursByEntry = new HashMap<>();
+            for (StudyBlock b : blockRepository.findCompletedByEntryIds(entryIds)) {
+                completedBlocksByEntry.computeIfAbsent(b.getStudyPlanEntry().getId(), k -> new ArrayList<>()).add(b);
+            }
+            entryIds.forEach(id -> {
+                List<StudyBlock> list = completedBlocksByEntry.getOrDefault(id, Collections.emptyList());
+                completedBlocksByEntry.putIfAbsent(id, Collections.emptyList());
+                completedHoursByEntry.put(id, list.stream().mapToDouble(StudyBlock::getDuration).sum());
+            });
+
             Map<Long, List<StudyBlock>> pinnedBlocksByEntry = new HashMap<>();
             Map<Long, Double> pinnedHoursByEntry = new HashMap<>();
-            for (StudyPlanEntry entry : entries) {
-                List<StudyBlock> completed = blockRepository.findByStudyPlanEntryAndCompleted(entry, true);
-                completedBlocksByEntry.put(entry.getId(), completed);
-                double completedHrs = completed.stream().mapToDouble(StudyBlock::getDuration).sum();
-                completedHoursByEntry.put(entry.getId(), completedHrs);
-
-                List<StudyBlock> pinned = blockRepository.findPinnedUncompletedByEntry(entry);
-                pinnedBlocksByEntry.put(entry.getId(), pinned);
-                double pinnedHrs = pinned.stream().mapToDouble(StudyBlock::getDuration).sum();
-                pinnedHoursByEntry.put(entry.getId(), pinnedHrs);
+            for (StudyBlock b : blockRepository.findPinnedUncompletedByEntryIds(entryIds)) {
+                pinnedBlocksByEntry.computeIfAbsent(b.getStudyPlanEntry().getId(), k -> new ArrayList<>()).add(b);
             }
+            entryIds.forEach(id -> {
+                List<StudyBlock> list = pinnedBlocksByEntry.getOrDefault(id, Collections.emptyList());
+                pinnedBlocksByEntry.putIfAbsent(id, Collections.emptyList());
+                pinnedHoursByEntry.put(id, list.stream().mapToDouble(StudyBlock::getDuration).sum());
+            });
 
-            for (StudyPlanEntry entry : entries) {
-                blockRepository.deleteByStudyPlanEntryAndCompletedFalseAndPinnedFalse(entry);
-            }
+            // Bulk-delete uncompleted unpinned blocks in one query
+            blockRepository.deleteUncompletedUnpinnedByEntryIds(entryIds);
             entityManager.flush();
 
             Map<Long, Double> originalWorkloads = new HashMap<>();
@@ -114,12 +123,11 @@ public class StudyPlanService {
                 originalWorkloads.put(entry.getId(), entry.getEstimatedWorkload());
                 double completedHrs = completedHoursByEntry.getOrDefault(entry.getId(), 0.0);
                 double pinnedHrs = pinnedHoursByEntry.getOrDefault(entry.getId(), 0.0);
-                // Subtract both completed and pinned hours — scheduler only fills what's left
                 double futureWorkload = Math.max(0, entry.getEstimatedWorkload() - completedHrs - pinnedHrs);
                 entry.setEstimatedWorkload(futureWorkload);
                 entry.setCompletedHours(0);
-                entryRepository.save(entry);
             }
+            entryRepository.saveAll(entries);
             entityManager.flush();
 
             for (StudyPlanEntry entry : entries) {
@@ -140,8 +148,8 @@ public class StudyPlanService {
             for (StudyPlanEntry entry : entries) {
                 entry.setEstimatedWorkload(originalWorkloads.get(entry.getId()));
                 entry.setCompletedHours(completedHoursByEntry.getOrDefault(entry.getId(), 0.0));
-                entryRepository.save(entry);
             }
+            entryRepository.saveAll(entries);
 
             return result;
 
@@ -216,14 +224,29 @@ public class StudyPlanService {
         java.time.LocalTime blockStart = block.getStartTime();
         java.time.LocalTime blockEnd = blockStart.plusMinutes((long)(block.getDuration() * 60));
 
+        // Load all other blocks on the same day so we can check if anything else sits in the slot
+        List<StudyBlock> otherDayBlocks = blockRepository
+                .findByStudyPlanEntry_User_IdAndDayBetween(userId, block.getDay(), block.getDay())
+                .stream()
+                .filter(b -> !b.getId().equals(blockId))
+                .toList();
+
         List<AvailabilitySlot> slots = slotRepository.findByUserIdAndWeekStart(userId, weekStart);
         for (AvailabilitySlot slot : slots) {
             if (!slot.getDayKey().equals(dayKey)) continue;
             java.time.LocalTime slotStart = slot.getStartTime();
             java.time.LocalTime slotEnd = slot.getEndTime();
-            // Check if block sits at the start of this slot
             if (!blockStart.isBefore(slotStart) && !blockEnd.isAfter(slotEnd)) {
-                if (blockStart.equals(slotStart) && blockEnd.equals(slotEnd)) {
+                // Check if any other block occupies this slot
+                boolean otherBlocksInSlot = otherDayBlocks.stream().anyMatch(b -> {
+                    java.time.LocalTime bStart = b.getStartTime();
+                    return !bStart.isBefore(slotStart) && bStart.isBefore(slotEnd);
+                });
+
+                if (!otherBlocksInSlot) {
+                    // No other study blocks in this slot — remove the whole slot
+                    slotRepository.delete(slot);
+                } else if (blockStart.equals(slotStart) && blockEnd.equals(slotEnd)) {
                     // Block fills entire slot — delete slot
                     slotRepository.delete(slot);
                 } else if (blockStart.equals(slotStart)) {
@@ -236,10 +259,8 @@ public class StudyPlanService {
                     slotRepository.save(slot);
                 } else {
                     // Block is in the middle — split into two slots
-                    // First half: slotStart -> blockStart
                     slot.setEndTime(blockStart);
                     slotRepository.save(slot);
-                    // Second half: blockEnd -> slotEnd
                     AvailabilitySlot second = new AvailabilitySlot();
                     second.setUser(slot.getUser());
                     second.setDayKey(slot.getDayKey());
@@ -277,6 +298,10 @@ public class StudyPlanService {
         StudyBlock block = blockRepository.findById(blockId)
                 .orElseThrow(() -> new ResourceNotFoundException("StudyBlock", blockId));
 
+        // Save old time boundaries before applying updates
+        java.time.LocalTime oldBlockStart = block.getStartTime();
+        java.time.LocalTime oldBlockEnd = oldBlockStart.plusMinutes((long)(block.getDuration() * 60));
+
         if (updates.containsKey("studyPlanEntryId")) {
             Long newEntryId = ((Number) updates.get("studyPlanEntryId")).longValue();
             StudyPlanEntry newEntry = entryRepository.findById(newEntryId)
@@ -307,7 +332,42 @@ public class StudyPlanService {
         }
 
         block.setPinned(true);
-        return blockRepository.save(block);
+        StudyBlock saved = blockRepository.save(block);
+
+        // Update the containing availability slot to match the new block boundaries
+        java.time.LocalTime newBlockStart = block.getStartTime();
+        java.time.LocalTime newBlockEnd = newBlockStart.plusMinutes((long)(block.getDuration() * 60));
+        if (!newBlockStart.equals(oldBlockStart) || !newBlockEnd.equals(oldBlockEnd)) {
+            Long userId = block.getStudyPlanEntry().getTask().getUserId();
+            java.time.LocalDate blockWeekStart = block.getDay()
+                    .with(java.time.temporal.TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+            String dayKey = block.getDay().getDayOfWeek().name();
+            List<AvailabilitySlot> slots = slotRepository.findByUserIdAndWeekStart(userId, blockWeekStart);
+            for (AvailabilitySlot slot : slots) {
+                if (!slot.getDayKey().equals(dayKey)) continue;
+                java.time.LocalTime slotStart = slot.getStartTime();
+                java.time.LocalTime slotEnd = slot.getEndTime();
+                boolean oldStartInSlot = !oldBlockStart.isBefore(slotStart) && oldBlockStart.isBefore(slotEnd);
+                if (!oldStartInSlot) continue;
+                // Exact match: slot boundaries == old block boundaries → resize to new block
+                if (slotStart.equals(oldBlockStart) && slotEnd.equals(oldBlockEnd)) {
+                    slot.setStartTime(newBlockStart);
+                    slot.setEndTime(newBlockEnd);
+                    slotRepository.save(slot);
+                // Old block was at the end of the slot → shrink/grow the slot end
+                } else if (slotEnd.equals(oldBlockEnd)) {
+                    slot.setEndTime(newBlockEnd);
+                    slotRepository.save(slot);
+                // Old block was at the start of the slot → shift the slot start
+                } else if (slotStart.equals(oldBlockStart)) {
+                    slot.setStartTime(newBlockStart);
+                    slotRepository.save(slot);
+                }
+                break;
+            }
+        }
+
+        return saved;
     }
 
     @Transactional
@@ -371,12 +431,20 @@ public class StudyPlanService {
     }
 
     @org.springframework.transaction.annotation.Transactional
-    public List<AvailabilitySlot> getSlots(Long userId, LocalDate weekStart) {
+    public List<AvailabilitySlot> getSlots(Long userId, LocalDate weekStart, String semester) {
         List<AvailabilitySlot> existing = slotRepository.findByUserIdAndWeekStart(userId, weekStart);
-        if (!existing.isEmpty()) return existing;
+        if (!existing.isEmpty()) {
+            boolean wrongSemester = semester != null && !semester.isBlank() &&
+                    existing.stream().anyMatch(s -> !semester.equals(s.getSemesterName()));
+            if (!wrongSemester) return existing;
+            slotRepository.deleteByUserIdAndWeekStart(userId, weekStart);
+            existing = java.util.Collections.emptyList();
+        }
 
         // No slots for this week — seed from the user's default schedule
-        List<DefaultScheduleSlot> defaults = defaultSlotRepository.findByUserId(userId);
+        List<DefaultScheduleSlot> defaults = (semester != null && !semester.isBlank())
+                ? defaultSlotRepository.findByUserIdAndSemesterName(userId, semester)
+                : defaultSlotRepository.findByUserId(userId);
         if (defaults.isEmpty()) return existing;
 
         User user = entityManager.getReference(User.class, userId);
@@ -388,13 +456,14 @@ public class StudyPlanService {
             slot.setStartTime(def.getStartTime());
             slot.setEndTime(def.getEndTime());
             slot.setWeekStart(weekStart);
+            slot.setSemesterName(semester);
             seeded.add(slot);
         }
         return slotRepository.saveAll(seeded);
     }
 
     @org.springframework.transaction.annotation.Transactional
-    public List<AvailabilitySlot> saveSlots(Long userId, LocalDate weekStart, List<java.util.Map<String, Object>> slots) {
+    public List<AvailabilitySlot> saveSlots(Long userId, LocalDate weekStart, String semester, List<java.util.Map<String, Object>> slots) {
         slotRepository.deleteByUserIdAndWeekStart(userId, weekStart);
         entityManager.flush();
         com.koursekit.model.User user = entityManager.getReference(com.koursekit.model.User.class, userId);
@@ -406,6 +475,7 @@ public class StudyPlanService {
             slot.setStartTime(java.time.LocalTime.parse((String) s.get("startTime")));
             slot.setEndTime(java.time.LocalTime.parse((String) s.get("endTime")));
             slot.setWeekStart(weekStart);
+            slot.setSemesterName(semester);
             toSave.add(slot);
         }
         return slotRepository.saveAll(toSave);

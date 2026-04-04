@@ -1,5 +1,11 @@
 package com.koursekit.service;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+
 import com.koursekit.dto.SaveGradeDataRequest;
 import com.koursekit.dto.SavedAssessmentDTO;
 import com.koursekit.dto.SavedCourseDTO;
@@ -7,21 +13,22 @@ import com.koursekit.dto.SavedSemesterResponse;
 import com.koursekit.model.SavedAssessment;
 import com.koursekit.model.SavedCourse;
 import com.koursekit.model.SavedSemester;
+import com.koursekit.model.Section;
 import com.koursekit.model.User;
 import com.koursekit.repository.SavedSemesterRepository;
-import jakarta.transaction.Transactional;
-import org.springframework.stereotype.Service;
+import com.koursekit.repository.SectionRepository;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import jakarta.transaction.Transactional;
 
 @Service
 public class SavedGradeService {
 
     private final SavedSemesterRepository semesterRepository;
+    private final SectionRepository sectionRepository;
 
-    public SavedGradeService(SavedSemesterRepository semesterRepository) {
+    public SavedGradeService(SavedSemesterRepository semesterRepository, SectionRepository sectionRepository) {
         this.semesterRepository = semesterRepository;
+        this.sectionRepository = sectionRepository;
     }
 
     @Transactional
@@ -97,6 +104,8 @@ public class SavedGradeService {
                     courseDTO.getCredits(),
                     semester
             );
+            course.setsectioncrn(courseDTO.getsectioncrn());
+            course.setcomponenttype(courseDTO.getcomponenttype());
 
             if (courseDTO.getAssessments() != null) {
                 for (SavedAssessmentDTO assessmentDTO : courseDTO.getAssessments()) {
@@ -120,12 +129,19 @@ public class SavedGradeService {
                     List<SavedAssessmentDTO> assessmentDTOs = course.getAssessments().stream()
                             .map(a -> new SavedAssessmentDTO(a.getName(), a.getGrade(), a.getWeight()))
                             .collect(Collectors.toList());
-                    return new SavedCourseDTO(
+                    SavedCourseDTO dto = new SavedCourseDTO(
                             course.getCourseCode(),
                             course.getGrade(),
                             course.getCredits(),
                             assessmentDTOs
                     );
+                    dto.setsectioncrn(course.getsectioncrn());
+                    dto.setcomponenttype(course.getcomponenttype());
+                    if (course.getsectioncrn() != null) {
+                        Optional<Section> section = sectionRepository.findByCrn(course.getsectioncrn());
+                        section.ifPresent(dto::setsection);
+                    }
+                    return dto;
                 })
                 .collect(Collectors.toList());
 

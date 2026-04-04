@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Pen, Search, Inbox, CheckCircle, Clock } from "lucide-react";
+import { Pen, Search, Inbox, CheckCircle, Hourglass } from "lucide-react";
 import CourseDetails from "./CourseDetails";
 
 const API = "http://localhost:8080";
@@ -15,6 +15,55 @@ const ANON_NAMES = [
 ];
 const randomAnon = () => ANON_NAMES[Math.floor(Math.random() * ANON_NAMES.length)];
 
+function RatingStats({ reviews }) {
+  if (!reviews || reviews.length === 0) return null;
+  const avg = (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1);
+  const counts = [5,4,3,2,1].map(star => ({
+    star,
+    count: reviews.filter(r => r.rating === star).length,
+  }));
+  return (
+    <div style={{
+      display:"flex", alignItems:"center", gap:24, flexWrap:"wrap",
+      background:"var(--surface2)", borderRadius:14, padding:"16px 20px",
+      marginBottom:20, border:"1px solid var(--border)",
+    }}>
+      {/* Average + stars */}
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4, minWidth:60 }}>
+        <div style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:2 }}>
+          Avg. Rating
+        </div>
+        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:36, color:"var(--primary)", lineHeight:1 }}>
+          {avg}
+        </div>
+        <div style={{ display:"inline-flex", gap:2 }}>
+          {[1,2,3,4,5].map(i => (
+            <span key={i} style={{ color: i <= Math.round(avg) ? "#f5a623" : "var(--border)", fontSize:14 }}>★</span>
+          ))}
+        </div>
+        <div style={{ fontSize:11, color:"var(--text3)" }}>{reviews.length} review{reviews.length !== 1 ? "s" : ""}</div>
+      </div>
+
+      {/* Bar breakdown */}
+      <div style={{ flex:1, minWidth:160, display:"flex", flexDirection:"column", gap:5 }}>
+        {counts.map(({ star, count }) => {
+          const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+          return (
+            <div key={star} style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ fontSize:11, color:"var(--text3)", width:10, textAlign:"right" }}>{star}</span>
+              <span style={{ color:"#f5a623", fontSize:11 }}>★</span>
+              <div style={{ flex:1, height:6, background:"var(--border)", borderRadius:4, overflow:"hidden" }}>
+                <div style={{ width:`${pct}%`, height:"100%", background:"#f5a623", borderRadius:4, transition:"width 0.4s ease" }} />
+              </div>
+              <span style={{ fontSize:11, color:"var(--text3)", width:18, textAlign:"right" }}>{count}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const timeAgo = ts => {
   const s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
   if (s < 60)    return "just now";
@@ -23,20 +72,65 @@ const timeAgo = ts => {
   return `${Math.floor(s/86400)}d ago`;
 };
 
+//fuzzy search algo
+const stem = word => word
+  .replace(/(ing|tion|ations|ation|ed|ly|er|est|ess|ness|ies|es|s)$/, "")
+  .toLowerCase();
+
+const fuzzyMatch = (a, b) => {
+  if (a === b) return true;
+  if (a.startsWith(b) || b.startsWith(a)) return true;
+  // Only allow 1 edit difference, and only for words longer than 5 chars
+  if (a.length < 5 || b.length < 5) return false;
+  if (Math.abs(a.length - b.length) > 2) return false;
+  let row = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = i;
+    for (let j = 1; j <= b.length; j++) {
+      const val = a[i-1] === b[j-1] ? row[j-1] : 1 + Math.min(row[j-1], row[j], prev);
+      row[j-1] = prev;
+      prev = val;
+    }
+    row[b.length] = prev;
+  }
+  return row[b.length] <= 1;
+};
+
+const fuzzySearch = (text, query) => {
+  if (!text || !query) return false;
+  const textWords  = text.toLowerCase().split(/\s+/).map(stem);
+  const queryWords = query.toLowerCase().trim().split(/\s+/).map(stem);
+  return queryWords.every(qw =>
+    qw.length >= 2 && textWords.some(tw => fuzzyMatch(tw, qw))
+  );
+};
+
 function Stars({ count, interactive, onSet }) {
+  const [hoverCount, setHoverCount] = useState(0);
+  const active = hoverCount || count;
   return (
     <span style={{ display:"inline-flex", gap:2 }}>
       {[1,2,3,4,5].map(i => (
-        <span key={i} onClick={() => interactive && onSet(i)} style={{
-          color: i<=count ? "var(--star)" : "var(--border)", fontSize:16,
-          cursor: interactive ? "pointer" : "default", transition:"color .1s"
-        }}>★</span>
+        <span
+          key={i}
+          onClick={() => interactive && onSet(i)}
+          onMouseEnter={() => interactive && setHoverCount(i)}
+          onMouseLeave={() => interactive && setHoverCount(0)}
+          style={{
+            color: i<=active ? (hoverCount ? "var(--accent2)" : "var(--star)") : "var(--border)",
+            fontSize:16,
+            cursor: interactive ? "pointer" : "default",
+            transition:"color .1s",
+            transform: interactive && i<=hoverCount ? "scale(1.2)" : "scale(1)",
+            display:"inline-block",
+          }}
+        >★</span>
       ))}
     </span>
   );
 }
 
-function ReviewCard({ review, token, userEmail, reviewType = "course" }) {
+function ReviewCard({ review, token, userEmail, reviewType = "course", animDelay = 0 }) {
   const [reporting,  setReporting]  = useState(false);
   const [reason,     setReason]     = useState("");
   const [submitted,  setSubmitted]  = useState(false);
@@ -74,7 +168,7 @@ function ReviewCard({ review, token, userEmail, reviewType = "course" }) {
   };
 
   return (
-    <div style={rv.card}>
+    <div className="rv-anim" style={{ ...rv.card, animationDelay: `${animDelay}s` }}>
       <div style={{ flex: 1 }}>
         {/* Header row */}
         <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap", marginBottom:8 }}>
@@ -143,8 +237,8 @@ function ReviewCard({ review, token, userEmail, reviewType = "course" }) {
             <button
               onClick={submitReport} disabled={submitting}
               style={{
-                padding:"7px 20px", background:"var(--warn)", color:"white",
-                border:"none", borderRadius:8, fontSize:12, fontWeight:600,
+                padding:"7px 20px", background:"color-mix(in srgb, var(--warn) 15%, transparent)", color:"var(--warn)",
+                border:"1px solid color-mix(in srgb, var(--warn) 30%, transparent)", borderRadius:8, fontSize:12, fontWeight:600,
                 cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
               }}
             >
@@ -218,6 +312,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
   const [err,             setErr]             = useState("");
   const [submitting,      setSubmitting]       = useState(false);
   const [success,         setSuccess]         = useState(false);
+  const [sectionDropOpen, setSectionDropOpen] = useState(false);
 
   useEffect(() => {
     if (preselectedCourse) {
@@ -271,7 +366,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
    <div style={{ ...rv.composeCard, textAlign:"center", padding:40 }}>
     {success === "PENDING" ? (
     <>
-      <div style={{ marginBottom:12 }}>⏳</div>
+      <div style={{ marginBottom:12 }}><Hourglass size={40} color="var(--primary)" /></div>
       <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>
         Review submitted for moderation
       </div>
@@ -302,27 +397,53 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
 
       {!preselectedCourse && (
         <>
-          <label style={rv.label}>Search for a Course</label>
+          <label style={rv.label}>Select a Course</label>
           <CourseSearch onSelect={selectCourse} />
         </>
       )}
 
       {selectedCourse && (
         <>
-          <div style={{ background:"var(--surface2)", borderRadius:10, padding:"10px 14px", marginBottom:16, fontSize:13 }}>
-            Selected: <strong style={{ color:"var(--primary)" }}>{selectedCourse.courseCode}</strong> — {selectedCourse.title}
+          <div style={{ background:"color-mix(in srgb, var(--accent) 10%, transparent)", border:"1px solid color-mix(in srgb, var(--accent) 25%, transparent)", borderRadius:10, padding:"10px 14px", marginBottom:16, fontSize:13, color:"var(--text2)" }}>
+            Selected: <strong style={{ color:"var(--accent)" }}>{selectedCourse.courseCode}</strong> — {selectedCourse.title}
           </div>
 
-          <label style={rv.label}>Select Section</label>
-          <select value={selectedSection} onChange={e => setSelectedSection(e.target.value)}
-            style={{ ...rv.input, cursor:"pointer" }}>
-            <option value="">— pick a section —</option>
-            {sections.map(s => (
-              <option key={s.id} value={s.id}>
-                Section {s.sectionNumber} — {s.professorName}
-              </option>
-            ))}
-          </select>
+          <label style={rv.label}>Select a Section</label>
+          <div style={{ position:"relative", marginBottom:16 }}>
+            <button type="button" onClick={() => setSectionDropOpen(o => !o)} style={{
+              width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10,
+              background:"var(--surface2)", color: selectedSection ? "var(--text)" : "var(--text3)",
+              fontSize:13, fontFamily:"'DM Sans',sans-serif", cursor:"pointer",
+              textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between",
+            }}>
+              {selectedSection
+                ? (() => { const s = sections.find(s => String(s.id) === String(selectedSection)); return s ? `Section ${s.sectionNumber} — ${s.professorName}` : "Select a section…"; })()
+                : "Select a section…"}
+              <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: sectionDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+            </button>
+            {sectionDropOpen && (
+              <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, maxHeight:220, overflowY:"auto" }}>
+                <div onClick={() => { setSelectedSection(""); setSectionDropOpen(false); }}
+                  className="kk-option"
+                  style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                    transition:"background .15s",
+                    background: !selectedSection ? "var(--divider)" : "transparent",
+                    color: !selectedSection ? "var(--accent)" : "var(--primary)" }}>
+                  Select a section…
+                </div>
+                {sections.map(s => (
+                  <div key={s.id} onClick={() => { setSelectedSection(s.id); setSectionDropOpen(false); }}
+                    className="kk-option"
+                    style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
+                      transition:"background .15s",
+                      background: String(selectedSection) === String(s.id) ? "var(--divider)" : "transparent",
+                      color: String(selectedSection) === String(s.id) ? "var(--accent)" : "var(--primary)" }}>
+                    Section {s.sectionNumber} — {s.professorName}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           <label style={rv.label}>Rating</label>
           <div style={{ marginBottom:16 }}>
@@ -332,7 +453,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
           <label style={rv.label}>Your Review</label>
           <textarea
             value={comment} onChange={e => { setComment(e.target.value); setErr(""); }}
-            placeholder="Share your honest experience..."
+            placeholder="Share your honest experience…"
             rows={4}
             style={{ ...rv.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
           />
@@ -350,17 +471,33 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
   );
 }
 
-export default function Reviews() {
+export default function Reviews({ onNavigateToForum }) {
   const token = localStorage.getItem("kk_token");
   const userEmail = localStorage.getItem("kk_email");
   const [detailsCourse, setDetailsCourse] = useState(null);
-  const [tab, setTab] = useState("course");
+  const [tab, setTab] = useState(() => {
+    try { return sessionStorage.getItem("kk_reviews_tab") || "course"; } catch { return "course"; }
+  });
   const [reviews,   setReviews]   = useState([]);
   const [loading,   setLoading]   = useState(false);
   const [sort,      setSort]      = useState("new");
   const [search,    setSearch]    = useState("");
   const [composing, setComposing] = useState(false);
-  const [activeCourse, setActiveCourse] = useState(null);
+  const [activeCourse, setActiveCourse] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem("kk_reviews_course") || "null"); } catch { return null; }
+  });
+  const [visibleCount,   setVisibleCount]   = useState(10);
+  const [recentReviews,  setRecentReviews]  = useState([]);
+  const [recentLoading,  setRecentLoading]  = useState(false);
+
+  useEffect(() => {
+      setRecentLoading(true);
+      fetch(`${API}/api/reviews/recent?limit=8`)
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setRecentReviews(data); })
+        .catch(() => {})
+        .finally(() => setRecentLoading(false));
+  }, []);
 
   const loadReviews = useCallback(async (courseId) => {
     setLoading(true);
@@ -372,55 +509,84 @@ export default function Reviews() {
     finally { setLoading(false); }
   }, []);
 
+
+  useEffect(() => {
+    if (activeCourse) loadReviews(activeCourse.id);
+  }, []);
+
   const selectCourse = (course) => {
     setActiveCourse(course);
     loadReviews(course.id);
     setComposing(false);
+    setVisibleCount(10);
+    sessionStorage.setItem("kk_reviews_course", JSON.stringify(course));
+  };
+
+  const clearCourse = () => {
+    setActiveCourse(null);
+    setReviews([]);
+    setComposing(false);
+    sessionStorage.removeItem("kk_reviews_course");
   };
 
   let displayed = reviews
-    .filter(r => !search || r.comment?.toLowerCase().includes(search.toLowerCase()));
+    .filter(r => !search || fuzzySearch(r.comment, search));
   displayed = sort === "top"
     ? [...displayed].sort((a,b) => b.rating - a.rating)
     : [...displayed].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const hasMoreCourse = displayed.length > visibleCount;
+  const visibleReviews = displayed.slice(0, visibleCount);
 
   if (detailsCourse) {
     return <CourseDetails course={detailsCourse} onBack={() => setDetailsCourse(null)} />;
   }
   return (
-    <div style={{ padding:"28px 28px 60px", maxWidth:860, fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{ padding:"28px 28px 60px", fontFamily:"'DM Sans',sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing:border-box; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+        .rv-anim { animation: fadeUp 0.3s ease both; }
       `}</style>
 
-      <div style={{ marginBottom:24 }}>
-        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:12 }}>Reviews</div>
-        <div style={{ display:"flex", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:14, padding:5, width:"fit-content", gap:4 }}>
-          {[
-            { id:"course",    icon:"", label:"Course Reviews"    },
-            { id:"professor", icon:"", label:"Professor Reviews" },
-          ].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
-              padding:"9px 22px", border:"none", borderRadius:10, fontSize:13, fontWeight:600,
-              cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
-              background: tab===t.id ? "var(--primary)" : "transparent",
-              color:       tab===t.id ? "#ffffff" : "var(--text2)",
-            }}>
-              {t.icon} {t.label}
-            </button>
-          ))}
-        </div>
+      <div>
+        <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:26, color:"var(--primary)", marginBottom:8}}>Reviews</div>
+      </div>
+      <div style={{ display:"flex", gap:6, width:"fit-content", marginBottom:24 }}>
+        {[
+          { id:"course",    label:"Course Reviews"    },
+          { id:"professor", label:"Professor Reviews" },
+          ...(token ? [{ id:"mine", label:"My Reviews" }] : []),
+        ].map(t => (
+          <button key={t.id} className="kk-tab" data-active={tab===t.id} onClick={() => { setTab(t.id); sessionStorage.setItem("kk_reviews_tab", t.id); }} style={{
+            padding:"8px 18px", borderRadius:9, fontSize:13,
+            fontWeight: tab===t.id ? 600 : 400,
+            cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
+            background: tab===t.id ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
+            color:  tab===t.id ? "var(--primary)" : "var(--text2)",
+            border: tab===t.id ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
+          }}>
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      {tab === "professor" && <ProfessorReviewsTab token={token} userEmail={userEmail} />}
+      {tab === "professor" && <ProfessorReviewsTab token={token} userEmail={userEmail} onNavigateToForum={onNavigateToForum} />}
+      {tab === "mine" && <MyReviewsTab token={token} userEmail={userEmail} />}
 
       {tab === "course" && <>
-      {/* Course search to browse reviews */}
-      <div style={{ marginBottom:20 }}>
-        <label style={rv.label}>Browse reviews by course</label>
-        <CourseSearch onSelect={selectCourse} />
-      </div>
+      {/* Course search or back button */}
+      {!activeCourse ? (
+        <div style={{ marginBottom:20 }}>
+          <label style={{ ...rv.label, fontSize:13, fontWeight:400, color:"var(--text2)" }}>Browse reviews by course</label>
+          <CourseSearch onSelect={selectCourse} />
+          <p style={{ fontSize:12, color:"var(--text3)", marginTop:6 }}>Search for any course to read and write student reviews.</p>
+        </div>
+      ) : (
+        <button onClick={clearCourse} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"var(--text2)", fontSize:13, fontWeight:600, cursor:"pointer", padding:"0 0 20px", fontFamily:"'DM Sans',sans-serif" }}>
+          ← Back to search
+        </button>
+      )}
 
       {activeCourse && (
         <>
@@ -429,38 +595,52 @@ export default function Reviews() {
                 <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>
                   {activeCourse.courseCode} — {activeCourse.title}
                 </div>
-                <button
+                <button className="kk-pill"
                   onClick={() => setDetailsCourse(activeCourse)}
                   style={{
-                    padding:"7px 16px", background:"var(--primary)", color:"#ffffff",
-                    border:"none", borderRadius:10, fontSize:12,
-                    fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                    padding:"7px 16px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)",
+                    border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:12,
+                    fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
                   }}
                 >
                   View Course Details
                 </button>
+
+                {onNavigateToForum && (
+                  <button
+                    onClick={() => onNavigateToForum(activeCourse.courseCode, "")}
+                    style={{
+                      padding:"7px 16px", background:"var(--accent2)", color:"white",
+                      border:"none", borderRadius:10, fontSize:12,
+                      fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                    }}
+                  >
+                    Discuss this Course
+                  </button>
+                )}
               </div>
             <div style={{ display:"flex", gap:8 }}>
               <div style={{ 
                 display:"flex", 
                 gap:4, 
-                background:"var(--surface)", 
-                border:"1px solid var(--border)",
-                padding:4, 
-                borderRadius:10 
+                background:"var(--surface2)",
+                padding:4,
+                borderRadius:10
               }}>
                 {[{id:"top",label:"Top"},{id:"new",label:"New"}].map(s => (
-                  <button key={s.id} onClick={() => setSort(s.id)} style={{
-                    padding:"6px 14px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
-                    background: sort===s.id ? "var(--primary)" : "transparent",
-                    color:      sort===s.id ? "#ffffff" : "var(--text2)",
+                  <button key={s.id} className="kk-tab" data-active={sort===s.id} onClick={() => setSort(s.id)} style={{
+                    padding:"6px 14px", border:"none", borderRadius:8, fontSize:12,
+                    fontWeight: sort===s.id ? 600 : 400, cursor:"pointer", transition:"all .15s",
+                    background: sort===s.id ? "var(--surface)" : "transparent",
+                    color:      sort===s.id ? "var(--primary)" : "var(--text2)",
+                    boxShadow:  sort===s.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
                 }}>{s.label}</button>
               ))}
             </div>
               {token && (
                 <button onClick={() => setComposing(c => !c)} style={{
-                  padding:"9px 20px 9px 12px", background:"var(--accent)", color:"white",
-                  border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer",
+                  padding:"9px 20px 9px 12px", background:"color-mix(in srgb, var(--accent) 15%, transparent)", color:"var(--accent)",
+                  border:"1px solid color-mix(in srgb, var(--accent) 30%, transparent)", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer",
                 }}><Pen size={14} style={{ marginRight: 6, verticalAlign: "middle" }} /> Write a Review</button>
               )}
             </div>
@@ -486,6 +666,7 @@ export default function Reviews() {
       )}
 
       {loading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading reviews…</div>}
+      {!loading && activeCourse && reviews.length > 0 && <RatingStats reviews={reviews} />}
 
       {!loading && activeCourse && displayed.length === 0 && !composing && (
         <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
@@ -495,18 +676,50 @@ export default function Reviews() {
         </div>
       )}
 
-      {!loading && !activeCourse && (
-        <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
-          <div style={{ fontSize:40, marginBottom:12 }}></div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>Search for a course above</div>
-          <div style={{ fontSize:13, marginTop:6 }}>to view or submit reviews</div>
-        </div>
+      {!activeCourse && (
+          <>
+            <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>
+              Recent Course Reviews
+            </div>
+            {recentLoading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
+            {!recentLoading && recentReviews.length === 0 && (
+              <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+                <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>No reviews yet</div>
+                <div style={{ fontSize:13, marginTop:6 }}>Search for a course above to be the first!</div>
+              </div>
+            )}
+            {!recentLoading && recentReviews.length > 0 && (
+              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                {recentReviews.map(r => (
+                  <div key={r.id}>
+                    {r.section?.course && (
+                      <div style={{ fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>
+                        {r.section.course.courseCode} — {r.section.course.title}
+                      </div>
+                    )}
+                    <ReviewCard review={r} token={token} userEmail={userEmail} reviewType="course" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
       )}
 
-      {!loading && displayed.length > 0 && (
-        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-          {displayed.map(r => <ReviewCard key={r.id} review={r} token={token} userEmail={userEmail} reviewType="course" />)}
-        </div>
+      {!loading && visibleReviews.length > 0 && (
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            {visibleReviews.map((r, i) => <ReviewCard key={r.id} review={r} token={token} userEmail={userEmail} reviewType="course" animDelay={i * 0.05} />)}
+          </div>
+      )}
+      {!loading && hasMoreCourse && (
+          <div style={{ textAlign:"center", marginTop:20 }}>
+            <button onClick={() => setVisibleCount(c => c + 10)} style={{
+              padding:"10px 32px", background:"var(--surface)", border:"1px solid var(--border)",
+              borderRadius:10, fontSize:13, fontWeight:600, color:"var(--primary)",
+              cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+            }}>
+              Load More ({displayed.length - visibleCount} remaining)
+            </button>
+          </div>
       )}
       </>}
     </div>
@@ -590,7 +803,7 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
       {success === "PENDING" ? (
         <>
         <div style={{ marginBottom:12 }}>
-          <Clock size={40} color="var(--primary)" />
+          <Hourglass size={40} color="var(--primary)" />
         </div>
         <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>
         Review submitted for moderation
@@ -622,7 +835,7 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
       </div>
       <label style={rv.label}>Your Review</label>
       <textarea value={comment} onChange={e => { setComment(e.target.value); setErr(""); }}
-        placeholder="Share your honest experience with this professor..."
+        placeholder="Share your honest experience with this professor…"
         rows={4}
         style={{ ...rv.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
       />
@@ -637,18 +850,149 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
   );
 }
 
-function ProfessorReviewsTab({ token, userEmail }) {
+function MyReviewsTab({ token, userEmail }) {
+  const [courseReviews,    setCourseReviews]    = useState([]);
+  const [profReviews,      setProfReviews]      = useState([]);
+  const [loading,          setLoading]          = useState(false);
+
+  useEffect(() => {
+    if (!token || !userEmail) return;
+    setLoading(true);
+    const headers = { "Authorization": `Bearer ${token}` };
+    Promise.all([
+      fetch(`${API}/api/reviews/my?userId=${encodeURIComponent(userEmail)}`, { headers }).then(r => r.json()),
+      fetch(`${API}/api/professor-reviews/my?userId=${encodeURIComponent(userEmail)}`, { headers }).then(r => r.json()),
+    ])
+      .then(([cr, pr]) => {
+        setCourseReviews(Array.isArray(cr) ? cr : []);
+        setProfReviews(Array.isArray(pr) ? pr : []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [token, userEmail]);
+
+  const STATUS_STYLE = {
+      APPROVED: { bg:"var(--surface2)",  color:"var(--text2)",   label:"Approved"            },
+      PENDING:  { bg:"#fff8ec",          color:"#b7680a",        label:"Pending moderation" },
+      FLAGGED:  { bg:"#fef0f0",          color:"#c0392b",        label:"Flagged"            },
+  };
+
+  const StatusBadge = ({ status }) => {
+    const s = STATUS_STYLE[status] || STATUS_STYLE.PENDING;
+    return (
+      <span style={{ fontSize:11, fontWeight:700, padding:"3px 10px", borderRadius:6, background:s.bg, color:s.color }}>
+        {s.label}
+      </span>
+    );
+  };
+
+  const ReviewRow = ({ review, type }) => {
+    const label = type === "course"
+      ? `${review.section?.course?.courseCode || ""} — Section ${review.section?.sectionNumber || ""}, ${review.section?.professorName || ""}`
+      : review.professorName || "";
+    return (
+      <div style={{
+        background:"var(--surface)", border:"1px solid var(--border)",
+        borderRadius:14, padding:"16px 20px",
+        boxShadow:"0 2px 8px rgba(49,72,122,0.06)",
+        opacity: review.status === "FLAGGED" ? 0.7 : 1,
+      }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:10 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+            <span style={{ fontSize:12, fontWeight:700, color:"var(--primary)" }}>{label}</span>
+            <span style={{ fontSize:11, color:"var(--text3)" }}>· {timeAgo(review.createdAt)}</span>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <span style={{ display:"inline-flex", gap:2 }}>
+              {[1,2,3,4,5].map(i => (
+                <span key={i} style={{ color: i <= review.rating ? "#f5a623" : "var(--border)", fontSize:14 }}>★</span>
+              ))}
+            </span>
+            <StatusBadge status={review.status} />
+          </div>
+        </div>
+        <p style={{ fontSize:14, color:"var(--text)", lineHeight:1.65, margin:0 }}>{review.comment}</p>
+        {review.status === "PENDING" && (
+          <div style={{ fontSize:12, color:"#b7680a", marginTop:10 }}>
+            Your review is awaiting moderator approval and is not yet visible to others.
+          </div>
+        )}
+        {review.status === "FLAGGED" && (
+          <div style={{ fontSize:12, color:"#c0392b", marginTop:10 }}>
+            Your review has been flagged and is under review by an admin.
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (loading) return <div style={{ textAlign:"center", padding:60, color:"var(--text3)" }}>Loading your reviews…</div>;
+
+  const total = courseReviews.length + profReviews.length;
+
+  if (total === 0) return (
+    <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+      <Inbox size={40} color="var(--text3)" style={{ marginBottom:12 }} />
+      <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)", marginBottom:6 }}>
+        No reviews yet
+      </div>
+      <div style={{ fontSize:13 }}>Your submitted reviews will appear here.</div>
+    </div>
+  );
+
+  return (
+    <div>
+      {courseReviews.length > 0 && (
+        <>
+          <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>
+            Course Reviews ({courseReviews.length})
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:28 }}>
+            {[...courseReviews].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+              .map(r => <ReviewRow key={r.id} review={r} type="course" />)}
+          </div>
+        </>
+      )}
+      {profReviews.length > 0 && (
+        <>
+          <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>
+            Professor Reviews ({profReviews.length})
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+            {[...profReviews].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+              .map(r => <ReviewRow key={r.id} review={r} type="professor" />)}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
   const [selected,  setSelected]  = useState(null);
   const [reviews,   setReviews]   = useState([]);
   const [loading,   setLoading]   = useState(false);
   const [composing, setComposing] = useState(false);
   const [sort,      setSort]      = useState("new");
   const [search,    setSearch]    = useState("");
+  const [recentReviews, setRecentReviews] = useState([]);
+  const [recentLoading, setRecentLoading] = useState(false);
+  const [visibleCount,   setVisibleCount]   = useState(10);
+
+  useEffect(() => {
+      setRecentLoading(true);
+      fetch(`${API}/api/professor-reviews/recent?limit=8`)
+        .then(r => r.json())
+        .then(data => { if (Array.isArray(data)) setRecentReviews(data); })
+        .catch(() => {})
+        .finally(() => setRecentLoading(false));
+  }, []);
 
   const selectProfessor = async (name) => {
     setSelected(name);
     setComposing(false);
     setLoading(true);
+    setVisibleCount(10);
     try {
       const res = await fetch(`${API}/api/professor-reviews?professorName=${encodeURIComponent(name)}`);
       const data = await res.json();
@@ -658,36 +1002,53 @@ function ProfessorReviewsTab({ token, userEmail }) {
   };
 
   let displayed = reviews
-    .filter(r => !search || r.comment?.toLowerCase().includes(search.toLowerCase()));
+    .filter(r => !search || fuzzySearch(r.comment, search));
   displayed = sort === "top"
     ? [...displayed].sort((a,b) => b.rating - a.rating)
     : [...displayed].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const hasMoreProf = displayed.length > visibleCount;
+  const visibleProfReviews = displayed.slice(0, visibleCount);
 
   return (
     <div>
       <div style={{ marginBottom:20 }}>
-        <label style={rv.label}>Browse reviews by professor</label>
+        <label style={{ ...rv.label, fontSize:13, fontWeight:400, color:"var(--text2)" }}>Browse reviews by professor</label>
         <ProfessorSearch onSelect={selectProfessor} />
+        <p style={{ fontSize:12, color:"var(--text3)", marginTop:6 }}>Search for any professor to read and write student reviews.</p>
       </div>
 
       {selected && (
         <>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, marginBottom:18 }}>
             <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}> {selected}</div>
+            {onNavigateToForum && (
+              <button
+                onClick={() => onNavigateToForum("", selected)}
+                style={{
+                  padding:"7px 16px", background:"var(--accent2)", color:"white",
+                  border:"none", borderRadius:10, fontSize:12,
+                  fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                }}
+              >
+                Discuss this Professor
+              </button>
+            )}
             <div style={{ display:"flex", gap:8 }}>
-              <div style={{ display:"flex", gap:4, background:"var(--bg)", padding:4, borderRadius:10 }}>
+              <div style={{ display:"flex", gap:4, background:"var(--surface2)", padding:4, borderRadius:10 }}>
                 {[{id:"top",label:"Top"},{id:"new",label:"New"}].map(s => (
-                  <button key={s.id} onClick={() => setSort(s.id)} style={{
-                    padding:"6px 14px", border:"none", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
-                    background: sort===s.id ? "var(--primary)" : "transparent",
-                    color:      sort===s.id ? "#ffffff" : "var(--text2)",
+                  <button key={s.id} className="kk-tab" data-active={sort===s.id} onClick={() => setSort(s.id)} style={{
+                    padding:"6px 14px", border:"none", borderRadius:8, fontSize:12,
+                    fontWeight: sort===s.id ? 600 : 400, cursor:"pointer", transition:"all .15s",
+                    background: sort===s.id ? "var(--surface)" : "transparent",
+                    color:      sort===s.id ? "var(--primary)" : "var(--text2)",
+                    boxShadow:  sort===s.id ? "0 1px 4px rgba(49,72,122,0.08)" : "none",
                   }}>{s.label}</button>
                 ))}
               </div>
               {token && (
                 <button onClick={() => setComposing(c => !c)} style={{
-                  padding:"9px 20px 9px 12px", background:"var(--accent)", color:"white",
-                  border:"none", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer",
+                  padding:"9px 20px 9px 12px", background:"color-mix(in srgb, var(--accent) 15%, transparent)", color:"var(--accent)",
+                  border:"1px solid color-mix(in srgb, var(--accent) 30%, transparent)", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer",
                 }}><Pen size={14} style={{ marginRight:6, verticalAlign:"middle" }} />Write a Review</button>
               )}
             </div>
@@ -708,6 +1069,7 @@ function ProfessorReviewsTab({ token, userEmail }) {
           )}
 
           {loading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading reviews…</div>}
+          {!loading && reviews.length > 0 && <RatingStats reviews={reviews} />}
 
           {!loading && displayed.length === 0 && !composing && (
             <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
@@ -717,20 +1079,50 @@ function ProfessorReviewsTab({ token, userEmail }) {
             </div>
           )}
 
-          {!loading && displayed.length > 0 && (
-            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              {displayed.map(r => <ReviewCard key={r.id} review={r} token={token} userEmail={userEmail} reviewType="professor" />)}
-            </div>
+          {!loading && visibleProfReviews.length > 0 && (
+              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                {visibleProfReviews.map((r, i) => <ReviewCard key={r.id} review={r} token={token} userEmail={userEmail} reviewType="professor" animDelay={i * 0.05} />)}
+              </div>
+          )}
+          {!loading && hasMoreProf && (
+              <div style={{ textAlign:"center", marginTop:20 }}>
+                <button onClick={() => setVisibleCount(c => c + 10)} style={{
+                  padding:"10px 32px", background:"var(--surface)", border:"1px solid var(--border)",
+                  borderRadius:10, fontSize:13, fontWeight:600, color:"var(--primary)",
+                  cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                }}>
+                  Load More ({displayed.length - visibleCount} remaining)
+                </button>
+              </div>
           )}
         </>
       )}
 
       {!selected && (
-        <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
-          <div style={{ fontSize:40, marginBottom:12 }}></div>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>Search for a professor above</div>
-          <div style={{ fontSize:13, marginTop:6 }}>to view or submit reviews</div>
-        </div>
+          <>
+            <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>
+              Recent Professor Reviews
+            </div>
+            {recentLoading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
+            {!recentLoading && recentReviews.length === 0 && (
+              <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+                <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>No reviews yet</div>
+                <div style={{ fontSize:13, marginTop:6 }}>Search for a professor above to be the first!</div>
+              </div>
+            )}
+            {!recentLoading && recentReviews.length > 0 && (
+              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                {recentReviews.map(r => (
+                  <div key={r.id}>
+                    <div style={{ fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>
+                      {r.professorName}
+                    </div>
+                    <ReviewCard review={r} token={token} userEmail={userEmail} reviewType="professor" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
       )}
     </div>
   );
@@ -739,7 +1131,7 @@ function ProfessorReviewsTab({ token, userEmail }) {
 const rv = {
   card: {
     display:"flex", gap:14, background:"var(--surface)", borderRadius:16, padding:"18px 20px",
-    border:"1px solid var(--border)", boxShadow:"0 2px 10px rgba(49,72,122,0.06)",
+    border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)",
   },
   composeCard: {
     background:"var(--surface)", borderRadius:18, padding:"24px 26px",
@@ -753,6 +1145,6 @@ const rv = {
   },
   label:     { display:"block", fontSize:12, fontWeight:600, color:"var(--text)", marginBottom:6 },
   input:     { width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", color:"var(--text)", background:"var(--surface2)", marginBottom:16, display:"block" },
-  submitBtn: { padding:"10px 24px", background:"var(--primary)", color:"white", border:"none", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
-  cancelBtn: { padding:"10px 18px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  submitBtn: { padding:"10px 22px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1.5px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
+  cancelBtn: { padding:"8px 16px", background:"var(--bg)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:14, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" },
 };

@@ -14,6 +14,8 @@ public record TaskResponseDTO(
         Task.Priority priority,
         @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm")
         LocalDateTime deadline,
-        boolean completed
+        boolean completed,
+        boolean fromSyllabus,
+        String semesterName
 ) {
 }
