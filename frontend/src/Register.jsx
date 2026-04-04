@@ -77,7 +77,7 @@ export default function Register({ onGoToLogin }) {
       await fetch("http://localhost:8080/api/grades/saved", {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${regToken}` },
-        body: JSON.stringify({ semesterName: semName, courses: courses.map(c => ({ courseCode: c.name.trim(), grade: "", credits: c.credits || 0, sectioncrn: c.sectioncrn || null })) }),
+        body: JSON.stringify({ semesterName: semName, courses: courses.flatMap(c => [{ courseCode: c.name.trim(), grade: "", credits: c.credits || 0, sectioncrn: c.sectioncrn || null }, ...(c.linkedSectionCrn ? [{ courseCode: c.name.trim(), grade: "", credits: 0, sectioncrn: c.linkedSectionCrn, componenttype: "Lab" }] : [])]) }),
       });
     } catch {}
     finally { setSemSaving(false); }
@@ -152,7 +152,7 @@ export default function Register({ onGoToLogin }) {
                     <div style={{ flex:1 }}>
                       <StudentCourses
                         value={{ code: c.name, sectioncrn: c.sectioncrn, sectionNumber: c.sectionNumber }}
-                        onSelect={data => setSemCourses(p => p.map(r => r.id===c.id ? {...r, name:data.code, sectioncrn:data.sectioncrn, sectionNumber:data.sectionno, professorName:data.profname, credits:data.credits||0} : r))}
+                        onSelect={data => setSemCourses(p => p.map(r => r.id===c.id ? {...r, name:data.code, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.profname, credits:data.credits||0, linkedSectionCrn:data.linkedSectionCrn||null} : r))}
                         inputStyle={{ ...s.input, marginBottom:0 }}
                       />
                     </div>

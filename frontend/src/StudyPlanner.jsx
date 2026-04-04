@@ -1150,10 +1150,11 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
     const courseBlocksPerDay = useMemo(() => {
         const map = {};
         enrolledSections.forEach((es, idx) => {
-            const color = globalCourseColors[es.courseCode] || COURSE_COLORS[idx % COURSE_COLORS.length];
+            const firstIdx = enrolledSections.findIndex(e => e.courseCode === es.courseCode);
+            const color = globalCourseColors[es.courseCode] || COURSE_COLORS[firstIdx % COURSE_COLORS.length];
             getSectionTimeSlots(es.section).forEach(({ dayKey, startHour, endHour }) => {
                 if (!map[dayKey]) map[dayKey] = [];
-                map[dayKey].push({ startHour, endHour, courseCode: es.courseCode, sectionNumber: es.sectionNumber, color, crn: es.crn });
+                map[dayKey].push({ startHour, endHour, courseCode: es.courseCode, sectionNumber: es.componenttype ? es.sectionNumber : null, color, crn: es.crn });
             });
         });
         return map;

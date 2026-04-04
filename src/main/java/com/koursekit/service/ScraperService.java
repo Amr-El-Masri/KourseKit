@@ -3,6 +3,7 @@ package com.koursekit.service;
 import com.koursekit.model.*;
 import com.koursekit.repository.*;
 import org.jsoup.Jsoup;
+import java.util.List;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -78,6 +79,7 @@ public class ScraperService {
 
                         // Save Section logic
                         String creditHoursStr = cols.get(6).text().trim();
+                        String sectionType    = cols.get(7).text().trim();
                         String college        = cols.get(8).text().trim();
                         String actualEnrolStr = cols.get(9).text().trim();
                         String seatsAvailStr  = cols.get(10).text().trim();
@@ -114,6 +116,8 @@ public class ScraperService {
                         }
                         String days2 = days2Builder.toString();
 
+                        String linkedCrns = cols.size() > 35 ? cols.get(35).text().trim() : "";
+
                         // Parse integers safely
                         int creditHours = 0;
                         int seatsAvail  = 0;
@@ -123,7 +127,13 @@ public class ScraperService {
                         try { actualEnrol = Integer.parseInt(actualEnrolStr); } catch (Exception ignored) {}
 
                         // Save Section logic
-                        if (!sectionRepo.existsByCrn(crn)) {
+                        if (sectionRepo.existsByCrn(crn)) {
+                            sectionRepo.findByCrn(crn).ifPresent(existing -> {
+                                existing.setSectionType(sectionType.isEmpty() ? null : sectionType);
+                                existing.setLinkedCrns(linkedCrns.isEmpty() ? null : linkedCrns);
+                                sectionRepo.save(existing);
+                            });
+                        } else {
                             Section section = new Section();
                             section.setCrn(crn);
                             section.setSectionNumber(sectionNum);
@@ -143,6 +153,8 @@ public class ScraperService {
                             section.setBuilding2(building2);
                             section.setRoom2(room2);
                             section.setDays2(days2);
+                            section.setSectionType(sectionType.isEmpty() ? null : sectionType);
+                            section.setLinkedCrns(linkedCrns.isEmpty() ? null : linkedCrns);
                             sectionRepo.save(section);
                             System.out.println("Imported: " + fullCode + " (" + sectionNum + ") - " + prof);
                         }

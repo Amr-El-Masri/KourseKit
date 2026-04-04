@@ -31,6 +31,9 @@ public class Section {
     private String room2;
     private String days2;
 
+    private String sectionType;
+    private String linkedCrns;
+
     @ManyToOne
     @JoinColumn(name = "course_id")
     @JsonBackReference // this tells jackson not to start a new loop back to the course from here, aka to stop "looking" at the sections once it has already processed the course, in order to prevent infinite recursion in the json response
@@ -92,4 +95,10 @@ public class Section {
 
     public String getDays2() { return days2; }
     public void setDays2(String days2) { this.days2 = days2; }
+
+    public String getSectionType() { return sectionType; }
+    public void setSectionType(String sectionType) { this.sectionType = sectionType; }
+
+    public String getLinkedCrns() { return linkedCrns; }
+    public void setLinkedCrns(String linkedCrns) { this.linkedCrns = linkedCrns; }
 }

@@ -43,6 +43,9 @@ public class SavedCourse {
     @Column(name = "component_type")
     private String componentType;
 
+    @Column(name = "linked_section_crn")
+    private String linkedSectionCrn;
+
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SavedAssessment> assessments = new ArrayList<>();
 
@@ -102,4 +105,7 @@ public class SavedCourse {
 
     public String getcomponenttype() { return componentType; }
     public void setcomponenttype(String componentType) { this.componentType = componentType; }
+
+    public String getLinkedSectionCrn() { return linkedSectionCrn; }
+    public void setLinkedSectionCrn(String linkedSectionCrn) { this.linkedSectionCrn = linkedSectionCrn; }
 }

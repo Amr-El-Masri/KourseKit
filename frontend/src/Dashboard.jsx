@@ -207,7 +207,7 @@ function CourseGradeSummaryWidget({ apiSemesters, selectedSemester, footer }) {
   const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
 
   const semObj = apiSemesters.find(s => s.semesterName === selectedSemester);
-  const courses = (semObj?.courses || []).filter(c => c.courseCode);
+  const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype);
 
   const [selectedCourse, setSelectedCourse] = useState("");
 
@@ -400,7 +400,7 @@ function GPASummaryWidget({ apiSemesters, selectedSemester, onNavigate, footer }
   };
 
   const semObj = apiSemesters.find(s => s.semesterName === selectedSemester);
-  const courses = (semObj?.courses || []).filter(c => c.courseCode);
+  const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype);
   const gradedCourses = courses.filter(c => c.grade && gradePoints[c.grade?.trim()?.toUpperCase()] !== undefined && Number(c.credits) > 0);
   const allGraded = courses.length > 0 && gradedCourses.length === courses.length;
 
@@ -712,10 +712,10 @@ export default function Dashboard({ onLogout }) {
 
   const selectedSem = apiSemesters.find(s => s.semesterName === semester) ?? { courses: [] };
   console.log("course object sample:", selectedSem.courses?.[0]);
-  const semCourseList = (selectedSem.courses || []).map(c => ({ id: c.courseCode, name: c.courseCode }));
+  const semCourseList = (selectedSem.courses || []).filter(c => !c.componenttype).map(c => ({ id: c.courseCode, name: c.courseCode }));
   const enrolledSections = (selectedSem.courses || [])
     .filter(c => c.section)
-    .map(c => ({ courseCode: c.courseCode, crn: c.sectioncrn, section: c.section }));
+    .map(c => ({ courseCode: c.courseCode, crn: c.sectioncrn, section: c.section, linkedSection: c.linkedSection || null, componenttype: c.componenttype || null, sectionNumber: c.section?.sectionNumber || null }));
   const addTodo = () => {
     if (!todoInput.trim()) { setTodoError(true); return; }
     setTodoError(false);
@@ -1037,7 +1037,7 @@ export default function Dashboard({ onLogout }) {
 
   // Courses from all saved semesters (deduplicated) for Grade Calculator dropdown
   const dashboardCourses = [...new Map(
-      apiSemesters.flatMap(s => (s.courses || []).map(c => ({ id: c.id, name: c.courseCode })))
+      apiSemesters.flatMap(s => (s.courses || []).filter(c => !c.componenttype).map(c => ({ id: c.id, name: c.courseCode })))
           .filter(c => c.name)
           .map(c => [c.name, c])
   ).values()];
@@ -1251,7 +1251,7 @@ export default function Dashboard({ onLogout }) {
       case "goals": {
         const LETTER_GRADES = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
         const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
-        const semCourses = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.courseCode);
+        const semCourses = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.courseCode&&!c.componenttype);
         return (
           <>
             <SectionTitle>Grade Goals</SectionTitle>

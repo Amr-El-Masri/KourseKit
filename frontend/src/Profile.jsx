@@ -1016,6 +1016,7 @@ const refetchSemesters = () =>
       } else if (lastMain) {
         lastMain.components.push({ id: Date.now() + i, code: c.courseCode || "", sectioncrn: c.sectioncrn || null, sectionNumber: c.section?.sectionNumber || null, type: c.componenttype });
         lastMain.hasLabRec = true;
+        lastMain.linkedSectionNumber = c.section?.sectionNumber || null;
       }
     });
     setEditCourses(mains);
@@ -1742,7 +1743,7 @@ const refetchSemesters = () =>
                 {newSemCourses.map(c => (
                   <div key={c.id} style={{ marginBottom:6 }}>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6 }}>
-                      <StudentCourses value={c} onSelect={async data => { setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, courseId:data.courseId, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r)); if (data.courseId) { const secs = await fetch(`${API}/api/courses/${data.courseId}/sections`).then(r=>r.json()).catch(()=>[]); const hasLabRec = secs.some(s => /^[BE]/i.test(s.sectionNumber||"")); setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, hasLabRec, components: hasLabRec && !(r.components||[]).some(x=>x.sectioncrn) ? [{id:Date.now(), code:data.code, sectioncrn:null, type:"Lab"}] : (r.components||[])} : r)); } }} />
+                      <StudentCourses value={c} onSelect={data => { setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, courseId:data.courseId, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName, linkedSectionNumber: data.linkedSectionNumber || null, components: data.linkedSectionCrn ? [{id:Date.now(), code:data.code, sectioncrn:data.linkedSectionCrn, sectionNumber:data.linkedSectionNumber, type:data.linkedSectionType}] : []} : r)); }} />
                       <input value={c.credits} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                       <div style={{ position:"relative" }}>
                         <button type="button" onClick={() => setOpenGradeDrop(openGradeDrop === `new-${c.id}` ? null : `new-${c.id}`)} style={{ width:"100%", padding:"9px 10px", border:"1px solid var(--border)", borderRadius:10, background:"var(--surface2)", color:"var(--text)", fontSize:13, fontFamily:"'DM Sans',sans-serif", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -1758,12 +1759,6 @@ const refetchSemesters = () =>
                       </div>
                       <button onClick={() => setNewSemCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
                     </div>
-                    {(c.components||[]).map(comp => (
-                      <div key={comp.id} style={{ display:"grid", gridTemplateColumns:"1fr 32px", gap:6, marginTop:4, paddingLeft:16 }}>
-                        <StudentCourses value={comp} lockedCourse={c.courseId ? { id:c.courseId, courseCode:c.code } : null} onSelect={data => { const sec = (data.sectionNumber||"").toUpperCase(); const type = sec.startsWith("BL") ? "Lab Lecture" : sec.startsWith("B") ? "Lab" : "Recitation"; setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, components: r.components.map(x => x.id===comp.id ? {...x, code:data.code, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, type} : x)} : r)); }} filterPrefix={["B","E"]} autoOpen={!comp.sectioncrn} />
-                        <button onClick={() => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, components: r.components.filter(x => x.id!==comp.id)} : r))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
-                      </div>
-                    ))}
                   </div>
                 ))}
                 <button onClick={() => setNewSemCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"", components:[] }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
@@ -1810,11 +1805,6 @@ const refetchSemesters = () =>
                             <span style={{ color:"var(--text2)" }}>{c.credits} cr</span>
                             <span style={{ color:"var(--accent)", fontWeight:600 }}>{c.grade}</span>
                           </div>
-                          {c.components.map((comp,ci) => (
-                            <div key={ci} style={{ display:"flex", gap:8, fontSize:12, color:"var(--text2)", alignItems:"center", paddingLeft:16, marginTop:2 }}>
-                              <span style={{ fontSize:11, fontWeight:600, color:"var(--text3)" }}>{comp.componenttype}</span>
-                            </div>
-                          ))}
                         </div>
                       ));
                     })()}
@@ -1847,7 +1837,7 @@ const refetchSemesters = () =>
                       <div key={c.id} style={{ marginBottom:6 }}>
                         <div style={{ display:"grid", gridTemplateColumns:"24px 1fr 80px 100px 32px", gap:6, marginBottom: syllabi[c.code] ? 4 : 0 }}>
                           <input type="color" value={courseColors[c.code] || COURSE_COLORS[editCourses.indexOf(c) % COURSE_COLORS.length]} onChange={e => saveCourseColor(c.code, e.target.value)} style={{ width:24, height:32, padding:2, border:"1px solid var(--border)", borderRadius:6, background:"none", cursor:"pointer" }} title="Pick course color" />
-                          <StudentCourses value={c} onSelect={async data => { setEditCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, courseId:data.courseId, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r)); if (data.courseId) { const secs = await fetch(`${API}/api/courses/${data.courseId}/sections`).then(r=>r.json()).catch(()=>[]); const hasLabRec = secs.some(s => /^[BE]/i.test(s.sectionNumber||"")); setEditCourses(p => p.map(r => r.id===c.id ? {...r, hasLabRec, components: hasLabRec && !(r.components||[]).some(x=>x.sectioncrn) ? [{id:Date.now(), code:data.code, sectioncrn:null, type:"Lab"}] : (r.components||[])} : r)); } }} />
+                          <StudentCourses value={c} onSelect={data => { setEditCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, courseId:data.courseId, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName, linkedSectionNumber: data.linkedSectionNumber || null, components: data.linkedSectionCrn ? [{id:Date.now(), code:data.code, sectioncrn:data.linkedSectionCrn, sectionNumber:data.linkedSectionNumber, type:data.linkedSectionType}] : []} : r)); }} />
                           <input value={c.credits} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                           <div style={{ position:"relative" }}>
                             <button type="button" onClick={() => setOpenGradeDrop(openGradeDrop === `edit-${c.id}` ? null : `edit-${c.id}`)} style={{ width:"100%", padding:"9px 10px", border:"1px solid var(--border)", borderRadius:10, background:"var(--surface2)", color:"var(--text)", fontSize:13, fontFamily:"'DM Sans',sans-serif", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -1879,12 +1869,6 @@ const refetchSemesters = () =>
                             <button onClick={() => setSyllabusUploadCourse(c.code)} style={{ fontSize:11, color:"var(--primary)", background:"color-mix(in srgb,var(--primary) 12%,transparent)", border:"1px solid color-mix(in srgb,var(--primary) 25%,transparent)", borderRadius:6, cursor:"pointer", padding:"2px 8px", fontWeight:600, fontFamily:"inherit", transition:"all .15s" }} className="kk-pill">+ Upload Syllabus</button>
                           </div>
                         ) : null}
-                        {(c.components||[]).map(comp => (
-                          <div key={comp.id} style={{ display:"grid", gridTemplateColumns:"1fr 32px", gap:6, marginTop:4, paddingLeft:16 }}>
-                            <StudentCourses value={comp} lockedCourse={c.courseId ? { id:c.courseId, courseCode:c.code } : null} onSelect={data => { const sec = (data.sectionNumber||"").toUpperCase(); const type = sec.startsWith("BL") ? "Lab Lecture" : sec.startsWith("B") ? "Lab" : "Recitation"; setEditCourses(p => p.map(r => r.id===c.id ? {...r, components: r.components.map(x => x.id===comp.id ? {...x, code:data.code, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, type} : x)} : r)); }} filterPrefix={["B","E"]} autoOpen={!comp.sectioncrn} />
-                            <button onClick={() => setEditCourses(p => p.map(r => r.id===c.id ? {...r, components: r.components.filter(x => x.id!==comp.id)} : r))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
-                          </div>
-                        ))}
                       </div>
                     ))}
                     <button onClick={() => setEditCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"", components:[] }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
