@@ -110,6 +110,7 @@ function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUse
   const setShowMenu = (val) => setSelectedMessageId(val ? message.id : null);
   const [showReportModal, setShowReportModal] = useState(false);
   const [reportReason, setReportReason] = useState("");
+  const [reportType, setReportType] = useState("message");
   const [submittingReport, setSubmittingReport] = useState(false);
   const clickTimer = useRef(null);
 
@@ -137,7 +138,13 @@ function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUse
   const submitReport = async () => {
     if (!reportReason.trim()) return;
     setSubmittingReport(true);
-    await onReport(message.id, message.senderId, reportReason.trim());
+
+    await onReport(
+      reportType === "message" ? message.id : null,
+      message.senderId,
+      reportReason.trim()
+    );
+
     setSubmittingReport(false);
     setShowReportModal(false);
     setReportReason("");
@@ -254,10 +261,20 @@ function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUse
           <div style={{ background:"var(--surface)", borderRadius:16, padding:"24px", width:340, boxShadow:"0 8px 40px rgba(0,0,0,0.18)" }}
             onClick={e => e.stopPropagation()}>
             <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)", marginBottom:6, display:"flex", alignItems:"center", gap:8 }}>
-              <AlertTriangle size={16} color="var(--error)" /> Report Message
+              <AlertTriangle size={16} color="var(--error)" /> Report
+            </div>
+            <div style={{ display:"flex", gap:6, marginBottom:12 }}>
+              <button onClick={() => setReportType("message")}
+                style={{ flex:1, padding:"7px 0", borderRadius:8, border:"1px solid var(--border)", background: reportType==="message" ? "var(--error-bg)" : "var(--surface2)", color: reportType==="message" ? "var(--error)" : "var(--text2)", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                This Message
+              </button>
+              <button onClick={() => setReportType("member")}
+                style={{ flex:1, padding:"7px 0", borderRadius:8, border:"1px solid var(--border)", background: reportType==="member" ? "var(--error-bg)" : "var(--surface2)", color: reportType==="member" ? "var(--error)" : "var(--text2)", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                This Member
+              </button>
             </div>
             <div style={{ fontSize:12, color:"var(--text2)", marginBottom:14 }}>
-              Describe the issue. The host will review this report.
+              {reportType === "message" ? "Describe the issue with this message." : "Describe the issue with this member."} The host will review this report.
             </div>
             <textarea
               value={reportReason}
@@ -374,7 +391,7 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
     try {
         await apiFetch(`/api/group-messages/reports`, {
         method: "POST",
-        body: JSON.stringify({ messageId, reportedUserId, reason }),
+        body: JSON.stringify({ messageId, reportedUserId, reason, groupId: group.id }),
         });
     } catch (e) {
         setError(e.message || "Could not submit report."); }
@@ -955,15 +972,26 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
               <div style={{ marginBottom:24 }}>
                 <div style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:10 }}>Members</div>
                 {members.map(m => (
-                  <div key={m.userId} className="member-row" onClick={() => { setViewingMember(m); setShowGroupInfo(false); }}
-                    style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 6px", borderBottom:"1px solid var(--border)", cursor:"pointer", borderRadius:8 }}>
-                    <div style={{ width:34, height:34, borderRadius:"50%", background:"var(--blue-light-bg)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"var(--primary)", flexShrink:0 }}>
-                      {m.firstName?.[0]}{m.lastName?.[0]}
+                  <div key={m.userId} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"9px 6px", borderBottom:"1px solid var(--border)", borderRadius:8 }}>
+                    <div className="member-row" onClick={() => { setViewingMember(m); setShowGroupInfo(false); }}
+                      style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer", flex:1 }}>
+                      <div style={{ width:34, height:34, borderRadius:"50%", background:"var(--blue-light-bg)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"var(--primary)", flexShrink:0 }}>
+                        {m.firstName?.[0]}{m.lastName?.[0]}
+                      </div>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>{m.firstName} {m.lastName}</div>
+                        <div style={{ fontSize:11, color:"var(--text2)", textTransform:"capitalize" }}>{m.role?.toLowerCase()}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>{m.firstName} {m.lastName}</div>
-                      <div style={{ fontSize:11, color:"var(--text2)", textTransform:"capitalize" }}>{m.role?.toLowerCase()}</div>
-                    </div>
+                    {String(m.userId) !== String(currentUserId) && (
+                      <button onClick={() => {
+                        const reason = window.prompt("Reason for reporting this member?");
+                        if (reason?.trim()) reportMessage(null, m.userId, reason.trim());
+                      }}
+                        style={{ padding:"4px 8px", borderRadius:7, border:"none", background:"var(--error-bg)", color:"var(--error)", fontSize:10, fontWeight:600, cursor:"pointer", fontFamily:"inherit", flexShrink:0, marginLeft:8 }}>
+                        Report
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>

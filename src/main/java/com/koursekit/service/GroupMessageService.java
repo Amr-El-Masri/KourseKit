@@ -81,17 +81,29 @@ public class GroupMessageService {
         return groupMessageRepo.save(msg);
     }
 
-    @Transactional
-    public GroupReport submitReport(Long reporterId, Long messageId, Long reportedUserId, String reason) {
-        GroupMessage message = groupMessageRepo.findById(messageId)
-            .orElseThrow(() -> new IllegalArgumentException("Message not found"));
+    public GroupReport submitReport(Long reporterId, Long messageId, Long reportedUserId, String reason, Long groupId) {
         User reporter = userRepo.findById(reporterId)
             .orElseThrow(() -> new IllegalArgumentException("User not found"));
         User reported = userRepo.findById(reportedUserId)
             .orElseThrow(() -> new IllegalArgumentException("Reported user not found"));
-        if (groupReportsRepo.existsByReportedBy_IdAndMessage_Id(reporterId, messageId))
-            throw new IllegalStateException("You already reported this message");
-        return groupReportsRepo.save(new GroupReport(message.getStudyGroup(), reporter, reported, message, reason));
+
+        GroupMessage message = null;
+        StudyGroup group;
+
+        if (messageId != null) {
+            message = groupMessageRepo.findById(messageId)
+                .orElseThrow(() -> new IllegalArgumentException("Message not found"));
+            group = message.getStudyGroup();
+            if (groupReportsRepo.existsByReportedBy_IdAndMessage_Id(reporterId, messageId))
+                throw new IllegalStateException("You already reported this message");
+        } else {
+            group = studyGroupRepo.findById(groupId)
+                .orElseThrow(() -> new IllegalArgumentException("Group not found"));
+            if (groupReportsRepo.existsByReportedBy_IdAndReportedUser_Id(reporterId, reportedUserId))
+                throw new IllegalStateException("You already reported this member");
+        }
+
+        return groupReportsRepo.save(new GroupReport(group, reporter, reported, message, reason));
     }
 
     public List<GroupReport> getReportsForGroup(Long groupId) {

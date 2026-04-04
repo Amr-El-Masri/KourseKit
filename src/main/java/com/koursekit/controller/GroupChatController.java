@@ -83,7 +83,7 @@ public class GroupChatController {
     @ResponseBody
     public ResponseEntity<?> submitReport(@RequestBody GroupReportsRequestDTO dto) {
         GroupReport report = groupMessageService.submitReport(
-            currentUserId(), dto.messageId(), dto.reportedUserId(), dto.reason());
+            currentUserId(), dto.messageId(), dto.reportedUserId(), dto.reason(), dto.groupId());
         return ResponseEntity.ok(groupReportsMapper.toResponseDTO(report));
     }
 

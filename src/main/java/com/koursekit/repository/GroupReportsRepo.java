@@ -12,7 +12,7 @@ public interface GroupReportsRepo extends JpaRepository<GroupReport, Long> {
     List<GroupReport> findByStudyGroup_Id(Long groupId);
     List<GroupReport> findByStatus(GroupReport.Status status);
     boolean existsByReportedBy_IdAndMessage_Id(Long reportedById, Long messageId);
-    boolean existsByReportedBy_Id(Long reportedById); //messageID could be optional/null
+    boolean existsByReportedBy_IdAndReportedUser_Id(Long reportedById, Long reportedUserId); //messageID could be optional/null
 
     @Modifying
     @Query("DELETE FROM GroupReport r WHERE r.studyGroup.id = :groupId")
