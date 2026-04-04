@@ -1,5 +1,6 @@
 package com.koursekit.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -25,6 +26,10 @@ import com.koursekit.repository.CourseRepository;
 
 @Service
 public class StudyGroupService {
+
+    @Autowired
+    private ContentFilterService contentFilterService;
+
     private final StudyGroupRepo studyGroupRepo;
     private final StudyGroupMemberRepo studyGroupMemberRepo;
     private final InviteCodeService inviteCodeService;
@@ -50,6 +55,14 @@ public class StudyGroupService {
         boolean nameTaken = studyGroupRepo.existsByNameAndCourse_Id(name, course.getId());
         if (nameTaken) {
             throw new IllegalArgumentException("Group name already exists for this course."); }
+
+        // Filter the group name
+        ContentFilterService.FilterResult nameFilter = contentFilterService.filter(
+                name, ContentFilterService.ContentContext.FORUM_GENERAL
+        );
+        if ("FLAGGED".equals(nameFilter.status)) {
+            throw new IllegalArgumentException("Group name contains inappropriate content. Please choose a different name.");
+        }
 
         String inviteCode = null;
         if (isPrivate) {
