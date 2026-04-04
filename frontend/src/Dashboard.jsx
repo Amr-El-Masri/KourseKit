@@ -713,6 +713,9 @@ export default function Dashboard({ onLogout }) {
   const selectedSem = apiSemesters.find(s => s.semesterName === semester) ?? { courses: [] };
   console.log("course object sample:", selectedSem.courses?.[0]);
   const semCourseList = (selectedSem.courses || []).map(c => ({ id: c.courseCode, name: c.courseCode }));
+  const enrolledSections = (selectedSem.courses || [])
+    .filter(c => c.section)
+    .map(c => ({ courseCode: c.courseCode, crn: c.sectioncrn, section: c.section }));
   const addTodo = () => {
     if (!todoInput.trim()) { setTodoError(true); return; }
     setTodoError(false);
@@ -1712,7 +1715,7 @@ export default function Dashboard({ onLogout }) {
               />
           )}
           {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
-          {activePage === "planner" && <StudyPlanner />}
+          {activePage === "planner" && <StudyPlanner enrolledSections={enrolledSections} semester={semester} onNavigate={setActivePage} />}
           {activePage === "students" && <StudentDirectory />}
           {activePage === "profile" && (
               <Profile onProfileSave={p => setProfile(p)} onSemestersUpdated={fetchSemesters} />
