@@ -10,5 +10,6 @@ public record StudyGroupResponseDTO (
     boolean isPrivate,
     Integer maxMembers,
     int memberCount,
-    String inviteCode
+    String inviteCode,
+    boolean isHost
 ) {}

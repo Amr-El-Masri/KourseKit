@@ -22,7 +22,8 @@ public class StudyGroupMapper {
             group.isPrivate(),
             group.getMaxMembers(),
             memberCount,
-            isHost ? group.getInviteCode() : null
+            isHost ? group.getInviteCode() : null,
+            isHost
         );
     }
 

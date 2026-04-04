@@ -421,7 +421,7 @@ export default function StudyGroupFinder({ courses = [] }) {
   const [showCreate,      setShowCreate]      = useState(false);
   const [showJoinPrivate, setShowJoinPrivate] = useState(false);
   const [openGroup, setOpenGroup] = useState(null);
-
+  const [myGroupsFilter, setMyGroupsFilter] = useState("all");
 
   useEffect(() => {
     if (!selectedCourse) return;
@@ -433,7 +433,7 @@ export default function StudyGroupFinder({ courses = [] }) {
       .finally(() => setLoadingPublic(false));
   }, [selectedCourse]);
 
-  useEffect(() => {
+ useEffect(() => {
     setLoadingMine(true);
     apiFetch("/api/study-groups/my-groups")
       .then(data => setMyGroups(data || []))
@@ -469,6 +469,12 @@ export default function StudyGroupFinder({ courses = [] }) {
   };
 
   const myGroupIds = new Set(myGroups.map(g => g.id));
+
+  const filteredMyGroups = myGroups.filter(g => {
+    if (myGroupsFilter === "hosting") return g.isHost === true;
+    if (myGroupsFilter === "member") return g.isHost !== true;
+    return true;
+  });
 
   const filteredPublic = publicGroups.filter(g =>
     g.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -608,6 +614,21 @@ export default function StudyGroupFinder({ courses = [] }) {
         <div>
           <SectionLabel>Groups You're In</SectionLabel>
 
+          <div style={{ display:"flex", gap:6, marginBottom:16 }}>
+            {[
+              { id:"all", label:"All" },
+              { id:"hosting", label:"Hosting" },
+              { id:"member", label:"Member" },
+            ].map(f => (
+              <button key={f.id} onClick={() => setMyGroupsFilter(f.id)}
+                style={{ padding:"6px 14px", borderRadius:8, border:"1px solid var(--border)", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                  background: myGroupsFilter === f.id ? "var(--primary)" : "var(--surface2)",
+                  color: myGroupsFilter === f.id ? "#fff" : "var(--text2)" }}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+
           {loadingMine && <Spinner />}
 
           {!loadingMine && myGroups.length === 0 && (
@@ -616,7 +637,7 @@ export default function StudyGroupFinder({ courses = [] }) {
 
           {!loadingMine && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
-              {myGroups.map(g => (
+              {filteredMyGroups.map(g => (
                 <MyGroupCard
                   key={g.id}
                   group={g}
