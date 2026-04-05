@@ -107,7 +107,7 @@ function getUserId() {
 
 async function apiFetch(path, options = {}) {
     const t = localStorage.getItem("kk_token");
-    if (!t) throw new Error("Not logged in — please refresh and log in again");
+    if (!t) throw new Error("Not logged in. Please refresh and log in again.");
     const res = await fetch(`${API_BASE}${path}`, {
         headers: {
             "Content-Type": "application/json",
@@ -1425,7 +1425,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         setAvailability(prev => {
             const existing = prev[dayKey] || [];
             if (existing.some(s => slotsOverlap(s, newSlot))) {
-                showToast("Slots can't overlap — adjust the existing one first", "error");
+                showToast("Slots can't overlap. Adjust the existing one first.", "error");
                 return prev;
             }
             const next = { ...prev, [dayKey]: [...existing, newSlot] };
@@ -2818,25 +2818,9 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                     } else if (noSlots) {
                         issues.push({ type: "error", msg: "No availability slots found. Drag on the calendar to add your free time first." });
                     }
-                    let hasCheck1Error = false;
-                    const erroredEntryIds = new Set();
                     if (!noEntries && !noSlots) {
-                        // Check 1: individual task exceeds total week availability
-                        entries.forEach(e => {
-                            const needed = parseFloat(e.hoursPerWeek) || 0;
-                            if (needed <= 0) return;
-                            if (needed > totalAvailHours) {
-                                hasCheck1Error = true;
-                                erroredEntryIds.add(e.id);
-                                issues.push({
-                                    type: "error",
-                                    msg: `"${e.name}" needs ${needed}h but only ${totalAvailHours.toFixed(1)}h of slots exist this week, so it won't fully fit.`,
-                                });
-                            }
-                        });
-
-                        // Check 2: deadline feasibility — cumulative per deadline day
-                        // Group tasks that have a deadline this week by their deadline day index
+                        // Tier 1 (errors): deadline-based feasibility for tasks due within this week
+                        // Group tasks with an in-week deadline by their deadline day index
                         const tasksByDeadlineDay = new Map();
                         entries.forEach(e => {
                             const needed = parseFloat(e.hoursPerWeek) || 0;
@@ -2849,42 +2833,42 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                             tasksByDeadlineDay.get(dlDayIdx).push({ e, needed });
                         });
 
-                        // For each deadline day (sorted ascending), check cumulative feasibility
+                        const deadlineErroredIds = new Set();
                         [...tasksByDeadlineDay.keys()].sort((a, b) => a - b).forEach(dayIdx => {
-                            const hoursAvailable = DAY_KEYS
+                            const hoursAvailableByDay = DAY_KEYS
                                 .slice(0, dayIdx + 1)
                                 .reduce((sum, dk) => sum + (availability[dk] || []).reduce((s, sl) => s + (sl.endHour - sl.startHour), 0), 0);
-                            // Sum of hours needed by ALL tasks due on or before this day
                             const allByThen = [...tasksByDeadlineDay.entries()]
                                 .filter(([d]) => d <= dayIdx)
                                 .flatMap(([, ts]) => ts);
                             const totalNeededByThen = allByThen.reduce((s, t) => s + t.needed, 0);
-                            const cumulativeShortfall = totalNeededByThen > hoursAvailable;
-                            // Report each task due ON this day that is individually infeasible or part of a cumulative shortfall
+
                             tasksByDeadlineDay.get(dayIdx).forEach(({ e, needed }) => {
-                                if (erroredEntryIds.has(e.id)) return;
-                                const individualShortfall = hoursAvailable < needed;
+                                if (deadlineErroredIds.has(e.id)) return;
+                                const individualShortfall = hoursAvailableByDay < needed;
+                                const cumulativeShortfall = totalNeededByThen > hoursAvailableByDay;
                                 if (individualShortfall) {
-                                    erroredEntryIds.add(e.id);
+                                    deadlineErroredIds.add(e.id);
                                     issues.push({
                                         type: "error",
-                                        msg: `"${e.name}" is due ${fmtDateOnly(e.deadline)} and needs ${needed}h, but only ${hoursAvailable.toFixed(1)}h of slots are available before then.`,
+                                        msg: `"${e.name}" is due ${fmtDateOnly(e.deadline)} and needs ${needed}h, but only ${hoursAvailableByDay.toFixed(1)}h of free time exists before then.`,
                                     });
                                 } else if (cumulativeShortfall) {
-                                    erroredEntryIds.add(e.id);
+                                    deadlineErroredIds.add(e.id);
+                                    const taskNames = allByThen.map(t => `"${t.e.name}"`).join(" and ");
                                     issues.push({
                                         type: "warning",
-                                        msg: `"${e.name}" is due ${fmtDateOnly(e.deadline)} and may not be fully scheduled: tasks due by then need ${totalNeededByThen.toFixed(1)}h combined but only ${hoursAvailable.toFixed(1)}h of slots are available.`,
+                                        msg: `${taskNames} are all due by ${fmtDateOnly(e.deadline)} and need ${totalNeededByThen.toFixed(1)}h combined, but only ${hoursAvailableByDay.toFixed(1)}h of free time exists before then. They may not all be fully scheduled.`,
                                     });
                                 }
                             });
                         });
 
-                        // Global: total requested > total available — skip if a Check 1 error already covers it
-                        if (totalRequestedHours > totalAvailHours && !hasCheck1Error) {
+                        // Tier 2 (warning): global capacity shortfall only shown when no deadline errors already explain it
+                        if (totalRequestedHours > totalAvailHours && deadlineErroredIds.size === 0) {
                             issues.push({
                                 type: "warning",
-                                msg: `${totalRequestedHours}h requested but only ${totalAvailHours.toFixed(1)}h of slots available, some tasks may be partially scheduled.`,
+                                msg: `You've requested ${totalRequestedHours.toFixed(1)}h total but only ${totalAvailHours.toFixed(1)}h of slots exist this week. Some tasks will be partially scheduled.`,
                             });
                         }
                     }
