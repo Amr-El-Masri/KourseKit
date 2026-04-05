@@ -565,7 +565,7 @@ export function DefaultScheduleEditor({ token, onDone, extraAction, showSectionN
       <div style={{ padding: "20px 28px 24px" }}>
         {showSectionNudge && sectionsLoaded && enrolledSections.length === 0 && (
           <div style={{ fontSize: 12, color: "var(--text2)", background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 10, padding: "9px 14px", marginBottom: 14 }}>
-            Go to your <strong>Profile → My Semesters</strong> and select your course sections to see them as blocks on your schedule.
+            Go to <strong>My Semesters</strong> and select your course sections to see them as blocks on your schedule.
           </div>
         )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>

@@ -432,6 +432,9 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
     try {
       const data = await apiFetch(`/api/group-sessions/${group.id}`);
       setSessions(data || []);
+      const synced = {};
+      (data || []).forEach(s => { if (s.isSynced) synced[s.id] = true; });
+      setSyncedSessions(synced);
     } catch (e) {}
   };
 
@@ -461,8 +464,9 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
 
   const syncToPlanner = async (sessionId) => {
     try {
-      await apiFetch(`/api/group-sessions/${sessionId}/sync`, { method: "POST" });
+      await apiFetch(`/api/group-sessions/${sessionId}/add-to-planner`, { method: "POST" });
       setSyncedSessions(prev => ({ ...prev, [sessionId]: true }));
+      setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, isSynced: true } : s));
     } catch (e) {
       setError(e.message || "Could not add to planner.");
     }

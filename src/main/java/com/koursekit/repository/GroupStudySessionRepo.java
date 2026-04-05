@@ -14,6 +14,9 @@ public interface GroupStudySessionRepo extends JpaRepository<GroupStudySession, 
     List<GroupStudySession> findByStudyGroup_IdAndIsSynced(Long groupId, boolean isSynced);
     List<GroupStudySession> findByStudyGroup_IdAndDateBetween(Long groupId, LocalDate startDate, LocalDate endDate);
 
+    @Query("SELECT s FROM GroupStudySession s WHERE s.studyGroup.id IN (SELECT m.studyGroup.id FROM StudyGroupMember m WHERE m.user.id = :userId) AND s.date BETWEEN :start AND :end AND s.isSynced = true")
+    List<GroupStudySession> findSyncedByUserMembershipAndDateBetween(@Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
+
     @Modifying
     @Query("UPDATE GroupStudySession session SET session.isSynced = true WHERE session.id IN :ids")
     void markAllSyncedSessionsByIds(@Param("ids") List<Long> ids);
