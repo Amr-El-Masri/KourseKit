@@ -8,6 +8,8 @@ public record GroupMessageResponseDTO (
     String senderFirstName,
     String senderLastName,
     String content,
+    String iv,
+    String encryptedKeys,
     LocalDateTime sentAt,
     boolean isDeleted,
     String reactionsJson

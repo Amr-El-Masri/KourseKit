@@ -37,14 +37,17 @@ public class GroupMessageService {
         this.objectMapper = objectMapper;
     }
 
-    public GroupMessage sendMessage(Long groupId, Long senderId, String content) {
+    public GroupMessage sendMessage(Long groupId, Long senderId, String content, String iv, String encryptedKeys) {
         StudyGroup group = studyGroupRepo.findById(groupId)
             .orElseThrow(() -> new IllegalArgumentException("Group not found"));
         User sender = userRepo.findById(senderId)
             .orElseThrow(() -> new IllegalArgumentException("User not found"));
         if (!studyGroupMemberRepo.existsByStudyGroup_IdAndUser_Id(groupId, senderId)) {
             throw new IllegalStateException("Not a member of this group"); }
+
         GroupMessage message = new GroupMessage(group, sender, content);
+        message.setIv(iv);
+        message.setEncryptedKeys(encryptedKeys);
         return groupMessageRepo.save(message);
     }
 

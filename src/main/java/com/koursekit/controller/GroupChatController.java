@@ -46,7 +46,10 @@ public class GroupChatController {
                             @Payload Map<String, String> payload) {
         Long senderId = Long.parseLong(payload.get("senderId"));
         String content = payload.get("content");
-        GroupMessage saved = groupMessageService.sendMessage(groupId, senderId, content);
+        String iv = payload.get("iv");
+        String encryptedKeys = payload.get("encryptedKeys");
+
+        GroupMessage saved = groupMessageService.sendMessage(groupId, senderId, content, iv, encryptedKeys);
         GroupMessageResponseDTO dto = groupMessageMapper.toResponseDTO(saved);
         messagingTemplate.convertAndSend("/topic/group/" + groupId, dto);
     }

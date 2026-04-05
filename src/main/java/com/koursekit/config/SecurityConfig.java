@@ -38,6 +38,9 @@ public class SecurityConfig {
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/group-sessions/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/group-sessions/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/keys/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/keys").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/keys/batch").authenticated()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session

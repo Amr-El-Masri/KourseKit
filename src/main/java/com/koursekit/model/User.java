@@ -15,6 +15,8 @@ public class User {
     private String email;
     @Column(nullable = false)
     private String pass;
+    @Column(name = "public_key", columnDefinition = "TEXT")
+    private String publicKey;
     @Id
     @GeneratedValue(strategy=GenerationType.IDENTITY)
     private Long id;
@@ -109,6 +111,9 @@ public class User {
 
     public String getPass() { return pass; }
     public void setPass(String pass) { this.pass = pass; }
+
+    public String getPublicKey() { return publicKey; }
+    public void setPublicKey(String publicKey) { this.publicKey = publicKey; }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

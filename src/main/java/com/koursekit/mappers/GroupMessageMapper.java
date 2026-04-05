@@ -13,6 +13,8 @@ public class GroupMessageMapper {
             message.getSender().getFirstName(),
             message.getSender().getLastName(),
             message.getContent(),
+            message.getIv(),
+            message.getEncryptedKeys(),
             message.getSentAt(),
             message.getIsDeleted(),
             message.getReactionsJson() != null ? message.getReactionsJson() : "{}"
