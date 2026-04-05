@@ -42,8 +42,7 @@ public class GroupChatController {
     }
 
     @MessageMapping("/chat/{groupId}")
-    public void handleMessage(@DestinationVariable Long groupId,
-                            @Payload Map<String, String> payload) {
+    public void handleMessage(@DestinationVariable Long groupId, @Payload Map<String, String> payload) {
         Long senderId = Long.parseLong(payload.get("senderId"));
         String content = payload.get("content");
         String iv = payload.get("iv");
