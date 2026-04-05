@@ -101,25 +101,41 @@ public class GroupStudySessionService {
                 // Slot fully inside session — delete
                 slotRepo.deleteById(slot.getId());
             } else if (slotStart.isBefore(sessionStart) && slotEnd.isAfter(sessionEnd)) {
-                // Slot spans the whole session — split into two
-                AvailabilitySlot right = new AvailabilitySlot();
-                right.setUser(slot.getUser());
-                right.setDayKey(dayKey);
-                right.setStartTime(sessionEnd);
-                right.setEndTime(slotEnd);
-                right.setWeekStart(weekStart);
-                right.setSemesterName(slot.getSemesterName());
-                slot.setEndTime(sessionStart);
-                slotRepo.save(slot);
-                slotRepo.save(right);
+                // Slot spans the whole session — split into two; drop fragments under 30 min
+                boolean leftOk  = java.time.Duration.between(slotStart, sessionStart).toMinutes() >= 30;
+                boolean rightOk = java.time.Duration.between(sessionEnd, slotEnd).toMinutes() >= 30;
+                if (leftOk) {
+                    slot.setEndTime(sessionStart);
+                    slotRepo.save(slot);
+                } else {
+                    slotRepo.deleteById(slot.getId());
+                }
+                if (rightOk) {
+                    AvailabilitySlot right = new AvailabilitySlot();
+                    right.setUser(slot.getUser());
+                    right.setDayKey(dayKey);
+                    right.setStartTime(sessionEnd);
+                    right.setEndTime(slotEnd);
+                    right.setWeekStart(weekStart);
+                    right.setSemesterName(slot.getSemesterName());
+                    slotRepo.save(right);
+                }
             } else if (slotStart.isBefore(sessionStart)) {
-                // Slot overlaps from the left — trim end
-                slot.setEndTime(sessionStart);
-                slotRepo.save(slot);
+                // Slot overlaps from the left — trim end; delete if remainder < 30 min
+                if (java.time.Duration.between(slotStart, sessionStart).toMinutes() >= 30) {
+                    slot.setEndTime(sessionStart);
+                    slotRepo.save(slot);
+                } else {
+                    slotRepo.deleteById(slot.getId());
+                }
             } else {
-                // Slot overlaps from the right — trim start
-                slot.setStartTime(sessionEnd);
-                slotRepo.save(slot);
+                // Slot overlaps from the right — trim start; delete if remainder < 30 min
+                if (java.time.Duration.between(sessionEnd, slotEnd).toMinutes() >= 30) {
+                    slot.setStartTime(sessionEnd);
+                    slotRepo.save(slot);
+                } else {
+                    slotRepo.deleteById(slot.getId());
+                }
             }
         }
 
@@ -168,6 +184,18 @@ public class GroupStudySessionService {
         session.setStartTime(startTime);
         session.setDuration(duration);
         session.setEndTime(startTime.plusMinutes((long)(duration * 60)));
+        return sessionRepo.save(session);
+    }
+
+    @Transactional
+    public GroupStudySession removeFromPlanner(Long sessionId, Long userId) {
+        GroupStudySession session = sessionRepo.findById(sessionId)
+            .orElseThrow(() -> new IllegalArgumentException("Session not found"));
+
+        if (!memberRepo.existsByStudyGroup_IdAndUser_Id(session.getStudyGroup().getId(), userId))
+            throw new IllegalStateException("You are not a member of this group");
+
+        session.setSynced(false);
         return sessionRepo.save(session);
     }
 

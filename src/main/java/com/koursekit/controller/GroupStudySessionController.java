@@ -61,6 +61,16 @@ public class GroupStudySessionController {
         return ResponseEntity.ok(list);
     }
 
+    @PostMapping("/{sessionId}/remove-from-planner")
+    public ResponseEntity<?> removeFromPlanner(@PathVariable Long sessionId) {
+        try {
+            GroupStudySession session = sessionService.removeFromPlanner(sessionId, currentUserId());
+            return ResponseEntity.ok(sessionMapper.toResponseDTO(session));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     @PostMapping("/{sessionId}/add-to-planner")
     public ResponseEntity<?> addToPlanner(@PathVariable Long sessionId) {
         try {
