@@ -1718,7 +1718,7 @@ export default function Dashboard({ onLogout }) {
           {activePage === "planner" && <StudyPlanner enrolledSections={enrolledSections} semester={semester} onNavigate={setActivePage} />}
           {activePage === "students" && <StudentDirectory />}
           {activePage === "profile" && (
-              <Profile onProfileSave={p => setProfile(p)} onSemestersUpdated={fetchSemesters} />
+              <Profile onProfileSave={p => setProfile(p)} onSemestersUpdated={fetchSemesters} activeSemester={semester} />
           )}
           {activePage === "settings" && <Settings onLogout={handleLogout} />}
 
