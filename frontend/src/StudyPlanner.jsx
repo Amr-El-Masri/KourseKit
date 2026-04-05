@@ -541,11 +541,41 @@ function CourseBlock({ startHour, endHour, courseCode, sectionNumber, color, onD
     );
 }
 
+function StudySessionBlock({ startHour, endHour, courseCode, sessionId, onDelete }) {
+    const top = hourToPx(startHour);
+    const height = Math.max((endHour - startHour) * HOUR_HEIGHT - 4, 40);
+    const [hovered, setHovered] = useState(false);
+    return (
+        <div
+            style={{ position:"absolute", top:top+2, height, left:4, right:4, zIndex:3,
+                background:"linear-gradient(135deg, #6c3fc5 0%, #4a90d9 100%)",
+                borderRadius:6, padding:"4px 6px", overflow:"hidden",
+                boxShadow:"0 2px 6px rgba(108,63,197,0.35)" }}
+            onMouseDown={e => e.stopPropagation()}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+        >
+            <div style={{ fontSize:10, fontWeight:800, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", textShadow:"0 1px 2px rgba(0,0,0,0.25)", paddingRight:14 }}>
+                {courseCode}
+            </div>
+            {height > 26 && <div style={{ fontSize:9, color:"rgba(255,255,255,0.85)" }}>{formatTime(startHour)} – {formatTime(endHour)}</div>}
+            {hovered && onDelete && (
+                <button
+                    onMouseDown={e => { e.stopPropagation(); onDelete(sessionId); }}
+                    style={{ position:"absolute", top:3, right:3, width:16, height:16, borderRadius:"50%",
+                        background:"rgba(255,255,255,0.25)", border:"none", cursor:"pointer",
+                        display:"flex", alignItems:"center", justifyContent:"center", padding:0, color:"#fff", fontSize:10, fontWeight:700, lineHeight:1 }}
+                >×</button>
+            )}
+        </div>
+    );
+}
+
 function DayColumn({
                        date, dayKey, blocks, colorMap, entries,
                        availabilitySlots, onCompleteBlock, onDeleteBlock, onUncompleteBlock,
                        onAddSlot, onDeleteSlot, onResizeSlot, isAvailabilityMode, showSlotOverlay, onEditBlock,
-                       onResizeBlock, courseBlocks, onDismissCourse, nowTime,
+                       onResizeBlock, courseBlocks, onDismissCourse, nowTime, studySessionBlocks, onDeleteSession,
                    }) {
     const columnRef = useRef(null);
     const dragRef = useRef(null);
@@ -620,6 +650,9 @@ function DayColumn({
             {(courseBlocks || []).map((cb, i) => (
                 <CourseBlock key={`course-${i}`} startHour={cb.startHour} endHour={cb.endHour} courseCode={cb.courseCode} sectionNumber={cb.sectionNumber} color={cb.color}
                     onDismiss={onDismissCourse ? () => onDismissCourse(cb.crn) : null} isPast={isPastDay} />
+            ))}
+            {(studySessionBlocks || []).map((sb, i) => (
+                <StudySessionBlock key={`session-${i}`} startHour={sb.startHour} endHour={sb.endHour} courseCode={sb.courseCode} sessionId={sb.sessionId} onDelete={onDeleteSession} />
             ))}
             {dragging && (
                 <div className="sp-drag-preview" style={{
@@ -713,6 +746,7 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
     const availableTasks = tasks.filter(t => {
         if (addedTaskIds.has(String(t.id))) return false;
         if (t.completed) return false;
+        if (t.type === "Group Study Session") return false;
         if (weekStartDate && t.deadline) {
             const deadline = new Date(t.deadline);
             if (deadline < weekStartDate) return false;
@@ -1056,6 +1090,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
     const [currentDate, setCurrentDate] = useState(new Date());
     const [weekBlocks, setWeekBlocks] = useState({});
     const [availability, setAvailability] = useState({});
+    const [studySessions, setStudySessions] = useState([]);
     const [isAvailabilityMode, setIsAvailabilityMode] = useState(false);
     const [colorMap, setColorMap] = useState({});
     const [loading, setLoading] = useState(false);
@@ -1163,6 +1198,20 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
     }, [enrolledSections, globalCourseColors]);
 
     const semesterCourseCodes = useMemo(() => new Set(enrolledSections.map(es => es.courseCode)), [enrolledSections]);
+
+    const studySessionBlocksPerDay = useMemo(() => {
+        const map = {};
+        studySessions.forEach(s => {
+            const [sh, sm] = s.startTime.split(":").map(Number);
+            const [eh, em] = s.endTime.split(":").map(Number);
+            const startHour = sh + sm / 60;
+            const endHour = eh + em / 60;
+            const dayKey = new Date(s.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long" }).toUpperCase();
+            if (!map[dayKey]) map[dayKey] = [];
+            map[dayKey].push({ startHour, endHour, groupName: s.groupName, courseCode: s.courseCode, sessionId: s.id });
+        });
+        return map;
+    }, [studySessions]);
 
     const postGenWarnings = useMemo(() => {
         if (!hasGenerated) return [];
@@ -1307,10 +1356,41 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         }
     }, [weekStart, semester, showToast]);
 
+    const loadStudySessions = useCallback(async () => {
+        try {
+            const data = await apiFetch(`/api/group-sessions/my?weekStart=${weekStart}`);
+            setStudySessions(Array.isArray(data) ? data : []);
+        } catch {
+            setStudySessions([]);
+        }
+    }, [weekStart]);
+
+    const handleDeleteStudySession = useCallback((sessionId) => {
+        const removed = studySessions.find(s => s.id === sessionId);
+        setStudySessions(prev => prev.filter(s => s.id !== sessionId));
+        clearUndo();
+        setUndoToast({ msg: "Session removed from planner" });
+        const commitFn = async () => {
+            try { await apiFetch(`/api/group-sessions/${sessionId}/remove-from-planner`, { method: "POST" }); } catch { /* ignore */ }
+        };
+        undoPendingRef.current = {
+            restoreFn: () => {
+                if (removed) setStudySessions(prev => [...prev, removed]);
+            },
+            commitFn,
+            timer: setTimeout(async () => {
+                undoPendingRef.current = null;
+                setUndoToast(null);
+                await commitFn();
+            }, 5000),
+        };
+    }, [studySessions, clearUndo]);
+
     useEffect(() => {
         loadEntries();
         loadWeeklyView();
         loadSlots();
+        loadStudySessions();
     }, [weekStart]);
 
     useEffect(() => {
@@ -1632,16 +1712,17 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
 
 
     const buildSettingsPayload = useCallback((availOverride = null) => {
-        // Subtract enrolled course times from availability so planner doesn't schedule during class
+        // Subtract enrolled course times and synced study sessions from availability
         const avail = availOverride ?? availability;
         const adjusted = {};
         for (const [dayKey, slots] of Object.entries(avail)) {
-            const busySlots = enrolledSections.flatMap(es => getSectionTimeSlots(es.section).filter(ts => ts.dayKey === dayKey));
-            const free = subtractBusyFromSlots(slots, busySlots);
+            const classBusy = enrolledSections.flatMap(es => getSectionTimeSlots(es.section).filter(ts => ts.dayKey === dayKey));
+            const sessionBusy = (studySessionBlocksPerDay[dayKey] || []).map(sb => ({ startHour: sb.startHour, endHour: sb.endHour }));
+            const free = subtractBusyFromSlots(subtractBusyFromSlots(slots, classBusy), sessionBusy);
             if (free.length > 0) adjusted[dayKey] = free;
         }
         return buildSchedulerSettings(adjusted);
-    }, [availability, enrolledSections]);
+    }, [availability, enrolledSections, studySessionBlocksPerDay]);
 
     const handleGenerate = useCallback(async () => {
         clearUndo();
@@ -2770,6 +2851,8 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                                                         courseBlocks={visibleCourseBlocks}
                                                         onDismissCourse={(crn) => dismissSection(dateStr, crn)}
                                                         nowTime={isToday(date) ? nowTime : null}
+                                                        studySessionBlocks={studySessionBlocksPerDay[dayKey] || []}
+                                                        onDeleteSession={handleDeleteStudySession}
                                                     />
                                                 );
                                             });
