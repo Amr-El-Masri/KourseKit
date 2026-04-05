@@ -1062,7 +1062,6 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
     const undoPendingRef = useRef(null);
     const [showGenerateModal, setShowGenerateModal] = useState(false);
     const [showClearModal, setShowClearModal] = useState(false);
-    const [postGenWarnings, setPostGenWarnings] = useState([]);
     const [entries, setEntries] = useState([]);
     const [entriesLoading, setEntriesLoading] = useState(true);
     const [activePanel, setActivePanel] = useState("entries"); // "entries" | "slots"
@@ -1159,6 +1158,21 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         });
         return map;
     }, [enrolledSections, globalCourseColors]);
+
+    const postGenWarnings = useMemo(() => {
+        if (!hasGenerated) return [];
+        return entries.flatMap(e => {
+            const scheduled = Object.values(weekBlocks).flat()
+                .filter(b => String(b.studyPlanEntryId) === String(e.id))
+                .reduce((sum, b) => sum + b.duration, 0);
+            const remaining = Math.max(0, (e.hoursPerWeek || 0) - (e.completedHours || 0));
+            const shortfall = remaining - scheduled;
+            if (shortfall > 0.1) {
+                return [{ taskTitle: e.name, course: e.course, scheduled: Math.round(scheduled * 10) / 10, remaining: Math.round(remaining * 10) / 10 }];
+            }
+            return [];
+        });
+    }, [entries, weekBlocks, hasGenerated]);
 
     const showToast = useCallback((msg, type = "info") => {
         setToast({ msg, type });
@@ -1292,7 +1306,6 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         loadEntries();
         loadWeeklyView();
         loadSlots();
-        setPostGenWarnings([]);
     }, [weekStart]);
 
     useEffect(() => {
@@ -1644,10 +1657,9 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                 setShowSlotOverlay(false);
                 // Generate resets completedHours to 0 — update locally, no extra fetch needed
                 setEntries(prev => prev.map(e => ({ ...e, completedHours: 0 })));
-                const warns = (data.warnings || []).filter(w => (w.shortfall || 0) > 0.1);
-                setPostGenWarnings(warns);
-                if (warns.length > 0) {
-                    showToast(`Plan generated, but ${warns.length} task${warns.length > 1 ? "s" : ""} couldn't be fully scheduled`, "warning");
+                const warnCount = (data.warnings || []).filter(w => (w.shortfall || 0) > 0.1).length;
+                if (warnCount > 0) {
+                    showToast(`Plan generated, but ${warnCount} task${warnCount > 1 ? "s" : ""} couldn't be fully scheduled`, "warning");
                 } else {
                     showToast("Plan generated!", "success");
                 }
@@ -1691,7 +1703,6 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
             await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`, { method: "DELETE" });
             setWeekBlocks({});
             setHasGenerated(false);
-            setPostGenWarnings([]);
             localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
             setShowSlotOverlay(true);
             await loadSlots(); // re-seeds from default since slots were just cleared
@@ -1756,13 +1767,11 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                 // Rebalance doesn't change entry data — skip the extra fetch
 
                 if (!changed) {
-                    // keep existing warnings visible — nothing was fixed
                     showToast("Nothing changed, the plan is already optimal", "info");
                 } else {
-                    const warns = (data.warnings || []).filter(w => (w.shortfall || 0) > 0.1);
-                    setPostGenWarnings(warns);
-                    if (warns.length > 0) {
-                        showToast(`Rebalanced, but ${warns.length} task${warns.length > 1 ? "s" : ""} couldn't be fully scheduled`, "warning");
+                    const warnCount = (data.warnings || []).filter(w => (w.shortfall || 0) > 0.1).length;
+                    if (warnCount > 0) {
+                        showToast(`Rebalanced, but ${warnCount} task${warnCount > 1 ? "s" : ""} couldn't be fully scheduled`, "warning");
                     } else {
                         showToast("Plan rebalanced!", "success");
                     }
@@ -2613,11 +2622,6 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                             ))}
                             <span style={{ color: "var(--warn1)" }}>Add more availability slots or reduce the hours to fit everything.</span>
                         </div>
-                        <button
-                            onClick={() => setPostGenWarnings([])}
-                            style={{ background: "none", border: "none", color: "var(--warn)", cursor: "pointer", fontSize: 18, padding: 0, lineHeight: 1, flexShrink: 0, opacity: 0.7 }}
-                            title="Dismiss"
-                        >×</button>
                     </div>
                 )}
 
