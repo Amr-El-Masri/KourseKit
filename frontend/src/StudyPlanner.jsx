@@ -681,7 +681,7 @@ function DayColumn({
     );
 }
 
-function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColorChange, userId, weekStart, isPastWeek, entriesLoading, onCarryOver, onNavigate }) {
+function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColorChange, userId, weekStart, isPastWeek, entriesLoading, onCarryOver, onNavigate, semesterCourseCodes }) {
     const [tasks, setTasks] = useState([]);
     const [selectedTaskId, setSelectedTaskId] = useState("");
     const [hoursPerWeek, setHoursPerWeek] = useState("");
@@ -708,7 +708,7 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
     const selectedTask = tasks.find(t => String(t.id) === String(selectedTaskId));
     const addedTaskIds = new Set(entries.map(e => String(e.taskId)));
 
-    // Filter out tasks already added AND tasks whose deadline has passed before this week
+    // Filter out tasks already added, expired tasks, and tasks for courses outside the current semester
     const weekStartDate = weekStart ? new Date(weekStart) : null;
     const availableTasks = tasks.filter(t => {
         if (addedTaskIds.has(String(t.id))) return false;
@@ -716,6 +716,9 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
         if (weekStartDate && t.deadline) {
             const deadline = new Date(t.deadline);
             if (deadline < weekStartDate) return false;
+        }
+        if (semesterCourseCodes && semesterCourseCodes.size > 0 && t.course) {
+            if (!semesterCourseCodes.has(t.course)) return false;
         }
         return true;
     });
@@ -1158,6 +1161,8 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         });
         return map;
     }, [enrolledSections, globalCourseColors]);
+
+    const semesterCourseCodes = useMemo(() => new Set(enrolledSections.map(es => es.courseCode)), [enrolledSections]);
 
     const postGenWarnings = useMemo(() => {
         if (!hasGenerated) return [];
@@ -2662,6 +2667,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                                     entriesLoading={entriesLoading}
                                     onCarryOver={handleCarryOver}
                                     onNavigate={onNavigate}
+                                    semesterCourseCodes={semesterCourseCodes}
                                 />
                             </div>
                             <div style={{ display: activePanel === "slots" ? "contents" : "none" }}>
