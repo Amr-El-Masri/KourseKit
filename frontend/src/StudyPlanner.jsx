@@ -557,7 +557,7 @@ function DayColumn({
     }, []);
 
     const handleMouseDown = useCallback((e) => {
-        if (!isAvailabilityMode && !showSlotOverlay) return;
+        if (!isAvailabilityMode) return;
         if (e.target.closest(".sp-avail-slot") || e.target.closest(".sp-study-block")) return;
         e.preventDefault();
         const startHour = Math.min(getHourFromEvent(e), END_HOUR - 0.5);
