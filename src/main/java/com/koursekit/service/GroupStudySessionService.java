@@ -4,7 +4,11 @@ import com.koursekit.model.*;
 import com.koursekit.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 
 @Service
@@ -14,21 +18,27 @@ public class GroupStudySessionService {
     private final StudyGroupMemberRepo memberRepo;
     private final UserRepo userRepo;
     private final TaskRepository taskRepository;
+    private final StudyBlockRepository studyBlockRepo;
+    private final AvailabilitySlotRepository slotRepo;
 
-    public GroupStudySessionService(GroupStudySessionRepo sessionRepo, StudyGroupRepo studyGroupRepo, StudyGroupMemberRepo memberRepo, UserRepo userRepo, TaskRepository taskRepository) {
+    public GroupStudySessionService(GroupStudySessionRepo sessionRepo, StudyGroupRepo studyGroupRepo,
+                                    StudyGroupMemberRepo memberRepo, UserRepo userRepo,
+                                    TaskRepository taskRepository, StudyBlockRepository studyBlockRepo,
+                                    AvailabilitySlotRepository slotRepo) {
         this.sessionRepo = sessionRepo;
         this.studyGroupRepo = studyGroupRepo;
         this.memberRepo = memberRepo;
         this.userRepo = userRepo;
         this.taskRepository = taskRepository;
+        this.studyBlockRepo = studyBlockRepo;
+        this.slotRepo = slotRepo;
     }
 
     @Transactional
-    public GroupStudySession createSession(Long hostId, Long groupId, java.time.LocalDate date, java.time.LocalTime startTime, double duration) {
-
-        if (date.isBefore(java.time.LocalDate.now()))
+    public GroupStudySession createSession(Long hostId, Long groupId, LocalDate date, LocalTime startTime, double duration) {
+        if (date.isBefore(LocalDate.now()))
             throw new IllegalArgumentException("Cannot schedule a session in the past");
-        if (date.isEqual(java.time.LocalDate.now()) && startTime.isBefore(java.time.LocalTime.now()))
+        if (date.isEqual(LocalDate.now()) && startTime.isBefore(LocalTime.now()))
             throw new IllegalArgumentException("Cannot schedule a session in the past");
 
         StudyGroup group = studyGroupRepo.findById(groupId)
@@ -39,7 +49,7 @@ public class GroupStudySessionService {
         User host = userRepo.findById(hostId)
             .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-         GroupStudySession session = new GroupStudySession(
+        GroupStudySession session = new GroupStudySession(
             group, host, date, startTime, duration,
             startTime.plusMinutes((long)(duration * 60))
         );
@@ -47,7 +57,75 @@ public class GroupStudySessionService {
     }
 
     public List<GroupStudySession> getSessionsForGroup(Long groupId) {
-        return sessionRepo.findByStudyGroup_Id(groupId); }
+        return sessionRepo.findByStudyGroup_Id(groupId);
+    }
+
+    public List<GroupStudySession> getMySyncedSessionsForWeek(Long userId, LocalDate weekStart) {
+        LocalDate weekEnd = weekStart.plusDays(6);
+        return sessionRepo.findSyncedByUserMembershipAndDateBetween(userId, weekStart, weekEnd);
+    }
+
+    @Transactional
+    public GroupStudySession addToPlanner(Long sessionId, Long userId) {
+        GroupStudySession session = sessionRepo.findById(sessionId)
+            .orElseThrow(() -> new IllegalArgumentException("Session not found"));
+
+        if (!memberRepo.existsByStudyGroup_IdAndUser_Id(session.getStudyGroup().getId(), userId))
+            throw new IllegalStateException("You are not a member of this group");
+
+        LocalDate sessionDate = session.getDate();
+        LocalTime sessionStart = session.getStartTime();
+        LocalTime sessionEnd = session.getEndTime();
+
+        // Delete any overlapping study blocks for this user on this date
+        List<StudyBlock> blocks = studyBlockRepo.findByStudyPlanEntry_User_IdAndDayBetween(userId, sessionDate, sessionDate);
+        for (StudyBlock block : blocks) {
+            LocalTime blockStart = block.getStartTime();
+            LocalTime blockEnd = blockStart.plusMinutes((long)(block.getDuration() * 60));
+            if (blockStart.isBefore(sessionEnd) && blockEnd.isAfter(sessionStart)) {
+                studyBlockRepo.deleteById(block.getId());
+            }
+        }
+
+        // Trim or delete overlapping availability slots for this user this week
+        LocalDate weekStart = sessionDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        String dayKey = sessionDate.getDayOfWeek().name();
+        List<AvailabilitySlot> slots = slotRepo.findByUserIdAndWeekStart(userId, weekStart);
+        for (AvailabilitySlot slot : slots) {
+            if (!slot.getDayKey().equals(dayKey)) continue;
+            LocalTime slotStart = slot.getStartTime();
+            LocalTime slotEnd = slot.getEndTime();
+            if (!slotStart.isBefore(sessionEnd) || !slotEnd.isAfter(sessionStart)) continue;
+
+            if (!slotStart.isBefore(sessionStart) && !slotEnd.isAfter(sessionEnd)) {
+                // Slot fully inside session — delete
+                slotRepo.deleteById(slot.getId());
+            } else if (slotStart.isBefore(sessionStart) && slotEnd.isAfter(sessionEnd)) {
+                // Slot spans the whole session — split into two
+                AvailabilitySlot right = new AvailabilitySlot();
+                right.setUser(slot.getUser());
+                right.setDayKey(dayKey);
+                right.setStartTime(sessionEnd);
+                right.setEndTime(slotEnd);
+                right.setWeekStart(weekStart);
+                right.setSemesterName(slot.getSemesterName());
+                slot.setEndTime(sessionStart);
+                slotRepo.save(slot);
+                slotRepo.save(right);
+            } else if (slotStart.isBefore(sessionStart)) {
+                // Slot overlaps from the left — trim end
+                slot.setEndTime(sessionStart);
+                slotRepo.save(slot);
+            } else {
+                // Slot overlaps from the right — trim start
+                slot.setStartTime(sessionEnd);
+                slotRepo.save(slot);
+            }
+        }
+
+        session.setSynced(true);
+        return sessionRepo.save(session);
+    }
 
     @Transactional
     public Task syncSessionToTask(Long sessionId, Long userId) {
@@ -74,11 +152,10 @@ public class GroupStudySessionService {
     }
 
     @Transactional
-    public GroupStudySession editSession(Long sessionId, Long hostId, java.time.LocalDate date, java.time.LocalTime startTime, double duration) {
-        if (date.isBefore(java.time.LocalDate.now()))
+    public GroupStudySession editSession(Long sessionId, Long hostId, LocalDate date, LocalTime startTime, double duration) {
+        if (date.isBefore(LocalDate.now()))
             throw new IllegalArgumentException("Cannot schedule a session in the past");
-        
-        if (date.isEqual(java.time.LocalDate.now()) && startTime.isBefore(java.time.LocalTime.now()))
+        if (date.isEqual(LocalDate.now()) && startTime.isBefore(LocalTime.now()))
             throw new IllegalArgumentException("Cannot schedule a session in the past");
 
         GroupStudySession session = sessionRepo.findById(sessionId)
@@ -86,7 +163,7 @@ public class GroupStudySessionService {
 
         if (!memberRepo.existsByStudyGroup_IdAndUser_IdAndRole(session.getStudyGroup().getId(), hostId, StudyGroupMember.Role.HOST))
             throw new IllegalStateException("Only the host can edit sessions");
-        
+
         session.setDate(date);
         session.setStartTime(startTime);
         session.setDuration(duration);

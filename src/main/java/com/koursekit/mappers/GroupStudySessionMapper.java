@@ -13,6 +13,8 @@ public class GroupStudySessionMapper {
         return new GroupStudySessionResponseDTO(
             session.getId(),
             session.getStudyGroup().getId(),
+            session.getStudyGroup().getName(),
+            session.getStudyGroup().getCourse().getCourseCode(),
             session.getDate(),
             session.getStartTime(),
             session.getDuration(),
