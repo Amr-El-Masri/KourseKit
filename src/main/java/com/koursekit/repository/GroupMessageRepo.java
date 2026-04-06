@@ -10,6 +10,8 @@ import com.koursekit.model.GroupMessage;
 public interface GroupMessageRepo extends JpaRepository<GroupMessage, Long> {
     List<GroupMessage> findByStudyGroup_IdOrderBySentAtAsc(Long groupId);
     List<GroupMessage> findByStudyGroup_IdAndIsDeletedFalseOrderBySentAtAsc(Long groupId);
+    List<GroupMessage> findByStudyGroup_IdAndPinnedTrueOrderByPinnedAtDesc(Long groupId);
+    long countByStudyGroup_IdAndPinnedTrue(Long groupId);
 
     @Modifying
     @Query("DELETE FROM GroupMessage message WHERE message.studyGroup.id = :groupId")

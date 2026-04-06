@@ -32,11 +32,14 @@ public class ReviewController {
             @RequestParam int rating,
             @RequestParam String userId) {
 
+        if (comment == null || comment.isBlank())
+            return ResponseEntity.badRequest().body("Review comment cannot be empty.");
+        if (rating < 1 || rating > 5)
+            return ResponseEntity.badRequest().body("Rating must be between 1 and 5.");
         try {
             Review review = reviewService.submitReview(sectionId, comment, rating, userId);
-            return ResponseEntity.ok(review); // Returns 200 OK with the saved review
+            return ResponseEntity.ok(review);
         } catch (RuntimeException e) {
-            // Returns 400 Bad Request with an "Already submitted" message
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }

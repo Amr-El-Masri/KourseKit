@@ -33,7 +33,7 @@ public class AuthService {
     @Autowired
     private PassRepo passhistoryrepo;
 
-    public AuthResponse signup(String email, String password) {
+    public AuthResponse signup(String email, String password, boolean rememberMe) {
         if (!isvalidaubmail(email)) { throw new IllegalArgumentException("Invalid email."); }
         if (userrepo.existsByEmail(email)) { throw new IllegalArgumentException("Email is already in use."); }
         validatepassword(password);
@@ -47,7 +47,7 @@ public class AuthService {
         passhistoryrepo.save(new PassHistory(user, passhash));
 
         String veriftoken = UUID.randomUUID().toString();
-        Token token = new Token(user, veriftoken, "EMAIL_VERIFICATION", LocalDateTime.now().plusMinutes(10));
+        Token token = new Token(user, veriftoken, "EMAIL_VERIFICATION", LocalDateTime.now().plusMinutes(rememberMe ? 1440 : 10));
         tokenrepo.save(token);
 
         try {
@@ -56,7 +56,7 @@ public class AuthService {
             System.err.println("Verification email failed: " + emailexception.getMessage());
         }
 
-        String jwttoken = jwtutil.generate(user.getId(), user.getEmail(), user.getRole());
+        String jwttoken = jwtutil.generate(user.getId(), user.getEmail(), user.getRole(), rememberMe);
 
         AuthResponse response = new AuthResponse();
         response.setsuccess(true);
@@ -89,14 +89,14 @@ public class AuthService {
         return response;
     }
 
-    public AuthResponse login(String email, String password) {
+    public AuthResponse login(String email, String password, boolean rememberMe) {
         User user = userrepo.findByEmail(email)
             .orElseThrow(() -> new IllegalArgumentException("Invalid email or password."));
         if (!user.isVerified()) { throw new IllegalArgumentException("Email has not been verified."); }
         if (!user.isActive()) { throw new IllegalArgumentException("Account is deactivated."); }
         if (!passhasher.check(password, user.getPass())) { throw new IllegalArgumentException("Invalid email or password."); }
 
-        String jwttoken = jwtutil.generate(user.getId(), email, user.getRole());
+        String jwttoken = jwtutil.generate(user.getId(), email, user.getRole(), rememberMe);
 
         AuthResponse response = new AuthResponse();
         response.setsuccess(true);

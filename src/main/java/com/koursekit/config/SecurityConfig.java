@@ -27,7 +27,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable()) 
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/verify", "/api/auth/forgot-password", "/api/auth/reset-password").permitAll()
+                .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/verify", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/refresh", "/api/auth/logout-all", "/api/auth/sessions", "/api/auth/sessions/**").permitAll()
                 .requestMatchers("/*.html", "/css/**", "/js/**", "/images/**").permitAll() // static files no token need
                 .requestMatchers("/api/courses/search", "/api/courses/*/sections", "/api/courses/professors", "/api/courses/*").permitAll()
                 .requestMatchers("/api/reviews/course/**", "/api/reviews/section/**").permitAll()

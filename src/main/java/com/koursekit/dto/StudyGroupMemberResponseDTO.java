@@ -7,6 +7,8 @@ public record StudyGroupMemberResponseDTO (
     Long userId,
     String firstName,
     String lastName,
+    String avatar,
+    String tag,
     StudyGroupMember.Role role,
     LocalDateTime joinedAt
 ) {}

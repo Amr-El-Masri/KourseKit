@@ -7,6 +7,7 @@ import com.koursekit.model.ProfessorReview;
 import com.koursekit.model.Report;
 import com.koursekit.model.Review;
 import com.koursekit.model.ReviewStatus;
+import com.koursekit.repository.ForumPostRepository;
 import com.koursekit.repository.ProfessorReviewRepository;
 import com.koursekit.repository.ReportRepository;
 import com.koursekit.repository.ReviewRepository;
@@ -20,6 +21,7 @@ public class ReportService {
     @Autowired private ReportRepository reportRepo;
     @Autowired private ReviewRepository reviewRepo;
     @Autowired private ProfessorReviewRepository profReviewRepo;
+    @Autowired private ForumPostRepository forumPostRepo;
     @Autowired private UserRepo userRepo;
 
     public void reportCourseReview(Long reviewId, String userId, String reason) {
@@ -80,11 +82,23 @@ public class ReportService {
         if (reportRepo.existsByUserIdAndForumPostId(userId, forumPostId)) {
             throw new RuntimeException("You have already reported this post.");
         }
+        com.koursekit.model.ForumPost post = forumPostRepo.findById(forumPostId)
+            .orElseThrow(() -> new RuntimeException("Post not found."));
+        post.setStatus(ReviewStatus.REPORTED);
+        forumPostRepo.save(post);
         Report report = new Report();
         report.setUserId(userId);
         report.setForumPostId(forumPostId);
         report.setReason(reason);
         reportRepo.save(report);
+        userRepo.findByEmail(post.getUserId()).ifPresent(author -> {
+            author.setReportCount(author.getReportCount() + 1);
+            if (author.getReportCount() >= REPORT_THRESHOLD) {
+                author.setFlagged(true);
+                author.setFlagReason(reason);
+            }
+            userRepo.save(author);
+        });
     }
 
     public void reportForumComment(Long forumCommentId, String userId, String reason) {

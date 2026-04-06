@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "study_group_members")
+@Table(name = "study_group_members", indexes = @Index(name = "idx_sgmember_user_id", columnList = "user_id"))
 
 public class StudyGroupMember {
     @Id
@@ -30,6 +30,9 @@ public class StudyGroupMember {
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
     private Role role;
+
+    @Column(name = "tag")
+    private String tag;
 
     public StudyGroupMember() {}
 
@@ -67,5 +70,8 @@ public class StudyGroupMember {
 
     public void setRole(Role role) {
         this.role = role; }
+
+    public String getTag() { return tag; }
+    public void setTag(String tag) { this.tag = tag; }
 }
 

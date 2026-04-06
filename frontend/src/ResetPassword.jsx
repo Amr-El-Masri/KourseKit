@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTheme } from "./ThemeContext";
 
 const requirements = [
   { label: "At least 8 characters",       test: p => p.length >= 8 },
@@ -9,6 +10,7 @@ const requirements = [
 ];
 
 export default function ResetPassword({ token, onGoToLogin }) {
+  const { isDark } = useTheme();
   const [password,  setPassword]  = useState("");
   const [confirm,   setConfirm]   = useState("");
   const [error,     setError]     = useState("");
@@ -157,7 +159,7 @@ export default function ResetPassword({ token, onGoToLogin }) {
                 </p>
               )}
               {capsLock && (
-                <p style={{ fontSize: 12, color: "#b45309", background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 8, padding: "6px 10px", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                <p style={{ fontSize: 12, color: isDark ? "#fcd34d" : "#b45309", background: isDark ? "#2a2000" : "#fffbeb", border: `1px solid ${isDark ? "#78500a" : "#fcd34d"}`, borderRadius: 8, padding: "6px 10px", marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
                   ⇪ Caps Lock is on
                 </p>
               )}

@@ -36,6 +36,7 @@ export default function Register({ onGoToLogin }) {
   const [loading,      setLoading]      = useState(false);
   const [passfocused,  setpassfocused]  = useState(false);
   const [showpass,     setshowpass]     = useState(false);
+  const [rememberMe,   setRememberMe]   = useState(false);
 
   const passwordOk   = requirements.every(r => r.test(password));
   const confirmMatch = confirm.length > 0 && password === confirm;
@@ -52,7 +53,7 @@ export default function Register({ onGoToLogin }) {
       const res  = await fetch("http://localhost:8080/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
       const data = await res.json();
       if (data.success) {
@@ -255,6 +256,12 @@ export default function Register({ onGoToLogin }) {
                   Passwords match ✓
                 </p>
               )}
+
+              <label style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16, cursor:"pointer", fontSize:13, color:"var(--text2)", userSelect:"none" }}>
+                <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)}
+                  style={{ width:15, height:15, accentColor:"var(--primary)", cursor:"pointer" }} />
+                Remember Me
+              </label>
 
               <button className="reg-btn" onClick={handle} disabled={loading} style={{ ...s.btn, opacity: loading ? 0.7 : 1, cursor: loading ? "not-allowed" : "pointer" }}>
                 {loading ? "Creating account…" : "Create Account"}

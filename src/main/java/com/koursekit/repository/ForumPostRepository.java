@@ -15,5 +15,6 @@ public interface ForumPostRepository extends JpaRepository<ForumPost, Long> {
 
     List<ForumPost> findByProfessorTagAndStatusOrderByCreatedAtDesc(String professorTag, ReviewStatus status);
 
+    List<ForumPost> findByStatusInOrderByCreatedAtDesc(List<ReviewStatus> statuses);
     List<ForumPost> findByUserId(String userId);
 }

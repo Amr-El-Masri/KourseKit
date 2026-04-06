@@ -12,16 +12,15 @@ import { useTheme } from "./ThemeContext";
 import StudentDirectory from "./StudentDirectoryPanel";
 import Forum from "./Forum";
 import StudyGroupFinder from "./StudyGroupFinder";
-import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Turtle, Settings as SettingsIcon, MessageSquare, Users } from 'lucide-react';
+import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Settings as SettingsIcon, MessageSquare, Users } from 'lucide-react';
 
 const AVATAR_ICONS = [
   { id:"Banana", icon: Banana },
-  { id:"Telescope", icon: Telescope  },
-  { id:"Eclipse", icon: Eclipse    },
-  { id:"Cat", icon: Cat   },
-  { id:"Dog", icon: Dog    },
-  { id:"Panda", icon: Panda  },
-  { id:"Turtle", icon: Turtle   },
+  { id:"Telescope", icon: Telescope },
+  { id:"Eclipse", icon: Eclipse },
+  { id:"Cat", icon: Cat },
+  { id:"Dog", icon: Dog },
+  { id:"Panda", icon: Panda },
 ];
 
 const DAYS_OF_WEEK = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
@@ -207,7 +206,7 @@ function CourseGradeSummaryWidget({ apiSemesters, selectedSemester, footer }) {
   const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
 
   const semObj = apiSemesters.find(s => s.semesterName === selectedSemester);
-  const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype && !(/^B(?!L)/i.test(c.section?.sectionNumber || "") || /^E/i.test(c.section?.sectionNumber || "")));
+  const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype);
 
   const [selectedCourse, setSelectedCourse] = useState("");
 
@@ -402,7 +401,7 @@ function GPASummaryWidget({ apiSemesters, selectedSemester, onNavigate, footer }
   };
 
   const semObj = apiSemesters.find(s => s.semesterName === selectedSemester);
-  const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype && !(/^B(?!L)/i.test(c.section?.sectionNumber || "") || /^E/i.test(c.section?.sectionNumber || "")));
+  const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype);
   const gradedCourses = courses.filter(c => c.grade && gradePoints[c.grade?.trim()?.toUpperCase()] !== undefined && Number(c.credits) > 0);
   const allGraded = courses.length > 0 && gradedCourses.length === courses.length;
 
@@ -723,9 +722,10 @@ export default function Dashboard({ onLogout }) {
   };
 
   const selectedSem = apiSemesters.find(s => s.semesterName === semester) ?? { courses: [] };
-  const semCourseList = (selectedSem.courses || [])
-  .filter(c => !c.componenttype && !(/^B(?!L)/i.test(c.section?.sectionNumber || "") || /^E/i.test(c.section?.sectionNumber || "")))
-  .map(c => ({ id: c.sectioncrn, name: c.courseCode, section: c.section, grade: c.grade, credits: c.credits, sectioncrn: c.sectioncrn }));
+  const semCourseList = (selectedSem.courses || []).filter(c => !c.componenttype).map(c => ({ id: c.courseCode, name: c.courseCode }));
+  const enrolledSections = (selectedSem.courses || [])
+    .filter(c => c.section)
+    .map(c => ({ courseCode: c.courseCode, crn: c.sectioncrn, section: c.section, linkedSection: c.linkedSection || null, componenttype: c.componenttype || null, sectionNumber: c.section?.sectionNumber || null }));
 
   const addTodo = () => {
     if (!todoInput.trim()) { setTodoError(true); return; }
@@ -1058,7 +1058,7 @@ export default function Dashboard({ onLogout }) {
 
   // Courses from all saved semesters (deduplicated) for Grade Calculator dropdown
   const dashboardCourses = [...new Map(
-      apiSemesters.flatMap(s => (s.courses || []).map(c => ({ id: c.id, name: c.courseCode, section: c.section })))
+      apiSemesters.flatMap(s => (s.courses || []).filter(c => !c.componenttype).map(c => ({ id: c.id, name: c.courseCode })))
           .filter(c => c.name && (!c.section?.sectionNumber || !(/^B(?!L)/i.test(c.section.sectionNumber) || /^E/i.test(c.section.sectionNumber))))
           .map(c => [c.name, c])
   ).values()];
@@ -1075,7 +1075,7 @@ export default function Dashboard({ onLogout }) {
               </div>
             : <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
               {semCourseList.map((c, i) => (
-                <div key={c.sectioncrn ?? `${c.name}-${i}`} className="course-card" onClick={()=>setCourseDetailsTarget(c.name)} style={{...s.courseCard, border:"1px solid var(--border2)", borderLeft:"3px solid var(--primary)", cursor:"pointer"}}>
+                <div key={c.sectioncrn ?? `${c.name}-${i}`} className="course-card" style={{...s.courseCard, border:"1px solid var(--border)", borderLeft:"3px solid var(--primary)"}}>
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
                     <div>
                       <div style={{fontWeight:700,fontSize:15,color:"var(--primary)"}}>{c.name}</div>
@@ -1366,7 +1366,7 @@ export default function Dashboard({ onLogout }) {
       case "grades": {
         const LETTER_GRADES = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
         const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
-        const semCourses = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.courseCode&&(!c.section?.sectionNumber||!((/^B(?!L)/i.test(c.section.sectionNumber))||/^E/i.test(c.section.sectionNumber))));
+        const semCourses = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.courseCode&&!c.componenttype);
         const gradeTabs = [{id:"grades",label:"Grades"},{id:"gpa",label:"GPA"},{id:"goals",label:"Goals"}];
         return (
           <>
@@ -1785,10 +1785,10 @@ export default function Dashboard({ onLogout }) {
           </nav>
           <div onClick={e => e.stopPropagation()} style={{margin:"0 8px 16px",borderRadius:10,border:"1px solid rgba(255,255,255,0.18)",background:"rgba(255,255,255,0.10)",display:"flex",alignItems:"center",padding:"8px 10px",gap:8,justifyContent:sidebarOpen?"flex-start":"center"}}>
             <div className="nav-btn" onClick={() => setActivePage("profile")} style={{display:"flex",alignItems:"center",gap:8,flex:1,cursor:"pointer",userSelect:"none",minWidth:0,borderRadius:8,padding:"2px 4px",background:activePage==="profile"?"rgba(255,255,255,0.12)":"transparent"}}>
-              <div style={{width:28,height:28,borderRadius:"50%",background:"#31487A",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,border:activePage==="profile"?"2px solid rgba(255,255,255,0.6)":"2px solid transparent",transition:"border-color .15s"}}>
-                {profile.avatar
-                    ? (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={13} color="white" /> : <span style={{fontWeight:700,fontSize:11,color:"white"}}>{email[0].toUpperCase()}</span>; })()
-                    : <span style={{fontWeight:700,fontSize:11,color:"white"}}>{email[0].toUpperCase()}</span>}
+              <div style={{width:28,height:28,borderRadius:"50%",background:"#31487A",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,border:activePage==="profile"?"2px solid rgba(255,255,255,0.6)":"2px solid transparent",transition:"border-color .15s",overflow:"hidden"}}>
+                {profile.avatar?.startsWith("data:")
+                    ? <img src={profile.avatar} alt="avatar" style={{width:"100%",height:"100%",objectFit:"cover"}} />
+                    : (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={13} color="white" /> : <span style={{fontWeight:700,fontSize:11,color:"white"}}>{email[0].toUpperCase()}</span>; })()}
               </div>
               {sidebarOpen && (
                 <div style={{display:"flex",flexDirection:"column",lineHeight:1.3,overflow:"hidden",minWidth:0}}>
@@ -1994,7 +1994,7 @@ export default function Dashboard({ onLogout }) {
           )}
           {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
           {activePage === "forum" && <Forum initialCourseTag={forumCourseTag} initialProfTag={forumProfTag} />}
-          {activePage === "planner" && <StudyPlanner enrolledSections={semCourseList.map(c => ({ crn: c.id, courseCode: c.name, section: c.section }))} semester={semester} />}
+          {activePage === "planner" && <StudyPlanner enrolledSections={enrolledSections} semester={semester} onNavigate={setActivePage} />}
           {activePage === "groups" && <StudyGroupFinder courses={[...new Map(semCourseList.map(c => [c.name, { id: c.name, name: c.name }])).values()]} />}
           {activePage === "students" && <StudentDirectory onClose={() => setActivePage("dashboard")} />}
           {activePage === "profile" && (

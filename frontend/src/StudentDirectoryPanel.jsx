@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle, X } from "lucide-react";
+import { Banana, Cat, Dog, Eclipse, Telescope, Panda, X } from "lucide-react";
 
 const API = "http://localhost:8080";
 const AVATAR_ICONS = [
   { id:"Banana", icon:Banana }, { id:"Telescope", icon:Telescope },
   { id:"Eclipse", icon:Eclipse }, { id:"Cat", icon:Cat },
-  { id:"Dog", icon:Dog }, { id:"Panda", icon:Panda }, { id:"Turtle", icon:Turtle },
+  { id:"Dog", icon:Dog }, { id:"Panda", icon:Panda },
 ];
 
 const STATUS_LABELS = {
@@ -14,6 +14,9 @@ const STATUS_LABELS = {
 };
 
 function AvatarIcon({ avatarId, size = 38 }) {
+  if (avatarId?.startsWith("data:")) {
+    return <img src={avatarId} alt="avatar" style={{ width:size, height:size, borderRadius:"50%", objectFit:"cover", flexShrink:0 }} />;
+  }
   const found = AVATAR_ICONS.find(a => a.id === avatarId);
   return (
     <div style={{ width:size, height:size, borderRadius:"50%", background:"linear-gradient(135deg,#8FB3E2,#A59AC9)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>

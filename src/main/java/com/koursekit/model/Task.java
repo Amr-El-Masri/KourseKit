@@ -9,7 +9,8 @@ import java.time.temporal.ChronoUnit;
 
 @Entity
 @Table(name = "tasks",
-        uniqueConstraints = {@UniqueConstraint(columnNames = {"course", "title", "user_id"})}
+        uniqueConstraints = {@UniqueConstraint(columnNames = {"course", "title", "user_id"})},
+        indexes = @Index(name = "idx_task_user_id", columnList = "user_id")
 )
 public class Task {
 

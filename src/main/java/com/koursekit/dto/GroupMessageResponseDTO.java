@@ -7,8 +7,11 @@ public record GroupMessageResponseDTO (
     Long senderId,
     String senderFirstName,
     String senderLastName,
+    String senderAvatar,
+    String senderTag,
     String content,
     LocalDateTime sentAt,
     boolean isDeleted,
-    String reactionsJson
+    String reactionsJson,
+    boolean pinned
 ) {}

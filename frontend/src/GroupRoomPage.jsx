@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Send, Trash2, UserPlus, UserCheck, X, Heart, ThumbsUp, Flag, AlertTriangle } from "lucide-react";
+import { useTheme } from "./ThemeContext";
+import { ArrowLeft, Send, Trash2, UserPlus, UserCheck, X, Heart, ThumbsUp, Flag, AlertTriangle, Pin } from "lucide-react";
 import { StudentProfileView } from "./StudentDirectoryPanel";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
@@ -30,7 +31,10 @@ async function apiFetch(path, options = {}) {
     return JSON.parse(text);
 }
 
-function MemberAvatar({ firstName, lastName, size = 30 }) {
+function MemberAvatar({ firstName, lastName, avatar, size = 30 }) {
+  if (avatar?.startsWith("data:")) {
+    return <img src={avatar} alt="avatar" style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />;
+  }
   const initials = `${firstName?.[0] || ""}${lastName?.[0] || ""}`;
   return (
     <div style={{
@@ -105,7 +109,8 @@ function MemberProfilePanel({ member, onClose }) {
   );
 }
 
-function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUserId, selectedMessageId, setSelectedMessageId }) {
+function MessageBubble({ message, isOwn, showName, showTime, onDelete, onReact, onReport, onPin, onViewProfile, avatarOverride, currentUserId, selectedMessageId, setSelectedMessageId, msgRef, highlighted }) {
+  const { isDark } = useTheme();
   const showMenu = selectedMessageId === message.id;
   const setShowMenu = (val) => setSelectedMessageId(val ? message.id : null);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -159,61 +164,72 @@ function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUse
     );
   }
 
+  const displayName = message.senderTag || `${message.senderFirstName} ${message.senderLastName}`;
+
   return (
-    <div style={{ display:"flex", flexDirection:"column", alignItems: isOwn ? "flex-end" : "flex-start", marginBottom: 10, position:"relative" }}>
-      {!isOwn && (
-        <div style={{ fontSize:11, fontWeight:600, color:"var(--accent2)", marginBottom:3, marginLeft:4 }}>
-          {message.senderFirstName} {message.senderLastName}
+    <div ref={msgRef} style={{ display:"flex", flexDirection:"column", alignItems: isOwn ? "flex-end" : "flex-start", marginBottom: showTime ? 10 : 2, position:"relative", borderRadius: 10, transition: "background 0.4s", background: highlighted ? "color-mix(in srgb, var(--primary) 10%, transparent)" : "transparent" }}>
+      {showName && !isOwn && (
+        <div style={{ fontSize:11, fontWeight:600, color:"var(--accent2)", marginBottom:3, marginLeft:38 }}>
+          {displayName}
         </div>
       )}
 
-      <div style={{ display:"flex", alignItems:"center", gap:6, flexDirection: isOwn ? "row-reverse" : "row" }}>
-        <div
-          onClick={handleClick}
-          style={{
-            maxWidth:380, padding:"9px 14px",
-            borderRadius: isOwn ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-            background: isOwn ? "var(--primary)" : "var(--surface2)",
-            color: isOwn ? "#fff" : "var(--text)",
-            fontSize:13, lineHeight:1.5,
-            boxShadow:"0 1px 4px rgba(0,0,0,0.07)",
-            cursor:"pointer", userSelect:"none",
-            outline: showMenu ? "2px solid var(--accent)" : "none",
-          }}
-        >
-          {message.content}
+      <div style={{ display:"flex", alignItems:"flex-end", gap:6, flexDirection: isOwn ? "row-reverse" : "row" }}>
+        {!isOwn && (
+          showTime
+            ? <div onClick={() => onViewProfile(message.senderId)} style={{ cursor:"pointer", flexShrink:0 }}>
+                <MemberAvatar firstName={message.senderFirstName} lastName={message.senderLastName} avatar={avatarOverride || message.senderAvatar} size={28} />
+              </div>
+            : <div style={{ width:28, flexShrink:0 }} />
+        )}
+        <div style={{ display:"flex", flexDirection:"column", alignItems: isOwn ? "flex-end" : "flex-start" }}>
+          <div
+            onClick={handleClick}
+            style={{
+              maxWidth:340, padding:"9px 14px",
+              borderRadius: isOwn ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+              background: isOwn ? "var(--primary)" : "var(--surface2)",
+              color: isOwn ? "#fff" : "var(--text)",
+              fontSize:13, lineHeight:1.5,
+              boxShadow:"0 1px 4px rgba(0,0,0,0.07)",
+              cursor:"pointer", userSelect:"none",
+              outline: showMenu ? "2px solid var(--accent)" : "none",
+            }}
+          >
+            {message.content}
+          </div>
+          {(heartUsers.length > 0 || thumbUsers.length > 0) && (
+            <div style={{ display:"flex", gap:3, marginTop:-8, marginBottom:2, [isOwn ? "marginRight" : "marginLeft"]: 8, zIndex:1 }}>
+              {heartUsers.length > 0 && (
+                <span style={{ fontSize:11, background: isDark ? "var(--surface)" : "#fff", border:"1px solid var(--border)", borderRadius:99, padding:"2px 7px", display:"flex", alignItems:"center", gap:3, boxShadow:"0 1px 4px rgba(0,0,0,0.12)" }}>
+                  <Heart size={10} color="#e74c3c" fill={myReaction === "heart" ? "#e74c3c" : "none"} />
+                  <span style={{ color: isDark ? "var(--text)" : "#333", fontWeight:600 }}>{heartUsers.length}</span>
+                </span>
+              )}
+              {thumbUsers.length > 0 && (
+                <span style={{ fontSize:11, background: isDark ? "var(--surface)" : "#fff", border:"1px solid var(--border)", borderRadius:99, padding:"2px 7px", display:"flex", alignItems:"center", gap:3, boxShadow:"0 1px 4px rgba(0,0,0,0.12)" }}>
+                  <ThumbsUp size={10} color={myReaction === "thumbsup" ? "var(--primary)" : "var(--text3)"} fill={myReaction === "thumbsup" ? "var(--primary)" : "none"} />
+                  <span style={{ color: isDark ? "var(--text)" : "#333", fontWeight:600 }}>{thumbUsers.length}</span>
+                </span>
+              )}
+            </div>
+          )}
+          {showTime && (
+            <div style={{ fontSize:10, color:"var(--text3)", marginTop:3, textAlign: isOwn ? "right" : "left" }}>
+              {new Date(message.sentAt).toLocaleTimeString("en-US", { hour:"2-digit", minute:"2-digit", hour12:true })}
+            </div>
+          )}
         </div>
 
         {isOwn && (
           <button
             onClick={() => onDelete(message.id)}
-            style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text3)", padding:4, display:"flex", alignItems:"center", opacity:0.6 }}
+            style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text3)", padding:4, display:"flex", alignItems:"center", opacity:0.6, alignSelf:"flex-end" }}
             title="Delete message"
           >
             <Trash2 size={13} />
           </button>
         )}
-      </div>
-
-      {(heartUsers.length > 0 || thumbUsers.length > 0) && (
-        <div style={{ display:"flex", gap:4, marginTop:4, marginLeft: isOwn ? 0 : 4, marginRight: isOwn ? 4 : 0 }}>
-          {heartUsers.length > 0 && (
-            <span style={{ fontSize:11, background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:99, padding:"2px 7px", display:"flex", alignItems:"center", gap:3 }}>
-              <Heart size={10} color={myReaction === "heart" ? "#e74c3c" : "var(--text3)"} fill={myReaction === "heart" ? "#e74c3c" : "none"} />
-              {heartUsers.length}
-            </span>
-          )}
-          {thumbUsers.length > 0 && (
-            <span style={{ fontSize:11, background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:99, padding:"2px 7px", display:"flex", alignItems:"center", gap:3 }}>
-              <ThumbsUp size={10} color={myReaction === "thumbsup" ? "var(--primary)" : "var(--text3)"} fill={myReaction === "thumbsup" ? "var(--primary)" : "none"} />
-              {thumbUsers.length}
-            </span>
-          )}
-        </div>
-      )}
-
-      <div style={{ fontSize:10, color:"var(--text3)", marginTop:3, marginLeft: isOwn ? 0 : 4, marginRight: isOwn ? 4 : 0 }}>
-        {new Date(message.sentAt).toLocaleTimeString("en-US", { hour:"2-digit", minute:"2-digit", hour12:true })}
       </div>
 
       {showMenu && (
@@ -224,21 +240,32 @@ function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUse
           padding:"8px", display:"flex", gap:6, zIndex:50, marginBottom:4,
         }}>
           <button
+            className="btn-msg-action btn-msg-heart"
             onClick={() => { onReact(message.id, "heart"); setShowMenu(false); }}
             title="Heart"
-            style={{ background: myReaction==="heart" ? "#fdecea" : "var(--surface2)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:12 }}
+            style={{ background: myReaction==="heart" ? "color-mix(in srgb, #e74c3c 18%, var(--surface2))" : "var(--surface2)", border: myReaction==="heart" ? "1px solid color-mix(in srgb, #e74c3c 40%, transparent)" : "1px solid var(--border)", borderRadius:8, padding:"6px 10px", cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:12 }}
           >
             <Heart size={14} color={myReaction==="heart" ? "#e74c3c" : "var(--text2)"} fill={myReaction==="heart" ? "#e74c3c" : "none"} />
           </button>
           <button
+            className="btn-msg-action btn-msg-thumb"
             onClick={() => { onReact(message.id, "thumbsup"); setShowMenu(false); }}
             title="Thumbs up"
-            style={{ background: myReaction==="thumbsup" ? "var(--blue-light-bg)" : "var(--surface2)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:12 }}
+            style={{ background: myReaction==="thumbsup" ? "color-mix(in srgb, var(--primary) 18%, var(--surface2))" : "var(--surface2)", border: myReaction==="thumbsup" ? "1px solid color-mix(in srgb, var(--primary) 40%, transparent)" : "1px solid var(--border)", borderRadius:8, padding:"6px 10px", cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:12 }}
           >
             <ThumbsUp size={14} color={myReaction==="thumbsup" ? "var(--primary)" : "var(--text2)"} fill={myReaction==="thumbsup" ? "var(--primary)" : "none"} />
           </button>
+          <button
+            className="btn-msg-action"
+            onClick={() => { onPin(message.id); setShowMenu(false); }}
+            title={message.pinned ? "Unpin" : "Pin"}
+            style={{ background: message.pinned ? "color-mix(in srgb, var(--primary) 18%, var(--surface2))" : "var(--surface2)", border: message.pinned ? "1px solid color-mix(in srgb, var(--primary) 40%, transparent)" : "1px solid var(--border)", borderRadius:8, padding:"6px 10px", cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:12, color: message.pinned ? "var(--primary)" : "var(--text2)" }}
+          >
+            <Pin size={14} color={message.pinned ? "var(--primary)" : "var(--text2)"}/>
+          </button>
           {!isOwn && (
             <button
+              className="btn-msg-action btn-msg-report"
               onClick={() => { setShowReportModal(true); setShowMenu(false); }}
               title="Report"
               style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:12, color:"var(--error)" }}
@@ -247,6 +274,7 @@ function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUse
             </button>
           )}
           <button
+            className="btn-msg-close"
             onClick={() => setShowMenu(false)}
             style={{ background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:8, padding:"6px 10px", cursor:"pointer", color:"var(--text3)", fontSize:12 }}
           >
@@ -313,7 +341,19 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
 
   const stompClient = useRef(null);
   const messagesEndRef = useRef(null);
+  const messageRefs = useRef({});
+  const [highlightedMessageId, setHighlightedMessageId] = useState(null);
+  const [expandedPinId, setExpandedPinId] = useState(null);
   const currentUserId = getUserId();
+
+  const scrollToMessage = (messageId) => {
+    const el = messageRefs.current[messageId];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlightedMessageId(messageId);
+      setTimeout(() => setHighlightedMessageId(null), 1800);
+    }
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -415,6 +455,17 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
     };
 
   const isHost = members.some(m => String(m.userId) === String(currentUserId) && m.role === "HOST");
+  const [pinnedMessages, setPinnedMessages] = useState([]);
+  useEffect(() => {
+    apiFetch(`/api/group-messages/${group.id}/pinned`).then(data => { if (Array.isArray(data)) setPinnedMessages(data); }).catch(() => {});
+  }, [group.id]);
+  const pinMessage = async (messageId) => {
+    try {
+      const updated = await apiFetch(`/api/group-messages/${messageId}/pin`, { method: "PATCH" });
+      setMessages(prev => prev.map(m => m.id === messageId ? { ...m, pinned: updated.pinned } : m));
+      setPinnedMessages(prev => updated.pinned ? [updated, ...prev.filter(p => p.id !== messageId)] : prev.filter(p => p.id !== messageId));
+    } catch (e) { setError(e.message); }
+  };
   const [sessions, setSessions] = useState([]);
   const [showSessionPanel, setShowSessionPanel] = useState(false);
   const [sessionForm, setSessionForm] = useState({ date: "", startTime: "", duration: 1 });
@@ -424,6 +475,18 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
   const [editForm, setEditForm] = useState({ date: "", startTime: "", duration: 1 });
   const [editLoading, setEditLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const myMember = members.find(m => String(m.userId) === String(currentUserId));
+  const [tagValue, setTagValue] = useState("");
+  const [tagLoading, setTagLoading] = useState(false);
+  useEffect(() => { if (myMember?.tag != null) setTagValue(myMember.tag); }, [myMember?.tag]);
+  const saveTag = async () => {
+    setTagLoading(true);
+    try {
+      const updated = await apiFetch(`/api/study-groups/${group.id}/my-tag`, { method: "PATCH", body: JSON.stringify({ tag: tagValue }) });
+      setMembers(prev => prev.map(m => String(m.userId) === String(currentUserId) ? { ...m, tag: updated.tag } : m));
+    } catch {}
+    setTagLoading(false);
+  };
   const [renameValue, setRenameValue] = useState(group.name);
   const [renameLoading, setRenameLoading] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
@@ -552,6 +615,19 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
         .msg-input:focus { border-color: var(--primary) !important; }
         .send-btn:hover { opacity: 0.85; }
         .member-row:hover { background: var(--surface2) !important; cursor: pointer; }
+        .btn-settings:hover { background: var(--surface2) !important; border-color: var(--primary) !important; color: var(--primary) !important; }
+        .btn-reports:hover { background: color-mix(in srgb, var(--error) 10%, var(--surface)) !important; border-color: color-mix(in srgb, var(--error) 40%, transparent) !important; }
+        .btn-make-host:hover { background: color-mix(in srgb, var(--primary) 20%, transparent) !important; border-color: var(--primary) !important; }
+        .btn-remove:hover { background: color-mix(in srgb, var(--error) 25%, transparent) !important; }
+        .btn-delete-group:hover { background: color-mix(in srgb, var(--error) 25%, transparent) !important; border-color: color-mix(in srgb, var(--error) 60%, transparent) !important; }
+        .btn-group-switch:hover { background: var(--blue-light-bg) !important; }
+        .btn-group-switch.active { background: var(--blue-light-bg); border-left: 3px solid var(--primary); }
+        .btn-msg-action { transition: background 0.12s, border-color 0.12s; }
+        .btn-msg-action:hover { background: var(--surface) !important; border-color: var(--primary) !important; }
+        .btn-msg-heart:hover { background: color-mix(in srgb, #e74c3c 15%, var(--surface)) !important; border-color: color-mix(in srgb, #e74c3c 40%, transparent) !important; }
+        .btn-msg-thumb:hover { background: color-mix(in srgb, var(--primary) 15%, var(--surface)) !important; border-color: var(--primary) !important; }
+        .btn-msg-report:hover { background: color-mix(in srgb, var(--error) 15%, var(--surface)) !important; border-color: var(--error) !important; }
+        .btn-msg-close:hover { background: var(--surface2) !important; }
       `}</style>
 
       <div style={{ marginBottom: 20, flexShrink: 0 }}>
@@ -569,32 +645,33 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
         <div style={{ fontSize: 13, color: "var(--accent2)" }}>{group.courseName}</div>
 
         <div style={{ display:"flex", gap:8, marginTop:8, flexWrap:"wrap" }}>
-          {isHost && (
-          <button
+          <button className="btn-settings"
               onClick={() => setShowSettings(true)}
-              style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface)", color:"var(--text2)", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface)", color:"var(--text2)", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s" }}
           >
               Settings
           </button>
-          )}
           {isHost && (
-          <button
+          <button className="kk-pill"
               onClick={() => setShowSessionPanel(v => !v)}
-              style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface)", color:"var(--primary)", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:9,
+                border: showSessionPanel ? "1.5px solid var(--primary)" : "1px solid var(--border)",
+                background: showSessionPanel ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
+                color:"var(--primary)", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s" }}
           >
-                {showSessionPanel ? "Hide Scheduler" : "Schedule Session"}
+                {showSessionPanel ? "Hide Scheduler" : "Schedule Study Session"}
           </button> )}
           {isHost && (
-          <button
+          <button className="btn-reports"
               onClick={() => { setShowReports(true); loadReports(); }}
-              style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface)", color:"var(--error)", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", marginTop:0 }}
+              style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface)", color:"var(--error)", fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", marginTop:0, transition:"all .15s" }}
           >
               <Flag size={13} /> View Reports {reports.length > 0 && `(${reports.length})`}
           </button> )}
         </div>
       {showSessionPanel && isHost && (
-          <div style={{ marginTop:12, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"16px 18px", maxWidth:420 }}>
-            <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:14, color:"var(--primary)", marginBottom:12 }}>Schedule Next Study Session</div>
+          <div style={{ marginTop:12, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"16px 18px" }}>
+            <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:14, color:"var(--primary)", marginBottom:12 }}>Schedule Study Session</div>
             <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
               <div>
                 <label style={{ fontSize:11, fontWeight:600, color:"var(--text2)", display:"block", marginBottom:4 }}>Date</label>
@@ -615,7 +692,7 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
                   style={{ width:"100%", padding:"8px 10px", border:"1px solid var(--border)", borderRadius:8, fontSize:13, fontFamily:"inherit", background:"var(--surface2)", color:"var(--text)", outline:"none" }} />
               </div>
               <button onClick={submitSession} disabled={sessionLoading || !sessionForm.date || !sessionForm.startTime}
-                style={{ padding:"9px 0", borderRadius:9, border:"none", background:"var(--primary)", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", opacity: sessionLoading ? 0.7 : 1 }}>
+                style={{ padding:"9px 0", borderRadius:9, border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", opacity: sessionLoading ? 0.7 : 1, transition:"background .15s" }}>
                 {sessionLoading ? "Scheduling…" : "Schedule Session"}
               </button>
             </div>
@@ -634,7 +711,7 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
         <div style={{ width: 160, flexShrink: 0, background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "12px 10px", display:"flex", flexDirection:"column", gap:6, overflowY:"auto" }}>
           <div style={{ fontSize:11, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.07em", padding:"4px 6px", marginBottom:4 }}>My Groups</div>
           {myGroups.map(g => (
-            <button key={g.id} onClick={() => onSwitchGroup(g)}
+            <button key={g.id} onClick={() => onSwitchGroup(g)} className={`btn-group-switch${g.id === group.id ? " active" : ""}`}
               style={{ display:"flex", flexDirection:"column", alignItems:"flex-start", padding:"8px 10px", borderRadius:10, border:"none", background: g.id === group.id ? "var(--blue-light-bg)" : "var(--surface2)", cursor:"pointer", fontFamily:"inherit", textAlign:"left", borderLeft: g.id === group.id ? "3px solid var(--primary)" : "3px solid transparent", transition:"all 0.15s" }}>
               <span style={{ fontSize:12, fontWeight:700, color:"var(--primary)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", width:"100%" }}>{g.name}</span>
               <span style={{ fontSize:10, color:"var(--text2)", marginTop:2 }}>{g.courseName}</span>
@@ -643,6 +720,36 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
         </div>
 
         <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden" }}>
+
+          {pinnedMessages.length > 0 && (
+            <div style={{ borderBottom: "1px solid var(--border)", padding: "8px 14px", background: "color-mix(in srgb, var(--primary) 6%, var(--surface))", display: "flex", flexDirection: "column", gap: 4 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:5, fontSize: 10, fontWeight: 700, color: "var(--primary)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>
+                <Pin size={11} /> Pinned
+              </div>
+              {pinnedMessages.map(p => {
+                const isLong = p.content && p.content.length > 80;
+                const isExpanded = expandedPinId === p.id;
+                return (
+                <div key={p.id} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                  <div
+                    onClick={() => {
+                      if (isLong) setExpandedPinId(isExpanded ? null : p.id);
+                      scrollToMessage(p.id);
+                    }}
+                    style={{ fontSize: 12, color: "var(--text)", flex: 1, cursor: "pointer", lineHeight: 1.5 }}
+                  >
+                    <span style={{ fontWeight: 600, color: "var(--primary)", marginRight: 6 }}>{p.senderTag || `${p.senderFirstName} ${p.senderLastName}`}:</span>
+                    {isLong && !isExpanded
+                      ? <>{p.content.slice(0, 80)}<span style={{ color: "var(--text3)" }}>… <span style={{ color: "var(--primary)", fontWeight: 600 }}>see more</span></span></>
+                      : p.content
+                    }
+                  </div>
+                  <button onClick={() => pinMessage(p.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text3)", padding: "2px 4px", flexShrink: 0, display:"flex", alignItems:"center", marginTop: 1 }}><X size={12} /></button>
+                </div>
+                );
+              })}
+            </div>
+          )}
 
           <div style={{ flex: 1, overflowY: "auto", padding: "20px 18px" }}>
             {loading && (
@@ -653,18 +760,31 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
                 No messages yet. Say hello!
               </div>
             )}
-            {messages.map(m => (
+            {messages.map((m, i) => {
+                const prev = messages[i - 1];
+                const next = messages[i + 1];
+                const isOwn = String(m.senderId) === String(currentUserId);
+                const sameAsPrev = prev && String(prev.senderId) === String(m.senderId);
+                const sameAsNext = next && String(next.senderId) === String(m.senderId);
+                return (
                 <MessageBubble
                     key={m.id}
                     message={m}
-                    isOwn={String(m.senderId) === String(currentUserId)}
+                    isOwn={isOwn}
+                    showName={!isOwn && !sameAsPrev}
+                    showTime={!sameAsNext}
                     onDelete={deleteMessage}
                     onReact={reactToMessage}
                     onReport={reportMessage}
+                    onPin={pinMessage}
+                    onViewProfile={(senderId) => { const mem = members.find(x => String(x.userId) === String(senderId)); if (mem) setViewingMember(mem); }}
+                    avatarOverride={members.find(x => String(x.userId) === String(m.senderId))?.avatar}
                     currentUserId={currentUserId}
                     selectedMessageId={selectedMessageId}
                     setSelectedMessageId={setSelectedMessageId}
-                /> ))}
+                    msgRef={el => { if (el) messageRefs.current[m.id] = el; else delete messageRefs.current[m.id]; }}
+                    highlighted={highlightedMessageId === m.id}
+                />);})}
             <div ref={messagesEndRef} />
 
             {showReports && (
@@ -835,8 +955,8 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
                   <div style={{ display:"flex", gap:8 }}>
                     <input value={renameValue} onChange={e => setRenameValue(e.target.value)}
                       style={{ flex:1, padding:"8px 10px", border:"1px solid var(--border)", borderRadius:8, fontSize:13, fontFamily:"inherit", background:"var(--surface2)", color:"var(--text)", outline:"none" }} />
-                    <button onClick={renameGroup} disabled={renameLoading}
-                      style={{ padding:"8px 14px", borderRadius:8, border:"none", background:"var(--primary)", color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                    <button className="kk-pill" onClick={renameGroup} disabled={renameLoading}
+                      style={{ padding:"8px 14px", borderRadius:8, border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", transition:"background .15s" }}>
                       {renameLoading ? "Saving…" : "Save"}
                     </button>
                   </div>
@@ -849,24 +969,22 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
                   <div key={m.userId} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid var(--border)" }}>
                     <div className="member-row" onClick={() => { setViewingMember(m); setShowSettings(false); }}
                       style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", flex:1 }}>
-                      <div style={{ width:30, height:30, borderRadius:"50%", background:"var(--blue-light-bg)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"var(--primary)", flexShrink:0 }}>
-                        {m.firstName?.[0]}{m.lastName?.[0]}
-                      </div>
+                      <MemberAvatar firstName={m.firstName} lastName={m.lastName} avatar={m.avatar} size={30} />
                       <div>
-                        <div style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>{m.firstName} {m.lastName}</div>
+                        <div style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>{m.tag || `${m.firstName} ${m.lastName}`}</div>
                         <div style={{ fontSize:11, color:"var(--text2)", textTransform:"capitalize" }}>{m.role?.toLowerCase()}</div>
                       </div>
                     </div>
                     {isHost && String(m.userId) !== String(currentUserId) && (
                       <div style={{ display:"flex", gap:6, marginLeft:8 }}>
                         {m.role !== "HOST" && (
-                          <button onClick={() => assignHost(m.userId)}
-                            style={{ padding:"5px 10px", borderRadius:7, border:"1px solid var(--border)", background:"var(--blue-light-bg)", color:"var(--primary)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                          <button className="btn-make-host" onClick={() => assignHost(m.userId)}
+                            style={{ padding:"5px 10px", borderRadius:7, border:"1px solid var(--border)", background:"var(--blue-light-bg)", color:"var(--primary)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit", transition:"all .15s" }}>
                             Make Host
                           </button>
                         )}
-                        <button onClick={() => removeMember(m.userId)}
-                          style={{ padding:"5px 10px", borderRadius:7, border:"none", background:"var(--error-bg)", color:"var(--error)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                        <button className="btn-remove" onClick={() => removeMember(m.userId)}
+                          style={{ padding:"5px 10px", borderRadius:7, border:"none", background:"var(--error-bg)", color:"var(--error)", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit", transition:"all .15s" }}>
                           Remove
                         </button>
                       </div>
@@ -930,20 +1048,35 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
                 </div>
               )}
 
-              <button onClick={async () => {
-                try { await apiFetch(`/api/study-groups/${group.id}/leave`, { method: "DELETE" }); onBack(); }
-                catch (e) { setError(e.message); }
-              }}
-                style={{ padding:"10px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface2)", color:"var(--text2)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
-                Leave Group
-              </button>
+              <div>
+                <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", marginBottom:8, textTransform:"uppercase", letterSpacing:"0.06em" }}>Add Member Tag</div>
+                <div style={{ fontSize:11, color:"var(--text3)", marginBottom:8 }}>Appears instead of your name.</div>
+                <div style={{ display:"flex", gap:8 }}>
+                  <input value={tagValue} onChange={e => setTagValue(e.target.value)} placeholder="e.g. coding connoisseur"
+                    style={{ flex:1, padding:"8px 10px", border:"1px solid var(--border)", borderRadius:8, fontSize:13, fontFamily:"inherit", background:"var(--surface2)", color:"var(--text)", outline:"none" }} />
+                  <button className="kk-pill" onClick={saveTag} disabled={tagLoading}
+                    style={{ padding:"8px 14px", borderRadius:8, border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                    {tagLoading ? "Saving…" : "Save"}
+                  </button>
+                </div>
+              </div>
 
-              {isHost && (
-                <button onClick={deleteGroup}
-                  style={{ padding:"10px", borderRadius:9, border:"none", background:"var(--error-bg)", color:"var(--error)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
-                  Delete Group
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                <button className="kk-pill" onClick={async () => {
+                  try { await apiFetch(`/api/study-groups/${group.id}/leave`, { method: "DELETE" }); onBack(); }
+                  catch (e) { setError(e.message); }
+                }}
+                  style={{ padding:"10px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface2)", color:"var(--text2)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", transition:"all .15s" }}>
+                  Leave Group
                 </button>
-              )}
+
+                {isHost && (
+                  <button className="kk-pill btn-delete-group" onClick={deleteGroup}
+                    style={{ padding:"10px", borderRadius:9, border:"1px solid color-mix(in srgb, var(--error) 30%, transparent)", background:"var(--error-bg)", color:"var(--error)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", transition:"all .15s" }}>
+                    Delete Group
+                  </button>
+                )}
+              </div>
 
             </div>
           </div>
@@ -979,11 +1112,9 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
                   <div key={m.userId} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"9px 6px", borderBottom:"1px solid var(--border)", borderRadius:8 }}>
                     <div className="member-row" onClick={() => { setViewingMember(m); setShowGroupInfo(false); }}
                       style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer", flex:1 }}>
-                      <div style={{ width:34, height:34, borderRadius:"50%", background:"var(--blue-light-bg)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"var(--primary)", flexShrink:0 }}>
-                        {m.firstName?.[0]}{m.lastName?.[0]}
-                      </div>
+                      <MemberAvatar firstName={m.firstName} lastName={m.lastName} avatar={m.avatar} size={34} />
                       <div>
-                        <div style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>{m.firstName} {m.lastName}</div>
+                        <div style={{ fontSize:13, fontWeight:600, color:"var(--primary)" }}>{m.tag || `${m.firstName} ${m.lastName}`}</div>
                         <div style={{ fontSize:11, color:"var(--text2)", textTransform:"capitalize" }}>{m.role?.toLowerCase()}</div>
                       </div>
                     </div>

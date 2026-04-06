@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Login from "./Login";
 import Register from "./Register";
 import Dashboard from "./Dashboard";
@@ -26,6 +26,21 @@ function hasValidToken() {
   }
 }
 
+async function tryRefreshToken() {
+  const token = localStorage.getItem("kk_token");
+  if (!token) return;
+  try {
+    const res = await fetch("http://localhost:8080/api/auth/refresh", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.token) localStorage.setItem("kk_token", data.token);
+    }
+  } catch {}
+}
+
 export default function App() {
   const [page, setPage] = useState(
     resettoken  ? "reset-password" :
@@ -33,6 +48,10 @@ export default function App() {
     hasValidToken() ? "dashboard" : "login"
   );
   const [prefillEmail, setPrefillEmail] = useState("");
+
+  useEffect(() => {
+    if (hasValidToken()) tryRefreshToken();
+  }, []);
 
   const goToLogin = () => {
     window.history.replaceState({}, document.title, "/");

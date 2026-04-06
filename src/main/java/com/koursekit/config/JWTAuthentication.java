@@ -41,6 +41,15 @@ public class JWTAuthentication extends OncePerRequestFilter {
                 String id = jwtutil.gettokenuserid(token);
                 User user = userrepo.findById(Long.parseLong(id)).orElse(null);
                 if (user != null && user.isVerified()) {
+                    // reject tokens issued before logout-all
+                    if (user.getTokenIssuedAfter() != null) {
+                        java.util.Date issuedAt = jwtutil.getTokenIssuedAt(token);
+                        if (issuedAt != null && issuedAt.toInstant().isBefore(
+                                user.getTokenIssuedAfter().atZone(java.time.ZoneId.systemDefault()).toInstant())) {
+                            filterChain.doFilter(request, response);
+                            return;
+                        }
+                    }
                     String role = jwtutil.gettokenrole(token);
                     List<GrantedAuthority> admins = List.of(new SimpleGrantedAuthority("ROLE_" + role));
                     UsernamePasswordAuthenticationToken authentication =

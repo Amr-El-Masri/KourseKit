@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { MessageSquare, Plus, ArrowLeft, Trash2, Flag, Search, ChevronUp, BookOpen, GraduationCap, LayoutGrid, Check, User } from "lucide-react";
+import { MessageSquare, ArrowLeft, Trash2, Flag, Search, ChevronUp, BookOpen, GraduationCap, LayoutGrid, Check, User } from "lucide-react";
 
 const API = "http://localhost:8080";
 
@@ -452,8 +452,8 @@ function CreatePost({ token, userEmail, userId, displayName, onDone, initialCate
 
       {err && (
         <div style={{
-          background: err.includes("review") ? "var(--surface2)" : "#fef0f0",
-          border: `1px solid ${err.includes("review") ? "var(--border)" : "#f5c6c6"}`,
+          background: err.includes("review") ? "var(--surface2)" : "color-mix(in srgb, var(--danger, #c0392b) 10%, var(--surface))",
+          border: `1px solid ${err.includes("review") ? "var(--border)" : "color-mix(in srgb, var(--danger, #c0392b) 30%, var(--border))"}`,
           borderRadius: 10, padding: "9px 14px", fontSize: 13,
           color: err.includes("review") ? "var(--accent2)" : "var(--danger, #c0392b)",
           marginBottom: 14,
@@ -467,14 +467,20 @@ function CreatePost({ token, userEmail, userId, displayName, onDone, initialCate
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         {CATEGORIES.filter(c => c.id !== "ALL").map(c => {
           const Icon = c.icon;
+          const isActive = category === c.id;
           return (
-            <button key={c.id} onClick={() => { setCategory(c.id); setCourseTag(""); setProfTag(""); }} style={{
-              display: "flex", alignItems: "center", gap: 6,
-              padding: "7px 16px", borderRadius: 10, border: "1px solid var(--border)",
-              background: category === c.id ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--surface)",
-              color: category === c.id ? "var(--primary)" : "var(--text2)",
-              fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
-            }}>
+            <button key={c.id}
+              onClick={() => { setCategory(c.id); setCourseTag(""); setProfTag(""); }}
+              onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "color-mix(in srgb, var(--primary) 8%, var(--surface))"; e.currentTarget.style.color = "var(--primary)"; e.currentTarget.style.borderColor = "color-mix(in srgb, var(--primary) 30%, var(--border))"; }}}
+              onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "var(--surface)"; e.currentTarget.style.color = "var(--text2)"; e.currentTarget.style.borderColor = "var(--border)"; }}}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "7px 16px", borderRadius: 10, border: "1px solid var(--border)",
+                background: isActive ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--surface)",
+                color: isActive ? "var(--primary)" : "var(--text2)",
+                fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+                transition: "all .15s",
+              }}>
               <Icon size={13} /> {c.label}
             </button>
           );
@@ -528,10 +534,16 @@ function CreatePost({ token, userEmail, userId, displayName, onDone, initialCate
       <div style={{ fontSize: 11, color: "var(--text3)", marginBottom: 16 }}>{body.length} chars</div>
 
       <div style={{ display: "flex", gap: 10 }}>
-        <button onClick={submit} disabled={submitting} style={f.primaryBtn}>
+        <button onClick={submit} disabled={submitting} style={f.primaryBtn}
+          onMouseEnter={e => { e.currentTarget.style.background = "color-mix(in srgb, var(--primary) 25%, transparent)"; e.currentTarget.style.borderColor = "color-mix(in srgb, var(--primary) 50%, transparent)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "color-mix(in srgb, var(--primary) 15%, transparent)"; e.currentTarget.style.borderColor = "color-mix(in srgb, var(--primary) 30%, transparent)"; }}>
           {submitting ? "Posting…" : "Post"}
         </button>
-        <button onClick={onDone} style={f.cancelBtn}>Cancel</button>
+        <button onClick={onDone} style={f.cancelBtn}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--surface3, var(--border))"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "var(--surface2)"; }}>
+          Cancel
+        </button>
       </div>
     </div>
   );
@@ -655,9 +667,9 @@ function MyPostsPanel({ token, userEmail, onOpenPost }) {
   }, [token]);
 
   const STATUS_STYLE = {
-    APPROVED: { bg:"var(--surface2)",  color:"var(--text2)",   label:"Approved"           },
-    PENDING:  { bg:"#fff8ec",          color:"#b7680a",        label:"Pending moderation" },
-    FLAGGED:  { bg:"#fef0f0",          color:"#c0392b",        label:"Flagged"            },
+    APPROVED: { bg:"var(--surface2)",                                                          color:"var(--text2)",            label:"Approved"           },
+    PENDING:  { bg:"color-mix(in srgb, #b7680a 12%, var(--surface))",                         color:"#b7680a",                 label:"Pending moderation" },
+    FLAGGED:  { bg:"color-mix(in srgb, var(--danger, #c0392b) 12%, var(--surface))",          color:"var(--danger, #c0392b)",  label:"Flagged"            },
   };
 
   const categoryColor = { COURSE: "var(--primary)", PROFESSOR: "var(--accent2)", GENERAL: "var(--accent)" };
@@ -678,12 +690,11 @@ function MyPostsPanel({ token, userEmail, onOpenPost }) {
 
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-      {sorted.map(post => {
+      {sorted.map((post, i) => {
         const s = STATUS_STYLE[post.status] || STATUS_STYLE.PENDING;
         const CatIcon = CATEGORIES.find(c => c.id === post.category)?.icon || MessageSquare;
         return (
-          <div key={post.id} style={{
-            ...f.card,
+          <div key={post.id} className="post-anim" style={{ animationDelay: `${i * 0.04}s`, ...f.card,
             opacity: post.status === "FLAGGED" ? 0.7 : 1,
             cursor: post.status === "APPROVED" ? "pointer" : "default",
           }}
@@ -731,7 +742,7 @@ function MyPostsPanel({ token, userEmail, onOpenPost }) {
               </div>
             )}
             {post.status === "FLAGGED" && (
-              <div style={{ fontSize:12, color:"#c0392b", marginTop:10 }}>
+              <div style={{ fontSize:12, color:"var(--danger, #c0392b)", marginTop:10 }}>
                 Your post has been flagged and is under review by an admin.
               </div>
             )}
@@ -870,8 +881,8 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
         </div>
         {token && (
           <button className="f-primary-btn" onClick={() => setComposing(c => !c)}
-            style={{ ...f.primaryBtn, display: "flex", alignItems: "center", gap: 8 }}>
-            {composing ? "Cancel" : <><Plus size={15} /> New Post</>}
+            style={{ padding:"10px 20px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s" }}>
+            {composing ? "Cancel" : "+ New Post"}
           </button>
         )}
       </div>
@@ -881,28 +892,28 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
         {CATEGORIES.map(c => {
           const Icon = c.icon;
           return (
-            <button key={c.id} className="kk-tab" data-active={category === c.id} onClick={() => { setCategory(c.id); sessionStorage.setItem("kk_forum_category", c.id); setComposing(false); setShowMyPosts(false); }} style={{
+            <button key={c.id} className="kk-tab" data-active={category === c.id && !showMyPosts} onClick={() => { setCategory(c.id); sessionStorage.setItem("kk_forum_category", c.id); setComposing(false); setShowMyPosts(false); }} style={{
               display: "flex", alignItems: "center", gap: 6,
               padding: "8px 18px", borderRadius: 9,
-              fontSize: 13, fontWeight: category === c.id ? 600 : 400, cursor: "pointer",
+              fontSize: 13, fontWeight: category === c.id && !showMyPosts ? 600 : 400, cursor: "pointer",
               fontFamily: "'DM Sans', sans-serif", transition: "all .15s",
-              background: category === c.id ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
-              color:  category === c.id ? "var(--primary)" : "var(--text2)",
-              border: category === c.id ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
+              background: category === c.id && !showMyPosts ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
+              color:  category === c.id && !showMyPosts ? "var(--primary)" : "var(--text2)",
+              border: category === c.id && !showMyPosts ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
             }}>
               <Icon size={14} /> {c.label}
             </button>
           );
         })}
         {token && (
-          <button onClick={() => { setShowMyPosts(p => !p); setComposing(false); }} style={{
+          <button className="kk-tab" data-active={showMyPosts} onClick={() => { setShowMyPosts(p => !p); setComposing(false); }} style={{
             display: "flex", alignItems: "center", gap: 6,
             padding: "8px 18px", borderRadius: 9,
             fontSize: 13, fontWeight: showMyPosts ? 600 : 400, cursor: "pointer",
             fontFamily: "'DM Sans', sans-serif", transition: "all .15s",
-            background: showMyPosts ? "color-mix(in srgb, var(--accent2) 14%, var(--surface))" : "var(--surface)",
-            color:      showMyPosts ? "var(--accent2)" : "var(--text2)",
-            border:     showMyPosts ? "1.5px solid var(--accent2)" : "1.5px solid var(--border)",
+            background: showMyPosts ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
+            color:      showMyPosts ? "var(--primary)" : "var(--text2)",
+            border:     showMyPosts ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
           }}>
             <User size={14} /> My Posts
           </button>

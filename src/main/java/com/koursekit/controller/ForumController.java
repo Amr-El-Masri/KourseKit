@@ -70,6 +70,10 @@ public class ForumController {
             @RequestParam String category,
             @RequestParam(required = false) String courseTag,
             @RequestParam(required = false) String professorTag) {
+        if (title == null || title.isBlank())
+            return ResponseEntity.badRequest().body("Post title cannot be empty.");
+        if (body == null || body.isBlank())
+            return ResponseEntity.badRequest().body("Post body cannot be empty.");
         try {
             String userId = getEmailFromRequest(request);
             ForumPost post = forumService.createPost(

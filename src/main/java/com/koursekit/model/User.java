@@ -51,7 +51,7 @@ public class User {
     private String totalCredits;
     @Column(name = "bio", columnDefinition = "TEXT")
     private String bio;
-    @Column(name = "avatar")
+    @Column(name = "avatar", columnDefinition = "TEXT")
     private String avatar;
     @Column(name = "double_major", columnDefinition = "TINYINT(1) DEFAULT 0")
     private boolean doubleMajor = false;
@@ -97,6 +97,9 @@ public class User {
 
     @Column(name = "strike_count", nullable = false, columnDefinition = "INT DEFAULT 0")
     private int strikeCount = 0;
+
+    @Column(name = "token_issued_after")
+    private LocalDateTime tokenIssuedAfter;
 
     public User() {}
     public User(String email, String pass) {
@@ -223,4 +226,7 @@ public class User {
 
     public int getStrikeCount() { return strikeCount; }
     public void setStrikeCount(int strikeCount) { this.strikeCount = strikeCount; }
+
+    public LocalDateTime getTokenIssuedAfter() { return tokenIssuedAfter; }
+    public void setTokenIssuedAfter(LocalDateTime tokenIssuedAfter) { this.tokenIssuedAfter = tokenIssuedAfter; }
 }

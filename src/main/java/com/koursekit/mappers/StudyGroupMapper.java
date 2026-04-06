@@ -32,6 +32,8 @@ public class StudyGroupMapper {
             member.getUser().getId(),
             member.getUser().getFirstName(),
             member.getUser().getLastName(),
+            member.getUser().getAvatar(),
+            member.getTag(),
             member.getRole(),
             member.getJoinedAt()
         );

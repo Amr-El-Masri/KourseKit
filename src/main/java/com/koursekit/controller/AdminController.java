@@ -6,6 +6,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -20,11 +23,15 @@ import org.springframework.web.bind.annotation.RestController;
 import com.koursekit.config.EmailConfig;
 import com.koursekit.dto.Admins;
 import com.koursekit.dto.MassRequest;
+import com.koursekit.model.ForumPost;
+import com.koursekit.model.GroupReport;
 import com.koursekit.model.ProfessorReview;
 import com.koursekit.model.Report;
 import com.koursekit.model.Review;
 import com.koursekit.model.ReviewStatus;
 import com.koursekit.model.User;
+import com.koursekit.repository.ForumPostRepository;
+import com.koursekit.repository.GroupReportsRepo;
 import com.koursekit.repository.ProfessorReviewRepository;
 import com.koursekit.repository.ReportRepository;
 import com.koursekit.repository.ReviewRepository;
@@ -38,6 +45,8 @@ public class AdminController {
     @Autowired private ReviewRepository reviewrepo;
     @Autowired private ProfessorReviewRepository profReviewRepo;
     @Autowired private ReportRepository reportRepo;
+    @Autowired private ForumPostRepository forumPostRepo;
+    @Autowired private GroupReportsRepo groupReportsRepo;
 
     private Admins toAdminsDto(User u) {
         return new Admins(u.getId(), u.getEmail(), u.getRole(), u.isActive(), u.getCreatedAt(),
@@ -45,11 +54,21 @@ public class AdminController {
     }
 
     @GetMapping("/users")
-    public List<Admins> getUsers(@RequestParam(required = false) String search) {
-        List<User> users = (search != null && !search.isBlank())
-            ? userrepo.findByEmailContainingIgnoreCase(search)
-            : userrepo.findAll();
-        return users.stream().map(this::toAdminsDto).collect(Collectors.toList());
+    public ResponseEntity<Map<String, Object>> getUsers(
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<User> userPage = (search != null && !search.isBlank())
+            ? userrepo.findByEmailContainingIgnoreCase(search, pageable)
+            : userrepo.findAll(pageable);
+        List<Admins> content = userPage.getContent().stream().map(this::toAdminsDto).collect(Collectors.toList());
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", content);
+        response.put("totalpages", userPage.getTotalPages());
+        response.put("totalelements", userPage.getTotalElements());
+        response.put("number", userPage.getNumber());
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/users/mass-status")
@@ -179,8 +198,17 @@ public class AdminController {
     }
 
     @GetMapping("/reviews")
-    public List<Map<String, Object>> getAllReviews() {
-        return reviewrepo.findAll().stream().map(this::reviewToMap).collect(Collectors.toList());
+    public ResponseEntity<Map<String, Object>> getAllReviews(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size) {
+        Page<Review> reviewPage = reviewrepo.findAll(PageRequest.of(page, size));
+        List<Map<String, Object>> content = reviewPage.getContent().stream().map(this::reviewToMap).collect(Collectors.toList());
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", content);
+        response.put("totalpages", reviewPage.getTotalPages());
+        response.put("totalelements", reviewPage.getTotalElements());
+        response.put("number", reviewPage.getNumber());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/reviews/flagged")
@@ -220,8 +248,16 @@ public class AdminController {
 
     @DeleteMapping("/reviews/{reviewid}")
     public ResponseEntity<?> deleteReview(@PathVariable Long reviewid) {
-        if (!reviewrepo.existsById(reviewid)) { return ResponseEntity.notFound().build(); }
-        reviewrepo.deleteById(reviewid);
+        Review r = reviewrepo.findById(reviewid).orElse(null);
+        if (r == null) return ResponseEntity.notFound().build();
+        reviewrepo.delete(r);
+        userrepo.findByEmail(r.getUserId()).ifPresent(author -> {
+            int strikes = author.getStrikeCount() + 1;
+            author.setStrikeCount(strikes);
+            author.setFlagged(true);
+            if (strikes >= 5) author.setActive(false);
+            userrepo.save(author);
+        });
         return ResponseEntity.ok("Review deleted.");
     }
 
@@ -233,8 +269,17 @@ public class AdminController {
     }
 
     @GetMapping("/professor-reviews")
-    public List<Map<String, Object>> getAllProfReviews() {
-        return profReviewRepo.findAll().stream().map(this::profReviewToMap).collect(Collectors.toList());
+    public ResponseEntity<Map<String, Object>> getAllProfReviews(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size) {
+        Page<ProfessorReview> reviewPage = profReviewRepo.findAll(PageRequest.of(page, size));
+        List<Map<String, Object>> content = reviewPage.getContent().stream().map(this::profReviewToMap).collect(Collectors.toList());
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", content);
+        response.put("totalpages", reviewPage.getTotalPages());
+        response.put("totalelements", reviewPage.getTotalElements());
+        response.put("number", reviewPage.getNumber());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/professor-reviews/flagged")
@@ -274,8 +319,16 @@ public class AdminController {
 
     @DeleteMapping("/professor-reviews/{reviewid}")
     public ResponseEntity<?> deleteProfReview(@PathVariable Long reviewid) {
-        if (!profReviewRepo.existsById(reviewid)) { return ResponseEntity.notFound().build(); }
-        profReviewRepo.deleteById(reviewid);
+        ProfessorReview r = profReviewRepo.findById(reviewid).orElse(null);
+        if (r == null) return ResponseEntity.notFound().build();
+        profReviewRepo.delete(r);
+        userrepo.findByEmail(r.getUserId()).ifPresent(author -> {
+            int strikes = author.getStrikeCount() + 1;
+            author.setStrikeCount(strikes);
+            author.setFlagged(true);
+            if (strikes >= 5) author.setActive(false);
+            userrepo.save(author);
+        });
         return ResponseEntity.ok("Review deleted.");
     }
 
@@ -299,5 +352,130 @@ public class AdminController {
         if (!reportRepo.existsById(reportid)) { return ResponseEntity.notFound().build(); }
         reportRepo.deleteById(reportid);
         return ResponseEntity.ok("Report deleted.");
+    }
+
+    // ─── FORUM POSTS ──────────────────────────────────────────────────────────
+
+    private Map<String, Object> forumPostToMap(ForumPost p) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id",           p.getId());
+        m.put("userid",       p.getUserId());
+        m.put("displayname",  p.getDisplayName());
+        m.put("title",        p.getTitle());
+        m.put("body",         p.getBody());
+        m.put("category",     p.getCategory());
+        m.put("coursetag",    p.getCourseTag());
+        m.put("professortag", p.getProfessorTag());
+        m.put("relatecount",  p.getRelateCount());
+        m.put("commentcount", p.getCommentCount());
+        m.put("status",       p.getStatus());
+        m.put("createdat",    p.getCreatedAt());
+        List<Report> reports = reportRepo.findByForumPostId(p.getId());
+        m.put("reportcount",   reports.size());
+        m.put("reportreasons", reports.stream().map(Report::getReason).collect(Collectors.toList()));
+        return m;
+    }
+
+    @GetMapping("/forum-posts/flagged")
+    public List<Map<String, Object>> getFlaggedForumPosts() {
+        return forumPostRepo.findByStatusInOrderByCreatedAtDesc(List.of(ReviewStatus.FLAGGED, ReviewStatus.PENDING))
+            .stream().map(this::forumPostToMap).collect(Collectors.toList());
+    }
+
+    @GetMapping("/forum-posts/reported")
+    public List<Map<String, Object>> getReportedForumPosts() {
+        return forumPostRepo.findByStatusOrderByCreatedAtDesc(ReviewStatus.REPORTED)
+            .stream().map(this::forumPostToMap)
+            .sorted((a, b) -> Integer.compare((int) b.get("reportcount"), (int) a.get("reportcount")))
+            .collect(Collectors.toList());
+    }
+
+    @PutMapping("/forum-posts/{postid}/approve")
+    public ResponseEntity<?> approveForumPost(@PathVariable Long postid) {
+        ForumPost p = forumPostRepo.findById(postid).orElseThrow(() -> new RuntimeException("Post not found."));
+        p.setStatus(ReviewStatus.APPROVED);
+        forumPostRepo.save(p);
+        return ResponseEntity.ok("Post approved.");
+    }
+
+    @PutMapping("/forum-posts/{postid}/warn")
+    public ResponseEntity<?> warnForumPost(@PathVariable Long postid) {
+        ForumPost p = forumPostRepo.findById(postid).orElseThrow(() -> new RuntimeException("Post not found."));
+        forumPostRepo.delete(p);
+        userrepo.findByEmail(p.getUserId()).ifPresent(author -> {
+            int strikes = author.getStrikeCount() + 1;
+            author.setStrikeCount(strikes);
+            author.setFlagged(true);
+            if (strikes >= 5) author.setActive(false);
+            userrepo.save(author);
+        });
+        return ResponseEntity.ok("User warned.");
+    }
+
+    @DeleteMapping("/forum-posts/{postid}")
+    public ResponseEntity<?> deleteForumPost(@PathVariable Long postid) {
+        ForumPost p = forumPostRepo.findById(postid).orElse(null);
+        if (p == null) return ResponseEntity.notFound().build();
+        forumPostRepo.delete(p);
+        userrepo.findByEmail(p.getUserId()).ifPresent(author -> {
+            int strikes = author.getStrikeCount() + 1;
+            author.setStrikeCount(strikes);
+            author.setFlagged(true);
+            if (strikes >= 5) author.setActive(false);
+            userrepo.save(author);
+        });
+        return ResponseEntity.ok("Post deleted.");
+    }
+
+    // ─── GROUP REPORTS ────────────────────────────────────────────────────────
+
+    private Map<String, Object> groupReportToMap(GroupReport r) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id",                r.getId());
+        m.put("groupid",           r.getStudyGroup().getId());
+        m.put("groupname",         r.getStudyGroup().getName());
+        m.put("reportedbyemail",   r.getReportedBy().getEmail());
+        m.put("reporteduseremail", r.getReportedUser().getEmail());
+        m.put("reason",            r.getReason());
+        m.put("status",            r.getStatus());
+        m.put("createdat",         r.getCreatedAt());
+        if (r.getMessage() != null) m.put("messagecontent", r.getMessage().getContent());
+        return m;
+    }
+
+    @GetMapping("/group-reports")
+    public List<Map<String, Object>> getPendingGroupReports() {
+        return groupReportsRepo.findByStatus(GroupReport.Status.PENDING)
+            .stream().map(this::groupReportToMap).collect(Collectors.toList());
+    }
+
+    @PutMapping("/group-reports/{reportid}/resolve")
+    public ResponseEntity<?> resolveGroupReport(@PathVariable Long reportid) {
+        GroupReport r = groupReportsRepo.findById(reportid).orElseThrow(() -> new RuntimeException("Report not found."));
+        r.setStatus(GroupReport.Status.RESOLVED);
+        groupReportsRepo.save(r);
+        return ResponseEntity.ok("Report resolved.");
+    }
+
+    @PutMapping("/group-reports/{reportid}/warn")
+    public ResponseEntity<?> warnGroupMember(@PathVariable Long reportid) {
+        GroupReport r = groupReportsRepo.findById(reportid).orElseThrow(() -> new RuntimeException("Report not found."));
+        userrepo.findByEmail(r.getReportedUser().getEmail()).ifPresent(user -> {
+            int strikes = user.getStrikeCount() + 1;
+            user.setStrikeCount(strikes);
+            user.setFlagged(true);
+            if (strikes >= 5) user.setActive(false);
+            userrepo.save(user);
+        });
+        r.setStatus(GroupReport.Status.RESOLVED);
+        groupReportsRepo.save(r);
+        return ResponseEntity.ok("User warned.");
+    }
+
+    @DeleteMapping("/group-reports/{reportid}")
+    public ResponseEntity<?> dismissGroupReport(@PathVariable Long reportid) {
+        if (!groupReportsRepo.existsById(reportid)) return ResponseEntity.notFound().build();
+        groupReportsRepo.deleteById(reportid);
+        return ResponseEntity.ok("Report dismissed.");
     }
 }

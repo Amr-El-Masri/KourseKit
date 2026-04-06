@@ -9,10 +9,11 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "tokens")
+@Table(name = "tokens", indexes = @Index(name = "idx_token_user_id", columnList = "user_id"))
 public class Token {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

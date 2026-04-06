@@ -37,6 +37,12 @@ public class GroupMessage {
     @Column(name = "reactions_json", columnDefinition = "TEXT")
     private String reactionsJson = "{}";
 
+    @Column(name = "pinned", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private Boolean pinned = false;
+
+    @Column(name = "pinned_at")
+    private java.time.LocalDateTime pinnedAt;
+
     public GroupMessage() {}
 
     public GroupMessage(StudyGroup studyGroup, User sender, String content) {
@@ -87,9 +93,15 @@ public class GroupMessage {
     public void setIsDeleted(Boolean isDeleted) {
         this.isDeleted = isDeleted; }
 
-    public String getReactionsJson() { 
+    public String getReactionsJson() {
         return reactionsJson; }
-        
-    public void setReactionsJson(String reactionsJson) { 
+
+    public void setReactionsJson(String reactionsJson) {
         this.reactionsJson = reactionsJson; }
+
+    public Boolean getPinned() { return pinned != null && pinned; }
+    public void setPinned(Boolean pinned) { this.pinned = pinned; }
+
+    public java.time.LocalDateTime getPinnedAt() { return pinnedAt; }
+    public void setPinnedAt(java.time.LocalDateTime pinnedAt) { this.pinnedAt = pinnedAt; }
 }

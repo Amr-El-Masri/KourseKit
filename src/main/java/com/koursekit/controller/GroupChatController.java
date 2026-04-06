@@ -3,8 +3,10 @@ package com.koursekit.controller;
 import com.koursekit.model.GroupMessage;
 import com.koursekit.dto.GroupMessageResponseDTO;
 import com.koursekit.mappers.GroupMessageMapper;
-import com.koursekit.model.GroupMessage;
+import com.koursekit.model.StudyGroupMember;
 import com.koursekit.model.User;
+import com.koursekit.repository.GroupMessageRepo;
+import com.koursekit.repository.StudyGroupMemberRepo;
 import com.koursekit.service.GroupMessageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -17,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import com.koursekit.dto.GroupReportsRequestDTO;
-import com.koursekit.dto.GroupReportsResponseDTO;
 import com.koursekit.mappers.GroupReportsMapper;
 import com.koursekit.model.GroupReport;
 
@@ -28,12 +29,21 @@ public class GroupChatController {
     private final GroupMessageMapper groupMessageMapper;
     private final SimpMessagingTemplate messagingTemplate;
     private final GroupReportsMapper groupReportsMapper;
+    private final StudyGroupMemberRepo memberRepo;
+    private final GroupMessageRepo groupMessageRepo;
 
-    public GroupChatController(GroupMessageService groupMessageService, GroupMessageMapper groupMessageMapper, SimpMessagingTemplate messagingTemplate, GroupReportsMapper groupReportsMapper) {
+    public GroupChatController(GroupMessageService groupMessageService, GroupMessageMapper groupMessageMapper, SimpMessagingTemplate messagingTemplate, GroupReportsMapper groupReportsMapper, StudyGroupMemberRepo memberRepo, GroupMessageRepo groupMessageRepo) {
         this.groupMessageService = groupMessageService;
         this.groupMessageMapper = groupMessageMapper;
         this.messagingTemplate = messagingTemplate;
         this.groupReportsMapper = groupReportsMapper;
+        this.memberRepo = memberRepo;
+        this.groupMessageRepo = groupMessageRepo;
+    }
+
+    private String getSenderTag(Long groupId, Long senderId) {
+        return memberRepo.findByStudyGroup_IdAndUser_Id(groupId, senderId)
+            .stream().findFirst().map(StudyGroupMember::getTag).orElse(null);
     }
 
     private Long currentUserId() {
@@ -47,7 +57,7 @@ public class GroupChatController {
         Long senderId = Long.parseLong(payload.get("senderId"));
         String content = payload.get("content");
         GroupMessage saved = groupMessageService.sendMessage(groupId, senderId, content);
-        GroupMessageResponseDTO dto = groupMessageMapper.toResponseDTO(saved);
+        GroupMessageResponseDTO dto = groupMessageMapper.toResponseDTO(saved, getSenderTag(groupId, senderId));
         messagingTemplate.convertAndSend("/topic/group/" + groupId, dto);
     }
 
@@ -56,7 +66,7 @@ public class GroupChatController {
     public ResponseEntity<?> loadHistory(@PathVariable Long groupId) {
         List<GroupMessageResponseDTO> messages = groupMessageService.loadMessages(groupId)
             .stream()
-            .map(groupMessageMapper::toResponseDTO)
+            .map(m -> groupMessageMapper.toResponseDTO(m, getSenderTag(groupId, m.getSender().getId())))
             .toList();
         return ResponseEntity.ok(messages);
     }
@@ -76,6 +86,33 @@ public class GroupChatController {
         GroupMessage msg = groupMessageService.toggleReaction(messageId, currentUserId(), body.get("emoji"));
         GroupMessageResponseDTO dto = groupMessageMapper.toResponseDTO(msg);
         messagingTemplate.convertAndSend("/topic/group/" + msg.getStudyGroup().getId(), dto);
+        return ResponseEntity.ok(dto);
+    }
+
+    @GetMapping("/{groupId}/pinned")
+    @ResponseBody
+    public ResponseEntity<?> getPinned(@PathVariable Long groupId) {
+        List<GroupMessageResponseDTO> pinned = groupMessageRepo.findByStudyGroup_IdAndPinnedTrueOrderByPinnedAtDesc(groupId)
+            .stream()
+            .map(m -> groupMessageMapper.toResponseDTO(m, getSenderTag(groupId, m.getSender().getId())))
+            .toList();
+        return ResponseEntity.ok(pinned);
+    }
+
+    @PatchMapping("/{messageId}/pin")
+    @ResponseBody
+    public ResponseEntity<?> pinMessage(@PathVariable Long messageId) {
+        GroupMessage msg = groupMessageRepo.findById(messageId).orElse(null);
+        if (msg == null) return ResponseEntity.notFound().build();
+        Long groupId = msg.getStudyGroup().getId();
+        boolean alreadyPinned = msg.getPinned();
+        if (!alreadyPinned && groupMessageRepo.countByStudyGroup_IdAndPinnedTrue(groupId) >= 3)
+            return ResponseEntity.badRequest().body(Map.of("message", "Maximum 3 pinned messages per group."));
+        msg.setPinned(!alreadyPinned);
+        msg.setPinnedAt(alreadyPinned ? null : java.time.LocalDateTime.now());
+        groupMessageRepo.save(msg);
+        GroupMessageResponseDTO dto = groupMessageMapper.toResponseDTO(msg, getSenderTag(groupId, msg.getSender().getId()));
+        messagingTemplate.convertAndSend("/topic/group/" + groupId, dto);
         return ResponseEntity.ok(dto);
     }
 
