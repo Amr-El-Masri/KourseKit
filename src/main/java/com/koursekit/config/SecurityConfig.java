@@ -38,6 +38,8 @@ public class SecurityConfig {
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/group-sessions/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/group-sessions/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/files/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/files/upload").authenticated()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session
