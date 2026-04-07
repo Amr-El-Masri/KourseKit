@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import StudentDirectoryPanel from "./StudentDirectoryPanel";
-import { Banana, Cat, Dog, Eclipse, Telescope, Panda, Turtle, TriangleAlert } from "lucide-react";
+import { Banana, Cat, Dog, Eclipse, Telescope, Panda, TriangleAlert } from "lucide-react";
 import AdminDashboard from "./AdminDashboard";
 import TranscriptModal from "./TranscriptModal";
 import SyllabusModal from "./SyllabusModal";
@@ -16,13 +16,13 @@ function getTokenRole() {
 
 const AVATAR_ICONS = [
   { id:"Banana", icon: Banana },
-  { id:"Telescope", icon: Telescope  },
-  { id:"Eclipse", icon: Eclipse    },
-  { id:"Cat", icon: Cat   },
-  { id:"Dog", icon: Dog    },
-  { id:"Panda", icon: Panda  },
-  { id:"Turtle", icon: Turtle   },
+  { id:"Telescope", icon: Telescope },
+  { id:"Eclipse", icon: Eclipse },
+  { id:"Cat", icon: Cat },
+  { id:"Dog", icon: Dog },
+  { id:"Panda", icon: Panda },
 ];
+
 const FACULTIES = [
   "Arts & Sciences",
   "Engineering & Architecture",
@@ -565,7 +565,7 @@ export function DefaultScheduleEditor({ token, onDone, extraAction, showSectionN
       <div style={{ padding: "20px 28px 24px" }}>
         {showSectionNudge && sectionsLoaded && enrolledSections.length === 0 && (
           <div style={{ fontSize: 12, color: "var(--text2)", background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 10, padding: "9px 14px", marginBottom: 14 }}>
-            Go to your <strong>Profile → My Semesters</strong> and select your course sections to see them as blocks on your schedule.
+            Go to <strong>My Semesters</strong> and select your course sections to see them as blocks on your schedule.
           </div>
         )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
@@ -706,6 +706,74 @@ function PfDropdown({ value, options, onChange, placeholder = "Select…", mb = 
   );
 }
 
+function CropCanvas({ cropModal, setCropModal }) {
+  const CANVAS = 220;
+  const divRef = useRef(null);
+
+  useEffect(() => {
+    const el = divRef.current;
+    if (!el) return;
+
+    const onWheel = (e) => {
+      e.preventDefault();
+      setCropModal(m => ({ ...m, zoom: Math.min(4, Math.max(1, m.zoom - e.deltaY * 0.005)) }));
+    };
+
+    const state = { lastX: null, lastY: null };
+    const onTouchStart = (e) => {
+      if (e.touches.length === 1) {
+        state.lastX = e.touches[0].clientX;
+        state.lastY = e.touches[0].clientY;
+      }
+    };
+    const onTouchMove = (e) => {
+      e.preventDefault();
+      if (e.touches.length === 1 && state.lastX !== null) {
+        const dx = e.touches[0].clientX - state.lastX;
+        const dy = e.touches[0].clientY - state.lastY;
+        setCropModal(m => ({ ...m, offsetX: m.offsetX + dx, offsetY: m.offsetY + dy }));
+        state.lastX = e.touches[0].clientX;
+        state.lastY = e.touches[0].clientY;
+      }
+    };
+    const onTouchEnd = () => { state.lastX = null; state.lastY = null; };
+
+    el.addEventListener("wheel",      onWheel,      { passive: false });
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove",  onTouchMove,  { passive: false });
+    el.addEventListener("touchend",   onTouchEnd,   { passive: true });
+    return () => {
+      el.removeEventListener("wheel",      onWheel);
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove",  onTouchMove);
+      el.removeEventListener("touchend",   onTouchEnd);
+    };
+  }, [setCropModal]);
+
+  const onMouseDown = (e) => {
+    e.preventDefault();
+    const startX = e.clientX, startY = e.clientY;
+    const startOX = cropModal.offsetX, startOY = cropModal.offsetY;
+    const onMove = (ev) => {
+      setCropModal(m => ({ ...m, offsetX: startOX + (ev.clientX - startX), offsetY: startOY + (ev.clientY - startY) }));
+    };
+    const onUp = () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  return (
+    <div ref={divRef} onMouseDown={onMouseDown}
+      style={{ width:CANVAS, height:CANVAS, borderRadius:"50%", overflow:"hidden", margin:"0 auto 20px", border:"2px solid var(--border)", cursor:"grab", userSelect:"none", touchAction:"pan-x pan-y" }}>
+      <img src={cropModal.src} alt="crop preview" draggable={false} style={{
+        width:"100%", height:"100%", objectFit:"cover", pointerEvents:"none",
+        transform:`scale(${cropModal.zoom}) translate(${cropModal.offsetX / cropModal.zoom}px, ${cropModal.offsetY / cropModal.zoom}px)`,
+        transformOrigin:"center",
+      }} />
+    </div>
+  );
+}
+
 export default function Profile({ onProfileSave, onSemestersUpdated, activeSemester }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const isAdmin = getTokenRole() === "ADMIN";
@@ -744,6 +812,10 @@ export default function Profile({ onProfileSave, onSemestersUpdated, activeSemes
   const [draft,      setDraft]      = useState({ ...DEFAULT_PROFILE, email });
   const [saved,      setSaved]      = useState(false);
   const [profilepic, setProfilepic] = useState(false);
+  const [cropModal, setCropModal]   = useState(null); // { src, zoom, offsetX, offsetY }
+  const [photoMenu,  setPhotoMenu]  = useState(false);
+  const fileRef = useRef(null);
+  const lastImageSrc = useRef(null); // original file src for re-editing
 
   // my semesters
   const [sectionVersion, setSectionVersion] = useState(0);
@@ -764,7 +836,6 @@ export default function Profile({ onProfileSave, onSemestersUpdated, activeSemes
   const semUndoTimerRef = useRef(null);
   const [syllabusUndoToast, setSyllabusUndoToast] = useState(null);
   const syllabusUndoTimerRef = useRef(null);
-  const [showFollowList, setShowFollowList] = useState(null);
   const [syllabusUploadCourse, setSyllabusUploadCourse] = useState(null); // courseCode for upload modal
   const [syllabusEditCourse, setSyllabusEditCourse] = useState(null); // courseCode being edited
   const [syllabusEditProf, setSyllabusEditProf] = useState("");
@@ -1017,6 +1088,7 @@ const refetchSemesters = () =>
       } else if (lastMain) {
         lastMain.components.push({ id: Date.now() + i, code: c.courseCode || "", sectioncrn: c.sectioncrn || null, sectionNumber: c.section?.sectionNumber || null, type: c.componenttype });
         lastMain.hasLabRec = true;
+        lastMain.linkedSectionNumber = c.section?.sectionNumber || null;
       }
     });
     setEditCourses(mains);
@@ -1111,14 +1183,49 @@ const refetchSemesters = () =>
   const handleCancel = () => { setDraft(profile); setEditing(false); };
 
 
-  const selectAvatar = async (iconId) => {
-    const updated = { ...profile, avatar: iconId };
+  const saveAvatar = async (value) => {
+    const updated = { ...profile, avatar: value };
     try {
-      await profileFetch("/api/profile", { method: "PUT", body: JSON.stringify({ avatar: iconId }) });
+      await profileFetch("/api/profile", { method: "PUT", body: JSON.stringify({ avatar: value }) });
     } catch {}
     setProfile(updated);
     setProfilepic(false);
     if (onProfileSave) onProfileSave(updated);
+  };
+
+  const onFileSelected = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    fileRef.current.value = "";
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      lastImageSrc.current = ev.target.result;
+      setCropModal({ src: ev.target.result, zoom: 1, offsetX: 0, offsetY: 0 });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const cropAndSave = () => {
+    if (!cropModal) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = 200; canvas.height = 200;
+    const ctx = canvas.getContext("2d");
+    ctx.beginPath();
+    ctx.arc(100, 100, 100, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    const img = new Image();
+    img.onload = () => {
+      const z = cropModal.zoom;
+      const side = Math.min(img.width, img.height) / z;
+      const sx = (img.width - side) / 2 + cropModal.offsetX;
+      const sy = (img.height - side) / 2 + cropModal.offsetY;
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, 200, 200);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      saveAvatar(dataUrl);
+      setCropModal(null);
+    };
+    img.src = cropModal.src;
   };
 
   const displayName = profile.firstName || profile.lastName
@@ -1133,6 +1240,25 @@ const refetchSemesters = () =>
 
   return (
     <div style={{ padding:"28px 28px 60px" }}>
+      {cropModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.55)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <div style={{ background:"var(--surface)", borderRadius:20, padding:"28px 28px 24px", width:300, boxShadow:"0 8px 40px rgba(0,0,0,0.22)" }}>
+            <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:18, color:"var(--primary)", marginBottom:6 }}>Crop photo</div>
+            <div style={{ fontSize:12, color:"var(--text2)", marginBottom:16 }}>Drag or scroll to adjust the image</div>
+            <CropCanvas cropModal={cropModal} setCropModal={setCropModal} />
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={cropAndSave}
+                onMouseEnter={e => e.currentTarget.style.background="color-mix(in srgb, var(--primary) 25%, transparent)"}
+                onMouseLeave={e => e.currentTarget.style.background="color-mix(in srgb, var(--primary) 15%, transparent)"}
+                style={{ flex:1, padding:"10px 0", borderRadius:10, border:"none", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s" }}>Save</button>
+              <button onClick={() => setCropModal(null)}
+                onMouseEnter={e => e.currentTarget.style.background="var(--surface3)"}
+                onMouseLeave={e => e.currentTarget.style.background="var(--surface2)"}
+                style={{ flex:1, padding:"10px 0", borderRadius:10, border:"1px solid var(--border)", background:"var(--surface2)", color:"var(--text2)", fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"background .15s" }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
       {showDirectory &&
         <StudentDirectoryPanel
           onClose={() => setShowDirectory(false)}
@@ -1192,46 +1318,98 @@ const refetchSemesters = () =>
 
           <div style={{ display:"flex", alignItems:"flex-end", gap:16, marginBottom:20 }}>
             <div style={{ position:"relative", flexShrink:0 }}>
+              <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={onFileSelected} />
               <div onClick={() => setProfilepic(o => !o)} style={{
-                width:72, height:72, borderRadius:20, border:"3px solid var(--border)",
+                width:72, height:72, borderRadius:"50%", border:"3px solid var(--border)",
                 background:"linear-gradient(135deg,#8FB3E2,#7B5EA7)",
                 color:"white", fontWeight:700, fontSize:26,
                 display:"flex", alignItems:"center", justifyContent:"center",
                 fontFamily:"'Fraunces',serif", boxShadow:"0 4px 12px rgba(49,72,122,0.18)",
-                cursor:"pointer",
+                cursor:"pointer", overflow:"hidden",
               }}>
-                {profile.avatar
-                  ? (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={32} color="white" /> : initials; })()
-                  : initials}
+                {profile.avatar?.startsWith("data:")
+                  ? <img src={profile.avatar} alt="avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                  : (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={32} color="white" /> : initials; })()}
               </div>
               {profilepic && (
                 <div style={{
                   position:"absolute", top:80, left:0, zIndex:100,
                   background:"var(--surface)", borderRadius:14, border:"1px solid var(--border)",
-                  boxShadow:"0 8px 32px rgba(49,72,122,0.15)", padding:10,
-                  display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:8, width:196,
+                  boxShadow:"0 8px 32px rgba(49,72,122,0.15)", padding:12,
+                  display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:8, width:192,
                 }}>
-                  <div onClick={() => selectAvatar(null)} title="Default (initials)" style={{
-                    width:36, height:36, borderRadius:10, cursor:"pointer",
-                    background: !profile.avatar ? "var(--accent)" : "linear-gradient(135deg,#8FB3E2,#A59AC9)",
-                    border: !profile.avatar ? "2px solid #31487A" : "2px solid transparent",
-                    display:"flex", alignItems:"center", justifyContent:"center",
-                    color:"white", fontWeight:700, fontSize:13, fontFamily:"'Fraunces',serif",
+                  <div onClick={() => saveAvatar(null)} title="Default (initials)"
+                    onMouseEnter={e => e.currentTarget.style.opacity="0.8"}
+                    onMouseLeave={e => e.currentTarget.style.opacity="1"}
+                    style={{
+                      width:36, height:36, borderRadius:"50%", cursor:"pointer",
+                      background: !profile.avatar ? "var(--accent)" : "linear-gradient(135deg,#8FB3E2,#A59AC9)",
+                      border: !profile.avatar ? "2px solid #31487A" : "2px solid transparent",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      color:"white", fontWeight:700, fontSize:13, fontFamily:"'Fraunces',serif",
+                      transition:"all .15s",
                   }}>{initials}</div>
                   {AVATAR_ICONS.map(({ id, icon: Icon }) => (
-                    <div key={id} onClick={() => selectAvatar(id)} title={id} style={{
-                      width:36, height:36, borderRadius:10, cursor:"pointer",
-                      background: profile.avatar === id ? "var(--accent)" : "linear-gradient(135deg,#8FB3E2,#A59AC9)",
-                      border: profile.avatar === id ? "2px solid #31487A" : "2px solid transparent",
-                      display:"flex", alignItems:"center", justifyContent:"center",
-                      transition:"all .15s",
-                    }}>
+                    <div key={id} onClick={() => saveAvatar(id)} title={id}
+                      onMouseEnter={e => e.currentTarget.style.opacity="0.8"}
+                      onMouseLeave={e => e.currentTarget.style.opacity="1"}
+                      style={{
+                        width:36, height:36, borderRadius:"50%", cursor:"pointer",
+                        background: profile.avatar === id ? "var(--accent)" : "linear-gradient(135deg,#8FB3E2,#A59AC9)",
+                        border: profile.avatar === id ? "2px solid #31487A" : "2px solid transparent",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        transition:"all .15s",
+                      }}>
                       <Icon size={18} color="white" />
                     </div>
                   ))}
+                  {profile.avatar?.startsWith("data:") ? (
+                    <div style={{ position:"relative" }}>
+                      <div
+                        onClick={() => setPhotoMenu(o => !o)}
+                        onMouseEnter={e => e.currentTarget.style.opacity="0.8"}
+                        onMouseLeave={e => e.currentTarget.style.opacity="1"}
+                        style={{ width:36, height:36, borderRadius:"50%", cursor:"pointer", overflow:"hidden", border:"2px solid var(--primary)", transition:"all .15s", flexShrink:0 }}>
+                        <img src={profile.avatar} alt="photo" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                      </div>
+                      {photoMenu && (
+                        <div style={{ position:"absolute", bottom:"calc(100% + 6px)", left:0, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:10, boxShadow:"0 6px 20px rgba(49,72,122,0.15)", overflow:"hidden", zIndex:200, minWidth:140 }}>
+                          <div onClick={() => { setPhotoMenu(false); setCropModal({ src: lastImageSrc.current || profile.avatar, zoom: 1, offsetX: 0, offsetY: 0 }); }}
+                            onMouseEnter={e => e.currentTarget.style.background="var(--surface2)"}
+                            onMouseLeave={e => e.currentTarget.style.background="transparent"}
+                            style={{ padding:"9px 14px", fontSize:13, fontWeight:600, color:"var(--primary)", cursor:"pointer", transition:"background .15s" }}>
+                            Edit crop
+                          </div>
+                          <div onClick={() => { setPhotoMenu(false); setProfilepic(false); fileRef.current.click(); }}
+                            onMouseEnter={e => e.currentTarget.style.background="var(--surface2)"}
+                            onMouseLeave={e => e.currentTarget.style.background="transparent"}
+                            style={{ padding:"9px 14px", fontSize:13, fontWeight:600, color:"var(--primary)", cursor:"pointer", transition:"background .15s" }}>
+                            Change image
+                          </div>
+                          <div onClick={() => { setPhotoMenu(false); saveAvatar(null); lastImageSrc.current = null; }}
+                            onMouseEnter={e => e.currentTarget.style.background="var(--error-bg)"}
+                            onMouseLeave={e => e.currentTarget.style.background="transparent"}
+                            style={{ padding:"9px 14px", fontSize:13, fontWeight:600, color:"var(--error)", cursor:"pointer", transition:"background .15s", borderTop:"1px solid var(--border)" }}>
+                            Remove image
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div onClick={() => { setProfilepic(false); fileRef.current.click(); }} title="Upload photo"
+                      onMouseEnter={e => { e.currentTarget.style.background="var(--surface3)"; e.currentTarget.style.borderColor="var(--primary)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background="var(--surface2)"; e.currentTarget.style.borderColor="var(--border)"; }}
+                      style={{
+                        width:36, height:36, borderRadius:"50%", cursor:"pointer",
+                        background:"var(--surface2)", border:"1.5px dashed var(--border)",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        color:"var(--primary)", fontSize:22, fontWeight:300, transition:"all .15s",
+                      }}>+</div>
+                  )}
                 </div>
               )}
             </div>
+
             <div style={{ paddingBottom:4 }}>
               <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:22, color:"var(--primary)" }}>{displayName}</div>
               <div style={{ fontSize:12, color:"var(--text2)" }}>{profile.email}</div>
@@ -1261,7 +1439,7 @@ const refetchSemesters = () =>
             {profile.totalCredits && <StatChip label="Credits" value={`${profile.totalCredits} cr`} color="var(--accent2)" bg="var(--surface3)" />}
           </div>
 
-          {profile.strikeCount > 0 && (
+          {profile.strikeCount >= 2 && (
             <div style={{ marginTop:18, padding:"12px 16px", border:"2px solid var(--error)", borderRadius:12, background:"var(--error-bg)", display:"flex", alignItems:"center", gap:10 }}>
               <TriangleAlert size={18} color="var(--error)" />
               <div>
@@ -1743,7 +1921,7 @@ const refetchSemesters = () =>
                 {newSemCourses.map(c => (
                   <div key={c.id} style={{ marginBottom:6 }}>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 80px 100px 32px", gap:6 }}>
-                      <StudentCourses value={c} onSelect={async data => { setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, courseId:data.courseId, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r)); if (data.courseId) { const secs = await fetch(`${API}/api/courses/${data.courseId}/sections`).then(r=>r.json()).catch(()=>[]); const hasLabRec = secs.some(s => /^[BE]/i.test(s.sectionNumber||"")); setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, hasLabRec, components: hasLabRec && !(r.components||[]).some(x=>x.sectioncrn) ? [{id:Date.now(), code:data.code, sectioncrn:null, type:"Lab"}] : (r.components||[])} : r)); } }} />
+                      <StudentCourses value={c} onSelect={data => { setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, courseId:data.courseId, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName, linkedSectionNumber: data.linkedSectionNumber || null, components: data.linkedSectionCrn ? [{id:Date.now(), code:data.code, sectioncrn:data.linkedSectionCrn, sectionNumber:data.linkedSectionNumber, type:data.linkedSectionType}] : []} : r)); }} />
                       <input value={c.credits} onChange={e => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                       <div style={{ position:"relative" }}>
                         <button type="button" onClick={() => setOpenGradeDrop(openGradeDrop === `new-${c.id}` ? null : `new-${c.id}`)} style={{ width:"100%", padding:"9px 10px", border:"1px solid var(--border)", borderRadius:10, background:"var(--surface2)", color:"var(--text)", fontSize:13, fontFamily:"'DM Sans',sans-serif", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -1759,12 +1937,6 @@ const refetchSemesters = () =>
                       </div>
                       <button onClick={() => setNewSemCourses(p => p.filter(r => r.id !== c.id))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
                     </div>
-                    {(c.components||[]).map(comp => (
-                      <div key={comp.id} style={{ display:"grid", gridTemplateColumns:"1fr 32px", gap:6, marginTop:4, paddingLeft:16 }}>
-                        <StudentCourses value={comp} lockedCourse={c.courseId ? { id:c.courseId, courseCode:c.code } : null} onSelect={data => { const sec = (data.sectionNumber||"").toUpperCase(); const type = sec.startsWith("BL") ? "Lab Lecture" : sec.startsWith("B") ? "Lab" : "Recitation"; setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, components: r.components.map(x => x.id===comp.id ? {...x, code:data.code, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, type} : x)} : r)); }} filterPrefix={["B","E"]} autoOpen={!comp.sectioncrn} />
-                        <button onClick={() => setNewSemCourses(p => p.map(r => r.id===c.id ? {...r, components: r.components.filter(x => x.id!==comp.id)} : r))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
-                      </div>
-                    ))}
                   </div>
                 ))}
                 <button onClick={() => setNewSemCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"", components:[] }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
@@ -1811,11 +1983,6 @@ const refetchSemesters = () =>
                             <span style={{ color:"var(--text2)" }}>{c.credits} cr</span>
                             <span style={{ color:"var(--accent)", fontWeight:600 }}>{c.grade}</span>
                           </div>
-                          {c.components.map((comp,ci) => (
-                            <div key={ci} style={{ display:"flex", gap:8, fontSize:12, color:"var(--text2)", alignItems:"center", paddingLeft:16, marginTop:2 }}>
-                              <span style={{ fontSize:11, fontWeight:600, color:"var(--text3)" }}>{comp.componenttype}</span>
-                            </div>
-                          ))}
                         </div>
                       ));
                     })()}
@@ -1848,7 +2015,7 @@ const refetchSemesters = () =>
                       <div key={c.id} style={{ marginBottom:6 }}>
                         <div style={{ display:"grid", gridTemplateColumns:"24px 1fr 80px 100px 32px", gap:6, marginBottom: syllabi[c.code] ? 4 : 0 }}>
                           <input type="color" value={courseColors[c.code] || COURSE_COLORS[editCourses.indexOf(c) % COURSE_COLORS.length]} onChange={e => saveCourseColor(c.code, e.target.value)} style={{ width:24, height:32, padding:2, border:"1px solid var(--border)", borderRadius:6, background:"none", cursor:"pointer" }} title="Pick course color" />
-                          <StudentCourses value={c} onSelect={async data => { setEditCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, courseId:data.courseId, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName} : r)); if (data.courseId) { const secs = await fetch(`${API}/api/courses/${data.courseId}/sections`).then(r=>r.json()).catch(()=>[]); const hasLabRec = secs.some(s => /^[BE]/i.test(s.sectionNumber||"")); setEditCourses(p => p.map(r => r.id===c.id ? {...r, hasLabRec, components: hasLabRec && !(r.components||[]).some(x=>x.sectioncrn) ? [{id:Date.now(), code:data.code, sectioncrn:null, type:"Lab"}] : (r.components||[])} : r)); } }} />
+                          <StudentCourses value={c} onSelect={data => { setEditCourses(p => p.map(r => r.id===c.id ? {...r, code:data.code, courseId:data.courseId, credits:data.credits||r.credits, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.professorName, linkedSectionNumber: data.linkedSectionNumber || null, components: data.linkedSectionCrn ? [{id:Date.now(), code:data.code, sectioncrn:data.linkedSectionCrn, sectionNumber:data.linkedSectionNumber, type:data.linkedSectionType}] : []} : r)); }} />
                           <input value={c.credits} onChange={e => setEditCourses(p => p.map(r => r.id===c.id ? {...r,credits:e.target.value} : r))} placeholder="3" type="number" style={{ ...pf.input, marginBottom:0, fontSize:13 }} />
                           <div style={{ position:"relative" }}>
                             <button type="button" onClick={() => setOpenGradeDrop(openGradeDrop === `edit-${c.id}` ? null : `edit-${c.id}`)} style={{ width:"100%", padding:"9px 10px", border:"1px solid var(--border)", borderRadius:10, background:"var(--surface2)", color:"var(--text)", fontSize:13, fontFamily:"'DM Sans',sans-serif", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -1880,12 +2047,6 @@ const refetchSemesters = () =>
                             <button onClick={() => setSyllabusUploadCourse(c.code)} style={{ fontSize:11, color:"var(--primary)", background:"color-mix(in srgb,var(--primary) 12%,transparent)", border:"1px solid color-mix(in srgb,var(--primary) 25%,transparent)", borderRadius:6, cursor:"pointer", padding:"2px 8px", fontWeight:600, fontFamily:"inherit", transition:"all .15s" }} className="kk-pill">+ Upload Syllabus</button>
                           </div>
                         ) : null}
-                        {(c.components||[]).map(comp => (
-                          <div key={comp.id} style={{ display:"grid", gridTemplateColumns:"1fr 32px", gap:6, marginTop:4, paddingLeft:16 }}>
-                            <StudentCourses value={comp} lockedCourse={c.courseId ? { id:c.courseId, courseCode:c.code } : null} onSelect={data => { const sec = (data.sectionNumber||"").toUpperCase(); const type = sec.startsWith("BL") ? "Lab Lecture" : sec.startsWith("B") ? "Lab" : "Recitation"; setEditCourses(p => p.map(r => r.id===c.id ? {...r, components: r.components.map(x => x.id===comp.id ? {...x, code:data.code, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, type} : x)} : r)); }} filterPrefix={["B","E"]} autoOpen={!comp.sectioncrn} />
-                            <button onClick={() => setEditCourses(p => p.map(r => r.id===c.id ? {...r, components: r.components.filter(x => x.id!==comp.id)} : r))} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:16, cursor:"pointer", padding:0 }}>✕</button>
-                          </div>
-                        ))}
                       </div>
                     ))}
                     <button onClick={() => setEditCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"", components:[] }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>

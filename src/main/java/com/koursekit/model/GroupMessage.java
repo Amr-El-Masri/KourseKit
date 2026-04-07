@@ -1,9 +1,18 @@
 package com.koursekit.model;
 
-import jakarta.persistence.*;
+import java.time.LocalDateTime;
+
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "group_messages")
@@ -24,6 +33,12 @@ public class GroupMessage {
 
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
+
+    @Column(name = "iv", columnDefinition = "TEXT")
+    private String iv;
+
+    @Column(name = "encrypted_keys", columnDefinition = "TEXT")
+    private String encryptedKeys;
 
     @Column(name = "sent_at", nullable = false, updatable = false)
     private LocalDateTime sentAt = LocalDateTime.now();
@@ -48,6 +63,11 @@ public class GroupMessage {
 
     @Column(name = "attachment_size")
     private Long attachmentSize;
+    @Column(name = "pinned", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private Boolean pinned = false;
+
+    @Column(name = "pinned_at")
+    private java.time.LocalDateTime pinnedAt;
 
     public GroupMessage() {}
 
@@ -81,6 +101,18 @@ public class GroupMessage {
     public void setContent(String content) {
         this.content = content; }
 
+    public String getIv() { 
+        return iv; }
+
+    public void setIv(String iv) { 
+        this.iv = iv; }
+
+    public String getEncryptedKeys() { 
+        return encryptedKeys; }
+
+    public void setEncryptedKeys(String encryptedKeys) { 
+        this.encryptedKeys = encryptedKeys; }
+
     public LocalDateTime getSentAt() {
         return sentAt; }
 
@@ -99,10 +131,10 @@ public class GroupMessage {
     public void setIsDeleted(Boolean isDeleted) {
         this.isDeleted = isDeleted; }
 
-    public String getReactionsJson() { 
+    public String getReactionsJson() {
         return reactionsJson; }
-        
-    public void setReactionsJson(String reactionsJson) { 
+
+    public void setReactionsJson(String reactionsJson) {
         this.reactionsJson = reactionsJson; }
 
     public String getAttachmentUrl() { 
@@ -128,4 +160,9 @@ public class GroupMessage {
 
     public void setAttachmentSize(Long attachmentSize) { 
         this.attachmentSize = attachmentSize; }
+    public Boolean getPinned() { return pinned != null && pinned; }
+    public void setPinned(Boolean pinned) { this.pinned = pinned; }
+
+    public java.time.LocalDateTime getPinnedAt() { return pinnedAt; }
+    public void setPinnedAt(java.time.LocalDateTime pinnedAt) { this.pinnedAt = pinnedAt; }
 }

@@ -18,7 +18,7 @@ public class RateLimiter {
 
         int current = counts.get(key);
         if (current >= max) { return false; }
-        counts.put(key, current++);
+        counts.put(key, current + 1);
         return true;
     }
 }

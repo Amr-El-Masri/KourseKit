@@ -1,22 +1,24 @@
 package com.koursekit.service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.koursekit.model.GroupMessage;
+import com.koursekit.model.GroupReport;
 import com.koursekit.model.StudyGroup;
 import com.koursekit.model.User;
 import com.koursekit.repository.GroupMessageRepo;
+import com.koursekit.repository.GroupReportsRepo;
 import com.koursekit.repository.StudyGroupMemberRepo;
 import com.koursekit.repository.StudyGroupRepo;
 import com.koursekit.repository.UserRepo;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import java.util.List;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.koursekit.model.GroupReport;
-import com.koursekit.repository.GroupReportsRepo;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 
 @Service
@@ -37,7 +39,7 @@ public class GroupMessageService {
         this.objectMapper = objectMapper;
     }
 
-    public GroupMessage sendMessage(Long groupId, Long senderId, String content, String attachmentUrl, String attachmentType, String attachmentName, Long attachmentSize) {
+    public GroupMessage sendMessage(Long groupId, Long senderId, String content, String iv, String encryptedKeys, String attachmentUrl, String attachmentType, String attachmentName, Long attachmentSize) {
         StudyGroup group = studyGroupRepo.findById(groupId)
             .orElseThrow(() -> new IllegalArgumentException("Group not found"));
         User sender = userRepo.findById(senderId)
@@ -50,6 +52,8 @@ public class GroupMessageService {
         message.setAttachmentType(attachmentType);
         message.setAttachmentName(attachmentName);
         message.setAttachmentSize(attachmentSize);
+        message.setIv(iv);
+        message.setEncryptedKeys(encryptedKeys);
         return groupMessageRepo.save(message);
     }
 
@@ -76,10 +80,14 @@ public class GroupMessageService {
             Map<String, List<Long>> reactions = (msg.getReactionsJson() != null && !msg.getReactionsJson().isBlank())
                 ? objectMapper.readValue(msg.getReactionsJson(), new TypeReference<>() {})
                 : new HashMap<>();
+            List<Long> existing = reactions.getOrDefault(emoji, new ArrayList<>());
+            boolean alreadyReacted = existing.contains(userId);
             reactions.forEach((key, users) -> users.remove(userId));
-            List<Long> users = reactions.getOrDefault(emoji, new ArrayList<>());
-            if (!users.contains(userId)) users.add(userId);
-            reactions.put(emoji, users);
+            if (!alreadyReacted) {
+                List<Long> users = reactions.getOrDefault(emoji, new ArrayList<>());
+                users.add(userId);
+                reactions.put(emoji, users);
+            }
             reactions.entrySet().removeIf(e -> e.getValue().isEmpty());
             msg.setReactionsJson(objectMapper.writeValueAsString(reactions));
         } catch (Exception e) { msg.setReactionsJson("{}"); }

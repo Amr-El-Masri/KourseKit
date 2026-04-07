@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 public record GroupStudySessionResponseDTO(
     Long id,
     Long groupId,
+    String groupName,
+    String courseCode,
     LocalDate date,
     LocalTime startTime,
     double duration,

@@ -31,7 +31,8 @@ public class FileUploadController {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         "application/vnd.ms-excel",
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "audio/mpeg", "audio/wav", "audio/ogg", "audio/webm"
+        "audio/mpeg", "audio/wav", "audio/ogg", "audio/webm",
+        "application/octet-stream"
     );
 
     public FileUploadController(FileStorageService fileStorageService, StudyGroupMemberRepo studyGroupMemberRepo) {

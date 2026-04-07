@@ -12,6 +12,8 @@ public class SavedCourseDTO {
     private String sectioncrn;
     private Section section;
     private String componenttype;
+    private String linkedSectionCrn;
+    private Section linkedSection;
 
     public SavedCourseDTO() {}
 
@@ -56,4 +58,10 @@ public class SavedCourseDTO {
     public void setsection(Section section) { this.section = section; }
     public String getcomponenttype() { return componenttype; }
     public void setcomponenttype(String componenttype) { this.componenttype = componenttype; }
+
+    public String getLinkedSectionCrn() { return linkedSectionCrn; }
+    public void setLinkedSectionCrn(String linkedSectionCrn) { this.linkedSectionCrn = linkedSectionCrn; }
+
+    public Section getLinkedSection() { return linkedSection; }
+    public void setLinkedSection(Section linkedSection) { this.linkedSection = linkedSection; }
 }

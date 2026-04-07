@@ -230,7 +230,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
   const loadSnapshot = (snapshot) => {
     setSemCourses(
-      (snapshot.courses ?? []).map((c, i) => ({
+      (snapshot.courses ?? []).filter(c => !c.componenttype).map((c, i) => ({
         id: Date.now() + i,
         name: c.courseCode || "",
         grade: c.grade || "",

@@ -15,6 +15,7 @@ import com.koursekit.model.StudyGroup;
 import java.util.Map;
 import com.koursekit.dto.StudyGroupMemberResponseDTO;
 import com.koursekit.model.StudyGroupMember;
+import com.koursekit.repository.StudyGroupMemberRepo;
 import java.util.stream.Collectors;
 
 @RestController
@@ -23,10 +24,12 @@ public class StudyGroupController {
 
     private final StudyGroupService studyGroupService;
     private final StudyGroupMapper studyGroupMapper;
+    private final StudyGroupMemberRepo memberRepo;
 
-    public StudyGroupController(StudyGroupService studyGroupService, StudyGroupMapper studyGroupMapper) {
+    public StudyGroupController(StudyGroupService studyGroupService, StudyGroupMapper studyGroupMapper, StudyGroupMemberRepo memberRepo) {
         this.studyGroupService = studyGroupService;
-        this.studyGroupMapper = studyGroupMapper; }
+        this.studyGroupMapper = studyGroupMapper;
+        this.memberRepo = memberRepo; }
 
     private Long currentUserId() {
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -135,6 +138,18 @@ public class StudyGroupController {
             return ResponseEntity.noContent().build();
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage())); }
+    }
+
+    @PatchMapping("/{groupId}/my-tag")
+    public ResponseEntity<?> updateMyTag(@PathVariable Long groupId, @RequestBody Map<String, String> body) {
+        Long userId = currentUserId();
+        List<StudyGroupMember> members = memberRepo.findByStudyGroup_IdAndUser_Id(groupId, userId);
+        if (members.isEmpty()) return ResponseEntity.status(403).build();
+        StudyGroupMember m = members.get(0);
+        String tag = body.get("tag");
+        m.setTag(tag != null && tag.isBlank() ? null : tag);
+        memberRepo.save(m);
+        return ResponseEntity.ok(studyGroupMapper.toMemberResponseDTO(m));
     }
 
     @PatchMapping("/{groupId}/rename")

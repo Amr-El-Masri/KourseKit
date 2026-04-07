@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "default_schedule_slot")
+@Table(name = "default_schedule_slot", indexes = @Index(name = "idx_defaultslot_user_id", columnList = "user_id"))
 public class DefaultScheduleSlot {
 
     @Id

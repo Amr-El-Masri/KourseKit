@@ -106,6 +106,7 @@ public class SavedGradeService {
             );
             course.setsectioncrn(courseDTO.getsectioncrn());
             course.setcomponenttype(courseDTO.getcomponenttype());
+            course.setLinkedSectionCrn(courseDTO.getLinkedSectionCrn());
 
             if (courseDTO.getAssessments() != null) {
                 for (SavedAssessmentDTO assessmentDTO : courseDTO.getAssessments()) {
@@ -137,9 +138,12 @@ public class SavedGradeService {
                     );
                     dto.setsectioncrn(course.getsectioncrn());
                     dto.setcomponenttype(course.getcomponenttype());
+                    dto.setLinkedSectionCrn(course.getLinkedSectionCrn());
                     if (course.getsectioncrn() != null) {
-                        Optional<Section> section = sectionRepository.findByCrn(course.getsectioncrn());
-                        section.ifPresent(dto::setsection);
+                        sectionRepository.findByCrn(course.getsectioncrn()).ifPresent(dto::setsection);
+                    }
+                    if (course.getLinkedSectionCrn() != null) {
+                        sectionRepository.findByCrn(course.getLinkedSectionCrn()).ifPresent(dto::setLinkedSection);
                     }
                     return dto;
                 })

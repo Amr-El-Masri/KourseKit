@@ -57,8 +57,30 @@ public class ProfileController {
         if (body.containsKey("secondMajor"))   user.setSecondMajor((String) body.get("secondMajor"));
         if (body.containsKey("secondFaculty")) user.setSecondFaculty((String) body.get("secondFaculty"));
         if (body.containsKey("status"))        user.setStatus((String) body.get("status"));
-        if (body.containsKey("cumGPA"))        user.setCumGPA((String) body.get("cumGPA"));
-        if (body.containsKey("totalCredits"))  user.setTotalCredits((String) body.get("totalCredits"));
+        if (body.containsKey("cumGPA")) {
+            String gpa = (String) body.get("cumGPA");
+            if (gpa != null && !gpa.isBlank()) {
+                try {
+                    double gpaVal = Double.parseDouble(gpa);
+                    if (gpaVal < 0 || gpaVal > 4.3) return ResponseEntity.badRequest().body(Map.of("error", "GPA must be between 0 and 4.3."));
+                } catch (NumberFormatException e) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "GPA must be a valid number."));
+                }
+            }
+            user.setCumGPA(gpa);
+        }
+        if (body.containsKey("totalCredits")) {
+            String credits = (String) body.get("totalCredits");
+            if (credits != null && !credits.isBlank()) {
+                try {
+                    int creditsVal = Integer.parseInt(credits);
+                    if (creditsVal < 0) return ResponseEntity.badRequest().body(Map.of("error", "Credits cannot be negative."));
+                } catch (NumberFormatException e) {
+                    return ResponseEntity.badRequest().body(Map.of("error", "Credits must be a valid number."));
+                }
+            }
+            user.setTotalCredits(credits);
+        }
         if (body.containsKey("bio"))           user.setBio((String) body.get("bio"));
         if (body.containsKey("avatar"))        user.setAvatar((String) body.get("avatar"));
         if (body.containsKey("doubleMajor"))   user.setDoubleMajor(Boolean.TRUE.equals(body.get("doubleMajor")));
@@ -85,7 +107,9 @@ public class ProfileController {
             String json = user.getCourseColorsJson();
             if (json != null && !json.isBlank())
                 return ResponseEntity.ok(objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {}));
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            System.err.println("Failed to parse course colors JSON: " + e.getMessage());
+        }
         return ResponseEntity.ok(new HashMap<>());
     }
 
@@ -116,7 +140,9 @@ public class ProfileController {
         try {
             user.setCourseColorsJson(objectMapper.writeValueAsString(colors));
             userRepo.save(user);
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            System.err.println("Failed to serialize course colors: " + e.getMessage());
+        }
         return ResponseEntity.ok(colors);
     }
 
@@ -216,7 +242,9 @@ public class ProfileController {
             String json = user.getNotificationPrefsJson();
             if (json != null && !json.isBlank())
                 return ResponseEntity.ok(objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {}));
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            System.err.println("Failed to parse notification prefs JSON: " + e.getMessage());
+        }
         Map<String, Object> defaults = new HashMap<>();
         defaults.put("overdue", true);
         defaults.put("dueToday", true);
@@ -230,7 +258,9 @@ public class ProfileController {
         try {
             user.setNotificationPrefsJson(objectMapper.writeValueAsString(body));
             userRepo.save(user);
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            System.err.println("Failed to serialize notification prefs: " + e.getMessage());
+        }
         return ResponseEntity.ok(body);
     }
 

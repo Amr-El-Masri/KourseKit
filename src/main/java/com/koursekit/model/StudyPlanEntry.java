@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name="StudyPlanEntry")
+@Table(name="StudyPlanEntry", indexes = @Index(name = "idx_studyplanentry_user_id", columnList = "user_id"))
 public class StudyPlanEntry {
 
     @Id

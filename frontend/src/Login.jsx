@@ -1,10 +1,11 @@
 import { useState } from "react";
 
 export default function Login({ onLogin, onGoToRegister, onGoToForgotPassword, prefillEmail }) {
-  const [email, setEmail]           = useState(prefillEmail || "");
+  const [email, setEmail]           = useState(prefillEmail || localStorage.getItem("kk_remembered_email") || "");
   const [password, setPassword]     = useState("");
   const [error, setError]           = useState("");
   const [showPassword, setShowPw]   = useState(false);
+  const [rememberMe,   setRememberMe] = useState(false);
 
   const handle = async () => {
     if (!email || !password) { setError("Please fill in all fields."); return; }
@@ -15,16 +16,18 @@ export default function Login({ onLogin, onGoToRegister, onGoToForgotPassword, p
       const res  = await fetch("http://localhost:8080/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
       const data = await res.json();
       if (data.success && data.token) {
         const previousEmail = localStorage.getItem("kk_email");
         if (previousEmail && previousEmail !== email) {
-          Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k));
+          Object.keys(localStorage).filter(k => k.startsWith("kk_") && !k.startsWith("kk_e2ee_")).forEach(k => localStorage.removeItem(k));
         }
         localStorage.setItem("kk_token", data.token);
         localStorage.setItem("kk_email", email);
+        if (rememberMe) localStorage.setItem("kk_remembered_email", email);
+        else localStorage.removeItem("kk_remembered_email");
         onLogin();
       } else {
         setError(data.message || "Invalid email or password.");
@@ -90,6 +93,12 @@ export default function Login({ onLogin, onGoToRegister, onGoToForgotPassword, p
               }
             </button>
           </div>
+
+          <label style={{ display:"flex", alignItems:"center", gap:8, marginBottom:16, cursor:"pointer", fontSize:13, color:"var(--text2)", userSelect:"none" }}>
+            <input type="checkbox" checked={rememberMe} onChange={e => setRememberMe(e.target.checked)}
+              style={{ width:15, height:15, accentColor:"var(--primary)", cursor:"pointer" }} />
+            Remember Me
+          </label>
 
           <button className="login-btn" onClick={handle} style={s.btn}>
             Sign In

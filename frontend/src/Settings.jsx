@@ -12,9 +12,76 @@ const passrequirements = [
   { label: "One special character",      test: p => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(p) },
 ];
 
+function parseToken(token) {
+  try { return JSON.parse(atob(token.split(".")[1])); } catch { return null; }
+}
+
 export default function Settings({ onLogout }) {
   const email = localStorage.getItem("kk_email") || "student@mail.aub.edu";
   const { theme } = useTheme();
+
+  const token = localStorage.getItem("kk_token");
+  const tokenPayload = token ? parseToken(token) : null;
+  const currentJti = tokenPayload?.jti ?? null;
+
+  const [sessions, setSessions] = useState([]);
+  const [loggingOutAll, setLoggingOutAll] = useState(false);
+  const [loggingOutJti, setLoggingOutJti] = useState(null);
+
+  const getDeviceName = () => {
+    const ua = navigator.userAgent;
+    if (/iPhone/.test(ua)) return "iPhone";
+    if (/iPad/.test(ua)) return "iPad";
+    if (/Android/.test(ua) && /Mobile/.test(ua)) return "Android Phone";
+    if (/Android/.test(ua)) return "Android Tablet";
+    if (/Macintosh/.test(ua)) return "Mac";
+    if (/Windows/.test(ua)) return "Windows PC";
+    if (/Linux/.test(ua)) return "Linux";
+    return "This device";
+  };
+
+  useEffect(() => {
+    fetch(`${API}/api/auth/sessions`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => {
+        if (!Array.isArray(data) || data.length === 0) {
+          // token predates jti support — show current device as fallback
+          const iat = tokenPayload?.iat ? new Date(tokenPayload.iat * 1000).toISOString() : new Date().toISOString();
+          setSessions([{ jti: "__current__", deviceName: getDeviceName(), lastLogin: iat, current: true }]);
+        } else {
+          setSessions(data);
+        }
+      })
+      .catch(() => {
+        const iat = tokenPayload?.iat ? new Date(tokenPayload.iat * 1000).toISOString() : new Date().toISOString();
+        setSessions([{ jti: "__current__", deviceName: getDeviceName(), lastLogin: iat, current: true }]);
+      });
+  }, []);
+
+  const handleLogoutDevice = async (jti) => {
+    if (jti === "__current__") return;
+    setLoggingOutJti(jti);
+    try {
+      await fetch(`${API}/api/auth/sessions/${encodeURIComponent(jti)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSessions(prev => prev.filter(s => s.jti !== jti));
+    } catch {}
+    setLoggingOutJti(null);
+  };
+
+  const handleLogoutAll = async () => {
+    setLoggingOutAll(true);
+    try {
+      await fetch(`${API}/api/auth/logout-all`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {}
+    Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k));
+    onLogout();
+  };
 
   const [emailReminders, setEmailReminders] = useState(
     localStorage.getItem("kk_email_reminders") !== "false"
@@ -285,8 +352,42 @@ export default function Settings({ onLogout }) {
 
       </div>
 
+      {/* Sessions */}
+      <div className="st-anim" style={{ animationDelay:"0.21s", background: "var(--surface)", borderRadius: 16, border: "1px solid var(--border)", padding: "20px 24px", marginBottom: 20 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text2)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Devices</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {sessions.map(s => (
+            <div key={s.jti} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+              <div>
+                <div style={label}>{s.deviceName}{s.current ? <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--primary)", background: "color-mix(in srgb, var(--primary) 12%, transparent)", borderRadius: 5, padding: "2px 6px" }}>current device</span> : null}</div>
+                <div style={sub}>Last logged in: {new Date(s.lastLogin).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}</div>
+              </div>
+              {!s.current && (
+                <button
+                  onClick={() => handleLogoutDevice(s.jti)}
+                  disabled={loggingOutJti === s.jti}
+                  style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--text2)", fontSize: 12, fontWeight: 600, cursor: loggingOutJti === s.jti ? "not-allowed" : "pointer", fontFamily: "'DM Sans',sans-serif", whiteSpace: "nowrap", opacity: loggingOutJti === s.jti ? 0.6 : 1 }}
+                >
+                  {loggingOutJti === s.jti ? "Logging out…" : "Log out"}
+                </button>
+              )}
+            </div>
+          ))}
+          {sessions.length === 0 && <div style={sub}>No active sessions found.</div>}
+        </div>
+        <div style={{ borderTop: "1px solid var(--border)", marginTop: 14, paddingTop: 14, display: "flex", justifyContent: "flex-end" }}>
+          <button
+            onClick={handleLogoutAll}
+            disabled={loggingOutAll}
+            style={{ padding: "7px 14px", borderRadius: 9, border: "1px solid var(--border)", background: "var(--surface2)", color: "var(--accent)", fontSize: 12, fontWeight: 600, cursor: loggingOutAll ? "not-allowed" : "pointer", fontFamily: "'DM Sans',sans-serif", whiteSpace: "nowrap", opacity: loggingOutAll ? 0.7 : 1 }}
+          >
+            {loggingOutAll ? "Logging out…" : "Log out of all devices"}
+          </button>
+        </div>
+      </div>
+
       {/* Account Deletion */}
-      <div className="st-anim" style={{ animationDelay:"0.21s", background: "var(--surface)", borderRadius: 16, border: "1px solid var(--error-border)", padding: "20px 24px", marginBottom: 20 }}>
+      <div className="st-anim" style={{ animationDelay:"0.28s", background: "var(--surface)", borderRadius: 16, border: "1px solid var(--error-border)", padding: "20px 24px", marginBottom: 20 }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: "var(--error)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 12 }}>Account Deletion</div>
         {!deleteConfirm ? (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>

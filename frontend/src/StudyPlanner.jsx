@@ -107,7 +107,7 @@ function getUserId() {
 
 async function apiFetch(path, options = {}) {
     const t = localStorage.getItem("kk_token");
-    if (!t) throw new Error("Not logged in — please refresh and log in again");
+    if (!t) throw new Error("Not logged in. Please refresh and log in again.");
     const res = await fetch(`${API_BASE}${path}`, {
         headers: {
             "Content-Type": "application/json",
@@ -541,11 +541,41 @@ function CourseBlock({ startHour, endHour, courseCode, sectionNumber, color, onD
     );
 }
 
+function StudySessionBlock({ startHour, endHour, courseCode, sessionId, onDelete }) {
+    const top = hourToPx(startHour);
+    const height = Math.max((endHour - startHour) * HOUR_HEIGHT - 4, 40);
+    const [hovered, setHovered] = useState(false);
+    return (
+        <div
+            style={{ position:"absolute", top:top+2, height, left:4, right:4, zIndex:3,
+                background:"linear-gradient(135deg, #6c3fc5 0%, #4a90d9 100%)",
+                borderRadius:6, padding:"4px 6px", overflow:"hidden",
+                boxShadow:"0 2px 6px rgba(108,63,197,0.35)" }}
+            onMouseDown={e => e.stopPropagation()}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+        >
+            <div style={{ fontSize:10, fontWeight:800, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", textShadow:"0 1px 2px rgba(0,0,0,0.25)", paddingRight:14 }}>
+                {courseCode}
+            </div>
+            {height > 26 && <div style={{ fontSize:9, color:"rgba(255,255,255,0.85)" }}>{formatTime(startHour)} – {formatTime(endHour)}</div>}
+            {hovered && onDelete && (
+                <button
+                    onMouseDown={e => { e.stopPropagation(); onDelete(sessionId); }}
+                    style={{ position:"absolute", top:3, right:3, width:16, height:16, borderRadius:"50%",
+                        background:"rgba(255,255,255,0.25)", border:"none", cursor:"pointer",
+                        display:"flex", alignItems:"center", justifyContent:"center", padding:0, color:"#fff", fontSize:10, fontWeight:700, lineHeight:1 }}
+                >×</button>
+            )}
+        </div>
+    );
+}
+
 function DayColumn({
                        date, dayKey, blocks, colorMap, entries,
                        availabilitySlots, onCompleteBlock, onDeleteBlock, onUncompleteBlock,
                        onAddSlot, onDeleteSlot, onResizeSlot, isAvailabilityMode, showSlotOverlay, onEditBlock,
-                       onResizeBlock, courseBlocks, onDismissCourse, nowTime,
+                       onResizeBlock, courseBlocks, onDismissCourse, nowTime, studySessionBlocks, onDeleteSession,
                    }) {
     const columnRef = useRef(null);
     const dragRef = useRef(null);
@@ -557,7 +587,7 @@ function DayColumn({
     }, []);
 
     const handleMouseDown = useCallback((e) => {
-        if (!isAvailabilityMode && !showSlotOverlay) return;
+        if (!isAvailabilityMode) return;
         if (e.target.closest(".sp-avail-slot") || e.target.closest(".sp-study-block")) return;
         e.preventDefault();
         const startHour = Math.min(getHourFromEvent(e), END_HOUR - 0.5);
@@ -621,6 +651,9 @@ function DayColumn({
                 <CourseBlock key={`course-${i}`} startHour={cb.startHour} endHour={cb.endHour} courseCode={cb.courseCode} sectionNumber={cb.sectionNumber} color={cb.color}
                     onDismiss={onDismissCourse ? () => onDismissCourse(cb.crn) : null} isPast={isPastDay} />
             ))}
+            {(studySessionBlocks || []).map((sb, i) => (
+                <StudySessionBlock key={`session-${i}`} startHour={sb.startHour} endHour={sb.endHour} courseCode={sb.courseCode} sessionId={sb.sessionId} onDelete={onDeleteSession} />
+            ))}
             {dragging && (
                 <div className="sp-drag-preview" style={{
                     top: hourToPx(dragging.startHour) + 2,
@@ -681,7 +714,7 @@ function DayColumn({
     );
 }
 
-function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColorChange, userId, weekStart, isPastWeek, entriesLoading, onCarryOver, onNavigate }) {
+function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColorChange, userId, weekStart, isPastWeek, entriesLoading, onCarryOver, onNavigate, semesterCourseCodes }) {
     const [tasks, setTasks] = useState([]);
     const [selectedTaskId, setSelectedTaskId] = useState("");
     const [hoursPerWeek, setHoursPerWeek] = useState("");
@@ -708,14 +741,18 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
     const selectedTask = tasks.find(t => String(t.id) === String(selectedTaskId));
     const addedTaskIds = new Set(entries.map(e => String(e.taskId)));
 
-    // Filter out tasks already added AND tasks whose deadline has passed before this week
+    // Filter out tasks already added, expired tasks, and tasks for courses outside the current semester
     const weekStartDate = weekStart ? new Date(weekStart) : null;
     const availableTasks = tasks.filter(t => {
         if (addedTaskIds.has(String(t.id))) return false;
         if (t.completed) return false;
+        if (t.type === "Group Study Session") return false;
         if (weekStartDate && t.deadline) {
             const deadline = new Date(t.deadline);
             if (deadline < weekStartDate) return false;
+        }
+        if (semesterCourseCodes && semesterCourseCodes.size > 0 && t.course) {
+            if (!semesterCourseCodes.has(t.course)) return false;
         }
         return true;
     });
@@ -1053,6 +1090,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
     const [currentDate, setCurrentDate] = useState(new Date());
     const [weekBlocks, setWeekBlocks] = useState({});
     const [availability, setAvailability] = useState({});
+    const [studySessions, setStudySessions] = useState([]);
     const [isAvailabilityMode, setIsAvailabilityMode] = useState(false);
     const [colorMap, setColorMap] = useState({});
     const [loading, setLoading] = useState(false);
@@ -1062,7 +1100,6 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
     const undoPendingRef = useRef(null);
     const [showGenerateModal, setShowGenerateModal] = useState(false);
     const [showClearModal, setShowClearModal] = useState(false);
-    const [postGenWarnings, setPostGenWarnings] = useState([]);
     const [entries, setEntries] = useState([]);
     const [entriesLoading, setEntriesLoading] = useState(true);
     const [activePanel, setActivePanel] = useState("entries"); // "entries" | "slots"
@@ -1150,14 +1187,46 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
     const courseBlocksPerDay = useMemo(() => {
         const map = {};
         enrolledSections.forEach((es, idx) => {
-            const color = globalCourseColors[es.courseCode] || COURSE_COLORS[idx % COURSE_COLORS.length];
+            const firstIdx = enrolledSections.findIndex(e => e.courseCode === es.courseCode);
+            const color = globalCourseColors[es.courseCode] || COURSE_COLORS[firstIdx % COURSE_COLORS.length];
             getSectionTimeSlots(es.section).forEach(({ dayKey, startHour, endHour }) => {
                 if (!map[dayKey]) map[dayKey] = [];
-                map[dayKey].push({ startHour, endHour, courseCode: es.courseCode, sectionNumber: es.sectionNumber, color, crn: es.crn });
+                map[dayKey].push({ startHour, endHour, courseCode: es.courseCode, sectionNumber: es.componenttype ? es.sectionNumber : null, color, crn: es.crn });
             });
         });
         return map;
     }, [enrolledSections, globalCourseColors]);
+
+    const semesterCourseCodes = useMemo(() => new Set(enrolledSections.map(es => es.courseCode)), [enrolledSections]);
+
+    const studySessionBlocksPerDay = useMemo(() => {
+        const map = {};
+        studySessions.forEach(s => {
+            const [sh, sm] = s.startTime.split(":").map(Number);
+            const [eh, em] = s.endTime.split(":").map(Number);
+            const startHour = sh + sm / 60;
+            const endHour = eh + em / 60;
+            const dayKey = new Date(s.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "long" }).toUpperCase();
+            if (!map[dayKey]) map[dayKey] = [];
+            map[dayKey].push({ startHour, endHour, groupName: s.groupName, courseCode: s.courseCode, sessionId: s.id });
+        });
+        return map;
+    }, [studySessions]);
+
+    const postGenWarnings = useMemo(() => {
+        if (!hasGenerated) return [];
+        return entries.flatMap(e => {
+            const scheduled = Object.values(weekBlocks).flat()
+                .filter(b => String(b.studyPlanEntryId) === String(e.id))
+                .reduce((sum, b) => sum + b.duration, 0);
+            const remaining = Math.max(0, (e.hoursPerWeek || 0) - (e.completedHours || 0));
+            const shortfall = remaining - scheduled;
+            if (shortfall > 0.1) {
+                return [{ taskTitle: e.name, course: e.course, scheduled: Math.round(scheduled * 10) / 10, remaining: Math.round(remaining * 10) / 10 }];
+            }
+            return [];
+        });
+    }, [entries, weekBlocks, hasGenerated]);
 
     const showToast = useCallback((msg, type = "info") => {
         setToast({ msg, type });
@@ -1287,11 +1356,41 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         }
     }, [weekStart, semester, showToast]);
 
+    const loadStudySessions = useCallback(async () => {
+        try {
+            const data = await apiFetch(`/api/group-sessions/my?weekStart=${weekStart}`);
+            setStudySessions(Array.isArray(data) ? data : []);
+        } catch {
+            setStudySessions([]);
+        }
+    }, [weekStart]);
+
+    const handleDeleteStudySession = useCallback((sessionId) => {
+        const removed = studySessions.find(s => s.id === sessionId);
+        setStudySessions(prev => prev.filter(s => s.id !== sessionId));
+        clearUndo();
+        setUndoToast({ msg: "Session removed from planner" });
+        const commitFn = async () => {
+            try { await apiFetch(`/api/group-sessions/${sessionId}/remove-from-planner`, { method: "POST" }); } catch { /* ignore */ }
+        };
+        undoPendingRef.current = {
+            restoreFn: () => {
+                if (removed) setStudySessions(prev => [...prev, removed]);
+            },
+            commitFn,
+            timer: setTimeout(async () => {
+                undoPendingRef.current = null;
+                setUndoToast(null);
+                await commitFn();
+            }, 5000),
+        };
+    }, [studySessions, clearUndo]);
+
     useEffect(() => {
         loadEntries();
         loadWeeklyView();
         loadSlots();
-        setPostGenWarnings([]);
+        loadStudySessions();
     }, [weekStart]);
 
     useEffect(() => {
@@ -1411,7 +1510,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         setAvailability(prev => {
             const existing = prev[dayKey] || [];
             if (existing.some(s => slotsOverlap(s, newSlot))) {
-                showToast("Slots can't overlap — adjust the existing one first", "error");
+                showToast("Slots can't overlap. Adjust the existing one first.", "error");
                 return prev;
             }
             const next = { ...prev, [dayKey]: [...existing, newSlot] };
@@ -1613,16 +1712,17 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
 
 
     const buildSettingsPayload = useCallback((availOverride = null) => {
-        // Subtract enrolled course times from availability so planner doesn't schedule during class
+        // Subtract enrolled course times and synced study sessions from availability
         const avail = availOverride ?? availability;
         const adjusted = {};
         for (const [dayKey, slots] of Object.entries(avail)) {
-            const busySlots = enrolledSections.flatMap(es => getSectionTimeSlots(es.section).filter(ts => ts.dayKey === dayKey));
-            const free = subtractBusyFromSlots(slots, busySlots);
+            const classBusy = enrolledSections.flatMap(es => getSectionTimeSlots(es.section).filter(ts => ts.dayKey === dayKey));
+            const sessionBusy = (studySessionBlocksPerDay[dayKey] || []).map(sb => ({ startHour: sb.startHour, endHour: sb.endHour }));
+            const free = subtractBusyFromSlots(subtractBusyFromSlots(slots, classBusy), sessionBusy);
             if (free.length > 0) adjusted[dayKey] = free;
         }
         return buildSchedulerSettings(adjusted);
-    }, [availability, enrolledSections]);
+    }, [availability, enrolledSections, studySessionBlocksPerDay]);
 
     const handleGenerate = useCallback(async () => {
         clearUndo();
@@ -1643,10 +1743,9 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                 setShowSlotOverlay(false);
                 // Generate resets completedHours to 0 — update locally, no extra fetch needed
                 setEntries(prev => prev.map(e => ({ ...e, completedHours: 0 })));
-                const warns = (data.warnings || []).filter(w => (w.shortfall || 0) > 0.1);
-                setPostGenWarnings(warns);
-                if (warns.length > 0) {
-                    showToast(`Plan generated, but ${warns.length} task${warns.length > 1 ? "s" : ""} couldn't be fully scheduled`, "warning");
+                const warnCount = (data.warnings || []).filter(w => (w.shortfall || 0) > 0.1).length;
+                if (warnCount > 0) {
+                    showToast(`Plan generated, but ${warnCount} task${warnCount > 1 ? "s" : ""} couldn't be fully scheduled`, "warning");
                 } else {
                     showToast("Plan generated!", "success");
                 }
@@ -1690,7 +1789,6 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
             await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`, { method: "DELETE" });
             setWeekBlocks({});
             setHasGenerated(false);
-            setPostGenWarnings([]);
             localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
             setShowSlotOverlay(true);
             await loadSlots(); // re-seeds from default since slots were just cleared
@@ -1755,13 +1853,11 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                 // Rebalance doesn't change entry data — skip the extra fetch
 
                 if (!changed) {
-                    // keep existing warnings visible — nothing was fixed
                     showToast("Nothing changed, the plan is already optimal", "info");
                 } else {
-                    const warns = (data.warnings || []).filter(w => (w.shortfall || 0) > 0.1);
-                    setPostGenWarnings(warns);
-                    if (warns.length > 0) {
-                        showToast(`Rebalanced, but ${warns.length} task${warns.length > 1 ? "s" : ""} couldn't be fully scheduled`, "warning");
+                    const warnCount = (data.warnings || []).filter(w => (w.shortfall || 0) > 0.1).length;
+                    if (warnCount > 0) {
+                        showToast(`Rebalanced, but ${warnCount} task${warnCount > 1 ? "s" : ""} couldn't be fully scheduled`, "warning");
                     } else {
                         showToast("Plan rebalanced!", "success");
                     }
@@ -2612,11 +2708,6 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                             ))}
                             <span style={{ color: "var(--warn1)" }}>Add more availability slots or reduce the hours to fit everything.</span>
                         </div>
-                        <button
-                            onClick={() => setPostGenWarnings([])}
-                            style={{ background: "none", border: "none", color: "var(--warn)", cursor: "pointer", fontSize: 18, padding: 0, lineHeight: 1, flexShrink: 0, opacity: 0.7 }}
-                            title="Dismiss"
-                        >×</button>
                     </div>
                 )}
 
@@ -2657,6 +2748,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                                     entriesLoading={entriesLoading}
                                     onCarryOver={handleCarryOver}
                                     onNavigate={onNavigate}
+                                    semesterCourseCodes={semesterCourseCodes}
                                 />
                             </div>
                             <div style={{ display: activePanel === "slots" ? "contents" : "none" }}>
@@ -2759,6 +2851,8 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                                                         courseBlocks={visibleCourseBlocks}
                                                         onDismissCourse={(crn) => dismissSection(dateStr, crn)}
                                                         nowTime={isToday(date) ? nowTime : null}
+                                                        studySessionBlocks={studySessionBlocksPerDay[dayKey] || []}
+                                                        onDeleteSession={handleDeleteStudySession}
                                                     />
                                                 );
                                             });
@@ -2813,25 +2907,9 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                     } else if (noSlots) {
                         issues.push({ type: "error", msg: "No availability slots found. Drag on the calendar to add your free time first." });
                     }
-                    let hasCheck1Error = false;
-                    const erroredEntryIds = new Set();
                     if (!noEntries && !noSlots) {
-                        // Check 1: individual task exceeds total week availability
-                        entries.forEach(e => {
-                            const needed = parseFloat(e.hoursPerWeek) || 0;
-                            if (needed <= 0) return;
-                            if (needed > totalAvailHours) {
-                                hasCheck1Error = true;
-                                erroredEntryIds.add(e.id);
-                                issues.push({
-                                    type: "error",
-                                    msg: `"${e.name}" needs ${needed}h but only ${totalAvailHours.toFixed(1)}h of slots exist this week, so it won't fully fit.`,
-                                });
-                            }
-                        });
-
-                        // Check 2: deadline feasibility — cumulative per deadline day
-                        // Group tasks that have a deadline this week by their deadline day index
+                        // Tier 1 (errors): deadline-based feasibility for tasks due within this week
+                        // Group tasks with an in-week deadline by their deadline day index
                         const tasksByDeadlineDay = new Map();
                         entries.forEach(e => {
                             const needed = parseFloat(e.hoursPerWeek) || 0;
@@ -2844,42 +2922,42 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                             tasksByDeadlineDay.get(dlDayIdx).push({ e, needed });
                         });
 
-                        // For each deadline day (sorted ascending), check cumulative feasibility
+                        const deadlineErroredIds = new Set();
                         [...tasksByDeadlineDay.keys()].sort((a, b) => a - b).forEach(dayIdx => {
-                            const hoursAvailable = DAY_KEYS
+                            const hoursAvailableByDay = DAY_KEYS
                                 .slice(0, dayIdx + 1)
                                 .reduce((sum, dk) => sum + (availability[dk] || []).reduce((s, sl) => s + (sl.endHour - sl.startHour), 0), 0);
-                            // Sum of hours needed by ALL tasks due on or before this day
                             const allByThen = [...tasksByDeadlineDay.entries()]
                                 .filter(([d]) => d <= dayIdx)
                                 .flatMap(([, ts]) => ts);
                             const totalNeededByThen = allByThen.reduce((s, t) => s + t.needed, 0);
-                            const cumulativeShortfall = totalNeededByThen > hoursAvailable;
-                            // Report each task due ON this day that is individually infeasible or part of a cumulative shortfall
+
                             tasksByDeadlineDay.get(dayIdx).forEach(({ e, needed }) => {
-                                if (erroredEntryIds.has(e.id)) return;
-                                const individualShortfall = hoursAvailable < needed;
+                                if (deadlineErroredIds.has(e.id)) return;
+                                const individualShortfall = hoursAvailableByDay < needed;
+                                const cumulativeShortfall = totalNeededByThen > hoursAvailableByDay;
                                 if (individualShortfall) {
-                                    erroredEntryIds.add(e.id);
+                                    deadlineErroredIds.add(e.id);
                                     issues.push({
                                         type: "error",
-                                        msg: `"${e.name}" is due ${fmtDateOnly(e.deadline)} and needs ${needed}h, but only ${hoursAvailable.toFixed(1)}h of slots are available before then.`,
+                                        msg: `"${e.name}" is due ${fmtDateOnly(e.deadline)} and needs ${needed}h, but only ${hoursAvailableByDay.toFixed(1)}h of free time exists before then.`,
                                     });
                                 } else if (cumulativeShortfall) {
-                                    erroredEntryIds.add(e.id);
+                                    deadlineErroredIds.add(e.id);
+                                    const taskNames = allByThen.map(t => `"${t.e.name}"`).join(" and ");
                                     issues.push({
                                         type: "warning",
-                                        msg: `"${e.name}" is due ${fmtDateOnly(e.deadline)} and may not be fully scheduled: tasks due by then need ${totalNeededByThen.toFixed(1)}h combined but only ${hoursAvailable.toFixed(1)}h of slots are available.`,
+                                        msg: `${taskNames} are all due by ${fmtDateOnly(e.deadline)} and need ${totalNeededByThen.toFixed(1)}h combined, but only ${hoursAvailableByDay.toFixed(1)}h of free time exists before then. They may not all be fully scheduled.`,
                                     });
                                 }
                             });
                         });
 
-                        // Global: total requested > total available — skip if a Check 1 error already covers it
-                        if (totalRequestedHours > totalAvailHours && !hasCheck1Error) {
+                        // Tier 2 (warning): global capacity shortfall only shown when no deadline errors already explain it
+                        if (totalRequestedHours > totalAvailHours && deadlineErroredIds.size === 0) {
                             issues.push({
                                 type: "warning",
-                                msg: `${totalRequestedHours}h requested but only ${totalAvailHours.toFixed(1)}h of slots available, some tasks may be partially scheduled.`,
+                                msg: `You've requested ${totalRequestedHours.toFixed(1)}h total but only ${totalAvailHours.toFixed(1)}h of slots exist this week. Some tasks will be partially scheduled.`,
                             });
                         }
                     }

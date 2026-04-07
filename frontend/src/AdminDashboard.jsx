@@ -50,13 +50,43 @@ export default function AdminDashboard({ token }) {
   const [userRevLoading,  setUserRevLoading]  = useState(false);
   const [err, setErr] = useState("");
 
-  const loadUsers = useCallback(async (q = "") => {
+  // forum posts
+  const [forumPostStatus,      setForumPostStatus]      = useState("flagged");
+  const [flaggedForumPosts,    setFlaggedForumPosts]    = useState([]);
+  const [flaggedForumLoading,  setFlaggedForumLoading]  = useState(false);
+  const [reportedForumPosts,   setReportedForumPosts]   = useState([]);
+  const [reportedForumLoading, setReportedForumLoading] = useState(false);
+  const [confirmForumAction,   setConfirmForumAction]   = useState(null);
+
+  // group reports
+  const [groupReports,        setGroupReports]        = useState([]);
+  const [groupReportsLoading, setGroupReportsLoading] = useState(false);
+  const [confirmGroupAction,  setConfirmGroupAction]  = useState(null);
+
+  // search filters
+  const [reviewSearch,      setReviewSearch]      = useState("");
+  const [forumSearch,       setForumSearch]       = useState("");
+  const [groupReportSearch, setGroupReportSearch] = useState("");
+
+  // pagination
+  const [userPage,              setUserPage]              = useState(0);
+  const [userTotalPages,        setUserTotalPages]        = useState(1);
+  const [courseReviewPage,      setCourseReviewPage]      = useState(0);
+  const [courseReviewTotalPages,setCourseReviewTotalPages]= useState(1);
+  const [profReviewPage,        setProfReviewPage]        = useState(0);
+  const [profReviewTotalPages,  setProfReviewTotalPages]  = useState(1);
+
+  const loadUsers = useCallback(async (q = "", pg = 0) => {
     setLoading(true); setErr("");
     try {
-      const url = q.trim() ? `${API}/api/admin/users?search=${encodeURIComponent(q)}` : `${API}/api/admin/users`;
+      let url = `${API}/api/admin/users?page=${pg}&size=20`;
+      if (q.trim()) url += `&search=${encodeURIComponent(q)}`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) { setErr("Failed to load users."); return; }
-      setUsers(await res.json());
+      const data = await res.json();
+      setUsers(data.content);
+      setUserTotalPages(data.totalpages);
+      setUserPage(data.number);
     } catch { setErr("Network error."); }
     finally { setLoading(false); }
   }, [token]);
@@ -69,8 +99,8 @@ export default function AdminDashboard({ token }) {
     } catch {} finally { setFlaggedUsersLoading(false); }
   }, [token]);
 
-  useEffect(() => { loadUsers(); }, [loadUsers]);
-  useEffect(() => { const t = setTimeout(() => loadUsers(search), 300); return () => clearTimeout(t); }, [search, loadUsers]);
+  useEffect(() => { loadUsers("", 0); }, [loadUsers]);
+  useEffect(() => { const t = setTimeout(() => loadUsers(search, 0), 300); return () => clearTimeout(t); }, [search, loadUsers]);
   useEffect(() => { if (tab === "users" && userSubTab === "flagged") loadFlaggedUsers(); }, [tab, userSubTab, loadFlaggedUsers]);
 
   const setRole = async (userId, role) => {
@@ -130,10 +160,17 @@ export default function AdminDashboard({ token }) {
     return matchesStatus && matchesRole;
   });
 
-  const loadCourseReviews = useCallback(async () => {
+  const loadCourseReviews = useCallback(async (pg = 0) => {
     setCourseLoading(true);
-    try { const res = await fetch(`${API}/api/admin/reviews`, { headers: { Authorization: `Bearer ${token}` } }); if (res.ok) setCourseReviews(await res.json()); }
-    catch {} finally { setCourseLoading(false); }
+    try {
+      const res = await fetch(`${API}/api/admin/reviews?page=${pg}&size=15`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setCourseReviews(data.content);
+        setCourseReviewTotalPages(data.totalpages);
+        setCourseReviewPage(data.number);
+      }
+    } catch {} finally { setCourseLoading(false); }
   }, [token]);
 
   const loadFlaggedCourse = useCallback(async () => {
@@ -148,10 +185,17 @@ export default function AdminDashboard({ token }) {
     catch {} finally { setReportedCourseLoading(false); }
   }, [token]);
 
-  const loadProfReviews = useCallback(async () => {
+  const loadProfReviews = useCallback(async (pg = 0) => {
     setProfLoading(true);
-    try { const res = await fetch(`${API}/api/admin/professor-reviews`, { headers: { Authorization: `Bearer ${token}` } }); if (res.ok) setProfReviews(await res.json()); }
-    catch {} finally { setProfLoading(false); }
+    try {
+      const res = await fetch(`${API}/api/admin/professor-reviews?page=${pg}&size=15`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        setProfReviews(data.content);
+        setProfReviewTotalPages(data.totalpages);
+        setProfReviewPage(data.number);
+      }
+    } catch {} finally { setProfLoading(false); }
   }, [token]);
 
   const loadFlaggedProf = useCallback(async () => {
@@ -166,10 +210,36 @@ export default function AdminDashboard({ token }) {
     catch {} finally { setReportedProfLoading(false); }
   }, [token]);
 
+  const loadFlaggedForumPosts = useCallback(async () => {
+    setFlaggedForumLoading(true);
+    try { const res = await fetch(`${API}/api/admin/forum-posts/flagged`, { headers: { Authorization: `Bearer ${token}` } }); if (res.ok) setFlaggedForumPosts(await res.json()); }
+    catch {} finally { setFlaggedForumLoading(false); }
+  }, [token]);
+
+  const loadReportedForumPosts = useCallback(async () => {
+    setReportedForumLoading(true);
+    try { const res = await fetch(`${API}/api/admin/forum-posts/reported`, { headers: { Authorization: `Bearer ${token}` } }); if (res.ok) setReportedForumPosts(await res.json()); }
+    catch {} finally { setReportedForumLoading(false); }
+  }, [token]);
+
+  const loadGroupReports = useCallback(async () => {
+    setGroupReportsLoading(true);
+    try { const res = await fetch(`${API}/api/admin/group-reports`, { headers: { Authorization: `Bearer ${token}` } }); if (res.ok) setGroupReports(await res.json()); }
+    catch {} finally { setGroupReportsLoading(false); }
+  }, [token]);
+
+  useEffect(() => {
+    if (tab === "forum") { loadFlaggedForumPosts(); loadReportedForumPosts(); }
+  }, [tab, loadFlaggedForumPosts, loadReportedForumPosts]);
+
+  useEffect(() => {
+    if (tab === "studygroups") loadGroupReports();
+  }, [tab, loadGroupReports]);
+
   useEffect(() => {
     if (tab === "reviews") {
-      loadCourseReviews(); loadFlaggedCourse(); loadReportedCourse();
-      loadProfReviews(); loadFlaggedProf(); loadReportedProf();
+      loadCourseReviews(0); loadFlaggedCourse(); loadReportedCourse();
+      loadProfReviews(0); loadFlaggedProf(); loadReportedProf();
     }
   }, [tab, loadCourseReviews, loadFlaggedCourse, loadReportedCourse, loadProfReviews, loadFlaggedProf, loadReportedProf]);
 
@@ -221,6 +291,45 @@ export default function AdminDashboard({ token }) {
       if (res.ok) removeFromAllLists(reviewId, type);
       else setErr("Action failed. Try again.");
     } catch { setErr("Action failed. Try again."); }
+  };
+
+  const removeForumPost = (postId) => {
+    setFlaggedForumPosts(prev => prev.filter(p => p.id !== postId));
+    setReportedForumPosts(prev => prev.filter(p => p.id !== postId));
+  };
+
+  const approveForumPost = async (postId) => {
+    try {
+      const res = await fetch(`${API}/api/admin/forum-posts/${postId}/approve`, { method: "PUT", headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) removeForumPost(postId); else setErr("Action failed.");
+    } catch { setErr("Action failed."); }
+  };
+
+  const warnForumPost = async (postId) => {
+    try {
+      const res = await fetch(`${API}/api/admin/forum-posts/${postId}/warn`, { method: "PUT", headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) removeForumPost(postId); else setErr("Action failed.");
+    } catch { setErr("Action failed."); }
+  };
+
+  const warnGroupMember = async (reportId) => {
+    try {
+      const res = await fetch(`${API}/api/admin/group-reports/${reportId}/warn`, { method: "PUT", headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setGroupReports(prev => prev.filter(r => r.id !== reportId)); else setErr("Action failed.");
+    } catch { setErr("Action failed."); }
+  };
+
+  const dismissGroupReport = async (reportId) => {
+    try {
+      const res = await fetch(`${API}/api/admin/group-reports/${reportId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) setGroupReports(prev => prev.filter(r => r.id !== reportId)); else setErr("Action failed.");
+    } catch { setErr("Action failed."); }
+  };
+
+  const matchSearch = (q, ...fields) => {
+    if (!q.trim()) return true;
+    const lq = q.toLowerCase();
+    return fields.some(f => f && String(f).toLowerCase().includes(lq));
   };
 
   const formatDate = ts => ts
@@ -323,6 +432,20 @@ export default function AdminDashboard({ token }) {
     );
   };
 
+  const Pagination = ({ page, totalPages, onPrev, onNext }) => totalPages <= 1 ? null : (
+    <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:14 }}>
+      <button onClick={onPrev} disabled={page === 0}
+        style={{ padding:"5px 14px", border:"1.5px solid var(--border)", borderRadius:8, fontSize:12, fontWeight:600,
+          cursor: page === 0 ? "not-allowed" : "pointer", opacity: page === 0 ? 0.4 : 1,
+          background:"var(--surface)", color:"var(--text2)" }}>← Prev</button>
+      <span style={{ fontSize:12, color:"var(--text2)" }}>Page {page + 1} of {totalPages}</span>
+      <button onClick={onNext} disabled={page >= totalPages - 1}
+        style={{ padding:"5px 14px", border:"1.5px solid var(--border)", borderRadius:8, fontSize:12, fontWeight:600,
+          cursor: page >= totalPages - 1 ? "not-allowed" : "pointer", opacity: page >= totalPages - 1 ? 0.4 : 1,
+          background:"var(--surface)", color:"var(--text2)" }}>Next →</button>
+    </div>
+  );
+
   return (
     <div style={{ fontFamily:"'DM Sans',sans-serif" }}>
       <style>{`
@@ -348,6 +471,22 @@ export default function AdminDashboard({ token }) {
           color:      tab === "users" ? "var(--primary)" : "var(--text2)",
           transition:"all .15s",
         }}>Users</button>
+
+        <button className="kk-tab" data-active={tab === "forum"} onClick={() => { setErr(""); setTab("forum"); setReviewDropdownOpen(false); }} style={{
+          padding:"8px 18px", borderRadius:9, fontSize:13, fontWeight: tab === "forum" ? 600 : 400, cursor:"pointer",
+          border: tab === "forum" ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
+          background: tab === "forum" ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
+          color:      tab === "forum" ? "var(--primary)" : "var(--text2)",
+          transition:"all .15s",
+        }}>Forum</button>
+
+        <button className="kk-tab" data-active={tab === "studygroups"} onClick={() => { setErr(""); setTab("studygroups"); setReviewDropdownOpen(false); }} style={{
+          padding:"8px 18px", borderRadius:9, fontSize:13, fontWeight: tab === "studygroups" ? 600 : 400, cursor:"pointer",
+          border: tab === "studygroups" ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
+          background: tab === "studygroups" ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
+          color:      tab === "studygroups" ? "var(--primary)" : "var(--text2)",
+          transition:"all .15s",
+        }}>Study Groups</button>
 
         <div style={{ position:"relative" }}>
           <button className="kk-tab" data-active={tab === "reviews"} onClick={() => { setErr(""); setReviewDropdownOpen(o => !o); if (tab !== "reviews") setTab("reviews"); }} style={{
@@ -576,8 +715,14 @@ export default function AdminDashboard({ token }) {
                   ))}
                 </div>
               )}
-              <div style={{ marginTop:14, fontSize:12, color:"var(--text3)" }}>
-                {displayed.length} user{displayed.length !== 1 ? "s" : ""} shown
+              <Pagination
+                page={userPage}
+                totalPages={userTotalPages}
+                onPrev={() => loadUsers(search, userPage - 1)}
+                onNext={() => loadUsers(search, userPage + 1)}
+              />
+              <div style={{ marginTop:8, fontSize:12, color:"var(--text3)" }}>
+                {displayed.length} user{displayed.length !== 1 ? "s" : ""} shown on this page
               </div>
             </>
           )}
@@ -615,10 +760,168 @@ export default function AdminDashboard({ token }) {
         </>
       )}
 
+      {/* forum tab */}
+      {tab === "forum" && (
+        <>
+          <div style={{ display:"flex", gap:6, marginBottom:16, width:"fit-content" }}>
+            {[{id:"flagged",label:"Flagged"},{id:"reported",label:"Reported"}].map(t => (
+              <button key={t.id} className="kk-tab" data-active={forumPostStatus === t.id} onClick={() => { setForumPostStatus(t.id); setConfirmForumAction(null); }} style={{
+                padding:"8px 18px", borderRadius:9, fontSize:13,
+                fontWeight: forumPostStatus === t.id ? 600 : 400, cursor:"pointer", transition:"all .15s",
+                border: forumPostStatus === t.id ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
+                background: forumPostStatus === t.id ? "color-mix(in srgb, var(--primary) 14%, var(--surface))" : "var(--surface)",
+                color:      forumPostStatus === t.id ? "var(--primary)" : "var(--text2)",
+              }}>{t.label}</button>
+            ))}
+          </div>
+
+          <div style={{ display:"flex", alignItems:"center", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"8px 14px", marginBottom:16, maxWidth:400 }}>
+            <Search size={14} color="var(--text3)" style={{ marginRight:8, flexShrink:0 }} />
+            <input value={forumSearch} onChange={e => setForumSearch(e.target.value)}
+              placeholder="Search by email, title, category, post text…"
+              style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"var(--text)", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
+            {forumSearch && <button onClick={() => setForumSearch("")} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text3)", fontSize:14, padding:0, marginLeft:6 }}>✕</button>}
+          </div>
+
+          {(() => {
+            const raw     = forumPostStatus === "flagged" ? flaggedForumPosts : reportedForumPosts;
+            const list    = raw.filter(p => matchSearch(forumSearch, p.userid, p.title, p.body, p.category, p.coursetag, p.professortag));
+            const loading = forumPostStatus === "flagged" ? flaggedForumLoading : reportedForumLoading;
+            const isReported = forumPostStatus === "reported";
+            const cols = isReported ? "1.5fr 2fr 90px 50px 1fr 200px" : "1.5fr 2fr 90px 50px 1fr 200px";
+            return (
+              <>
+                {loading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
+                {!loading && list.length === 0 && (
+                  <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+                    <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>
+                      No {forumPostStatus} forum posts
+                    </div>
+                  </div>
+                )}
+                {!loading && list.length > 0 && (
+                  <div className="ad-anim" style={ad.table}>
+                    <div style={{ ...ad.tableHeader, gridTemplateColumns: cols }}>
+                      <span>User</span><span>Title</span><span>Category</span><span>Reports</span><span style={{ paddingLeft:16 }}>Reasons</span><span>Actions</span>
+                    </div>
+                    {list.map((p, i) => {
+                      const isConfirming = confirmForumAction?.id === p.id;
+                      return (
+                        <div key={p.id} className="ad-anim" style={{ animationDelay:`${i*0.04}s`, padding:"10px 20px 12px", background: i % 2 === 0 ? "var(--surface)" : "var(--surface2)", borderBottom: i < list.length - 1 ? "1px solid var(--divider)" : "none" }}>
+                          <div style={{ display:"grid", gridTemplateColumns: cols, alignItems:"center", marginBottom:8 }}>
+                            <span style={{ fontSize:12, color:"var(--text2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:8 }}>{p.userid || "—"}</span>
+                            <span style={{ fontSize:12, color:"var(--primary)", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:8 }}>{p.title || "—"}</span>
+                            <span style={{ fontSize:11, fontWeight:600, padding:"2px 8px", borderRadius:6, width:"fit-content",
+                              background: p.category === "COURSE" ? "color-mix(in srgb, var(--primary) 12%, var(--surface))" : p.category === "PROFESSOR" ? "color-mix(in srgb, var(--accent2) 12%, var(--surface))" : "color-mix(in srgb, var(--accent) 12%, var(--surface))",
+                              color: p.category === "COURSE" ? "var(--primary)" : p.category === "PROFESSOR" ? "var(--accent2)" : "var(--accent)" }}>
+                              {p.category || "—"}
+                            </span>
+                            <span style={{ fontSize:12, color: p.reportcount > 0 ? "var(--error)" : "var(--text3)", fontWeight: p.reportcount > 0 ? 700 : 400 }}>{p.reportcount ?? 0}</span>
+                            <span style={{ fontSize:11, color:"var(--text2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:8, paddingLeft:16 }}>
+                              {(p.reportreasons || []).length > 0 ? [...new Set(p.reportreasons)].join(", ") : "—"}
+                            </span>
+                            {isConfirming ? (
+                              <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                                <span style={{ fontSize:11, fontWeight:600, color: confirmForumAction.action === "approve" ? "var(--success)" : "var(--accent)" }}>Sure?</span>
+                                <button onClick={() => {
+                                  if (confirmForumAction.action === "approve") approveForumPost(p.id);
+                                  else warnForumPost(p.id);
+                                  setConfirmForumAction(null);
+                                }} style={{ padding:"4px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:600, cursor:"pointer",
+                                  background: confirmForumAction.action === "approve" ? "rgba(0,180,100,0.12)" : "var(--divider)",
+                                  color: confirmForumAction.action === "approve" ? "var(--success)" : "var(--accent)" }}>Yes</button>
+                                <button onClick={() => setConfirmForumAction(null)} style={{ padding:"4px 8px", border:"1px solid var(--border)", borderRadius:6, fontSize:11, cursor:"pointer", background:"var(--surface)", color:"var(--text2)" }}>No</button>
+                              </div>
+                            ) : (
+                              <div style={{ display:"flex", gap:4 }}>
+                                <button className="action-btn" onClick={() => setConfirmForumAction({ id: p.id, action:"approve" })} style={{ padding:"4px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:600, cursor:"pointer", background:"rgba(0,180,100,0.12)", color:"var(--success)" }}>Approve</button>
+                                <button className="action-btn" onClick={() => setConfirmForumAction({ id: p.id, action:"warn" })} style={{ padding:"4px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:600, cursor:"pointer", background:"var(--divider)", color:"var(--accent)" }}>Warn</button>
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ fontSize:12, color:"var(--text2)", lineHeight:1.5, paddingLeft:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                            <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:.5, marginRight:6 }}>Post</span>
+                            {p.body || "—"}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <div style={{ marginTop:14, fontSize:12, color:"var(--text3)" }}>{list.length} post{list.length !== 1 ? "s" : ""} shown{forumSearch && ` (filtered)`}</div>
+              </>
+            );
+          })()}
+        </>
+      )}
+
+      {/* study group tab */}
+      {tab === "studygroups" && (() => {
+        const filtered = groupReports.filter(r => matchSearch(groupReportSearch, r.reporteduseremail, r.reportedbyemail, r.groupname, r.reason, r.messagecontent));
+        return (
+          <>
+            <div style={{ marginBottom:12, fontSize:13, color:"var(--text2)" }}>Pending reports from study group members.</div>
+            <div style={{ display:"flex", alignItems:"center", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"8px 14px", marginBottom:16, maxWidth:400 }}>
+              <Search size={14} color="var(--text3)" style={{ marginRight:8, flexShrink:0 }} />
+              <input value={groupReportSearch} onChange={e => setGroupReportSearch(e.target.value)}
+                placeholder="Search by email, group name, reason…"
+                style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"var(--text)", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
+              {groupReportSearch && <button onClick={() => setGroupReportSearch("")} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text3)", fontSize:14, padding:0, marginLeft:6 }}>✕</button>}
+            </div>
+            {groupReportsLoading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
+            {!groupReportsLoading && filtered.length === 0 && (
+              <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+                <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>{groupReports.length === 0 ? "No pending group reports" : "No results"}</div>
+              </div>
+            )}
+            {!groupReportsLoading && filtered.length > 0 && (
+              <div className="ad-anim" style={ad.table}>
+                <div style={{ ...ad.tableHeader, gridTemplateColumns:"1.5fr 1.5fr 1fr 2fr 180px" }}>
+                  <span>Reported User</span><span>Reported By</span><span>Group</span><span>Reason</span><span>Actions</span>
+                </div>
+                {filtered.map((r, i) => {
+                  const isConfirming = confirmGroupAction?.id === r.id;
+                  return (
+                    <div key={r.id} className="ad-anim" style={{ animationDelay:`${i*0.04}s`, padding:"12px 20px", background: i % 2 === 0 ? "var(--surface)" : "var(--surface2)", borderBottom: i < filtered.length - 1 ? "1px solid var(--divider)" : "none" }}>
+                      <div style={{ display:"grid", gridTemplateColumns:"1.5fr 1.5fr 1fr 2fr 180px", alignItems:"center" }}>
+                        <span style={{ fontSize:12, color:"var(--primary)", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:8 }}>{r.reporteduseremail || "—"}</span>
+                        <span style={{ fontSize:12, color:"var(--text2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:8 }}>{r.reportedbyemail || "—"}</span>
+                        <span style={{ fontSize:12, color:"var(--accent2)", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:8 }}>{r.groupname || "—"}</span>
+                        <span style={{ fontSize:12, color:"var(--text2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:8 }}>{r.reason || "—"}</span>
+                        {isConfirming ? (
+                          <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                            <span style={{ fontSize:11, fontWeight:600, color: confirmGroupAction.action === "warn" ? "var(--accent)" : "var(--text3)" }}>Sure?</span>
+                            <button onClick={() => { if (confirmGroupAction.action === "warn") warnGroupMember(r.id); else dismissGroupReport(r.id); setConfirmGroupAction(null); }}
+                              style={{ padding:"4px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:600, cursor:"pointer", background: confirmGroupAction.action === "warn" ? "var(--divider)" : "var(--error-bg)", color: confirmGroupAction.action === "warn" ? "var(--accent)" : "var(--error)" }}>Yes</button>
+                            <button onClick={() => setConfirmGroupAction(null)} style={{ padding:"4px 8px", border:"1px solid var(--border)", borderRadius:6, fontSize:11, cursor:"pointer", background:"var(--surface)", color:"var(--text2)" }}>No</button>
+                          </div>
+                        ) : (
+                          <div style={{ display:"flex", gap:4 }}>
+                            <button className="action-btn" onClick={() => setConfirmGroupAction({ id: r.id, action:"warn" })} style={{ padding:"4px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:600, cursor:"pointer", background:"var(--divider)", color:"var(--accent)" }}>Warn</button>
+                            <button className="action-btn" onClick={() => setConfirmGroupAction({ id: r.id, action:"dismiss" })} style={{ padding:"4px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:600, cursor:"pointer", background:"var(--error-bg)", color:"var(--error)" }}>Dismiss</button>
+                          </div>
+                        )}
+                      </div>
+                      {r.messagecontent && (
+                        <div style={{ fontSize:12, color:"var(--text2)", lineHeight:1.5, paddingLeft:2, marginTop:6, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                          <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:.5, marginRight:6 }}>Message</span>
+                          {r.messagecontent}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div style={{ marginTop:14, fontSize:12, color:"var(--text3)" }}>{filtered.length} report{filtered.length !== 1 ? "s" : ""} shown{groupReportSearch && " (filtered)"}</div>
+          </>
+        );
+      })()}
+
       {/* reviews tab */}
       {tab === "reviews" && (
         <>
-          <div style={{ display:"flex", gap:6, marginBottom:20, width:"fit-content" }}>
+          <div style={{ display:"flex", gap:6, marginBottom:16, width:"fit-content" }}>
             {[{id:"all",label:"All"},{id:"flagged",label:"Flagged"},{id:"reported",label:"Reported"}].map(t => (
               <button key={t.id} className="kk-tab" data-active={reviewStatus === t.id} onClick={() => { setReviewStatus(t.id); setExpandedId(null); setConfirmAction(null); }} style={{
                 padding:"8px 18px", borderRadius:9, fontSize:13,
@@ -630,12 +933,26 @@ export default function AdminDashboard({ token }) {
             ))}
           </div>
 
-          {reviewStatus === "all"      && reviewType === "course"    && reviewTable(courseReviews,    courseLoading,         "No course reviews yet",         deleteCourseReview, "ac", "course",    false)}
-          {reviewStatus === "all"      && reviewType === "professor" && reviewTable(profReviews,      profLoading,           "No professor reviews yet",      deleteProfReview,   "ap", "professor", false)}
-          {reviewStatus === "flagged"  && reviewType === "course"    && reviewTable(flaggedCourse,    flaggedCourseLoading,  "No flagged course reviews",     deleteCourseReview, "fc", "course",    false, true)}
-          {reviewStatus === "flagged"  && reviewType === "professor" && reviewTable(flaggedProf,      flaggedProfLoading,    "No flagged professor reviews",  deleteProfReview,   "fp", "professor", false, true)}
-          {reviewStatus === "reported" && reviewType === "course"    && reviewTable(reportedCourse,   reportedCourseLoading, "No reported course reviews",    deleteCourseReview, "rc", "course",    true)}
-          {reviewStatus === "reported" && reviewType === "professor" && reviewTable(reportedProf,     reportedProfLoading,   "No reported professor reviews", deleteProfReview,   "rp", "professor", true)}
+          <div style={{ display:"flex", alignItems:"center", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"8px 14px", marginBottom:16, maxWidth:400 }}>
+            <Search size={14} color="var(--text3)" style={{ marginRight:8, flexShrink:0 }} />
+            <input value={reviewSearch} onChange={e => setReviewSearch(e.target.value)}
+              placeholder="Search by email, course, professor, review text…"
+              style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"var(--text)", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
+            {reviewSearch && <button onClick={() => setReviewSearch("")} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text3)", fontSize:14, padding:0, marginLeft:6 }}>✕</button>}
+          </div>
+
+          {reviewStatus === "all" && reviewType === "course" && (<>
+            {reviewTable(courseReviews.filter(r => matchSearch(reviewSearch, r.userid, r.coursecode, r.coursetitle, r.comment)), courseLoading, "No course reviews yet", deleteCourseReview, "ac", "course", false)}
+            <Pagination page={courseReviewPage} totalPages={courseReviewTotalPages} onPrev={() => loadCourseReviews(courseReviewPage - 1)} onNext={() => loadCourseReviews(courseReviewPage + 1)} />
+          </>)}
+          {reviewStatus === "all" && reviewType === "professor" && (<>
+            {reviewTable(profReviews.filter(r => matchSearch(reviewSearch, r.userid, r.profname, r.comment)), profLoading, "No professor reviews yet", deleteProfReview, "ap", "professor", false)}
+            <Pagination page={profReviewPage} totalPages={profReviewTotalPages} onPrev={() => loadProfReviews(profReviewPage - 1)} onNext={() => loadProfReviews(profReviewPage + 1)} />
+          </>)}
+          {reviewStatus === "flagged"  && reviewType === "course"    && reviewTable(flaggedCourse.filter(r    => matchSearch(reviewSearch, r.userid, r.coursecode, r.coursetitle, r.comment)),    flaggedCourseLoading,  "No flagged course reviews",     deleteCourseReview, "fc", "course",    false, true)}
+          {reviewStatus === "flagged"  && reviewType === "professor" && reviewTable(flaggedProf.filter(r      => matchSearch(reviewSearch, r.userid, r.profname, r.comment)),                     flaggedProfLoading,    "No flagged professor reviews",  deleteProfReview,   "fp", "professor", false, true)}
+          {reviewStatus === "reported" && reviewType === "course"    && reviewTable(reportedCourse.filter(r   => matchSearch(reviewSearch, r.userid, r.coursecode, r.coursetitle, r.comment)),   reportedCourseLoading, "No reported course reviews",    deleteCourseReview, "rc", "course",    true)}
+          {reviewStatus === "reported" && reviewType === "professor" && reviewTable(reportedProf.filter(r     => matchSearch(reviewSearch, r.userid, r.profname, r.comment)),                    reportedProfLoading,   "No reported professor reviews", deleteProfReview,   "rp", "professor", true)}
         </>
       )}
     </div>

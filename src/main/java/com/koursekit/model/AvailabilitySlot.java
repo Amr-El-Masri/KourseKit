@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "AvailabilitySlot")
+@Table(name = "AvailabilitySlot", indexes = @Index(name = "idx_availslot_user_id", columnList = "user_id"))
 public class AvailabilitySlot {
 
     @Id
