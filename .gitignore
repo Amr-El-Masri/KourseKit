@@ -52,3 +52,6 @@ application-local.properties
 
 #node dependencies
 node_modules/
+
+# file uploads
+uploads/
