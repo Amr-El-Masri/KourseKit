@@ -214,19 +214,25 @@ function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUse
               href={`${API_BASE}${message.attachmentUrl}`}
               target="_blank"
               rel="noreferrer"
-              style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", background: isOwn ? "rgba(255,255,255,0.15)" : "var(--surface)", borderRadius:10, textDecoration:"none", maxWidth:260 }}
+              style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 14px", background: isOwn ? "rgba(255,255,255,0.15)" : "var(--surface)", borderRadius:12, textDecoration:"none", maxWidth:280, border: isOwn ? "1px solid rgba(255,255,255,0.2)" : "1px solid var(--border)", marginTop:4 }}
             >
-              {message.attachmentType === "PDF" ? <FileText size={20} color={isOwn ? "#fff" : "var(--primary)"} /> : <FileIcon size={20} color={isOwn ? "#fff" : "var(--primary)"} />}
-              <div style={{ minWidth:0 }}>
-                <div style={{ fontSize:12, fontWeight:600, color: isOwn ? "#fff" : "var(--primary)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+              <div style={{ width:40, height:40, borderRadius:10, background: isOwn ? "rgba(255,255,255,0.2)" : "var(--blue-light-bg)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                {message.attachmentType === "PDF"
+                  ? <FileText size={22} color={isOwn ? "#fff" : "var(--primary)"} />
+                  : <FileIcon size={22} color={isOwn ? "#fff" : "var(--primary)"} />}
+              </div>
+              <div style={{ minWidth:0, flex:1 }}>
+                <div style={{ fontSize:13, fontWeight:600, color: isOwn ? "#fff" : "var(--primary)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", marginBottom:2 }}>
                   {message.attachmentName}
                 </div>
-                {message.attachmentSize && (
-                  <div style={{ fontSize:10, color: isOwn ? "rgba(255,255,255,0.7)" : "var(--text3)" }}>
-                    {(message.attachmentSize / 1024).toFixed(1)} KB
-                  </div>
-                )}
+                <div style={{ fontSize:11, color: isOwn ? "rgba(255,255,255,0.7)" : "var(--text3)", display:"flex", alignItems:"center", gap:6 }}>
+                  {message.attachmentType === "PDF" ? "PDF" : "Document"}
+                  {message.attachmentSize && (
+                    <span>· {(message.attachmentSize / 1024).toFixed(1)} KB</span>
+                  )}
+                </div>
               </div>
+              <div style={{ fontSize:10, color: isOwn ? "rgba(255,255,255,0.6)" : "var(--text3)", flexShrink:0 }}>↓</div>
             </a>
           )}
         </div>
