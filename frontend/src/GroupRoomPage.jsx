@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { ArrowLeft, Send, Trash2, UserPlus, UserCheck, X, Heart, ThumbsUp, Flag, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Send, Trash2, UserPlus, UserCheck, X, Heart, ThumbsUp, Flag, AlertTriangle, Paperclip, Image, FileText, Music, File as FileIcon, Mic, MicOff } from "lucide-react";
 import { StudentProfileView } from "./StudentDirectoryPanel";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
@@ -183,7 +183,6 @@ function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUse
         >
           {message.content}
         </div>
-
         {isOwn && (
           <button
             onClick={() => onDelete(message.id)}
@@ -194,6 +193,44 @@ function MessageBubble({ message, isOwn, onDelete, onReact, onReport, currentUse
           </button>
         )}
       </div>
+
+      {message.attachmentUrl && !message.isDeleted && (
+        <div style={{ marginTop: message.content ? 8 : 0 }}>
+          {message.attachmentType === "IMAGE" && (
+            <img
+              src={`${API_BASE}${message.attachmentUrl}`}
+              alt={message.attachmentName}
+              style={{ maxWidth:260, maxHeight:200, borderRadius:10, display:"block", cursor:"pointer", objectFit:"cover" }}
+              onClick={() => window.open(`${API_BASE}${message.attachmentUrl}`, "_blank")}
+            />
+          )}
+          {message.attachmentType === "AUDIO" && (
+            <audio controls style={{ maxWidth:260 }}>
+              <source src={`${API_BASE}${message.attachmentUrl}`} />
+            </audio>
+          )}
+          {(message.attachmentType === "PDF" || message.attachmentType === "DOC") && (
+            <a
+              href={`${API_BASE}${message.attachmentUrl}`}
+              target="_blank"
+              rel="noreferrer"
+              style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", background: isOwn ? "rgba(255,255,255,0.15)" : "var(--surface)", borderRadius:10, textDecoration:"none", maxWidth:260 }}
+            >
+              {message.attachmentType === "PDF" ? <FileText size={20} color={isOwn ? "#fff" : "var(--primary)"} /> : <FileIcon size={20} color={isOwn ? "#fff" : "var(--primary)"} />}
+              <div style={{ minWidth:0 }}>
+                <div style={{ fontSize:12, fontWeight:600, color: isOwn ? "#fff" : "var(--primary)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                  {message.attachmentName}
+                </div>
+                {message.attachmentSize && (
+                  <div style={{ fontSize:10, color: isOwn ? "rgba(255,255,255,0.7)" : "var(--text3)" }}>
+                    {(message.attachmentSize / 1024).toFixed(1)} KB
+                  </div>
+                )}
+              </div>
+            </a>
+          )}
+        </div>
+      )}
 
       {(heartUsers.length > 0 || thumbUsers.length > 0) && (
         <div style={{ display:"flex", gap:4, marginTop:4, marginLeft: isOwn ? 0 : 4, marginRight: isOwn ? 4 : 0 }}>
@@ -304,6 +341,14 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
   const [members,  setMembers]  = useState([]);
   const [messages, setMessages] = useState([]);
   const [input,    setInput]    = useState("");
+  const [attachment, setAttachment] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const [recording, setRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const recordingTimerRef = useRef(null);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState("");
   const [viewingMember, setViewingMember] = useState(null);
@@ -363,11 +408,21 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
   //to send a messaeg (via websocket)
   const sendMessage = () => {
     const content = input.trim();
-    if (!content || !stompClient.current?.connected) return;
+    if ((!content && !attachment) || !stompClient.current?.connected) return;
     stompClient.current.publish({
-        destination: `/app/chat/${group.id}`,
-        body: JSON.stringify({ content, senderId: String(currentUserId) }), });
-    setInput(""); };
+      destination: `/app/chat/${group.id}`,
+      body: JSON.stringify({
+        content: content || "",
+        senderId: String(currentUserId),
+        attachmentUrl: attachment?.url || null,
+        attachmentType: attachment?.fileType || null,
+        attachmentName: attachment?.fileName || null,
+        attachmentSize: attachment?.fileSize ? String(attachment.fileSize) : null,
+      }),
+    });
+    setInput("");
+    setAttachment(null);
+  };
 
   // to delete a message
   const deleteMessage = async (messageId) => {
@@ -468,6 +523,93 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
     }
   };
 
+  const handleFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setUploading(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("groupId", group.id);
+
+      const token = getToken();
+      const res = await fetch(`${API_BASE}/api/files/upload?groupId=${group.id}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || "Upload failed");
+      }
+      const data = await res.json();
+      setAttachment(data);
+    } catch (e) {
+      setError(e.message || "Could not upload file.");
+    }
+
+    setUploading(false);
+    e.target.value = "";
+  };
+
+const clearAttachment = () => setAttachment(null);
+
+const startRecording = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mediaRecorder = new MediaRecorder(stream);
+    mediaRecorderRef.current = mediaRecorder;
+    audioChunksRef.current = [];
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) audioChunksRef.current.push(e.data);
+    };
+
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+      const file = new File([blob], `voice-note-${Date.now()}.webm`, { type: "audio/webm" });
+      stream.getTracks().forEach(t => t.stop());
+
+      setUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append("file", file);
+        const token = getToken();
+        const res = await fetch(`${API_BASE}/api/files/upload?groupId=${group.id}`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        if (!res.ok) throw new Error("Upload failed");
+        const data = await res.json();
+        setAttachment(data);
+      } catch (e) {
+        setError(e.message || "Could not upload voice note.");
+      }
+      setUploading(false);
+    };
+
+    mediaRecorder.start();
+    setRecording(true);
+    setRecordingTime(0);
+    recordingTimerRef.current = setInterval(() => {
+      setRecordingTime(t => t + 1);
+    }, 1000);
+
+  } catch (e) {
+    setError("Microphone access denied. Please allow microphone permissions.");
+  }
+};
+
+const stopRecording = () => {
+  mediaRecorderRef.current?.stop();
+  setRecording(false);
+  clearInterval(recordingTimerRef.current);
+  setRecordingTime(0);
+};
+
   const deleteSession = async (sessionId) => {
     if (!window.confirm("Delete this session?")) return;
     try {
@@ -548,6 +690,7 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
         .msg-input:focus { border-color: var(--primary) !important; }
         .send-btn:hover { opacity: 0.85; }
         .member-row:hover { background: var(--surface2) !important; cursor: pointer; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
       `}</style>
 
       <div style={{ marginBottom: 20, flexShrink: 0 }}>
@@ -719,34 +862,96 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
               )}
           </div>
 
-          <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border)", display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
-            <input
-              className="msg-input"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
-              placeholder="Type a message…"
-              style={{
-                flex: 1, padding: "10px 14px", border: "1px solid var(--border)",
-                borderRadius: 10, fontSize: 13, fontFamily: "'DM Sans',sans-serif",
-                background: "var(--surface2)", color: "var(--text)", outline: "none",
-                transition: "border-color 0.15s",
-              }}
-            />
-            <button
-              className="send-btn"
-              onClick={sendMessage}
-              disabled={!input.trim()}
-              style={{
-                width: 40, height: 40, borderRadius: 10, border: "none",
-                background: input.trim() ? "var(--primary)" : "var(--border)",
-                color: "#fff", cursor: input.trim() ? "pointer" : "not-allowed",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                flexShrink: 0, transition: "opacity 0.15s",
-              }}
-            >
-              <Send size={16} />
-            </button>
+          <div style={{ padding:"12px 16px", borderTop:"1px solid var(--border)", display:"flex", flexDirection:"column", gap:8, flexShrink:0 }}>
+
+            {recording && (
+              <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:10 }}>
+                <div style={{ width:8, height:8, borderRadius:"50%", background:"var(--error)", animation:"pulse 1s infinite" }} />
+                <span style={{ fontSize:12, fontWeight:600, color:"var(--error)" }}>
+                  Recording… {Math.floor(recordingTime / 60)}:{String(recordingTime % 60).padStart(2, "0")}
+                </span>
+                <button onClick={stopRecording}
+                  style={{ marginLeft:"auto", padding:"4px 10px", borderRadius:7, border:"none", background:"var(--error)", color:"#fff", fontSize:11, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                  Stop
+                </button>
+              </div>
+            )}
+
+            {attachment && (
+              <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:10 }}>
+                <span style={{ fontSize:18 }}>
+                  {attachment.fileType === "IMAGE" ? <Image size={18} /> : attachment.fileType === "PDF" ? <FileText size={18} /> : attachment.fileType === "AUDIO" ? <Music size={18} /> : <FileIcon size={18} />}
+                </span>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:"var(--primary)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{attachment.fileName}</div>
+                  <div style={{ fontSize:11, color:"var(--text3)" }}>{(attachment.fileSize / 1024).toFixed(1)} KB</div>
+                </div>
+                <button onClick={clearAttachment} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text3)", fontSize:16, padding:4 }}>×</button>
+              </div>
+            )}
+
+            <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,audio/*"
+                style={{ display:"none" }}
+              />
+
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                style={{ width:40, height:40, borderRadius:10, border:"1px solid var(--border)", background:"var(--surface2)", color:"var(--text2)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:18, opacity: uploading ? 0.5 : 1 }}
+                title="Attach file"
+              >
+                {uploading ? <span style={{ fontSize:12 }}>…</span> : <Paperclip size={16} />}
+              </button>
+
+              <button
+                onClick={recording ? stopRecording : startRecording}
+                disabled={uploading}
+                style={{
+                  width:40, height:40, borderRadius:10, border:"1px solid var(--border)",
+                  background: recording ? "var(--error-bg)" : "var(--surface2)",
+                  color: recording ? "var(--error)" : "var(--text2)",
+                  cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
+                  flexShrink:0, opacity: uploading ? 0.5 : 1,
+                  transition:"all 0.15s",
+                }}
+                title={recording ? "Stop recording" : "Record voice note"}
+              >
+                {recording ? <MicOff size={16} /> : <Mic size={16} />}
+              </button>
+
+              <input
+                className="msg-input"
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
+                placeholder={attachment ? "Add a caption…" : "Type a message…"}
+                style={{
+                  flex:1, padding:"10px 14px", border:"1px solid var(--border)",
+                  borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif",
+                  background:"var(--surface2)", color:"var(--text)", outline:"none",
+                  transition:"border-color 0.15s",
+                }}
+              />
+              <button
+                className="send-btn"
+                onClick={sendMessage}
+                disabled={!input.trim() && !attachment}
+                style={{
+                  width:40, height:40, borderRadius:10, border:"none",
+                  background: (input.trim() || attachment) ? "var(--primary)" : "var(--border)",
+                  color:"#fff", cursor: (input.trim() || attachment) ? "pointer" : "not-allowed",
+                  display:"flex", alignItems:"center", justifyContent:"center",
+                  flexShrink:0, transition:"opacity 0.15s",
+                }}
+              >
+                <Send size={16} />
+              </button>
+            </div>
           </div>
         </div>
 
