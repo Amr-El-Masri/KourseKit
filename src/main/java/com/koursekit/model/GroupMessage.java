@@ -25,6 +25,12 @@ public class GroupMessage {
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "iv", columnDefinition = "TEXT")
+    private String iv;
+
+    @Column(name = "encrypted_keys", columnDefinition = "TEXT")
+    private String encryptedKeys;
+
     @Column(name = "sent_at", nullable = false, updatable = false)
     private LocalDateTime sentAt = LocalDateTime.now();
 
@@ -74,6 +80,18 @@ public class GroupMessage {
 
     public void setContent(String content) {
         this.content = content; }
+
+    public String getIv() { 
+        return iv; }
+
+    public void setIv(String iv) { 
+        this.iv = iv; }
+
+    public String getEncryptedKeys() { 
+        return encryptedKeys; }
+
+    public void setEncryptedKeys(String encryptedKeys) { 
+        this.encryptedKeys = encryptedKeys; }
 
     public LocalDateTime getSentAt() {
         return sentAt; }

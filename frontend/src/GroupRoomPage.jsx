@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useTheme } from "./ThemeContext";
 import { ArrowLeft, Send, Trash2, UserPlus, UserCheck, X, Heart, ThumbsUp, Flag, AlertTriangle, Pin } from "lucide-react";
+import { initE2EE, fetchMemberPublicKeys, encryptMessage, decryptMessage } from "./e2ee";
 import { StudentProfileView } from "./StudentDirectoryPanel";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
@@ -345,6 +346,18 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
   const [highlightedMessageId, setHighlightedMessageId] = useState(null);
   const [expandedPinId, setExpandedPinId] = useState(null);
   const currentUserId = getUserId();
+  const privateKeyRef = useRef(null);
+  const memberKeysRef = useRef({});
+  const [e2eeReady, setE2eeReady] = useState(false);
+
+  // Task 1: init E2EE — load or generate keypair from IndexedDB, upload public key
+  useEffect(() => {
+    initE2EE(String(currentUserId), apiFetch).then(({ privateKey, publicKey }) => {
+      privateKeyRef.current = privateKey;
+      memberKeysRef.current[String(currentUserId)] = publicKey;
+      setE2eeReady(true);
+    }).catch(() => setE2eeReady(true)); // degrade gracefully
+  }, []);
 
   const scrollToMessage = (messageId) => {
     const el = messageRefs.current[messageId];
@@ -359,55 +372,78 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Task 2 (part 1): fetch members + their public keys after E2EE is ready
   useEffect(() => {
+    if (!e2eeReady) return;
     apiFetch(`/api/study-groups/${group.id}/members`)
-      .then(data => setMembers(data || []))
+      .then(async data => {
+        const mems = data || [];
+        setMembers(mems);
+        const ids = mems.map(m => m.userId).filter(Boolean);
+        if (ids.length) {
+          const fetched = await fetchMemberPublicKeys(ids, apiFetch);
+          delete fetched[String(currentUserId)]; // keep our locally-generated key
+          memberKeysRef.current = { ...memberKeysRef.current, ...fetched };
+        }
+      })
       .catch(() => {});
-  }, [group.id]);
+  }, [group.id, e2eeReady]);
 
+  // Task 3: load history and decrypt each message
   useEffect(() => {
+    if (!e2eeReady) return;
     setLoading(true);
     apiFetch(`/api/group-messages/${group.id}/history`)
-      .then(data => { setMessages(data || []); setLoading(false); })
+      .then(async data => {
+        const msgs = data || [];
+        const decrypted = await Promise.all(msgs.map(m => decryptMessage(m, currentUserId, privateKeyRef.current)));
+        setMessages(decrypted.filter(m => !m._notMember));
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
-  }, [group.id]);
+  }, [group.id, e2eeReady]);
 
   useEffect(() => {
     const token = getToken();
-
     const client = new Client({
       webSocketFactory: () => new SockJS(`${API_BASE}/ws`),
       connectHeaders: { Authorization: `Bearer ${token}` },
-
       onConnect: () => {
-        client.subscribe(`/topic/group/${group.id}`, (frame) => {
+        // Task 3: decrypt incoming WebSocket messages
+        client.subscribe(`/topic/group/${group.id}`, async (frame) => {
           const incoming = JSON.parse(frame.body);
+          const msg = await decryptMessage(incoming, currentUserId, privateKeyRef.current);
+          if (msg._notMember) return;
           setMessages(prev => {
-            const exists = prev.find(m => m.id === incoming.id);
-            if (exists) return prev.map(m => m.id === incoming.id ? incoming : m);
-            return [...prev, incoming];
+            const exists = prev.find(m => m.id === msg.id);
+            if (exists) return prev.map(m => m.id === msg.id ? msg : m);
+            return [...prev, msg];
           });
         });
       },
-
       onDisconnect: () => {},
       onStompError: () => setError("Connection lost. Please refresh."),
     });
-
     client.activate();
     stompClient.current = client;
-
     return () => { client.deactivate(); };
   }, [group.id]);
 
-  //to send a messaeg (via websocket)
-  const sendMessage = () => {
-    const content = input.trim();
-    if (!content || !stompClient.current?.connected) return;
-    stompClient.current.publish({
+  // Task 2 (part 2): encrypt with AES, wrap key per member, send via WebSocket
+  const sendMessage = async () => {
+    const plaintext = input.trim();
+    if (!plaintext || !stompClient.current?.connected) return;
+    setInput("");
+    try {
+      const { content, iv, encryptedKeys } = await encryptMessage(plaintext, memberKeysRef.current);
+      stompClient.current.publish({
         destination: `/app/chat/${group.id}`,
-        body: JSON.stringify({ content, senderId: String(currentUserId) }), });
-    setInput(""); };
+        body: JSON.stringify({ content, iv, encryptedKeys, senderId: String(currentUserId) }),
+      });
+    } catch {
+      setError("Could not encrypt message.");
+    }
+  };
 
   // to delete a message
   const deleteMessage = async (messageId) => {

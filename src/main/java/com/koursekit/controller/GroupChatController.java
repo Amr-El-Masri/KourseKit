@@ -1,13 +1,8 @@
 package com.koursekit.controller;
 
-import com.koursekit.model.GroupMessage;
-import com.koursekit.dto.GroupMessageResponseDTO;
-import com.koursekit.mappers.GroupMessageMapper;
-import com.koursekit.model.StudyGroupMember;
-import com.koursekit.model.User;
-import com.koursekit.repository.GroupMessageRepo;
-import com.koursekit.repository.StudyGroupMemberRepo;
-import com.koursekit.service.GroupMessageService;
+import java.util.List;
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -15,12 +10,26 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
-import java.util.List;
-import java.util.Map;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.koursekit.dto.GroupMessageResponseDTO;
 import com.koursekit.dto.GroupReportsRequestDTO;
+import com.koursekit.mappers.GroupMessageMapper;
 import com.koursekit.mappers.GroupReportsMapper;
+import com.koursekit.model.GroupMessage;
 import com.koursekit.model.GroupReport;
+import com.koursekit.model.StudyGroupMember;
+import com.koursekit.model.User;
+import com.koursekit.repository.GroupMessageRepo;
+import com.koursekit.repository.StudyGroupMemberRepo;
+import com.koursekit.service.GroupMessageService;
 
 @Controller
 @RequestMapping("/api/group-messages")
@@ -52,12 +61,14 @@ public class GroupChatController {
     }
 
     @MessageMapping("/chat/{groupId}")
-    public void handleMessage(@DestinationVariable Long groupId,
-                            @Payload Map<String, String> payload) {
+    public void handleMessage(@DestinationVariable Long groupId, @Payload Map<String, String> payload) {
         Long senderId = Long.parseLong(payload.get("senderId"));
         String content = payload.get("content");
-        GroupMessage saved = groupMessageService.sendMessage(groupId, senderId, content);
-        GroupMessageResponseDTO dto = groupMessageMapper.toResponseDTO(saved, getSenderTag(groupId, senderId));
+        String iv = payload.get("iv");
+        String encryptedKeys = payload.get("encryptedKeys");
+
+        GroupMessage saved = groupMessageService.sendMessage(groupId, senderId, content, iv, encryptedKeys);
+        GroupMessageResponseDTO dto = groupMessageMapper.toResponseDTO(saved);
         messagingTemplate.convertAndSend("/topic/group/" + groupId, dto);
     }
 

@@ -10,6 +10,8 @@ public record GroupMessageResponseDTO (
     String senderAvatar,
     String senderTag,
     String content,
+    String iv,
+    String encryptedKeys,
     LocalDateTime sentAt,
     boolean isDeleted,
     String reactionsJson,

@@ -22,7 +22,7 @@ export default function Login({ onLogin, onGoToRegister, onGoToForgotPassword, p
       if (data.success && data.token) {
         const previousEmail = localStorage.getItem("kk_email");
         if (previousEmail && previousEmail !== email) {
-          Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k));
+          Object.keys(localStorage).filter(k => k.startsWith("kk_") && !k.startsWith("kk_e2ee_")).forEach(k => localStorage.removeItem(k));
         }
         localStorage.setItem("kk_token", data.token);
         localStorage.setItem("kk_email", email);
