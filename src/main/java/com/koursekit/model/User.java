@@ -17,6 +17,8 @@ public class User {
     private String pass;
     @Column(name = "public_key", columnDefinition = "TEXT")
     private String publicKey;
+    @Column(name = "encrypted_private_key", columnDefinition = "TEXT")
+    private String encryptedPrivateKey;
     @Id
     @GeneratedValue(strategy=GenerationType.IDENTITY)
     private Long id;
@@ -114,6 +116,8 @@ public class User {
 
     public String getPublicKey() { return publicKey; }
     public void setPublicKey(String publicKey) { this.publicKey = publicKey; }
+    public String getEncryptedPrivateKey() { return encryptedPrivateKey; }
+    public void setEncryptedPrivateKey(String encryptedPrivateKey) { this.encryptedPrivateKey = encryptedPrivateKey; }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

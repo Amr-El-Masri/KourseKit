@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { initE2EE } from "./e2ee";
 import GradeCalculator from "./GradeCalculator";
 import Reviews from "./Reviews";
 import TaskManager from "./TaskManager";
@@ -575,6 +576,21 @@ export default function Dashboard({ onLogout }) {
     if (!email) return;
     if (localStorage.getItem(`kk_schedule_onboarded_${email}`)) return;
     setShowOnboarding(true);
+  }, []);
+
+  // Generate + upload E2EE public key on login so other members can encrypt for us
+  // even before we open the groupchat for the first time
+  useEffect(() => {
+    const token = localStorage.getItem("kk_token");
+    if (!token) return;
+    try {
+      const userId = JSON.parse(atob(token.split(".")[1])).sub;
+      const apiFetch = (path, opts = {}) => fetch(`http://localhost:8080${path}`, {
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        ...opts,
+      }).then(r => r.json());
+      initE2EE(String(userId), apiFetch).catch(() => {});
+    } catch { /* non-critical */ }
   }, []);
   useEffect(() => {
     localStorage.setItem("kk_activePage", activePage);

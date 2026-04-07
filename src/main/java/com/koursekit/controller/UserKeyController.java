@@ -70,4 +70,23 @@ public class UserKeyController {
             return ResponseEntity.ok(Map.of("hasKey", false));
         return ResponseEntity.ok(Map.of("hasKey", true, "publicKey", user.getPublicKey()));
     }
+
+    @PostMapping("/private")
+    public ResponseEntity<?> uploadEncryptedPrivateKey(@RequestBody Map<String, String> body) {
+        String encryptedPrivateKey = body.get("encryptedPrivateKey");
+        if (encryptedPrivateKey == null || encryptedPrivateKey.isBlank())
+            return ResponseEntity.badRequest().body(Map.of("message", "encryptedPrivateKey is required"));
+        User user = currentUser();
+        user.setEncryptedPrivateKey(encryptedPrivateKey);
+        userRepo.save(user);
+        return ResponseEntity.ok(Map.of("message", "Encrypted private key stored"));
+    }
+
+    @GetMapping("/private")
+    public ResponseEntity<?> getEncryptedPrivateKey() {
+        User user = currentUser();
+        if (user.getEncryptedPrivateKey() == null)
+            return ResponseEntity.ok(Map.of("hasKey", false));
+        return ResponseEntity.ok(Map.of("hasKey", true, "encryptedPrivateKey", user.getEncryptedPrivateKey()));
+    }
 }
