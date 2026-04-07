@@ -10,5 +10,9 @@ public record GroupMessageResponseDTO (
     String content,
     LocalDateTime sentAt,
     boolean isDeleted,
-    String reactionsJson
+    String reactionsJson,
+    String attachmentUrl,
+    String attachmentType,
+    String attachmentName,
+    Long attachmentSize
 ) {}

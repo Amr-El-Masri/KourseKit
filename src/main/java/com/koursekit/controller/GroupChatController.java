@@ -42,11 +42,16 @@ public class GroupChatController {
     }
 
     @MessageMapping("/chat/{groupId}")
-    public void handleMessage(@DestinationVariable Long groupId,
-                            @Payload Map<String, String> payload) {
+    public void handleMessage(@DestinationVariable Long groupId, @Payload Map<String, String> payload) {
         Long senderId = Long.parseLong(payload.get("senderId"));
         String content = payload.get("content");
-        GroupMessage saved = groupMessageService.sendMessage(groupId, senderId, content);
+        String attachmentUrl = payload.get("attachmentUrl");
+        String attachmentType = payload.get("attachmentType");
+        String attachmentName = payload.get("attachmentName");
+        Long attachmentSize = payload.get("attachmentSize") != null
+            ? Long.parseLong(payload.get("attachmentSize")) : null;
+
+        GroupMessage saved = groupMessageService.sendMessage(groupId, senderId, content, attachmentUrl, attachmentType, attachmentName, attachmentSize);
         GroupMessageResponseDTO dto = groupMessageMapper.toResponseDTO(saved);
         messagingTemplate.convertAndSend("/topic/group/" + groupId, dto);
     }

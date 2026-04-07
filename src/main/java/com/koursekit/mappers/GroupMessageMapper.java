@@ -15,7 +15,11 @@ public class GroupMessageMapper {
             message.getContent(),
             message.getSentAt(),
             message.getIsDeleted(),
-            message.getReactionsJson() != null ? message.getReactionsJson() : "{}"
+            message.getReactionsJson() != null ? message.getReactionsJson() : "{}",
+            message.getAttachmentUrl(),
+            message.getAttachmentType(),
+            message.getAttachmentName(),
+            message.getAttachmentSize()
         );
 
     }

@@ -37,6 +37,18 @@ public class GroupMessage {
     @Column(name = "reactions_json", columnDefinition = "TEXT")
     private String reactionsJson = "{}";
 
+    @Column(name = "attachment_url", columnDefinition = "TEXT")
+    private String attachmentUrl;
+
+    @Column(name = "attachment_type")
+    private String attachmentType; 
+
+    @Column(name = "attachment_name")
+    private String attachmentName;
+
+    @Column(name = "attachment_size")
+    private Long attachmentSize;
+
     public GroupMessage() {}
 
     public GroupMessage(StudyGroup studyGroup, User sender, String content) {
@@ -92,4 +104,28 @@ public class GroupMessage {
         
     public void setReactionsJson(String reactionsJson) { 
         this.reactionsJson = reactionsJson; }
+
+    public String getAttachmentUrl() { 
+        return attachmentUrl; }
+    
+    public void setAttachmentUrl(String attachmentUrl) { 
+        this.attachmentUrl = attachmentUrl; }
+
+    public String getAttachmentType() { 
+        return attachmentType; }
+
+    public void setAttachmentType(String attachmentType) { 
+        this.attachmentType = attachmentType; }
+
+    public String getAttachmentName() { 
+        return attachmentName; }
+
+    public void setAttachmentName(String attachmentName) { 
+        this.attachmentName = attachmentName; }
+
+    public Long getAttachmentSize() { 
+        return attachmentSize; }
+
+    public void setAttachmentSize(Long attachmentSize) { 
+        this.attachmentSize = attachmentSize; }
 }
