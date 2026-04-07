@@ -387,27 +387,26 @@ function MessageBubble({ message, isOwn, showName, showTime, onDelete, onReact, 
           {!message.content && !message.attachmentUrl && (
             <div onClick={handleClick} style={{ position:"absolute", inset:0, zIndex:0 }} />
           )}
+          {(heartUsers.length > 0 || thumbUsers.length > 0) && (
+            <div style={{ display:"flex", gap:3, marginTop:-10, marginBottom:2, [isOwn ? "marginRight" : "marginLeft"]: 8, zIndex:2 }}>
+              {heartUsers.length > 0 && (
+                <span style={{ fontSize:11, background: isDark ? "var(--surface)" : "#fff", border:"1px solid var(--border)", borderRadius:99, padding:"2px 7px", display:"flex", alignItems:"center", gap:3, boxShadow:"0 1px 4px rgba(0,0,0,0.12)" }}>
+                  <Heart size={10} color="#e74c3c" fill={myReaction === "heart" ? "#e74c3c" : "none"} />
+                  <span style={{ color: isDark ? "var(--text)" : "#333", fontWeight:600 }}>{heartUsers.length}</span>
+                </span>
+              )}
+              {thumbUsers.length > 0 && (
+                <span style={{ fontSize:11, background: isDark ? "var(--surface)" : "#fff", border:"1px solid var(--border)", borderRadius:99, padding:"2px 7px", display:"flex", alignItems:"center", gap:3, boxShadow:"0 1px 4px rgba(0,0,0,0.12)" }}>
+                  <ThumbsUp size={10} color={myReaction === "thumbsup" ? "var(--primary)" : "var(--text3)"} fill={myReaction === "thumbsup" ? "var(--primary)" : "none"} />
+                  <span style={{ color: isDark ? "var(--text)" : "#333", fontWeight:600 }}>{thumbUsers.length}</span>
+                </span>
+              )}
+            </div>
+          )}
         </div>
       </div>
-
-      {(heartUsers.length > 0 || thumbUsers.length > 0) && (
-        <div style={{ display:"flex", gap:3, marginTop:4, [isOwn ? "marginRight" : "marginLeft"]: 8, zIndex:1 }}>
-          {heartUsers.length > 0 && (
-            <span style={{ fontSize:11, background: isDark ? "var(--surface)" : "#fff", border:"1px solid var(--border)", borderRadius:99, padding:"2px 7px", display:"flex", alignItems:"center", gap:3, boxShadow:"0 1px 4px rgba(0,0,0,0.12)" }}>
-              <Heart size={10} color="#e74c3c" fill={myReaction === "heart" ? "#e74c3c" : "none"} />
-              <span style={{ color: isDark ? "var(--text)" : "#333", fontWeight:600 }}>{heartUsers.length}</span>
-            </span>
-          )}
-          {thumbUsers.length > 0 && (
-            <span style={{ fontSize:11, background: isDark ? "var(--surface)" : "#fff", border:"1px solid var(--border)", borderRadius:99, padding:"2px 7px", display:"flex", alignItems:"center", gap:3, boxShadow:"0 1px 4px rgba(0,0,0,0.12)" }}>
-              <ThumbsUp size={10} color={myReaction === "thumbsup" ? "var(--primary)" : "var(--text3)"} fill={myReaction === "thumbsup" ? "var(--primary)" : "none"} />
-              <span style={{ color: isDark ? "var(--text)" : "#333", fontWeight:600 }}>{thumbUsers.length}</span>
-            </span>
-          )}
-        </div>
-      )}
       {showTime && (
-        <div style={{ fontSize:10, color:"var(--text3)", marginTop:3, textAlign: isOwn ? "right" : "left" }}>
+        <div style={{ fontSize:10, color:"var(--text3)", marginTop:3, textAlign: isOwn ? "right" : "left", marginLeft: isOwn ? 0 : 34 }}>
           {new Date(message.sentAt).toLocaleTimeString("en-US", { hour:"2-digit", minute:"2-digit", hour12:true })}
         </div>
       )}
@@ -616,7 +615,7 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
       .then(async data => {
         const msgs = data || [];
         const decrypted = await Promise.all(msgs.map(m => decryptMessage(m, currentUserId, privateKeyRef.current)));
-        setMessages(decrypted.filter(m => !m._notMember));
+        setMessages(decrypted.filter(m => !m._notMember && !m._decryptFailed));
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -656,6 +655,13 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
     setInput("");
     setUploading(true);
     try {
+      const ids = members.map(m => m.userId).filter(Boolean);
+      if (ids.length) {
+        const fetched = await fetchMemberPublicKeys(ids, apiFetch);
+        delete fetched[String(currentUserId)];
+        memberKeysRef.current = { ...memberKeysRef.current, ...fetched };
+      }
+      console.log("[E2EE] encrypting for members:", Object.keys(memberKeysRef.current));
       const { content, iv, encryptedKeys, rawAes } = await encryptMessage(plaintext || "", memberKeysRef.current);
       let attachmentUrl = null, attachmentType = null, attachmentName = null, attachmentSize = null;
       if (pendingFileRef.current) {
@@ -747,13 +753,22 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
   const isHost = members.some(m => String(m.userId) === String(currentUserId) && m.role === "HOST");
   const [pinnedMessages, setPinnedMessages] = useState([]);
   useEffect(() => {
-    apiFetch(`/api/group-messages/${group.id}/pinned`).then(data => { if (Array.isArray(data)) setPinnedMessages(data); }).catch(() => {});
-  }, [group.id]);
+    if (!e2eeReady) return;
+    apiFetch(`/api/group-messages/${group.id}/pinned`).then(async data => {
+      if (!Array.isArray(data)) return;
+      const decrypted = await Promise.all(data.map(m => decryptMessage(m, currentUserId, privateKeyRef.current)));
+      setPinnedMessages(decrypted);
+    }).catch(() => {});
+  }, [group.id, e2eeReady]);
   const pinMessage = async (messageId) => {
     try {
       const updated = await apiFetch(`/api/group-messages/${messageId}/pin`, { method: "PATCH" });
       setMessages(prev => prev.map(m => m.id === messageId ? { ...m, pinned: updated.pinned } : m));
-      setPinnedMessages(prev => updated.pinned ? [updated, ...prev.filter(p => p.id !== messageId)] : prev.filter(p => p.id !== messageId));
+      setPinnedMessages(prev => {
+        const decryptedMsg = messages.find(m => m.id === messageId);
+        const merged = decryptedMsg ? { ...decryptedMsg, pinned: updated.pinned } : updated;
+        return updated.pinned ? [merged, ...prev.filter(p => p.id !== messageId)] : prev.filter(p => p.id !== messageId);
+      });
     } catch (e) { setError(e.message); }
   };
   const [sessions, setSessions] = useState([]);
@@ -1075,6 +1090,12 @@ const stopRecording = () => {
               {pinnedMessages.map(p => {
                 const isLong = p.content && p.content.length > 80;
                 const isExpanded = expandedPinId === p.id;
+                const attachmentLabel = !p.content && p.attachmentType
+                  ? p.attachmentType === "IMAGE" ? <span style={{ display:"flex", alignItems:"center", gap:4 }}><Image size={12} /> Image</span>
+                  : p.attachmentType === "AUDIO" ? <span style={{ display:"flex", alignItems:"center", gap:4 }}><Music size={12} /> Voice note</span>
+                  : p.attachmentType === "PDF" ? <span style={{ display:"flex", alignItems:"center", gap:4 }}><FileText size={12} /> PDF</span>
+                  : <span style={{ display:"flex", alignItems:"center", gap:4 }}><Paperclip size={12} /> File</span>
+                  : null;
                 return (
                 <div key={p.id} style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
                   <div
@@ -1082,15 +1103,14 @@ const stopRecording = () => {
                       if (isLong) setExpandedPinId(isExpanded ? null : p.id);
                       scrollToMessage(p.id);
                     }}
-                    style={{ fontSize: 12, color: "var(--text)", flex: 1, cursor: "pointer", lineHeight: 1.5, minWidth: 0, wordBreak: "break-word", overflowWrap: "break-word", display:"flex", flexDirection:"column", gap:1 }}
+                    style={{ fontSize: 12, color: "var(--text)", flex: 1, cursor: "pointer", lineHeight: 1.5, minWidth: 0, wordBreak: "break-word", overflowWrap: "break-word" }}
                   >
-                    <span style={{ fontWeight: 600, color: "var(--primary)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{p.senderTag || `${p.senderFirstName} ${p.senderLastName}`}</span>
-                    <span>
-                      {isLong && !isExpanded
+                    {attachmentLabel
+                      ? <span style={{ color: "var(--text3)", fontStyle: "italic" }}>{attachmentLabel}</span>
+                      : isLong && !isExpanded
                         ? <>{p.content.slice(0, 80)}<span style={{ color: "var(--text3)" }}>… <span style={{ color: "var(--primary)", fontWeight: 600 }}>see more</span></span></>
                         : p.content
-                      }
-                    </span>
+                    }
                   </div>
                   <button onClick={() => pinMessage(p.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text3)", padding: "2px 4px", flexShrink: 0, display:"flex", alignItems:"center", marginTop: 1 }}><X size={12} /></button>
                 </div>

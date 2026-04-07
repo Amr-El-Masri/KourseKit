@@ -71,17 +71,12 @@ export async function initE2EE(userId, apiFetch) {
     await idbPut(db, PRIV_KEY, privateB64);
     await idbPut(db, PUB_KEY,  publicB64);
     await apiFetch("/api/keys", { method: "POST", body: JSON.stringify({ publicKey: publicB64 }) });
-    console.log("[E2EE] Generated new keypair and uploaded public key");
+    console.log("[E2EE] generated new keypair & uploaded public key");
   } else {
-    // reupload if server lost the public key
     try {
-      const res = await apiFetch("/api/keys/me");
-      if (!res.hasKey) {
-        await apiFetch("/api/keys", { method: "POST", body: JSON.stringify({ publicKey: publicB64 }) });
-        console.log("[E2EE] Re-uploaded public key");
-      }
+      await apiFetch("/api/keys", { method: "POST", body: JSON.stringify({ publicKey: publicB64 }) });
     } catch { /* non-critical */ }
-    console.log("[E2EE] Loaded existing keypair from IndexedDB");
+    console.log("[E2EE] loaded existing keypair from indexeddb");
   }
 
   const privateKey = await importPrivateKey(privateB64);
@@ -96,8 +91,8 @@ export async function fetchMemberPublicKeys(userIds, apiFetch) {
       method: "POST", body: JSON.stringify({ userIds }),
     });
     const result = {};
-    for (const { id, publicKey } of keys) {
-      result[String(id)] = await importPublicKey(publicKey);
+    for (const { userId, publicKey } of keys) {
+      result[String(userId)] = await importPublicKey(publicKey);
     }
     return result;
   } catch { return {}; }
@@ -132,19 +127,24 @@ export async function decryptMessage(msg, myUserId, privateKey) {
   try {
     const encryptedKeys = JSON.parse(msg.encryptedKeys || "{}");
     const myEncKey = encryptedKeys[String(myUserId)];
+    console.log("[E2EE] decrypting msg", msg.id, "myUserId:", myUserId, "keys in msg:", Object.keys(encryptedKeys));
     if (!myEncKey) return { ...msg, content: null, _notMember: true };
 
     const rawAes = await crypto.subtle.decrypt(
       { name: "RSA-OAEP" }, privateKey, b64ToBytes(myEncKey).buffer
     );
     const aesKey = await crypto.subtle.importKey("raw", rawAes, { name: "AES-GCM" }, false, ["decrypt"]);
-    const plain = await crypto.subtle.decrypt(
-      { name: "AES-GCM", iv: b64ToBytes(msg.iv) }, aesKey, b64ToBytes(msg.content).buffer
-    );
-    return { ...msg, content: new TextDecoder().decode(plain), rawAes };
+    let decryptedContent = "";
+    if (msg.content) {
+      const plain = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: b64ToBytes(msg.iv) }, aesKey, b64ToBytes(msg.content).buffer
+      );
+      decryptedContent = new TextDecoder().decode(plain);
+    }
+    return { ...msg, content: decryptedContent, rawAes };
   } catch (err) {
     console.error("[E2EE] decrypt failed:", err.message, "userId:", myUserId, "hasKey:", !!privateKey);
-    return { ...msg, content: "[Could not decrypt message]" };
+    return { ...msg, _decryptFailed: true };
   }
 }
 
