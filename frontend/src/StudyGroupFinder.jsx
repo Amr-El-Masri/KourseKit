@@ -437,7 +437,7 @@ const labelStyle = {
 };
 
 export default function StudyGroupFinder({ courses = [] }) {
-  const [tab,             setTab]             = useState("find");    
+  const [tab,             setTab]             = useState(() => sessionStorage.getItem("kk_sg_tab") || "find");
   const [publicGroups,    setPublicGroups]    = useState([]);
   const [myGroups,        setMyGroups]        = useState([]);
   const [selectedCourse,  setSelectedCourse]  = useState(courses[0]?.id?.toString() || null);
@@ -576,7 +576,7 @@ export default function StudyGroupFinder({ courses = [] }) {
             key={t.id}
             className="sg-tab kk-tab"
             data-active={tab === t.id}
-            onClick={() => setTab(t.id)}
+            onClick={() => { setTab(t.id); sessionStorage.setItem("kk_sg_tab", t.id); }}
             style={{
               padding: "8px 18px", borderRadius: 9, fontSize: 13,
               fontWeight: tab === t.id ? 600 : 400,

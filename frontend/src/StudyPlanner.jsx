@@ -1091,7 +1091,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
     const [showClearModal, setShowClearModal] = useState(false);
     const [entries, setEntries] = useState([]);
     const [entriesLoading, setEntriesLoading] = useState(true);
-    const [activePanel, setActivePanel] = useState("entries"); // "entries" | "slots"
+    const [activePanel, setActivePanel] = useState(() => sessionStorage.getItem("kk_sp_panel") || "entries"); // "entries" | "slots"
     const [editingBlock, setEditingBlock] = useState(null);
     const [hasGenerated, setHasGenerated] = useState(false);
     const [showSlotOverlay, setShowSlotOverlay] = useState(true);
@@ -2706,19 +2706,19 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                         <div className="sp-sidebar-tabs">
                             <button
                                 className={`sp-sidebar-tab ${activePanel === "entries" ? "active" : ""}`}
-                                onClick={() => setActivePanel("entries")}
+                                onClick={() => { setActivePanel("entries"); sessionStorage.setItem("kk_sp_panel", "entries"); }}
                             >
                                 Entries
                             </button>
                             <button
                                 className={`sp-sidebar-tab ${activePanel === "slots" ? "active" : ""}`}
-                                onClick={() => setActivePanel("slots")}
+                                onClick={() => { setActivePanel("slots"); sessionStorage.setItem("kk_sp_panel", "slots"); }}
                             >
                                 Slots
                             </button>
                             <button
                                 className={`sp-sidebar-tab ${activePanel === "courses" ? "active" : ""}`}
-                                onClick={() => setActivePanel("courses")}
+                                onClick={() => { setActivePanel("courses"); sessionStorage.setItem("kk_sp_panel", "courses"); }}
                             >
                                 Courses
                             </button>

@@ -259,9 +259,9 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
 
 export default function TaskManager({ initialEditTask, onNavigate, semester }) {
   const [tasks,        setTasks]        = useState([]);
-  const [filter,       setFilter]       = useState("All");
+  const [filter,       setFilter]       = useState(() => sessionStorage.getItem("kk_tm_filter") || "All");
   const [search,       setSearch]       = useState("");
-  const [courseFilter, setCourseFilter] = useState("");
+  const [courseFilter, setCourseFilter] = useState(() => sessionStorage.getItem("kk_tm_course") || "");
   const [composing,    setComposing]    = useState(false);
   const [editing,      setEditing]      = useState(initialEditTask || null);
   const [courseFilterDropOpen, setCourseFilterDropOpen] = useState(false);
@@ -535,7 +535,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
             { label:"Done",    val:counts.done,    filter:"Done"    },
             { label:"Overdue", val:counts.overdue, filter:"Overdue", warn:counts.overdue>0 },
           ].map(c => (
-              <button key={c.filter} className="kk-tab" data-active={filter === c.filter} onClick={() => setFilter(c.filter)} style={{
+              <button key={c.filter} className="kk-tab" data-active={filter === c.filter} onClick={() => { setFilter(c.filter); sessionStorage.setItem("kk_tm_filter", c.filter); }} style={{
                 padding:"8px 18px",
                 borderRadius:9,
                 fontSize:13,
@@ -574,7 +574,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
             </button>
             {courseFilterDropOpen && (
               <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
-                <div onClick={() => { setSearch(""); setCourseFilter(""); setCourseFilterDropOpen(false); }}
+                <div onClick={() => { setSearch(""); setCourseFilter(""); sessionStorage.removeItem("kk_tm_course"); setCourseFilterDropOpen(false); }}
                   className="kk-option"
                   style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
                     transition:"background .15s",
@@ -583,7 +583,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
                   All Courses
                 </div>
                 {[...new Set([...savedCourses, ...allCourses])].sort().map(c => (
-                  <div key={c} onClick={() => { setSearch(""); setCourseFilter(c); setCourseFilterDropOpen(false); }}
+                  <div key={c} onClick={() => { setSearch(""); setCourseFilter(c); sessionStorage.setItem("kk_tm_course", c); setCourseFilterDropOpen(false); }}
                     className="kk-option"
                     style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
                       transition:"background .15s",
