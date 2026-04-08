@@ -488,22 +488,12 @@ export default function Reviews({ onNavigateToForum }) {
     try { return JSON.parse(sessionStorage.getItem("kk_reviews_course") || "null"); } catch { return null; }
   });
   const [visibleCount,   setVisibleCount]   = useState(10);
-  const [recentReviews,  setRecentReviews]  = useState([]);
-  const [recentLoading,  setRecentLoading]  = useState(false);
-
-  useEffect(() => {
-      setRecentLoading(true);
-      fetch(`${API}/api/reviews/recent?limit=8`)
-        .then(r => r.json())
-        .then(data => { if (Array.isArray(data)) setRecentReviews(data); })
-        .catch(() => {})
-        .finally(() => setRecentLoading(false));
-  }, []);
+  const authHeaders = token ? { "Authorization": `Bearer ${token}` } : {};
 
   const loadReviews = useCallback(async (courseId) => {
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/reviews/course/${courseId}`);
+      const res = await fetch(`${API}/api/reviews/course/${courseId}`, { headers: authHeaders });
       const data = await res.json();
       setReviews(data);
     } catch { setReviews([]); }
@@ -678,40 +668,18 @@ export default function Reviews({ onNavigateToForum }) {
       )}
 
       {!activeCourse && (
-          <>
-            <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>
-              Recent Course Reviews
-            </div>
-            {recentLoading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
-            {!recentLoading && recentReviews.length === 0 && (
-              <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
-                <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>No reviews yet</div>
-                <div style={{ fontSize:13, marginTop:6 }}>Search for a course above to be the first!</div>
-              </div>
-            )}
-            {!recentLoading && recentReviews.length > 0 && (
-              <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-                {recentReviews.map(r => (
-                  <div key={r.id}>
-                    {r.section?.course && (
-                      <div style={{ fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>
-                        {r.section.course.courseCode} — {r.section.course.title}
-                      </div>
-                    )}
-                    <ReviewCard review={r} token={token} userEmail={userEmail} reviewType="course" />
-                  </div>
-                ))}
-              </div>
-            )}
-          </>
+        <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>No course selected</div>
+          <div style={{ fontSize:13, marginTop:6 }}>Search for a course above to read and write reviews.</div>
+        </div>
       )}
 
-      {!loading && visibleReviews.length > 0 && (
+      {!loading && activeCourse && visibleReviews.length > 0 && (
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             {visibleReviews.map((r, i) => <ReviewCard key={r.id} review={r} token={token} userEmail={userEmail} reviewType="course" animDelay={i * 0.05} />)}
           </div>
       )}
-      {!loading && hasMoreCourse && (
+      {!loading && activeCourse && hasMoreCourse && (
           <div style={{ textAlign:"center", marginTop:20 }}>
             <button onClick={() => setVisibleCount(c => c + 10)} style={{
               padding:"10px 32px", background:"var(--surface)", border:"1px solid var(--border)",
@@ -980,9 +948,11 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
   const [recentLoading, setRecentLoading] = useState(false);
   const [visibleCount,   setVisibleCount]   = useState(10);
 
+  const authHeaders = token ? { "Authorization": `Bearer ${token}` } : {};
+
   useEffect(() => {
       setRecentLoading(true);
-      fetch(`${API}/api/professor-reviews/recent?limit=8`)
+      fetch(`${API}/api/professor-reviews/recent?limit=8`, { headers: authHeaders })
         .then(r => r.json())
         .then(data => { if (Array.isArray(data)) setRecentReviews(data); })
         .catch(() => {})
@@ -995,7 +965,7 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
     setLoading(true);
     setVisibleCount(10);
     try {
-      const res = await fetch(`${API}/api/professor-reviews?professorName=${encodeURIComponent(name)}`);
+      const res = await fetch(`${API}/api/professor-reviews?professorName=${encodeURIComponent(name)}`, { headers: authHeaders });
       const data = await res.json();
       setReviews(data);
     } catch { setReviews([]); }

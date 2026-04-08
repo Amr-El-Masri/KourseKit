@@ -233,7 +233,7 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
 
   const loadComments = async () => {
     try {
-      const res  = await fetch(`${API}/api/forum/posts/${post.id}/comments`);
+      const res  = await fetch(`${API}/api/forum/posts/${post.id}/comments`, { headers: token ? { "Authorization": `Bearer ${token}` } : {} });
       const data = await res.json();
       setComments(Array.isArray(data) ? data : []);
     } catch { setComments([]); }
@@ -812,7 +812,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
         } else {
           url = `${API}/api/forum/posts/category/${resolvedCat}`;
         }
-      const res  = await fetch(url);
+      const res  = await fetch(url, { headers: token ? { "Authorization": `Bearer ${token}` } : {} });
       const data = await res.json();
       setPosts(Array.isArray(data) ? data : []);
     } catch { setPosts([]); }
@@ -941,7 +941,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
       )}
       {!showMyPosts && <>
       {/* Search + sort bar */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap", alignItems: "flex-start" }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "8px 14px", minWidth: 200 }}>
             <Search size={14} style={{ color: "var(--text3)", marginRight: 8, flexShrink: 0 }} />
