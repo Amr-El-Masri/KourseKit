@@ -714,11 +714,10 @@ function DayColumn({
     );
 }
 
-function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColorChange, userId, weekStart, isPastWeek, entriesLoading, onCarryOver, onNavigate, semesterCourseCodes }) {
+function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColorChange, userId, weekStart, isPastWeek, entriesLoading, onCarryOver, onNavigate, semesterCourseCodes, globalCourseColors }) {
     const [tasks, setTasks] = useState([]);
     const [selectedTaskId, setSelectedTaskId] = useState("");
     const [hoursPerWeek, setHoursPerWeek] = useState("");
-    const [color, setColor] = useState(PALETTE[0]);
     const [openColorPickerId, setOpenColorPickerId] = useState(null);
     const [editingHoursId, setEditingHoursId] = useState(null);
     const [draftHours, setDraftHours] = useState("");
@@ -759,6 +758,9 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
 
     const handleAdd = () => {
         if (!selectedTask) return;
+        const courseColors = (globalCourseColors && globalCourseColors[selectedTask.course])
+            || (() => { try { return JSON.parse(localStorage.getItem("kk_course_colors") || "{}")[selectedTask.course]; } catch { return null; } })()
+            || COURSE_COLORS[entries.length % COURSE_COLORS.length];
         onAdd({
             name: selectedTask.title,
             course: selectedTask.course,
@@ -766,11 +768,10 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
             workload: selectedTask.priority === "HIGH" ? "heavy"
                 : selectedTask.priority === "MEDIUM" ? "medium" : "light",
             hoursPerWeek: parseFloat(hoursPerWeek) || 2,
-            color,
+            color: courseColors,
         });
         setSelectedTaskId("");
         setHoursPerWeek("");
-        setColor(PALETTE[(entries.length + 1) % PALETTE.length]);
     };
 
     return (
@@ -779,7 +780,7 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
 
             {!isPastWeek && <div className="sp-entry-form">
                 {availableTasks.length === 0 && tasks.length === 0 && (
-                    <div className="sp-empty-hint" style={{ marginBottom: 8, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                    <div className="sp-empty-hint" style={{ marginBottom: 8, display:"flex", flexDirection:"column", alignItems:"center", gap:8, textAlign:"center" }}>
                         <span>No tasks found. Add tasks in the Task Manager first.</span>
                         {onNavigate && <button onClick={() => onNavigate("tasks")} style={{ fontSize:11, fontWeight:600, color:"var(--primary)", background:"none", border:"1px solid var(--primary)", borderRadius:6, padding:"3px 8px", cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Go to Task Manager →</button>}
                     </div>
@@ -798,8 +799,8 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
                             fontFamily:"'DM Sans',sans-serif",
                         }}>
                             {selectedTaskId
-                                ? (() => { const t = availableTasks.find(t => String(t.id) === String(selectedTaskId)); return t ? `${t.title} - ${t.course}` : "Pick a task"; })()
-                                : "Pick a task"}
+                                ? (() => { const t = availableTasks.find(t => String(t.id) === String(selectedTaskId)); return t ? `${t.title} - ${t.course}` : "Select a task"; })()
+                                : "Select a task"}
                             <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: taskDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
                         </button>
                         {taskDropOpen && (
@@ -810,7 +811,7 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
                                         transition:"background .15s",
                                         background: !selectedTaskId ? "var(--divider)" : "transparent",
                                         color:      !selectedTaskId ? "var(--accent)"  : "var(--primary)" }}>
-                                    Pick a task
+                                    Select a task
                                 </div>
                                 {availableTasks.map(t => (
                                     <div key={t.id} onClick={() => { setSelectedTaskId(t.id); setTaskDropOpen(false); }}
@@ -840,34 +841,22 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
                 )}
 
                 {selectedTask && (
-                    <input
-                        className="sp-input"
-                        type="number"
-                        placeholder="Hours per week"
-                        min="0.5"
-                        max="40"
-                        step="0.5"
-                        value={hoursPerWeek}
-                        onChange={e => setHoursPerWeek(e.target.value)}
-                        onKeyDown={e => ["e","E","+","-"].includes(e.key) && e.preventDefault()}
-                    />
+                    <div>
+                        <input
+                            className="sp-input"
+                            type="number"
+                            placeholder="Hours per week"
+                            min="0.5"
+                            max="40"
+                            step="0.5"
+                            value={hoursPerWeek}
+                            onChange={e => setHoursPerWeek(e.target.value)}
+                            onKeyDown={e => ["e","E","+","-"].includes(e.key) && e.preventDefault()}
+                        />
+                        <div style={{ fontSize:11, color:"var(--text3)", marginTop:4 }}>How many hours per week to dedicate to this task</div>
+                    </div>
                 )}
 
-                <div className="sp-color-row">
-                    {PALETTE.slice(0, 7).map(c => (
-                        <button
-                            key={c}
-                            className={`sp-color-dot ${color === c ? "selected" : ""}`}
-                            style={{ background: c }}
-                            onClick={() => setColor(c)}
-                        />
-                    ))}
-                    <label title="Custom color" style={{ width:"100%", aspectRatio:"1", borderRadius:"50%", border:"2px dashed var(--text3)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", overflow:"hidden", position:"relative" }}>
-                        <span style={{ fontSize:13, color:"var(--text3)", lineHeight:1, pointerEvents:"none" }}>+</span>
-                        <input type="color" value={color} onChange={e => setColor(e.target.value)}
-                            style={{ position:"absolute", opacity:0, width:"100%", height:"100%", cursor:"pointer", top:0, left:0 }} />
-                    </label>
-                </div>
                 <button className="sp-add-btn" onClick={handleAdd} disabled={!selectedTask || !hoursPerWeek}>
                     + Add Entry
                 </button>
@@ -1202,6 +1191,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
     const studySessionBlocksPerDay = useMemo(() => {
         const map = {};
         studySessions.forEach(s => {
+            if (!s.startTime || !s.endTime || !s.date) return;
             const [sh, sm] = s.startTime.split(":").map(Number);
             const [eh, em] = s.endTime.split(":").map(Number);
             const startHour = sh + sm / 60;
@@ -2749,6 +2739,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                                     onCarryOver={handleCarryOver}
                                     onNavigate={onNavigate}
                                     semesterCourseCodes={semesterCourseCodes}
+                                    globalCourseColors={globalCourseColors}
                                 />
                             </div>
                             <div style={{ display: activePanel === "slots" ? "contents" : "none" }}>

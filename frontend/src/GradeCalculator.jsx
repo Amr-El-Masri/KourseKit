@@ -149,7 +149,7 @@ function inferType(name) {
 
 // Grade Calculator page
 export default function GradeCalculator({ dashboardCourses = [], savedSemesters = [], selectedSemester = "", onNavigate }) {
-  const [activeTab, setActiveTab] = useState("semester");
+  const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem("kk_gc_tab") || "semester");
 
   // Row helpers (UI only)
   const addRow    = setter => setter(p => [...p, { id:Date.now(), name:"", grade:"", credits:"", weight:"", type:"", gpa:"", customType:"" }]);
@@ -395,7 +395,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
   // Single open-dropdown tracker for all row-level dropdowns
   const [openDropId, setOpenDropId] = useState("");
 
-  // Confirm states for Clear all and row deletes
+  // Confirm states for Clear All and row deletes
   const [confirmClearSem,    setConfirmClearSem]    = useState(false);
   const [confirmClearCum,    setConfirmClearCum]    = useState(false);
   const [confirmDelSem,      setConfirmDelSem]      = useState(null);
@@ -425,7 +425,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
   };
 
   // Selected course (shared across course/target/simulator tabs)
-  const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState(() => sessionStorage.getItem("kk_gc_course") || "");
   const notBESection = (c) => !c.section?.sectionNumber || !(/^B(?!L)/i.test(c.section.sectionNumber) || /^E/i.test(c.section.sectionNumber));
   const semesterCourses = semToLoad
     ? (savedSemesters.find(s => String(s.id) === String(semToLoad))?.courses || []).filter(c => c.courseCode && notBESection(c)).map(c => ({ name: c.courseCode }))
@@ -435,6 +435,8 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
   // Switch course — loads saved state or falls back to syllabus extract
   const switchCourse = (courseName) => {
+    if (courseName) sessionStorage.setItem("kk_gc_course", courseName);
+    else sessionStorage.removeItem("kk_gc_course");
     setSelectedCourse(courseName);
     setCourseResult(null); setTargetResult(null);
     setCourseError(null);  setTargetError(null);
@@ -472,6 +474,17 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
     setFinalWeight(saved?.finalWeight || (syl?.finalExamWeight != null ? String(syl.finalExamWeight) : ""));
     setTargetGoal(saved?.targetGoal ?? "");
   };
+
+  // Restore persisted course selection once semesterCourses are available
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current || semesterCourses.length === 0) return;
+    const saved = sessionStorage.getItem("kk_gc_course");
+    if (saved && semesterCourses.some(c => c.name === saved)) {
+      restoredRef.current = true;
+      switchCourse(saved);
+    }
+  }, [semesterCourses]);
 
   // Auto-save whenever course-specific state changes
   useEffect(() => {
@@ -555,25 +568,34 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
       {/* Course picker — shown on course/target/simulator tabs */}
       {["course","target","simulator"].includes(activeTab) && semesterCourses.length > 0 && (
-        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16, flexWrap:"wrap" }}>
-          <span style={{ fontSize:13, fontWeight:600, color:"var(--accent2)" }}>Course:</span>
-          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-            {semesterCourses.map(c => (
-              <button key={c.name} className="kk-pill" data-active={selectedCourse === c.name} onClick={() => switchCourse(selectedCourse === c.name ? "" : c.name)} style={{
-                fontSize:12, fontWeight:600, padding:"5px 14px", borderRadius:20,
-                border: selectedCourse === c.name ? "none" : "1px solid var(--border)",
-                background: selectedCourse === c.name ? "color-mix(in srgb, var(--primary) 15%, transparent)" : "var(--bg)",
-                color: selectedCourse === c.name ? "var(--primary)" : "var(--accent2)",
-                cursor:"pointer", transition:"all .15s",
-              }}>
-                {c.name}
+        <div style={{ marginBottom:16 }}>
+          {selectedCourse ? (
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <button onClick={() => switchCourse("")} style={{ display:"flex", alignItems:"center", gap:6, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:10, padding:"7px 14px", cursor:"pointer", fontSize:13, fontWeight:600, color:"var(--primary)", fontFamily:"'DM Sans',sans-serif" }}>
+                ← Back
               </button>
-            ))}
-          </div>
-          {selectedCourse && (
-            <span style={{ fontSize:11, color:"var(--text2)" }}>
-              {loadCourseData(selectedCourse) ? "● Saved data loaded" : loadSyllabus(selectedCourse) ? "● Syllabus loaded" : ""}
-            </span>
+              <span style={{ fontSize:14, fontWeight:700, color:"var(--primary)" }}>{selectedCourse}</span>
+              <span style={{ fontSize:11, color:"var(--text2)" }}>
+                {loadCourseData(selectedCourse) ? "● Saved data loaded" : loadSyllabus(selectedCourse) ? "● Syllabus loaded" : ""}
+              </span>
+            </div>
+          ) : (
+            <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+              <span style={{ fontSize:13, fontWeight:600, color:"var(--accent2)" }}>Select a course:</span>
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                {semesterCourses.map(c => (
+                  <button key={c.name} className="kk-pill" onClick={() => switchCourse(c.name)} style={{
+                    fontSize:12, fontWeight:600, padding:"5px 14px", borderRadius:20,
+                    border:"1px solid var(--border)",
+                    background:"var(--bg)",
+                    color:"var(--accent2)",
+                    cursor:"pointer", transition:"all .15s",
+                  }}>
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -581,7 +603,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
       {/* Tab bar */}
       <div style={{ display:"flex", marginTop:24, gap:6, width:"fit-content" }}>
         {TABS.map(t => (
-          <button key={t.id} className="kk-tab" data-active={activeTab === t.id} onClick={() => setActiveTab(t.id)} style={{
+          <button key={t.id} className="kk-tab" data-active={activeTab === t.id} onClick={() => { setActiveTab(t.id); sessionStorage.setItem("kk_gc_tab", t.id); }} style={{
             padding:"8px 18px",
             borderRadius:9,
             fontSize:13,
@@ -746,12 +768,12 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             </button>
             {confirmClearSem ? (
               <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                <span style={{ fontSize:12, color:"var(--error)", fontWeight:600 }}>Clear all?</span>
+                <span style={{ fontSize:12, color:"var(--error)", fontWeight:600 }}>Clear All?</span>
                 <button onClick={() => { setConfirmClearSem(false); setSemCourses([{ id:Date.now(), name:"", grade:"", credits:"" }]); setSemResult(null); setSemError(null); setImpactResult(null); setImpactError(null); }} style={{ ...gc.clearBtn, padding:"6px 10px", fontSize:12 }}>Yes</button>
                 <button onClick={() => setConfirmClearSem(false)} style={{ ...gc.clearBtn, color:"var(--text2)", borderColor:"var(--border)", padding:"6px 10px", fontSize:12 }}>No</button>
               </span>
             ) : (
-              <button onClick={() => setConfirmClearSem(true)} style={gc.clearBtn}>Clear all</button>
+              <button onClick={() => setConfirmClearSem(true)} style={gc.clearBtn}>Clear All</button>
             )}
             {semResult && !semError && (
               <ResultBadge
@@ -894,12 +916,12 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             </button>
             {confirmClearCum ? (
               <span style={{ display:"flex", alignItems:"center", gap:4 }}>
-                <span style={{ fontSize:12, color:"var(--error)", fontWeight:600 }}>Clear all?</span>
+                <span style={{ fontSize:12, color:"var(--error)", fontWeight:600 }}>Clear All?</span>
                 <button onClick={() => { setConfirmClearCum(false); setCumSems([{ id:Date.now(), name:"", gpa:"", credits:"" }]); setCumResult(null); setCumError(null); setFutureResult(null); setFutureError(null); setFutureTargetGPA(""); setFutureRemainingCreds(""); }} style={{ ...gc.clearBtn, padding:"6px 10px", fontSize:12 }}>Yes</button>
                 <button onClick={() => setConfirmClearCum(false)} style={{ ...gc.clearBtn, color:"var(--text2)", borderColor:"var(--border)", padding:"6px 10px", fontSize:12 }}>No</button>
               </span>
             ) : (
-              <button onClick={() => setConfirmClearCum(true)} style={gc.clearBtn}>Clear all</button>
+              <button onClick={() => setConfirmClearCum(true)} style={gc.clearBtn}>Clear All</button>
             )}
             {cumResult && !cumError && (
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
@@ -1052,7 +1074,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             <button className="gc-calcbtn" onClick={calcCourse} disabled={courseLoading} style={gc.calcBtn}>
               {courseLoading ? "Calculating…" : "Calculate Grade"}
             </button>
-            <button onClick={() => { const snap = [...components]; setComponents([{ id:Date.now(), type:"", weight:"", grade:"", customType:"" }]); setCourseResult(null); setCourseError(null); showUndo("All components cleared", () => setComponents(snap)); }} style={gc.clearBtn}>Clear all</button>
+            <button onClick={() => { const snap = [...components]; setComponents([{ id:Date.now(), type:"", weight:"", grade:"", customType:"" }]); setCourseResult(null); setCourseError(null); showUndo("All components cleared", () => setComponents(snap)); }} style={gc.clearBtn}>Clear All</button>
             {courseResult && !courseError && (
               <div style={{ display:"flex", gap:12, flexWrap:"wrap", alignItems:"center" }}>
                 <ResultBadge
@@ -1107,7 +1129,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
               {selectedCourse && <div style={{ fontSize:12, color:"var(--text2)", marginBottom:12 }}>No grades logged yet — enter grades in the Course Grade tab, or fill in manually below.</div>}
               <div style={gc.headerRow}>
                 <span style={gc.colHead}>Weight %</span>
-                <span style={gc.colHead}>Grade</span>
+                <span style={gc.colHead}>Grade (letter or 0–100)</span>
                 <span style={{ width:28 }} />
               </div>
               {graded.map(g => (
@@ -1140,7 +1162,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             <button className="gc-calcbtn" onClick={calcTarget} disabled={targetLoading} style={gc.calcBtn}>
               {targetLoading ? "Calculating…" : "Calculate"}
             </button>
-            {!useAuto && <button onClick={() => { const snapG = [...graded]; const snapFW = finalWeight; const snapTG = targetGoal; setGraded([{ id:Date.now(), weight:"", grade:"" }]); setFinalWeight(""); setTargetGoal(""); setTargetResult(null); setTargetError(null); showUndo("Target cleared", () => { setGraded(snapG); setFinalWeight(snapFW); setTargetGoal(snapTG); }); }} style={gc.clearBtn}>Clear all</button>}
+            {!useAuto && <button onClick={() => { const snapG = [...graded]; const snapFW = finalWeight; const snapTG = targetGoal; setGraded([{ id:Date.now(), weight:"", grade:"" }]); setFinalWeight(""); setTargetGoal(""); setTargetResult(null); setTargetError(null); showUndo("Target cleared", () => { setGraded(snapG); setFinalWeight(snapFW); setTargetGoal(snapTG); }); }} style={gc.clearBtn}>Clear All</button>}
           </div>
 
           {targetError && <ErrorBox>{targetError}</ErrorBox>}

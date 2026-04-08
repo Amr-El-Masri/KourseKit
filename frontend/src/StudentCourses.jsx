@@ -255,7 +255,7 @@ export default function StudentCourses({ value, onSelect, inputStyle = {}, filte
         onChange={hasSection || lockedCourse ? undefined : handleQueryChange}
         onClick={lockedCourse && !hasSection ? handleLockedClick : undefined}
         readOnly={hasSection || !!lockedCourse}
-        placeholder={lockedCourse ? "Click to pick section" : "Search course"}
+        placeholder={lockedCourse ? "Click to select a section" : "Search for a course…"}
         style={base}
         onFocus={() => {
           if (!lockedCourse && !hasSection && query.trim().length >= 2 && courseResults.length > 0) {
@@ -303,7 +303,7 @@ export default function StudentCourses({ value, onSelect, inputStyle = {}, filte
       {showSections && dropPos && createPortal(
         <div style={dropStyle}>
           <div style={{ padding: "8px 14px 6px", fontSize: 11, fontWeight: 700, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid var(--divider)" }}>
-            Pick a section for {selectedCourse?.courseCode}
+            Select a section for {selectedCourse?.courseCode}
           </div>
           {loadingSections && <div style={{ padding: "10px 14px", fontSize: 12, color: "var(--text2)" }}>Loading sections…</div>}
           {!loadingSections && displaySections.length === 0 && <div style={{ padding: "10px 14px", fontSize: 12, color: "var(--text2)" }}>No sections available.</div>}
@@ -343,7 +343,7 @@ export default function StudentCourses({ value, onSelect, inputStyle = {}, filte
       {showLinked && dropPos && createPortal(
         <div style={dropStyle}>
           <div style={{ padding: "8px 14px 6px", fontSize: 11, fontWeight: 700, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: "1px solid var(--divider)" }}>
-            Pick linked section for {selectedCourse?.courseCode}
+            Select linked section for {selectedCourse?.courseCode}
           </div>
           {linkedSections.map(s => (
             <div key={s.id}

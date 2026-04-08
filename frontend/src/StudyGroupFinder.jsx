@@ -314,6 +314,7 @@ function CreateGroupModal({ courses, onClose, onCreated }) {
               onChange={e => setMaxMembers(e.target.value)}
               style={inputStyle}
             />
+            <div style={{ fontSize:11, color:"var(--text3)", marginTop:4 }}>Between 2 and 50 members</div>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--surface2)", borderRadius: 10, padding: "12px 14px" }}>

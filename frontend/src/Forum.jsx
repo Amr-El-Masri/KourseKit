@@ -531,7 +531,7 @@ function CreatePost({ token, userEmail, userId, displayName, onDone, initialCate
       <textarea value={body} onChange={e => { setBody(e.target.value); setErr(""); }}
         placeholder="Share your thoughts, questions, or experiences…"
         rows={5} style={{ ...f.input, resize: "vertical", lineHeight: 1.6, marginBottom: 6 }} />
-      <div style={{ fontSize: 11, color: "var(--text3)", marginBottom: 16 }}>{body.length} chars</div>
+      <div style={{ fontSize: 11, color: body.length > 0 && body.length < 20 ? "var(--error)" : "var(--text3)", marginBottom: 16 }}>{body.length} chars · minimum 20</div>
 
       <div style={{ display: "flex", gap: 10 }}>
         <button onClick={submit} disabled={submitting} style={f.primaryBtn}
@@ -942,11 +942,14 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
       {!showMyPosts && <>
       {/* Search + sort bar */}
       <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
-        <div style={{ flex: 1, display: "flex", alignItems: "center", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "8px 14px", minWidth: 200 }}>
-          <Search size={14} style={{ color: "var(--text3)", marginRight: 8, flexShrink: 0 }} />
-          <input value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Search posts…"
-            style={{ border: "none", outline: "none", background: "transparent", fontSize: 13, color: "var(--text)", width: "100%", fontFamily: "'DM Sans', sans-serif" }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 12, padding: "8px 14px", minWidth: 200 }}>
+            <Search size={14} style={{ color: "var(--text3)", marginRight: 8, flexShrink: 0 }} />
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search posts…"
+              style={{ border: "none", outline: "none", background: "transparent", fontSize: 13, color: "var(--text)", width: "100%", fontFamily: "'DM Sans', sans-serif" }} />
+          </div>
+          <div style={{ fontSize: 11, color: "var(--text3)", marginTop: 4, paddingLeft: 2 }}>Searches post titles and content</div>
         </div>
         <div style={{ display: "flex", gap: 4, background: "var(--surface2)", padding: 4, borderRadius: 10 }}>
           {[{ id: "new", label: "New" }, { id: "top", label: "Top" }].map(s => (

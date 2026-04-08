@@ -585,7 +585,7 @@ export function DefaultScheduleEditor({ token, onDone, extraAction, showSectionN
               {confirmDelete ? (
                 <>
                   <button onClick={handleDeleteSchedule} style={{ padding: "6px 14px", background: "var(--error)", color: "white", border: "none", borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
-                    Confirm Delete
+                    Yes, Delete
                   </button>
                   <button onClick={() => setConfirmDelete(false)} style={{ padding: "6px 14px", background: "var(--bg)", color: "var(--text2)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 13, cursor: "pointer", fontFamily: "'DM Sans',sans-serif" }}>
                     Cancel
@@ -950,7 +950,7 @@ const refetchSemesters = () =>
     if (!newSemName.trim()) return;
     const courses = newSemCourses.filter(c => c.code.trim());
     const missingBE = courses.find(c => (c.components||[]).some(x => !x.sectioncrn));
-    if (missingBE) { setSemErr(`Please pick a lab/recitation section for ${missingBE.code}.`); return; }
+    if (missingBE) { setSemErr(`Please select a lab/recitation section for ${missingBE.code}.`); return; }
     setSemErr("");
     setSemSaveLoad(true);
     try {
@@ -968,7 +968,7 @@ const refetchSemesters = () =>
   const saveEdit = async () => {
     const courses = editCourses.filter(c => c.code.trim());
     const missingBE = courses.find(c => (c.components||[]).some(x => !x.sectioncrn));
-    if (missingBE) { setSemErr(`Please pick a lab/recitation section for ${missingBE.code}.`); return; }
+    if (missingBE) { setSemErr(`Please select a lab/recitation section for ${missingBE.code}.`); return; }
     setSemErr("");
     setSemSaveLoad(true);
     try {

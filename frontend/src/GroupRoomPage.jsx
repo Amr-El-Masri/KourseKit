@@ -85,7 +85,7 @@ function MemberProfilePanel({ member, onClose }) {
   return (
     <>
       <div onClick={onClose} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.3)", zIndex:200, backdropFilter:"blur(2px)" }} />
-      <div style={{ position:"fixed", top:0, right:0, bottom:0, width:380, background:"var(--bg)", boxShadow:"-8px 0 32px rgba(0,0,0,0.15)", zIndex:201, display:"flex", flexDirection:"column" }}>
+      <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:"min(420px,92vw)", maxHeight:"80vh", background:"var(--bg)", boxShadow:"0 8px 40px rgba(0,0,0,0.18)", borderRadius:16, zIndex:201, display:"flex", flexDirection:"column" }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 22px", borderBottom:"1px solid var(--border)" }}>
           <div style={{ fontFamily:"'Fraunces',serif", fontSize:17, fontWeight:700, color:"var(--primary)" }}>Member Profile</div>
           <button onClick={onClose} style={{ background:"none", border:"1px solid var(--border)", borderRadius:8, width:32, height:32, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text2)" }}>
@@ -1158,7 +1158,7 @@ const stopRecording = () => {
             {showReports && (
                 <>
                  <div onClick={() => setShowReports(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.3)", zIndex:200, backdropFilter:"blur(2px)" }} />
-                    <div style={{ position:"fixed", top:0, right:0, bottom:0, width:420, background:"var(--bg)", boxShadow:"-8px 0 32px rgba(0,0,0,0.15)", zIndex:201, display:"flex", flexDirection:"column" }}>
+                    <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:"min(520px,92vw)", maxHeight:"80vh", background:"var(--bg)", boxShadow:"0 8px 40px rgba(0,0,0,0.18)", borderRadius:16, zIndex:201, display:"flex", flexDirection:"column" }}>
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 22px", borderBottom:"1px solid var(--border)" }}>
                         <div style={{ fontFamily:"'Fraunces',serif", fontSize:17, fontWeight:700, color:"var(--primary)" }}>Reports</div>
                         <button onClick={() => setShowReports(false)} style={{ background:"none", border:"1px solid var(--border)", borderRadius:8, width:32, height:32, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text2)" }}>
@@ -1370,7 +1370,7 @@ const stopRecording = () => {
       {showSettings && (
         <>
           <div onClick={() => setShowSettings(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.3)", zIndex:200, backdropFilter:"blur(2px)" }} />
-          <div style={{ position:"fixed", top:0, right:0, bottom:0, width:380, background:"var(--bg)", boxShadow:"-8px 0 32px rgba(0,0,0,0.15)", zIndex:201, display:"flex", flexDirection:"column" }}>
+          <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:"min(460px,92vw)", maxHeight:"80vh", background:"var(--bg)", boxShadow:"0 8px 40px rgba(0,0,0,0.18)", borderRadius:16, zIndex:201, display:"flex", flexDirection:"column" }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 22px", borderBottom:"1px solid var(--border)" }}>
               <div style={{ fontFamily:"'Fraunces',serif", fontSize:17, fontWeight:700, color:"var(--primary)" }}>Group Settings</div>
               <button onClick={() => setShowSettings(false)} style={{ background:"none", border:"1px solid var(--border)", borderRadius:8, width:32, height:32, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:"var(--text2)" }}>
@@ -1516,7 +1516,7 @@ const stopRecording = () => {
         {showGroupInfo && (
         <>
           <div onClick={() => setShowGroupInfo(false)} style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.3)", zIndex:200, backdropFilter:"blur(2px)" }} />
-          <div style={{ position:"fixed", top:0, right:0, bottom:0, width:340, background:"var(--bg)", boxShadow:"-8px 0 32px rgba(0,0,0,0.15)", zIndex:201, display:"flex", flexDirection:"column" }}>
+          <div style={{ position:"fixed", top:"50%", left:"50%", transform:"translate(-50%,-50%)", width:"min(420px,92vw)", maxHeight:"80vh", background:"var(--bg)", boxShadow:"0 8px 40px rgba(0,0,0,0.18)", borderRadius:16, zIndex:201, display:"flex", flexDirection:"column" }}>
             
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"20px 22px", borderBottom:"1px solid var(--border)" }}>
               <div style={{ fontFamily:"'Fraunces',serif", fontSize:17, fontWeight:700, color:"var(--primary)" }}>Group Info</div>

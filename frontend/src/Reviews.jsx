@@ -284,6 +284,7 @@ function CourseSearch({ onSelect }) {
         />
         {loading && <span style={{ fontSize:11, color:"var(--text3)" }}>searching…</span>}
       </div>
+      <div style={{ fontSize:11, color:"var(--text3)", marginTop:4, paddingLeft:2 }}>Type at least 2 characters to search</div>
 
       {results.length > 0 && (
         <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, boxShadow:"0 4px 20px rgba(0,0,0,0.1)", zIndex:100, maxHeight:240, overflowY:"auto", marginTop:4 }}>
@@ -457,7 +458,7 @@ function SubmitReview({ token, userEmail, onDone, preselectedCourse }) {
             rows={4}
             style={{ ...rv.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
           />
-          <div style={{ fontSize:11, color:"var(--text3)", marginTop:-10, marginBottom:16 }}>{comment.length} chars</div>
+          <div style={{ fontSize:11, color: comment.length > 0 && comment.length < 20 ? "var(--error)" : "var(--text3)", marginTop:-10, marginBottom:16 }}>{comment.length} chars · minimum 20</div>
 
           <div style={{ display:"flex", gap:10 }}>
             <button onClick={submit} disabled={submitting} style={rv.submitBtn}>
@@ -839,7 +840,7 @@ function SubmitProfessorReview({ token, userEmail, professorName, onDone }) {
         rows={4}
         style={{ ...rv.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
       />
-      <div style={{ fontSize:11, color:"var(--text3)", marginTop:-10, marginBottom:16 }}>{comment.length} chars</div>
+      <div style={{ fontSize:11, color: comment.length > 0 && comment.length < 20 ? "var(--error)" : "var(--text3)", marginTop:-10, marginBottom:16 }}>{comment.length} chars · minimum 20</div>
       <div style={{ display:"flex", gap:10 }}>
         <button onClick={submit} disabled={submitting} style={rv.submitBtn}>
           {submitting ? "Submitting…" : "Post Review"}

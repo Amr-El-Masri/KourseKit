@@ -1219,17 +1219,19 @@ export default function Dashboard({ onLogout }) {
 
                 const semCourses = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.section);
                 const mainCourses = semCourses.filter(c => !c.componenttype);
+                const savedCourseColors = (() => { try { return JSON.parse(localStorage.getItem("kk_course_colors") || "{}"); } catch { return {}; } })();
+                const SCHED_FALLBACK = ["var(--sched1)","var(--sched2)","var(--sched3)","var(--sched4)","var(--sched5)","var(--sched6)","var(--sched7)"];
                 const courseColorMap = {};
-                mainCourses.forEach((c, ci) => { courseColorMap[c.courseCode] = ci % 7; });
+                mainCourses.forEach((c, ci) => { courseColorMap[c.courseCode] = savedCourseColors[c.courseCode] || SCHED_FALLBACK[ci % 7]; });
                 const classByDay = {};
                 DAYS.forEach(d => { classByDay[d] = []; });
                 semCourses.forEach((c) => {
-                  const colorIdx = courseColorMap[c.courseCode] ?? 0;
+                  const color = courseColorMap[c.courseCode] || SCHED_FALLBACK[0];
                   const sec = c.section;
                   [[sec.days1, sec.beginTime1, sec.endTime1],[sec.days2, sec.beginTime2, sec.endTime2]].forEach(([days, start, end]) => {
                     if (!days || !start) return;
                     parseDays(days).forEach(day => {
-                      classByDay[day].push({ label: c.courseCode, startH: parseT(start), endH: parseT(end), colorIdx });
+                      classByDay[day].push({ label: c.courseCode, startH: parseT(start), endH: parseT(end), color });
                     });
                   });
                 });
@@ -1273,8 +1275,8 @@ export default function Dashboard({ onLogout }) {
                                   if (!cl.startH || cl.startH >= SCH_END || cl.endH <= SCH_START) return null;
                                   const top = (Math.max(cl.startH, SCH_START) - SCH_START) * SCH_H;
                                   const height = (Math.min(cl.endH, SCH_END) - Math.max(cl.startH, SCH_START)) * SCH_H - 2;
-                                  return <div key={`cl${ci}`} style={{ '--c':`var(--sched${cl.colorIdx+1})`, position:"absolute", top:top+1, left:1, right:1, height, background:"color-mix(in srgb, var(--c) 20%, transparent)", borderLeft:"2px solid var(--c)", borderRadius:3, overflow:"hidden", padding:"2px 6px", zIndex:2 }}>
-                                    <div style={{ fontSize:11, fontWeight:700, color:"var(--c)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{cl.label}</div>
+                                  return <div key={`cl${ci}`} style={{ position:"absolute", top:top+1, left:1, right:1, height, background:`color-mix(in srgb, ${cl.color} 20%, transparent)`, borderLeft:`2px solid ${cl.color}`, borderRadius:3, overflow:"hidden", padding:"2px 6px", zIndex:2 }}>
+                                    <div style={{ fontSize:11, fontWeight:700, color:cl.color, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{cl.label}</div>
                                     <div style={{ fontSize:10, color:"var(--text3)" }}>{fmtT(cl.startH)}–{fmtT(cl.endH)}</div>
                                   </div>;
                                 })}

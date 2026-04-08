@@ -552,12 +552,15 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
           ))}
         </div>
 
-        <div style={{ display:"flex", gap:10, marginBottom:18, flexWrap:"wrap", alignItems:"center" }}>
-          <div style={{ display:"flex", alignItems:"center", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"8px 14px", flex:"1 1 200px", maxWidth:300 }}>
-            <Search size={15} style={{ color:"var(--text3)", marginRight:8, flexShrink:0 }} />
-            <input value={search} onChange={e => { setCourseFilter(""); setSearch(e.target.value); }} placeholder="Search tasks…"
-                   className="tm-input"
-                   style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"var(--text)", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
+        <div style={{ display:"flex", gap:10, marginBottom:18, flexWrap:"wrap", alignItems:"flex-start" }}>
+          <div>
+            <div style={{ display:"flex", alignItems:"center", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"8px 14px", flex:"1 1 200px", maxWidth:300 }}>
+              <Search size={15} style={{ color:"var(--text3)", marginRight:8, flexShrink:0 }} />
+              <input value={search} onChange={e => { setCourseFilter(""); setSearch(e.target.value); }} placeholder="Search tasks…"
+                     className="tm-input"
+                     style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"var(--text)", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
+            </div>
+            <div style={{ fontSize:11, color:"var(--text3)", marginTop:4, paddingLeft:2 }}>Searches by title, type, and notes</div>
           </div>
           <div style={{ position:"relative", flex:"1 1 160px", maxWidth:200 }}>
             <button onClick={() => setCourseFilterDropOpen(o => !o)} style={{
@@ -579,7 +582,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
                     color:      !courseFilter ? "var(--accent)"  : "var(--primary)" }}>
                   All Courses
                 </div>
-                {allCourses.map(c => (
+                {[...new Set([...savedCourses, ...allCourses])].sort().map(c => (
                   <div key={c} onClick={() => { setSearch(""); setCourseFilter(c); setCourseFilterDropOpen(false); }}
                     className="kk-option"
                     style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
@@ -596,12 +599,12 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
           {counts.done > 0 && (
             confirmDeleteDone ? (
               <div style={{ display:"flex", gap:6, alignItems:"center", flexShrink:0 }}>
-                <button onClick={deleteAllDone} style={{ padding:"8px 14px", background:"color-mix(in srgb,var(--error) 15%,transparent)", color:"var(--error)", border:"1px solid color-mix(in srgb,var(--error) 30%,transparent)", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Yes, delete</button>
-                <button onClick={() => setConfirmDeleteDone(false)} style={{ padding:"8px 14px", background:"var(--surface)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:12, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Cancel</button>
+                <button onClick={deleteAllDone} style={{ padding:"8px 14px", background:"color-mix(in srgb,var(--error) 15%,transparent)", color:"var(--error)", border:"1px solid color-mix(in srgb,var(--error) 30%,transparent)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Yes, Delete</button>
+                <button onClick={() => setConfirmDeleteDone(false)} style={{ padding:"8px 14px", background:"var(--surface)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:13, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Cancel</button>
               </div>
             ) : (
-              <button onClick={() => setConfirmDeleteDone(true)} style={{ padding:"8px 14px", background:"var(--surface)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:12, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s", flexShrink:0, whiteSpace:"nowrap" }}>
-                Delete All Done
+              <button onClick={() => setConfirmDeleteDone(true)} style={{ padding:"8px 14px", background:"var(--surface)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s", flexShrink:0, whiteSpace:"nowrap" }}>
+                Delete Completed
               </button>
             )
           )}
@@ -616,7 +619,6 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
                 {filter==="Done" ? "No completed tasks yet." : filter==="Overdue" ? "Nothing overdue!" : "No tasks found."}
               </div>
               {filter==="All" && <div style={{ fontSize:13, marginTop:6 }}>Hit "+ New Task" to add one.</div>}
-              {filter==="All" && onNavigate && <button onClick={() => onNavigate("planner")} style={{ marginTop:10, fontSize:12, fontWeight:600, color:"var(--primary)", background:"none", border:"1px solid var(--primary)", borderRadius:7, padding:"5px 12px", cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Go to Study Planner →</button>}
             </div>
         ) : (<>
           {syllabusDisplayed.length > 0 && (
