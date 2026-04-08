@@ -856,21 +856,38 @@ function MyReviewsTab({ token, userEmail }) {
   };
 
   const ReviewRow = ({ review, type }) => {
-    const label = type === "course"
-      ? `${review.section?.course?.courseCode || ""} — Section ${review.section?.sectionNumber || ""}, ${review.section?.professorName || ""}`
-      : review.professorName || "";
-    return (
-      <div style={{
-        background:"var(--surface)", border:"1px solid var(--border)",
-        borderRadius:14, padding:"16px 20px",
-        boxShadow:"0 2px 8px rgba(49,72,122,0.06)",
-        opacity: review.status === "FLAGGED" ? 0.7 : 1,
-      }}>
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:10 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-            <span style={{ fontSize:12, fontWeight:700, color:"var(--primary)" }}>{label}</span>
-            <span style={{ fontSize:11, color:"var(--text3)" }}>· {timeAgo(review.createdAt)}</span>
-          </div>
+      return (
+        <div style={{
+          background:"var(--surface)", border:"1px solid var(--border)",
+          borderRadius:14, padding:"16px 20px",
+          boxShadow:"0 2px 8px rgba(49,72,122,0.06)",
+          opacity: review.status === "FLAGGED" ? 0.7 : 1,
+        }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:10 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+              {type === "course" ? (
+                <>
+                  {review.section?.course?.courseCode && (
+                    <span style={{ fontSize:12, fontWeight:700, color:"var(--primary)" }}>
+                      {review.section.course.courseCode}
+                    </span>
+                  )}
+                  {(review.section?.sectionNumber || review.section?.professorName) && (
+                    <span style={{ fontSize:11, fontWeight:600, background:"var(--surface3)", color:"var(--accent2)", padding:"2px 8px", borderRadius:6 }}>
+                      {[
+                        review.section?.sectionNumber ? `Section ${review.section.sectionNumber}` : null,
+                        review.section?.professorName || null,
+                      ].filter(Boolean).join(", ")}
+                    </span>
+                  )}
+                </>
+              ) : (
+                <span style={{ fontSize:12, fontWeight:700, color:"var(--primary)" }}>
+                  {review.professorName || ""}
+                </span>
+              )}
+              <span style={{ fontSize:11, color:"var(--text3)" }}>· {timeAgo(review.createdAt)}</span>
+            </div>
           <div style={{ display:"flex", alignItems:"center", gap:10 }}>
             <span style={{ display:"inline-flex", gap:2 }}>
               {[1,2,3,4,5].map(i => (
