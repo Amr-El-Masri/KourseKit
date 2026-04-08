@@ -1,5 +1,7 @@
 package com.koursekit.repository;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -11,6 +13,7 @@ import com.koursekit.model.GroupReport;
 public interface GroupReportsRepo extends JpaRepository<GroupReport, Long> {
     List<GroupReport> findByStudyGroup_Id(Long groupId);
     List<GroupReport> findByStatus(GroupReport.Status status);
+    Page<GroupReport> findByStatus(GroupReport.Status status, Pageable pageable);
     boolean existsByReportedBy_IdAndMessage_Id(Long reportedById, Long messageId);
     boolean existsByReportedBy_IdAndReportedUser_Id(Long reportedById, Long reportedUserId); //messageID could be optional/null
 

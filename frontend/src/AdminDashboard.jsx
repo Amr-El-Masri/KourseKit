@@ -75,6 +75,12 @@ export default function AdminDashboard({ token }) {
   const [courseReviewTotalPages,setCourseReviewTotalPages]= useState(1);
   const [profReviewPage,        setProfReviewPage]        = useState(0);
   const [profReviewTotalPages,  setProfReviewTotalPages]  = useState(1);
+  const [forumFlaggedPage,       setForumFlaggedPage]       = useState(0);
+  const [forumFlaggedTotalPages, setForumFlaggedTotalPages] = useState(1);
+  const [forumReportedPage,      setForumReportedPage]      = useState(0);
+  const [forumReportedTotalPages,setForumReportedTotalPages]= useState(1);
+  const [groupReportPage,        setGroupReportPage]        = useState(0);
+  const [groupReportTotalPages,  setGroupReportTotalPages]  = useState(1);
 
   const loadUsers = useCallback(async (q = "", pg = 0) => {
     setLoading(true); setErr("");
@@ -210,30 +216,36 @@ export default function AdminDashboard({ token }) {
     catch {} finally { setReportedProfLoading(false); }
   }, [token]);
 
-  const loadFlaggedForumPosts = useCallback(async () => {
+  const loadFlaggedForumPosts = useCallback(async (pg = 0) => {
     setFlaggedForumLoading(true);
-    try { const res = await fetch(`${API}/api/admin/forum-posts/flagged`, { headers: { Authorization: `Bearer ${token}` } }); if (res.ok) setFlaggedForumPosts(await res.json()); }
-    catch {} finally { setFlaggedForumLoading(false); }
+    try {
+      const res = await fetch(`${API}/api/admin/forum-posts/flagged?page=${pg}&size=15`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { const data = await res.json(); setFlaggedForumPosts(data.content); setForumFlaggedTotalPages(data.totalpages); setForumFlaggedPage(data.number); }
+    } catch {} finally { setFlaggedForumLoading(false); }
   }, [token]);
 
-  const loadReportedForumPosts = useCallback(async () => {
+  const loadReportedForumPosts = useCallback(async (pg = 0) => {
     setReportedForumLoading(true);
-    try { const res = await fetch(`${API}/api/admin/forum-posts/reported`, { headers: { Authorization: `Bearer ${token}` } }); if (res.ok) setReportedForumPosts(await res.json()); }
-    catch {} finally { setReportedForumLoading(false); }
+    try {
+      const res = await fetch(`${API}/api/admin/forum-posts/reported?page=${pg}&size=15`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { const data = await res.json(); setReportedForumPosts(data.content); setForumReportedTotalPages(data.totalpages); setForumReportedPage(data.number); }
+    } catch {} finally { setReportedForumLoading(false); }
   }, [token]);
 
-  const loadGroupReports = useCallback(async () => {
+  const loadGroupReports = useCallback(async (pg = 0) => {
     setGroupReportsLoading(true);
-    try { const res = await fetch(`${API}/api/admin/group-reports`, { headers: { Authorization: `Bearer ${token}` } }); if (res.ok) setGroupReports(await res.json()); }
-    catch {} finally { setGroupReportsLoading(false); }
+    try {
+      const res = await fetch(`${API}/api/admin/group-reports?page=${pg}&size=20`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { const data = await res.json(); setGroupReports(data.content); setGroupReportTotalPages(data.totalpages); setGroupReportPage(data.number); }
+    } catch {} finally { setGroupReportsLoading(false); }
   }, [token]);
 
   useEffect(() => {
-    if (tab === "forum") { loadFlaggedForumPosts(); loadReportedForumPosts(); }
+    if (tab === "forum") { loadFlaggedForumPosts(0); loadReportedForumPosts(0); }
   }, [tab, loadFlaggedForumPosts, loadReportedForumPosts]);
 
   useEffect(() => {
-    if (tab === "studygroups") loadGroupReports();
+    if (tab === "studygroups") loadGroupReports(0);
   }, [tab, loadGroupReports]);
 
   useEffect(() => {
@@ -784,11 +796,12 @@ export default function AdminDashboard({ token }) {
           </div>
 
           {(() => {
-            const raw     = forumPostStatus === "flagged" ? flaggedForumPosts : reportedForumPosts;
-            const list    = raw.filter(p => matchSearch(forumSearch, p.userid, p.title, p.body, p.category, p.coursetag, p.professortag));
+            const list    = (forumPostStatus === "flagged" ? flaggedForumPosts : reportedForumPosts).filter(p => matchSearch(forumSearch, p.userid, p.title, p.body, p.category, p.coursetag, p.professortag));
             const loading = forumPostStatus === "flagged" ? flaggedForumLoading : reportedForumLoading;
-            const isReported = forumPostStatus === "reported";
-            const cols = isReported ? "1.5fr 2fr 90px 50px 1fr 200px" : "1.5fr 2fr 90px 50px 1fr 200px";
+            const page       = forumPostStatus === "flagged" ? forumFlaggedPage       : forumReportedPage;
+            const totalPages = forumPostStatus === "flagged" ? forumFlaggedTotalPages : forumReportedTotalPages;
+            const loadPage   = forumPostStatus === "flagged" ? loadFlaggedForumPosts  : loadReportedForumPosts;
+            const cols = "1.5fr 2fr 90px 50px 1fr 200px";
             return (
               <>
                 {loading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
@@ -848,6 +861,7 @@ export default function AdminDashboard({ token }) {
                     })}
                   </div>
                 )}
+                <Pagination page={page} totalPages={totalPages} onPrev={() => loadPage(page - 1)} onNext={() => loadPage(page + 1)} />
                 <div style={{ marginTop:14, fontSize:12, color:"var(--text3)" }}>{list.length} post{list.length !== 1 ? "s" : ""} shown{forumSearch && ` (filtered)`}</div>
               </>
             );
@@ -863,10 +877,10 @@ export default function AdminDashboard({ token }) {
             <div style={{ marginBottom:12, fontSize:13, color:"var(--text2)" }}>Pending reports from study group members.</div>
             <div style={{ display:"flex", alignItems:"center", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"8px 14px", marginBottom:16, maxWidth:400 }}>
               <Search size={14} color="var(--text3)" style={{ marginRight:8, flexShrink:0 }} />
-              <input value={groupReportSearch} onChange={e => setGroupReportSearch(e.target.value)}
+              <input value={groupReportSearch} onChange={e => { setGroupReportSearch(e.target.value); setGroupReportPage(0); }}
                 placeholder="Search by email, group name, reason…"
                 style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"var(--text)", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
-              {groupReportSearch && <button onClick={() => setGroupReportSearch("")} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text3)", fontSize:14, padding:0, marginLeft:6 }}>✕</button>}
+              {groupReportSearch && <button onClick={() => { setGroupReportSearch(""); loadGroupReports(0); }} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text3)", fontSize:14, padding:0, marginLeft:6 }}>✕</button>}
             </div>
             {groupReportsLoading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
             {!groupReportsLoading && filtered.length === 0 && (
@@ -913,6 +927,7 @@ export default function AdminDashboard({ token }) {
                 })}
               </div>
             )}
+            <Pagination page={groupReportPage} totalPages={groupReportTotalPages} onPrev={() => loadGroupReports(groupReportPage - 1)} onNext={() => loadGroupReports(groupReportPage + 1)} />
             <div style={{ marginTop:14, fontSize:12, color:"var(--text3)" }}>{filtered.length} report{filtered.length !== 1 ? "s" : ""} shown{groupReportSearch && " (filtered)"}</div>
           </>
         );

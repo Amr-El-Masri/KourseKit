@@ -377,17 +377,33 @@ public class AdminController {
     }
 
     @GetMapping("/forum-posts/flagged")
-    public List<Map<String, Object>> getFlaggedForumPosts() {
-        return forumPostRepo.findByStatusInOrderByCreatedAtDesc(List.of(ReviewStatus.FLAGGED, ReviewStatus.PENDING))
-            .stream().map(this::forumPostToMap).collect(Collectors.toList());
+    public ResponseEntity<Map<String, Object>> getFlaggedForumPosts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size) {
+        Page<ForumPost> forumPage = forumPostRepo.findByStatusInOrderByCreatedAtDesc(
+            List.of(ReviewStatus.FLAGGED, ReviewStatus.PENDING), PageRequest.of(page, size));
+        List<Map<String, Object>> content = forumPage.getContent().stream().map(this::forumPostToMap).collect(Collectors.toList());
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", content);
+        response.put("totalpages", forumPage.getTotalPages());
+        response.put("totalelements", forumPage.getTotalElements());
+        response.put("number", forumPage.getNumber());
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/forum-posts/reported")
-    public List<Map<String, Object>> getReportedForumPosts() {
-        return forumPostRepo.findByStatusOrderByCreatedAtDesc(ReviewStatus.REPORTED)
-            .stream().map(this::forumPostToMap)
-            .sorted((a, b) -> Integer.compare((int) b.get("reportcount"), (int) a.get("reportcount")))
-            .collect(Collectors.toList());
+    public ResponseEntity<Map<String, Object>> getReportedForumPosts(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size) {
+        Page<ForumPost> forumPage = forumPostRepo.findByStatusOrderByCreatedAtDesc(
+            ReviewStatus.REPORTED, PageRequest.of(page, size));
+        List<Map<String, Object>> content = forumPage.getContent().stream().map(this::forumPostToMap).collect(Collectors.toList());
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", content);
+        response.put("totalpages", forumPage.getTotalPages());
+        response.put("totalelements", forumPage.getTotalElements());
+        response.put("number", forumPage.getNumber());
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/forum-posts/{postid}/approve")
@@ -444,9 +460,17 @@ public class AdminController {
     }
 
     @GetMapping("/group-reports")
-    public List<Map<String, Object>> getPendingGroupReports() {
-        return groupReportsRepo.findByStatus(GroupReport.Status.PENDING)
-            .stream().map(this::groupReportToMap).collect(Collectors.toList());
+    public ResponseEntity<Map<String, Object>> getPendingGroupReports(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Page<GroupReport> groupPage = groupReportsRepo.findByStatus(GroupReport.Status.PENDING, PageRequest.of(page, size));
+        List<Map<String, Object>> content = groupPage.getContent().stream().map(this::groupReportToMap).collect(Collectors.toList());
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", content);
+        response.put("totalpages", groupPage.getTotalPages());
+        response.put("totalelements", groupPage.getTotalElements());
+        response.put("number", groupPage.getNumber());
+        return ResponseEntity.ok(response);
     }
 
     @PutMapping("/group-reports/{reportid}/resolve")
