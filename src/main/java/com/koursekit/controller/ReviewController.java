@@ -1,6 +1,7 @@
 package com.koursekit.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -65,7 +66,28 @@ public class ReviewController {
 
     // GET /api/reviews/my?userId=...
     @GetMapping("/my")
-    public List<Review> getMyReviews(@RequestParam String userId) {
-        return reviewService.getReviewsByUser(userId);
+    public List<Map<String, Object>> getMyReviews(@RequestParam String userId) {
+        return reviewService.getReviewsByUser(userId).stream().map(r -> {
+            Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("id",        r.getId());
+            m.put("comment",   r.getComment());
+            m.put("rating",    r.getRating());
+            m.put("status",    r.getStatus());
+            m.put("createdAt", r.getCreatedAt());
+            // Build section info manually to include course
+            if (r.getSection() != null) {
+                Map<String, Object> sec = new java.util.LinkedHashMap<>();
+                sec.put("sectionNumber",  r.getSection().getSectionNumber());
+                sec.put("professorName",  r.getSection().getProfessorName());
+                if (r.getSection().getCourse() != null) {
+                    Map<String, Object> course = new java.util.LinkedHashMap<>();
+                    course.put("courseCode", r.getSection().getCourse().getCourseCode());
+                    course.put("title",      r.getSection().getCourse().getTitle());
+                    sec.put("course", course);
+                }
+                m.put("section", sec);
+            }
+            return m;
+        }).toList();
     }
 }
