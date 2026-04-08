@@ -209,10 +209,12 @@ function CourseGradeSummaryWidget({ apiSemesters, selectedSemester, footer }) {
   const semObj = apiSemesters.find(s => s.semesterName === selectedSemester);
   const courses = (semObj?.courses || []).filter(c => c.courseCode && !c.componenttype);
 
-  const [selectedCourse, setSelectedCourse] = useState("");
+  const [selectedCourse, setSelectedCourse] = useState(() => sessionStorage.getItem("kk_dash_gb_course") || "");
 
   useEffect(() => {
-    setSelectedCourse(courses[0]?.courseCode || "");
+    const saved = sessionStorage.getItem("kk_dash_gb_course");
+    const valid = courses.find(c => c.courseCode === saved);
+    setSelectedCourse(valid ? saved : (courses[0]?.courseCode || ""));
   }, [selectedSemester]);
 
   const courseObj = courses.find(c => c.courseCode === selectedCourse);
@@ -297,7 +299,7 @@ function CourseGradeSummaryWidget({ apiSemesters, selectedSemester, footer }) {
                         key={c.courseCode}
                         className="kk-pill"
                         data-active={selectedCourse === c.courseCode}
-                        onClick={() => setSelectedCourse(c.courseCode)}
+                        onClick={() => { setSelectedCourse(c.courseCode); sessionStorage.setItem("kk_dash_gb_course", c.courseCode); }}
                         style={{
                           padding:"5px 12px", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer",
                           fontFamily:"'DM Sans',sans-serif", border:"1px solid var(--border)",

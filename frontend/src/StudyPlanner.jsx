@@ -541,7 +541,7 @@ function CourseBlock({ startHour, endHour, courseCode, sectionNumber, color, onD
     );
 }
 
-function StudySessionBlock({ startHour, endHour, courseCode, sessionId, onDelete }) {
+function StudySessionBlock({ startHour, endHour, courseCode, groupName, sessionId, onDelete }) {
     const top = hourToPx(startHour);
     const height = Math.max((endHour - startHour) * HOUR_HEIGHT - 4, 40);
     const [hovered, setHovered] = useState(false);
@@ -558,6 +558,11 @@ function StudySessionBlock({ startHour, endHour, courseCode, sessionId, onDelete
             <div style={{ fontSize:10, fontWeight:800, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", textShadow:"0 1px 2px rgba(0,0,0,0.25)", paddingRight:14 }}>
                 {courseCode}
             </div>
+            {groupName && height > 36 && (
+                <div style={{ fontSize:9, color:"rgba(255,255,255,0.85)", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>
+                    {groupName}
+                </div>
+            )}
             {height > 26 && <div style={{ fontSize:9, color:"rgba(255,255,255,0.85)" }}>{formatTime(startHour)} – {formatTime(endHour)}</div>}
             {hovered && onDelete && (
                 <button
@@ -652,7 +657,7 @@ function DayColumn({
                     onDismiss={onDismissCourse ? () => onDismissCourse(cb.crn) : null} isPast={isPastDay} />
             ))}
             {(studySessionBlocks || []).map((sb, i) => (
-                <StudySessionBlock key={`session-${i}`} startHour={sb.startHour} endHour={sb.endHour} courseCode={sb.courseCode} sessionId={sb.sessionId} onDelete={onDeleteSession} />
+                <StudySessionBlock key={`session-${i}`} startHour={sb.startHour} endHour={sb.endHour} courseCode={sb.courseCode} groupName={sb.groupName} sessionId={sb.sessionId} onDelete={onDeleteSession} />
             ))}
             {dragging && (
                 <div className="sp-drag-preview" style={{
@@ -745,12 +750,12 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
     const availableTasks = tasks.filter(t => {
         if (addedTaskIds.has(String(t.id))) return false;
         if (t.completed) return false;
-        if (t.type === "Group Study Session") return false;
+        // Group Study Sessions are allowed in planner
         if (weekStartDate && t.deadline) {
             const deadline = new Date(t.deadline);
             if (deadline < weekStartDate) return false;
         }
-        if (semesterCourseCodes && semesterCourseCodes.size > 0 && t.course) {
+        if (t.type !== "Group Study Session" && semesterCourseCodes && semesterCourseCodes.size > 0 && t.course) {
             if (!semesterCourseCodes.has(t.course)) return false;
         }
         return true;
@@ -973,12 +978,7 @@ function SlotPanel({ availability, onDeleteSlot, onClearAll }) {
 
     return (
         <div className="sp-slot-panel">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <div className="sp-panel-title" style={{ marginBottom: 0 }}>Availability Slots</div>
-                {allSlots.length > 0 && (
-                    <button className="sp-clear-btn" onClick={onClearAll}>Clear all</button>
-                )}
-            </div>
+            <div className="sp-panel-title">Availability Slots</div>
             {allSlots.length === 0 && (
                 <div className="sp-empty-hint">Drag on the calendar to add free slots.</div>
             )}
@@ -992,6 +992,9 @@ function SlotPanel({ availability, onDeleteSlot, onClearAll }) {
                     >×</button>
                 </div>
             ))}
+            {allSlots.length > 0 && (
+                <button className="sp-clear-btn" onClick={onClearAll} style={{ width:"100%", marginTop:10 }}>Clear All</button>
+            )}
         </div>
     );
 }

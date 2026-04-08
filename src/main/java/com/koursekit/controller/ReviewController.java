@@ -60,8 +60,28 @@ public class ReviewController {
 
     // GET /api/reviews/recent?limit=10
     @GetMapping("/recent")
-    public List<Review> getRecentReviews(@RequestParam(defaultValue = "10") int limit) {
-        return reviewService.getRecentApprovedReviews(limit);
+    public List<Map<String, Object>> getRecentReviews(@RequestParam(defaultValue = "10") int limit) {
+        return reviewService.getRecentApprovedReviews(limit).stream().map(r -> {
+            Map<String, Object> m = new java.util.LinkedHashMap<>();
+            m.put("id",        r.getId());
+            m.put("comment",   r.getComment());
+            m.put("rating",    r.getRating());
+            m.put("status",    r.getStatus());
+            m.put("createdAt", r.getCreatedAt());
+            if (r.getSection() != null) {
+                Map<String, Object> sec = new java.util.LinkedHashMap<>();
+                sec.put("sectionNumber", r.getSection().getSectionNumber());
+                sec.put("professorName", r.getSection().getProfessorName());
+                if (r.getSection().getCourse() != null) {
+                    Map<String, Object> course = new java.util.LinkedHashMap<>();
+                    course.put("courseCode", r.getSection().getCourse().getCourseCode());
+                    course.put("title",      r.getSection().getCourse().getTitle());
+                    sec.put("course", course);
+                }
+                m.put("section", sec);
+            }
+            return m;
+        }).toList();
     }
 
     // GET /api/reviews/my?userId=...

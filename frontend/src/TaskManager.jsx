@@ -313,7 +313,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
   const loadTasks = useCallback(async () => {
     const data = await apiFetch(`/api/tasks/list-all${semester ? `?semester=${encodeURIComponent(semester)}` : ""}`);
     if (data) {
-      const mapped = data.filter(t => t.type !== "Group Study Session").map(t => ({ ...t, due: t.deadline, done: t.completed }));
+      const mapped = data.map(t => ({ ...t, due: t.deadline, done: t.completed }));
       setTasks(mapped);
       setAllCourses([...new Set(mapped.map(t => t.course).filter(Boolean))].sort());
     }

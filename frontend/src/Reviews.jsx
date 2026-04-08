@@ -488,7 +488,18 @@ export default function Reviews({ onNavigateToForum }) {
     try { return JSON.parse(sessionStorage.getItem("kk_reviews_course") || "null"); } catch { return null; }
   });
   const [visibleCount,   setVisibleCount]   = useState(10);
+  const [recentReviews,  setRecentReviews]  = useState([]);
+  const [recentLoading,  setRecentLoading]  = useState(false);
   const authHeaders = token ? { "Authorization": `Bearer ${token}` } : {};
+
+  useEffect(() => {
+    setRecentLoading(true);
+    fetch(`${API}/api/reviews/recent?limit=8`, { headers: authHeaders })
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setRecentReviews(data); })
+      .catch(() => {})
+      .finally(() => setRecentLoading(false));
+  }, []);
 
   const loadReviews = useCallback(async (courseId) => {
     setLoading(true);
@@ -668,10 +679,32 @@ export default function Reviews({ onNavigateToForum }) {
       )}
 
       {!activeCourse && (
-        <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
-          <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>No course selected</div>
-          <div style={{ fontSize:13, marginTop:6 }}>Search for a course above to read and write reviews.</div>
-        </div>
+        <>
+          <div style={{ fontSize:12, fontWeight:700, color:"var(--text2)", textTransform:"uppercase", letterSpacing:"0.08em", marginBottom:14 }}>
+            Recent Course Reviews
+          </div>
+          {recentLoading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
+          {!recentLoading && recentReviews.length === 0 && (
+            <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+              <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>No reviews yet</div>
+              <div style={{ fontSize:13, marginTop:6 }}>Search for a course above to be the first!</div>
+            </div>
+          )}
+          {!recentLoading && recentReviews.length > 0 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              {recentReviews.map(r => (
+                <div key={r.id}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:6 }}>
+                    {r.section?.course?.courseCode
+                      ? `${r.section.course.courseCode} — ${r.section.course.title}`
+                      : "Unknown Course"}
+                  </div>
+                  <ReviewCard review={r} token={token} userEmail={userEmail} reviewType="course" />
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {!loading && activeCourse && visibleReviews.length > 0 && (
