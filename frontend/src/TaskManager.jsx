@@ -109,7 +109,7 @@ function TaskRow({ task, onToggle, onDelete, onEdit }) {
           </div>
 
           <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-            <button onClick={e => { e.stopPropagation(); onEdit(task); }} style={tm.iconBtn} title="Edit"><Pencil size={15} color="var(--text2)" /></button>
+            {!task.done && <button onClick={e => { e.stopPropagation(); onEdit(task); }} style={tm.iconBtn} title="Edit"><Pencil size={15} color="var(--text2)" /></button>}
             <button onClick={e => { e.stopPropagation(); onDelete(task.id); }} style={{ ...tm.iconBtn, color:"var(--error)" }} title="Delete"><X size={15} /></button>
           </div>
         </div>
@@ -271,6 +271,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
 
   const [allCourses,   setAllCourses]   = useState([]);
   const [savedCourses, setSavedCourses] = useState([]);
+  const [hasPlan,      setHasPlan]      = useState(true);
   const [undoTask, setUndoTask] = useState(null); // most recent pending deletion for toast
   const pendingDeletesRef = useRef(new Map()); // id -> { task, index, timer }
   const composeRef   = useRef(null);
@@ -334,6 +335,14 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
   }, [USER_ID, semester]);
 
   useEffect(() => { loadTasks(); }, [loadTasks]);
+
+  useEffect(() => {
+    const semQ = semester ? `?semester=${encodeURIComponent(semester)}` : "";
+    apiFetch(`/api/study-plan/entries/has-any${semQ}`).then(data => {
+      if (data && typeof data.hasEntries === "boolean") setHasPlan(data.hasEntries);
+      else setHasPlan(false);
+    });
+  }, [semester]);
 
   // Delete fromSyllabus tasks whose syllabus has been removed
   useEffect(() => {
@@ -419,6 +428,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
     setTasks(p => p.filter(t => !t.done));
     setConfirmDeleteDone(false);
     await Promise.all(doneTasks.map(t => apiFetch(`/api/tasks/delete/${t.id}`, { method: "DELETE" })));
+    onNotificationsChanged?.();
   };
 
   const saveTask = async (task, onError) => {
@@ -435,6 +445,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
         const updated = await res.json();
         setTasks(p => p.map(t => t.id === task.id ? { ...updated, due: updated.deadline, done: updated.completed } : t));
         setEditing(null);
+        onNotificationsChanged?.();
       } else {
         const data = await res.json().catch(() => ({}));
         if (onError) onError(data.message || "Failed to update task.");
@@ -446,8 +457,6 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
         body: JSON.stringify(payload),
       });
       if (res.ok) {
-        const created = await res.json();
-        const newTask = { ...created, due: created.deadline, done: created.completed };
         await loadTasks();
         if (created.course) setAllCourses(prev => [...new Set([...prev, created.course])].sort());
         setComposing(false);
@@ -461,7 +470,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
   };
 
   const filterFn = t => {
-    if (filter==="Pending") return !t.done;
+    if (filter==="Pending") return !t.done && !isOverdue(t.due, t.done);
     if (filter==="Done")    return t.done;
     if (filter==="Overdue") return isOverdue(t.due, t.done);
     return true;
@@ -483,7 +492,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
 
   const counts = {
     all:     tasks.length,
-    pending: tasks.filter(t=>!t.done).length,
+    pending: tasks.filter(t=>!t.done && !isOverdue(t.due,t.done)).length,
     done:    tasks.filter(t=>t.done).length,
     overdue: tasks.filter(t=>isOverdue(t.due,t.done)).length,
   };
@@ -516,7 +525,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
         </div>
 
         {/* Study planner tip */}
-        <div style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"12px 16px", marginBottom:20, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+        {!hasPlan && <div style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, padding:"12px 16px", marginBottom:20, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
           <div style={{ fontSize:13, color:"var(--accent2)", lineHeight:1.5 }}>
             <span style={{ fontWeight:600 }}>Want a personalized study plan?</span>
             {" "}Set your weekly availability in the Study Planner and KourseKit will auto-generate study blocks around your deadlines.
@@ -529,10 +538,10 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
                 Go to Study Planner →
               </button>
           )}
-        </div>
+        </div>}
 
         {composing && (
-            <div ref={composeRef}>
+            <div ref={composeRef} style={{ marginBottom:20 }}>
               <TaskForm
                   initial={null}
                   onSave={saveTask}
@@ -615,7 +624,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
             )}
           </div>
 
-          {counts.done > 0 && (
+          {counts.done > 0 && filter !== "Pending" && filter !== "Overdue" && (
             confirmDeleteDone ? (
               <div style={{ display:"flex", gap:6, alignItems:"center", flexShrink:0 }}>
                 <button onClick={deleteAllDone} style={{ padding:"8px 14px", background:"color-mix(in srgb,var(--error) 15%,transparent)", color:"var(--error)", border:"1px solid color-mix(in srgb,var(--error) 30%,transparent)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif" }}>Yes, Delete</button>
