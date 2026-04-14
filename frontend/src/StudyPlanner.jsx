@@ -717,7 +717,7 @@ function DayColumn({
     );
 }
 
-function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColorChange, userId, weekStart, isPastWeek, entriesLoading, onCarryOver, onNavigate, semesterCourseCodes, globalCourseColors }) {
+function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColorChange, userId, weekStart, isPastWeek, entriesLoading, onCarryOver, onNavigate, semesterCourseCodes, globalCourseColors, semester }) {
     const [tasks, setTasks] = useState([]);
     const [selectedTaskId, setSelectedTaskId] = useState("");
     const [hoursPerWeek, setHoursPerWeek] = useState("");
@@ -735,10 +735,13 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
 
 
     useEffect(() => {
-        apiFetch(`/api/tasks/list-all`).then(data => {
+        const url = semester
+            ? `/api/tasks/list-all?semester=${encodeURIComponent(semester)}`
+            : `/api/tasks/list-all`;
+        apiFetch(url).then(data => {
             if (data) setTasks(data);
         });
-    }, [userId]);
+    }, [userId, semester]);
 
     const selectedTask = tasks.find(t => String(t.id) === String(selectedTaskId));
     const addedTaskIds = new Set(entries.map(e => String(e.taskId)));
@@ -1080,6 +1083,10 @@ function CoursesPanel({ enrolledSections, globalCourseColors, dismissedSections,
 }
 
 export default function StudyPlanner({ enrolledSections = [], semester = "", onNavigate }) {
+    const semParamRef = useRef(semester ? `&semester=${encodeURIComponent(semester)}` : "");
+    semParamRef.current = semester ? `&semester=${encodeURIComponent(semester)}` : "";
+    const semesterRef = useRef(semester);
+    semesterRef.current = semester;
     const [currentDate, setCurrentDate] = useState(new Date());
     const [weekBlocks, setWeekBlocks] = useState({});
     const [availability, setAvailability] = useState({});
@@ -1236,7 +1243,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
 
     const loadEntries = useCallback(async (preserveColors = false) => {
         setEntriesLoading(true);
-        const data = await apiFetch(`/api/study-plan/entries?weekStart=${weekStart}`);
+        const data = await apiFetch(`/api/study-plan/entries?weekStart=${weekStart}${semParamRef.current}`);
         const list = Array.isArray(data) ? data : [];
         const mapped = list.map((entry, i) => ({
             id: entry.id,
@@ -1265,15 +1272,19 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
 
     const loadWeeklyView = useCallback(async () => {
         setLoading(true);
-        const data = await apiFetch(`/api/study-plan/weekly?weekStart=${weekStart}`);
+        const data = await apiFetch(`/api/study-plan/weekly?weekStart=${weekStart}${semParamRef.current}`);
         if (data) {
             const normalized = normalizeWeeklyData(data);
             setWeekBlocks(normalized);
             const hasBlocks = Object.values(normalized).some(arr => arr.length > 0);
-            if (!hasBlocks) {
+            if (hasBlocks) {
+                setHasGenerated(true);
+                setShowSlotOverlay(false);
+                localStorage.setItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`, 'true');
+            } else {
                 setHasGenerated(false);
                 setShowSlotOverlay(true);
-                localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
+                localStorage.removeItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`);
             }
         }
         setLoading(false);
@@ -1307,12 +1318,12 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         return null;
     }, [weekStart, semester]);
 
-    // Restore per-week generated state when week changes
+    // Restore per-week/semester generated state when week or semester changes
     useEffect(() => {
-        const stored = localStorage.getItem(`kk_hasGenerated_${weekStart}`) === 'true';
+        const stored = localStorage.getItem(`kk_hasGenerated_${weekStart}_${semester}`) === 'true';
         setHasGenerated(stored);
         setShowSlotOverlay(!stored);
-    }, [weekStart]);
+    }, [weekStart, semester]);
 
     const persistSlots = useCallback(async (newAvailability) => {
         const userId = getUserId();
@@ -1376,7 +1387,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         loadWeeklyView();
         loadSlots();
         loadStudySessions();
-    }, [weekStart]);
+    }, [weekStart, semester]);
 
     useEffect(() => {
         const url = semester
@@ -1428,7 +1439,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         if (allGone) {
             setHasGenerated(false);
             setShowSlotOverlay(true);
-            localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
+            localStorage.removeItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`);
         }
         clearUndo();
         setUndoToast({ msg: "Study block deleted" });
@@ -1445,7 +1456,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                         return { ...prev, [deletedDay]: dayBlocks };
                     });
                     setHasGenerated(true);
-                    localStorage.setItem(`kk_hasGenerated_${weekStart}`, 'true');
+                    localStorage.setItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`, 'true');
                 }
             },
             commitFn,
@@ -1548,15 +1559,15 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         setAvailability({});
         setWeekBlocks({});
         setHasGenerated(false);
-        localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
+        localStorage.removeItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`);
         setShowSlotOverlay(true);
 
         clearUndo();
         setUndoToast({ msg: "All slots cleared" });
 
         const commitFn = async () => {
-            await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`, { method: "DELETE" });
-            await apiFetch(`/api/study-plan/blocks?weekStart=${weekStart}`, { method: "DELETE" });
+            await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}${semParamRef.current}`, { method: "DELETE" });
+            await apiFetch(`/api/study-plan/blocks?weekStart=${weekStart}${semParamRef.current}`, { method: "DELETE" });
         };
 
         undoPendingRef.current = {
@@ -1564,7 +1575,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                 setAvailability(snapshotAvailability);
                 setWeekBlocks(snapshotBlocks);
                 setHasGenerated(snapshotGenerated);
-                if (snapshotGenerated) localStorage.setItem(`kk_hasGenerated_${weekStart}`, 'true');
+                if (snapshotGenerated) localStorage.setItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`, 'true');
                 setShowSlotOverlay(!snapshotGenerated);
             },
             commitFn,
@@ -1578,7 +1589,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
 
     const handleAddFromDefault = useCallback(async () => {
         try {
-            await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`, { method: "DELETE" });
+            await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}${semParamRef.current}`, { method: "DELETE" });
             await loadSlots();
         } catch (e) {
             showToast(e.message || "Failed to load default slots", "error");
@@ -1613,7 +1624,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
             const remaining = Math.max(0.5, entry.hoursPerWeek - (entry.completedHours || 0));
             if (entry.deadline && new Date(entry.deadline) < new Date(currentWeekStart)) { expiredNames.push(entry.name); continue; }
             try {
-                const res = await apiFetch(`/api/study-plan/entries/add?taskId=${entry.taskId}&estimatedWorkload=${remaining}&weekStart=${currentWeekStart}`, { method: "POST" });
+                const res = await apiFetch(`/api/study-plan/entries/add?taskId=${entry.taskId}&estimatedWorkload=${remaining}&weekStart=${currentWeekStart}${semParamRef.current}`, { method: "POST" });
                 carriedNames.push(entry.name);
                 const oldColor = colorMap[String(entry.id)];
                 if (oldColor && res?.id) savedColors[String(res.id)] = oldColor;
@@ -1636,7 +1647,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         if (!entry.taskId) { showToast("No task selected", "error"); return; }
         try {
             await apiFetch(
-                `/api/study-plan/entries/add?taskId=${entry.taskId}&estimatedWorkload=${entry.hoursPerWeek}&weekStart=${weekStart}`,
+                `/api/study-plan/entries/add?taskId=${entry.taskId}&estimatedWorkload=${entry.hoursPerWeek}&weekStart=${weekStart}${semParamRef.current}`,
                 { method: "POST" }
             );
             await loadEntries(true);
@@ -1677,7 +1688,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         if (allGone) {
             setHasGenerated(false);
             setShowSlotOverlay(true);
-            localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
+            localStorage.removeItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`);
         }
         clearUndo();
         setUndoToast({ msg: "Entry removed" });
@@ -1700,7 +1711,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                     });
                     if (Object.keys(deletedBlocks).length > 0) {
                         setHasGenerated(true);
-                        localStorage.setItem(`kk_hasGenerated_${weekStart}`, 'true');
+                        localStorage.setItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`, 'true');
                     }
                 }
             },
@@ -1755,7 +1766,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         setShowGenerateModal(false);
         try {
             const payload = buildSettingsPayload();
-            const data = await apiFetch(`/api/study-plan/generate?weekStart=${weekStart}`, {
+            const data = await apiFetch(`/api/study-plan/generate?weekStart=${weekStart}${semParamRef.current}`, {
                 method: "POST",
                 body: JSON.stringify(payload),
             });
@@ -1763,7 +1774,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                 const weeklyView = data.weeklyView ?? data;
                 setWeekBlocks(normalizeWeeklyData(weeklyView));
                 setHasGenerated(true);
-                localStorage.setItem(`kk_hasGenerated_${weekStart}`, 'true');
+                localStorage.setItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`, 'true');
                 setIsAvailabilityMode(false);
                 setShowSlotOverlay(false);
                 // Generate resets completedHours to 0 — update locally, no extra fetch needed
@@ -1786,7 +1797,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
     const handleMarkPastDone = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await apiFetch(`/api/study-plan/blocks/complete-past?weekStart=${weekStart}`, { method: "POST" });
+            const res = await apiFetch(`/api/study-plan/blocks/complete-past?weekStart=${weekStart}${semParamRef.current}`, { method: "POST" });
             const count = res?.marked ?? 0;
             if (count === 0) {
                 showToast("No past blocks to mark done", "info");
@@ -1810,11 +1821,11 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         setShowClearModal(false);
         setLoading(true);
         try {
-            await apiFetch(`/api/study-plan/blocks?weekStart=${weekStart}`, { method: "DELETE" });
-            await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`, { method: "DELETE" });
+            await apiFetch(`/api/study-plan/blocks?weekStart=${weekStart}${semParamRef.current}`, { method: "DELETE" });
+            await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}${semParamRef.current}`, { method: "DELETE" });
             setWeekBlocks({});
             setHasGenerated(false);
-            localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
+            localStorage.removeItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`);
             setShowSlotOverlay(true);
             await loadSlots(); // re-seeds from default since slots were just cleared
             showToast("Plan cleared", "info");
@@ -1862,7 +1873,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         setLoading(true);
         try {
             const payload = buildSettingsPayload(freshAvail);
-            const data = await apiFetch(`/api/study-plan/rebalance?weekStart=${weekStart}`, {
+            const data = await apiFetch(`/api/study-plan/rebalance?weekStart=${weekStart}${semParamRef.current}`, {
                 method: "POST",
                 body: JSON.stringify(payload),
             });
@@ -2779,6 +2790,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                                     onNavigate={onNavigate}
                                     semesterCourseCodes={semesterCourseCodes}
                                     globalCourseColors={globalCourseColors}
+                                    semester={semester}
                                 />
                             </div>
                             <div style={{ display: activePanel === "slots" ? "contents" : "none" }}>
