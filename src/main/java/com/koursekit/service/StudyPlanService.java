@@ -8,6 +8,7 @@ import com.koursekit.exception.ResourceNotFoundException;
 import com.koursekit.model.*;
 import com.koursekit.repository.StudyBlockRepository;
 import com.koursekit.repository.StudyPlanRepository;
+import com.koursekit.repository.UserWeekSlotConfigRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
@@ -35,6 +36,9 @@ public class StudyPlanService {
 
     @Autowired
     private DefaultScheduleSlotRepository defaultSlotRepository;
+
+    @Autowired
+    private UserWeekSlotConfigRepository weekSlotConfigRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -371,11 +375,11 @@ public class StudyPlanService {
     }
 
     @Transactional
-    public int markPastBlocksDone(Long userId) {
+    public int markPastBlocksDone(Long userId, LocalDate weekStart) {
         LocalDate today = LocalDate.now();
         java.time.LocalTime now = java.time.LocalTime.now();
 
-        List<StudyBlock> pastBlocks = blockRepository.findAllPastUncompletedForUser(userId, today, now);
+        List<StudyBlock> pastBlocks = blockRepository.findAllPastUncompletedForUser(userId, weekStart, today, now);
         if (pastBlocks.isEmpty()) return 0;
 
         List<Long> ids = pastBlocks.stream().map(StudyBlock::getId).toList();
@@ -430,6 +434,13 @@ public class StudyPlanService {
                 .orElseThrow(() -> new RuntimeException("Entry not found"));
     }
 
+    public boolean hasDefaultSlots(Long userId, String semester) {
+        List<DefaultScheduleSlot> defaults = (semester != null && !semester.isBlank())
+                ? defaultSlotRepository.findByUserIdAndSemesterName(userId, semester)
+                : defaultSlotRepository.findByUserId(userId);
+        return !defaults.isEmpty();
+    }
+
     @org.springframework.transaction.annotation.Transactional
     public List<AvailabilitySlot> getSlots(Long userId, LocalDate weekStart, String semester) {
         List<AvailabilitySlot> existing = slotRepository.findByUserIdAndWeekStart(userId, weekStart);
@@ -441,7 +452,12 @@ public class StudyPlanService {
             existing = java.util.Collections.emptyList();
         }
 
-        // No slots for this week — seed from the user's default schedule
+        // Don't seed if the user has already manually configured this week's slots
+        if (weekSlotConfigRepository.existsByUserIdAndWeekStart(userId, weekStart)) {
+            return existing;
+        }
+
+        // No slots and no user config for this week — seed from the user's default schedule
         List<DefaultScheduleSlot> defaults = (semester != null && !semester.isBlank())
                 ? defaultSlotRepository.findByUserIdAndSemesterName(userId, semester)
                 : defaultSlotRepository.findByUserId(userId);
@@ -466,6 +482,10 @@ public class StudyPlanService {
     public List<AvailabilitySlot> saveSlots(Long userId, LocalDate weekStart, String semester, List<java.util.Map<String, Object>> slots) {
         slotRepository.deleteByUserIdAndWeekStart(userId, weekStart);
         entityManager.flush();
+        // Mark this week as user-configured so defaults are never re-seeded
+        if (!weekSlotConfigRepository.existsByUserIdAndWeekStart(userId, weekStart)) {
+            weekSlotConfigRepository.save(new UserWeekSlotConfig(userId, weekStart));
+        }
         com.koursekit.model.User user = entityManager.getReference(com.koursekit.model.User.class, userId);
         List<AvailabilitySlot> toSave = new java.util.ArrayList<>();
         for (java.util.Map<String, Object> s : slots) {
@@ -484,6 +504,8 @@ public class StudyPlanService {
     @org.springframework.transaction.annotation.Transactional
     public void clearSlots(Long userId, LocalDate weekStart) {
         slotRepository.deleteByUserIdAndWeekStart(userId, weekStart);
+        // Remove config so defaults get re-seeded on next load
+        weekSlotConfigRepository.deleteByUserIdAndWeekStart(userId, weekStart);
     }
 
     @org.springframework.transaction.annotation.Transactional

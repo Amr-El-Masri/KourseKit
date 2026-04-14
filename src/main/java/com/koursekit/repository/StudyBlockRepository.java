@@ -63,9 +63,10 @@ public interface StudyBlockRepository extends JpaRepository<StudyBlock, Long> {
     @Query("DELETE FROM StudyBlock b WHERE b.studyPlanEntry.user.id = :userId AND b.studyPlanEntry.weekStart = :weekStart")
     void deleteAllByUserIdAndWeekStart(@Param("userId") Long userId, @Param("weekStart") LocalDate weekStart);
 
-    @Query("SELECT b FROM StudyBlock b WHERE b.studyPlanEntry.user.id = :userId AND b.completed = false AND (b.day < :today OR (b.day = :today AND b.startTime < :cutoffTime))")
+    @Query("SELECT b FROM StudyBlock b WHERE b.studyPlanEntry.user.id = :userId AND b.completed = false AND b.day >= :weekStart AND (b.day < :today OR (b.day = :today AND b.startTime < :cutoffTime))")
     List<StudyBlock> findAllPastUncompletedForUser(
             @Param("userId") Long userId,
+            @Param("weekStart") LocalDate weekStart,
             @Param("today") LocalDate today,
             @Param("cutoffTime") java.time.LocalTime cutoffTime
     );

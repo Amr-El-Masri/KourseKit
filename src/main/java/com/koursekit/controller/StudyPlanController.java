@@ -152,8 +152,9 @@ public class StudyPlanController {
     }
 
     @PostMapping("/blocks/complete-past")
-    public ResponseEntity<Map<String, Integer>> markPastBlocksDone() {
-        int count = studyPlanService.markPastBlocksDone(currentUserId());
+    public ResponseEntity<Map<String, Integer>> markPastBlocksDone(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
+        int count = studyPlanService.markPastBlocksDone(currentUserId(), weekStart);
         return ResponseEntity.ok(Map.of("marked", count));
     }
 
@@ -230,6 +231,13 @@ public class StudyPlanController {
             @PathVariable Long blockId,
             @RequestBody Map<String, Object> updates) {
         return ResponseEntity.ok(studyPlanService.editBlock(blockId, updates));
+    }
+
+    @GetMapping("/slots/has-defaults")
+    public ResponseEntity<Map<String, Boolean>> hasDefaultSlots(
+            @RequestParam(required = false) String semester) {
+        boolean has = studyPlanService.hasDefaultSlots(currentUserId(), semester);
+        return ResponseEntity.ok(Map.of("hasDefaults", has));
     }
 
     @GetMapping("/slots")
