@@ -271,9 +271,21 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
 
   const [allCourses,   setAllCourses]   = useState([]);
   const [savedCourses, setSavedCourses] = useState([]);
-  const [undoTask, setUndoTask] = useState(null); // { task, timer }
-  const undoTimerRef = useRef(null);
+  const [undoTask, setUndoTask] = useState(null); // most recent pending deletion for toast
+  const pendingDeletesRef = useRef(new Map()); // id -> { task, index, timer }
   const composeRef   = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      const pending = pendingDeletesRef.current;
+      if (pending.size === 0) return;
+      pending.forEach(({ timer }, id) => {
+        clearTimeout(timer);
+        apiFetch(`/api/tasks/delete/${id}`, { method: "DELETE" }).catch(() => {});
+      });
+      pending.clear();
+    };
+  }, []);
   const editRef      = useRef(null);
 
   useEffect(() => {
@@ -375,24 +387,26 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
   };
 
   const handleDeleteTask = useCallback((id) => {
-    const task = tasks.find(t => t.id === id);
+    const index = tasks.findIndex(t => t.id === id);
+    const task = tasks[index];
     if (!task) return;
     setTasks(p => p.filter(t => t.id !== id));
-    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     const timer = setTimeout(async () => {
-      setUndoTask(null);
-      undoTimerRef.current = null;
+      pendingDeletesRef.current.delete(id);
+      setUndoTask(prev => prev?.task.id === id ? null : prev);
       await apiFetch(`/api/tasks/delete/${id}`, { method: "DELETE" });
     }, 5000);
-    undoTimerRef.current = timer;
-    setUndoTask({ task, timer });
+    pendingDeletesRef.current.set(id, { task, index, timer });
+    setUndoTask({ task, index, timer });
   }, [tasks]);
 
   const handleUndoDelete = () => {
     if (!undoTask) return;
-    clearTimeout(undoTask.timer);
-    undoTimerRef.current = null;
-    setTasks(p => [...p, undoTask.task]);
+    const entry = pendingDeletesRef.current.get(undoTask.task.id);
+    if (!entry) return;
+    clearTimeout(entry.timer);
+    pendingDeletesRef.current.delete(undoTask.task.id);
+    setTasks(p => { const next = [...p]; next.splice(entry.index, 0, entry.task); return next; });
     setUndoTask(null);
   };
 
@@ -677,7 +691,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
             <div className="tm-undo-toast" style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", background:"var(--surface)", border:"1px solid var(--border)", color:"var(--text)", borderRadius:10, padding:"10px 20px", display:"flex", alignItems:"center", gap:14, boxShadow:"0 4px 24px rgba(49,72,122,0.12)", zIndex:9999, fontFamily:"'DM Sans',sans-serif", whiteSpace:"nowrap", fontSize:12, minWidth:200 }}>
               <span style={{ flex:1 }}>Task deleted</span>
               <button onClick={handleUndoDelete} style={{ background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"none", fontSize:12, fontWeight:700, cursor:"pointer", padding:"5px 12px", borderRadius:6 }}>Undo</button>
-              <button onClick={() => { clearTimeout(undoTask.timer); undoTimerRef.current = null; setUndoTask(null); apiFetch(`/api/tasks/delete/${undoTask.task.id}`, { method: "DELETE" }); }} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:15, cursor:"pointer", padding:0, lineHeight:1 }}>✕</button>
+              <button onClick={() => { const e = pendingDeletesRef.current.get(undoTask.task.id); if (e) { clearTimeout(e.timer); pendingDeletesRef.current.delete(undoTask.task.id); apiFetch(`/api/tasks/delete/${undoTask.task.id}`, { method: "DELETE" }); } setUndoTask(null); }} style={{ background:"none", border:"none", color:"var(--text3)", fontSize:15, cursor:"pointer", padding:0, lineHeight:1 }}>✕</button>
             </div>
         )}
       </div>
