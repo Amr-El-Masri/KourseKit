@@ -74,9 +74,7 @@ public class GroupStudySessionController {
     @PostMapping("/{sessionId}/add-to-planner")
     public ResponseEntity<?> addToPlanner(@PathVariable Long sessionId) {
         try {
-            Long userId = currentUserId();
-            sessionService.syncSessionToTask(sessionId, userId);
-            GroupStudySession session = sessionService.addToPlanner(sessionId, userId);
+            GroupStudySession session = sessionService.addToPlanner(sessionId, currentUserId());
             return ResponseEntity.ok(sessionMapper.toResponseDTO(session));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));

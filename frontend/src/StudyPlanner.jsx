@@ -750,12 +750,12 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
     const availableTasks = tasks.filter(t => {
         if (addedTaskIds.has(String(t.id))) return false;
         if (t.completed) return false;
-        // Group Study Sessions are allowed in planner
+        if (t.type === "Group Study Session") return false;
         if (weekStartDate && t.deadline) {
             const deadline = new Date(t.deadline);
             if (deadline < weekStartDate) return false;
         }
-        if (t.type !== "Group Study Session" && semesterCourseCodes && semesterCourseCodes.size > 0 && t.course) {
+        if (semesterCourseCodes && semesterCourseCodes.size > 0 && t.course) {
             if (!semesterCourseCodes.has(t.course)) return false;
         }
         return true;
