@@ -20,6 +20,13 @@ public interface StudyBlockRepository extends JpaRepository<StudyBlock, Long> {
             LocalDate endDate
     );
 
+    List<StudyBlock> findByStudyPlanEntry_User_IdAndDayBetweenAndStudyPlanEntry_SemesterName(
+            Long userId,
+            LocalDate startDate,
+            LocalDate endDate,
+            String semesterName
+    );
+
     // Used by rebalance to load only completed blocks for an entry
     List<StudyBlock> findByStudyPlanEntryAndCompleted(StudyPlanEntry entry, boolean completed);
 
@@ -63,12 +70,17 @@ public interface StudyBlockRepository extends JpaRepository<StudyBlock, Long> {
     @Query("DELETE FROM StudyBlock b WHERE b.studyPlanEntry.user.id = :userId AND b.studyPlanEntry.weekStart = :weekStart")
     void deleteAllByUserIdAndWeekStart(@Param("userId") Long userId, @Param("weekStart") LocalDate weekStart);
 
-    @Query("SELECT b FROM StudyBlock b WHERE b.studyPlanEntry.user.id = :userId AND b.completed = false AND b.day >= :weekStart AND (b.day < :today OR (b.day = :today AND b.startTime < :cutoffTime))")
+    @Modifying
+    @Query("DELETE FROM StudyBlock b WHERE b.studyPlanEntry.user.id = :userId AND b.studyPlanEntry.weekStart = :weekStart AND b.studyPlanEntry.semesterName = :semester")
+    void deleteAllByUserIdAndWeekStartAndSemester(@Param("userId") Long userId, @Param("weekStart") LocalDate weekStart, @Param("semester") String semester);
+
+    @Query("SELECT b FROM StudyBlock b WHERE b.studyPlanEntry.user.id = :userId AND b.completed = false AND b.day >= :weekStart AND (b.day < :today OR (b.day = :today AND b.startTime < :cutoffTime)) AND (:semester IS NULL OR b.studyPlanEntry.semesterName = :semester)")
     List<StudyBlock> findAllPastUncompletedForUser(
             @Param("userId") Long userId,
             @Param("weekStart") LocalDate weekStart,
             @Param("today") LocalDate today,
-            @Param("cutoffTime") java.time.LocalTime cutoffTime
+            @Param("cutoffTime") java.time.LocalTime cutoffTime,
+            @Param("semester") String semester
     );
 
     @Modifying

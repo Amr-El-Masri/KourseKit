@@ -44,12 +44,12 @@ public class StudyPlanService {
     private EntityManager entityManager;
 
     @Transactional
-    public StudyPlanEntry createEntry(Long userId, Long taskId, double estimatedWorkload, LocalDate weekStart) {
+    public StudyPlanEntry createEntry(Long userId, Long taskId, double estimatedWorkload, LocalDate weekStart, String semester) {
         User user = entityManager.getReference(User.class, userId);
         Task task = entityManager.find(Task.class, taskId);
         if (task == null) throw new RuntimeException("Task not found: " + taskId);
 
-        boolean duplicate = entryRepository.existsByUserIdAndTaskIdAndWeekStart(userId, taskId, weekStart);
+        boolean duplicate = entryRepository.existsByUserIdAndTaskIdAndWeekStartAndSemester(userId, taskId, weekStart, semester);
         if (duplicate) throw new RuntimeException("Entry for this task already exists this week");
 
         StudyPlanEntry entry = new StudyPlanEntry();
@@ -58,13 +58,14 @@ public class StudyPlanService {
         entry.setEstimatedWorkload(estimatedWorkload);
         entry.setCompletedHours(0);
         entry.setWeekStart(weekStart);
+        entry.setSemesterName(semester);
 
         return entryRepository.save(entry);
     }
 
     @Transactional
-    public SchedulerResult generatePlan(Long userId, SchedulerSettings settings, LocalDate weekStart) {
-        List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStart(userId, weekStart);
+    public SchedulerResult generatePlan(Long userId, SchedulerSettings settings, LocalDate weekStart, String semester) {
+        List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStartAndSemesterName(userId, weekStart, semester);
         if (entries.isEmpty()) return new SchedulerResult(Collections.emptyList(), Collections.emptyList());
 
         List<Long> entryIds = entries.stream().map(StudyPlanEntry::getId).toList();
@@ -87,10 +88,10 @@ public class StudyPlanService {
     }
 
     @Transactional
-    public SchedulerResult rebalance(Long userId, SchedulerSettings settings, LocalDate weekStart) {
+    public SchedulerResult rebalance(Long userId, SchedulerSettings settings, LocalDate weekStart, String semester) {
         try {
             LocalDate today = weekStart.isAfter(LocalDate.now()) ? weekStart : LocalDate.now();
-            List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStart(userId, weekStart);
+            List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStartAndSemesterName(userId, weekStart, semester);
             if (entries.isEmpty()) return new SchedulerResult(Collections.emptyList(), Collections.emptyList());
 
             List<Long> entryIds = entries.stream().map(StudyPlanEntry::getId).toList();
@@ -192,11 +193,20 @@ public class StudyPlanService {
         entryRepository.save(entry);
     }
 
-    public Map<DayOfWeek, List<StudyBlock>> getWeeklyView(Long userId, LocalDate weekStart) {
+    public Map<DayOfWeek, List<StudyBlock>> getWeeklyView(Long userId, LocalDate weekStart, String semester) {
         LocalDate weekEnd = weekStart.plusDays(6);
 
-        List<StudyBlock> blocks = blockRepository.findByStudyPlanEntry_User_IdAndDayBetween(
-                userId, weekStart, weekEnd);
+        List<StudyBlock> blocks;
+        if (semester != null && !semester.isBlank()) {
+            blocks = blockRepository.findByStudyPlanEntry_User_IdAndDayBetweenAndStudyPlanEntry_SemesterName(userId, weekStart, weekEnd, semester);
+            if (blocks.isEmpty()) {
+                // Fall back to null-semester blocks (legacy data from before semester scoping)
+                blocks = blockRepository.findByStudyPlanEntry_User_IdAndDayBetween(userId, weekStart, weekEnd)
+                        .stream().filter(b -> b.getStudyPlanEntry().getSemesterName() == null).toList();
+            }
+        } else {
+            blocks = blockRepository.findByStudyPlanEntry_User_IdAndDayBetween(userId, weekStart, weekEnd);
+        }
 
         return blocks.stream()
                 .collect(Collectors.groupingBy(
@@ -375,11 +385,11 @@ public class StudyPlanService {
     }
 
     @Transactional
-    public int markPastBlocksDone(Long userId, LocalDate weekStart) {
+    public int markPastBlocksDone(Long userId, LocalDate weekStart, String semester) {
         LocalDate today = LocalDate.now();
         java.time.LocalTime now = java.time.LocalTime.now();
 
-        List<StudyBlock> pastBlocks = blockRepository.findAllPastUncompletedForUser(userId, weekStart, today, now);
+        List<StudyBlock> pastBlocks = blockRepository.findAllPastUncompletedForUser(userId, weekStart, today, now, semester);
         if (pastBlocks.isEmpty()) return 0;
 
         List<Long> ids = pastBlocks.stream().map(StudyBlock::getId).toList();
@@ -411,9 +421,13 @@ public class StudyPlanService {
     }
 
     @Transactional
-    public void clearBlocksByWeek(Long userId, LocalDate weekStart) {
-        List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStart(userId, weekStart);
-        blockRepository.deleteAllByUserIdAndWeekStart(userId, weekStart);
+    public void clearBlocksByWeek(Long userId, LocalDate weekStart, String semester) {
+        List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStartAndSemesterName(userId, weekStart, semester);
+        if (semester != null && !semester.isBlank()) {
+            blockRepository.deleteAllByUserIdAndWeekStartAndSemester(userId, weekStart, semester);
+        } else {
+            blockRepository.deleteAllByUserIdAndWeekStart(userId, weekStart);
+        }
         entityManager.flush();
         for (StudyPlanEntry entry : entries) {
             entry.setCompletedHours(0);
@@ -425,8 +439,23 @@ public class StudyPlanService {
         blockRepository.saveAll(blocks);
     }
 
-    public List<StudyPlanEntry> getActiveEntries(Long userId, LocalDate weekStart) {
-        return entryRepository.findByUserIdAndWeekStart(userId, weekStart);
+    @Transactional
+    public List<StudyPlanEntry> getActiveEntries(Long userId, LocalDate weekStart, String semester) {
+        List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStartAndSemesterName(userId, weekStart, semester);
+        if (!entries.isEmpty() || semester == null || semester.isBlank()) return entries;
+        // Migrate null-semester entries (legacy data from before semester scoping)
+        List<StudyPlanEntry> nullEntries = entryRepository.findByUserIdAndWeekStartAndSemesterName(userId, weekStart, null);
+        if (!nullEntries.isEmpty()) {
+            nullEntries.forEach(e -> e.setSemesterName(semester));
+            return entryRepository.saveAll(nullEntries);
+        }
+        return entries;
+    }
+
+    public boolean hasAnyEntries(Long userId, String semester) {
+        return (semester != null && !semester.isBlank())
+                ? entryRepository.existsByUserIdAndSemesterName(userId, semester)
+                : entryRepository.existsByUserId(userId);
     }
 
     public StudyPlanEntry getEntry(Long entryId) {
@@ -453,7 +482,7 @@ public class StudyPlanService {
         }
 
         // Don't seed if the user has already manually configured this week's slots
-        if (weekSlotConfigRepository.existsByUserIdAndWeekStart(userId, weekStart)) {
+        if (weekSlotConfigRepository.existsByUserIdAndWeekStartAndSemesterName(userId, weekStart, semester)) {
             return existing;
         }
 
@@ -483,8 +512,8 @@ public class StudyPlanService {
         slotRepository.deleteByUserIdAndWeekStart(userId, weekStart);
         entityManager.flush();
         // Mark this week as user-configured so defaults are never re-seeded
-        if (!weekSlotConfigRepository.existsByUserIdAndWeekStart(userId, weekStart)) {
-            weekSlotConfigRepository.save(new UserWeekSlotConfig(userId, weekStart));
+        if (!weekSlotConfigRepository.existsByUserIdAndWeekStartAndSemesterName(userId, weekStart, semester)) {
+            weekSlotConfigRepository.save(new UserWeekSlotConfig(userId, weekStart, semester));
         }
         com.koursekit.model.User user = entityManager.getReference(com.koursekit.model.User.class, userId);
         List<AvailabilitySlot> toSave = new java.util.ArrayList<>();
@@ -502,10 +531,10 @@ public class StudyPlanService {
     }
 
     @org.springframework.transaction.annotation.Transactional
-    public void clearSlots(Long userId, LocalDate weekStart) {
+    public void clearSlots(Long userId, LocalDate weekStart, String semester) {
         slotRepository.deleteByUserIdAndWeekStart(userId, weekStart);
         // Remove config so defaults get re-seeded on next load
-        weekSlotConfigRepository.deleteByUserIdAndWeekStart(userId, weekStart);
+        weekSlotConfigRepository.deleteByUserIdAndWeekStartAndSemesterName(userId, weekStart, semester);
     }
 
     @org.springframework.transaction.annotation.Transactional
