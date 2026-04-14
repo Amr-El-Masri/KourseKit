@@ -457,6 +457,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
         body: JSON.stringify(payload),
       });
       if (res.ok) {
+        const created = await res.json();
         await loadTasks();
         if (created.course) setAllCourses(prev => [...new Set([...prev, created.course])].sort());
         setComposing(false);
