@@ -2009,6 +2009,7 @@ export default function Dashboard({ onLogout }) {
                   key={editingTask?.id || "tasks"}
                   onNavigate={setActivePage}
                   semester={semester}
+                  onNotificationsChanged={loadNotifications}
               />
           )}
           {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}

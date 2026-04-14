@@ -257,7 +257,7 @@ function TaskForm({ initial, onSave, onCancel, backendError, courses = [] }) {
   );
 }
 
-export default function TaskManager({ initialEditTask, onNavigate, semester }) {
+export default function TaskManager({ initialEditTask, onNavigate, semester, onNotificationsChanged }) {
   const [tasks,        setTasks]        = useState([]);
   const [filter,       setFilter]       = useState(() => sessionStorage.getItem("kk_tm_filter") || "All");
   const [search,       setSearch]       = useState("");
@@ -279,11 +279,13 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
     return () => {
       const pending = pendingDeletesRef.current;
       if (pending.size === 0) return;
+      const deletes = [];
       pending.forEach(({ timer }, id) => {
         clearTimeout(timer);
-        apiFetch(`/api/tasks/delete/${id}`, { method: "DELETE" }).catch(() => {});
+        deletes.push(apiFetch(`/api/tasks/delete/${id}`, { method: "DELETE" }).catch(() => {}));
       });
       pending.clear();
+      Promise.all(deletes).then(() => onNotificationsChanged?.());
     };
   }, []);
   const editRef      = useRef(null);
@@ -383,7 +385,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
       method: "PATCH",
       body: JSON.stringify({ ...task, completed: !task.done }),
     });
-    if (updated) setTasks(p => p.map(t => t.id === id ? { ...updated, due: updated.deadline, done: updated.completed } : t));
+    if (updated) { setTasks(p => p.map(t => t.id === id ? { ...updated, due: updated.deadline, done: updated.completed } : t)); onNotificationsChanged?.(); }
   };
 
   const handleDeleteTask = useCallback((id) => {
@@ -395,6 +397,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
       pendingDeletesRef.current.delete(id);
       setUndoTask(prev => prev?.task.id === id ? null : prev);
       await apiFetch(`/api/tasks/delete/${id}`, { method: "DELETE" });
+      onNotificationsChanged?.();
     }, 5000);
     pendingDeletesRef.current.set(id, { task, index, timer });
     setUndoTask({ task, index, timer });
@@ -408,6 +411,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
     pendingDeletesRef.current.delete(undoTask.task.id);
     setTasks(p => { const next = [...p]; next.splice(entry.index, 0, entry.task); return next; });
     setUndoTask(null);
+    onNotificationsChanged?.();
   };
 
   const deleteAllDone = async () => {
@@ -447,6 +451,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester }) {
         await loadTasks();
         if (created.course) setAllCourses(prev => [...new Set([...prev, created.course])].sort());
         setComposing(false);
+        onNotificationsChanged?.();
       } else {
         const data = await res.json().catch(() => ({}));
         const msg = res.status === 409 ? "A task with this course and title already exists." : (data.error || data.message || "Failed to add task.");
