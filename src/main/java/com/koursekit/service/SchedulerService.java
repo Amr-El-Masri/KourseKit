@@ -179,7 +179,7 @@ public class SchedulerService {
                 // On the last opportunity, let the slot capacity be the only ceiling.
                 if (hasMoreOpportunities) assign = Math.min(assign, settings.getMaximumSessionHours());
                 assign = Math.min(assign, subjectCapacityToday);
-                assign = Math.floor(assign * 4) / 4.0;
+                assign = Math.floor(assign * 2) / 2.0;
 
                 // Only enforce minimum session if the task has more work left than the minimum.
                 // If it's a small remainder (e.g. 0.5h left), schedule exactly that amount.
@@ -188,7 +188,7 @@ public class SchedulerService {
                         assign = settings.getMinimumSessionHours();
                     } else if (remaining < settings.getMinimumSessionHours() && assign >= 0.001) {
                         // Small remainder — schedule it as-is (already floored to 0.5h grid)
-                        assign = Math.floor(remaining * 4) / 4.0;
+                        assign = Math.floor(remaining * 2) / 2.0;
                         if (assign < 0.001) continue;
                     } else {
                         continue;
