@@ -6,6 +6,8 @@ import com.koursekit.repository.DefaultScheduleSlotRepository;
 
 import com.koursekit.exception.ResourceNotFoundException;
 import com.koursekit.model.*;
+import com.koursekit.repository.SavedSemesterRepository;
+import com.koursekit.repository.SectionRepository;
 import com.koursekit.repository.StudyBlockRepository;
 import com.koursekit.repository.StudyPlanRepository;
 import com.koursekit.repository.UserWeekSlotConfigRepository;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,6 +42,12 @@ public class StudyPlanService {
 
     @Autowired
     private UserWeekSlotConfigRepository weekSlotConfigRepository;
+
+    @Autowired
+    private SavedSemesterRepository savedSemesterRepository;
+
+    @Autowired
+    private SectionRepository sectionRepository;
 
     @PersistenceContext
     private EntityManager entityManager;
@@ -81,6 +90,7 @@ public class StudyPlanService {
 
         // Start from today if current week, otherwise from weekStart (Monday)
         LocalDate startDate = weekStart.isAfter(LocalDate.now()) ? weekStart : LocalDate.now();
+        blockOutCourseTimes(settings, userId, semester);
         SchedulerResult result = schedulerService.generatePlan(entries, settings, startDate, weekStart);
         saveSchedule(entries, result.getBlocks());
 
@@ -143,6 +153,7 @@ public class StudyPlanService {
                 entry.getAssignedBlocks().addAll(pinned);
             }
 
+            blockOutCourseTimes(settings, userId, semester);
             SchedulerResult result = schedulerService.rebalance(entries, settings, today, weekStart);
 
             List<StudyBlock> newBlocks = result.getBlocks().stream()
@@ -552,5 +563,112 @@ public class StudyPlanService {
                 slotRepository.deleteByUserIdAndWeekStart(userId, weekStart);
             }
         }
+    }
+
+    // Removes enrolled course section times from the scheduler availability so study blocks
+    // are never placed during class hours.
+    private void blockOutCourseTimes(SchedulerSettings settings, Long userId, String semester) {
+        if (semester == null || semester.isBlank()) return;
+
+        List<SavedSemester> semesters = savedSemesterRepository.findByUserIdWithCourses(userId);
+        SavedSemester matched = semesters.stream()
+                .filter(s -> semester.equalsIgnoreCase(s.getName()))
+                .findFirst()
+                .orElse(null);
+        if (matched == null) return;
+
+        for (SavedCourse course : matched.getCourses()) {
+            String crn = course.getsectioncrn();
+            if (crn == null || crn.isBlank()) continue;
+
+            sectionRepository.findByCrn(crn).ifPresent(section -> {
+                applyCourseMeetingCarveOut(settings, section.getDays1(), section.getBeginTime1(), section.getEndTime1());
+                applyCourseMeetingCarveOut(settings, section.getDays2(), section.getBeginTime2(), section.getEndTime2());
+            });
+        }
+    }
+
+    private void applyCourseMeetingCarveOut(SchedulerSettings settings, String daysStr, String beginStr, String endStr) {
+        if (daysStr == null || daysStr.isBlank()) return;
+        if (beginStr == null || beginStr.isBlank() || endStr == null || endStr.isBlank()) return;
+
+        LocalTime classStart = parseTime(beginStr);
+        LocalTime classEnd = parseTime(endStr);
+        if (classStart == null || classEnd == null || !classEnd.isAfter(classStart)) return;
+
+        for (DayOfWeek dow : parseDays(daysStr)) {
+            carveOut(settings, dow, classStart, classEnd);
+        }
+    }
+
+    private void carveOut(SchedulerSettings settings, DayOfWeek dow, LocalTime classStart, LocalTime classEnd) {
+        DaySchedule daySchedule = settings.getAvailability().get(dow);
+        if (daySchedule == null) return;
+
+        List<TimeSlot> result = new ArrayList<>();
+        for (TimeSlot slot : daySchedule.getSlots()) {
+            LocalTime s = slot.getStart();
+            LocalTime e = slot.getEnd();
+
+            boolean classStartsAfterSlot = !classStart.isBefore(e);
+            boolean classEndsBeforeSlot  = !classEnd.isAfter(s);
+            if (classStartsAfterSlot || classEndsBeforeSlot) {
+                // No overlap — keep slot unchanged
+                result.add(slot);
+            } else if (!classStart.isAfter(s) && !classEnd.isBefore(e)) {
+                // Class fully covers slot — drop it
+            } else if (!classStart.isAfter(s) && classEnd.isAfter(s) && classEnd.isBefore(e)) {
+                // Class overlaps the beginning of the slot
+                addIfLongEnough(result, classEnd, e);
+            } else if (classStart.isAfter(s) && classStart.isBefore(e) && !classEnd.isBefore(e)) {
+                // Class overlaps the end of the slot
+                addIfLongEnough(result, s, classStart);
+            } else {
+                // Class is in the middle — split into two
+                addIfLongEnough(result, s, classStart);
+                addIfLongEnough(result, classEnd, e);
+            }
+        }
+        daySchedule.setSlots(result);
+    }
+
+    private void addIfLongEnough(List<TimeSlot> list, LocalTime start, LocalTime end) {
+        // Drop slots shorter than 30 minutes — the minimum session length
+        if (java.time.Duration.between(start, end).toMinutes() >= 30) {
+            list.add(new TimeSlot(start, end));
+        }
+    }
+
+    private Set<DayOfWeek> parseDays(String daysStr) {
+        Set<DayOfWeek> days = new LinkedHashSet<>();
+        for (char c : daysStr.toCharArray()) {
+            switch (c) {
+                case 'M' -> days.add(DayOfWeek.MONDAY);
+                case 'T' -> days.add(DayOfWeek.TUESDAY);
+                case 'W' -> days.add(DayOfWeek.WEDNESDAY);
+                case 'R' -> days.add(DayOfWeek.THURSDAY);
+                case 'F' -> days.add(DayOfWeek.FRIDAY);
+                case 'S' -> days.add(DayOfWeek.SATURDAY);
+                case 'U' -> days.add(DayOfWeek.SUNDAY);
+                default -> { /* skip spaces and unknown chars */ }
+            }
+        }
+        return days;
+    }
+
+    private LocalTime parseTime(String timeStr) {
+        if (timeStr == null || timeStr.isBlank()) return null;
+        try {
+            if (timeStr.contains(":")) {
+                return LocalTime.parse(timeStr.length() == 5 ? timeStr : timeStr.substring(0, 5));
+            }
+            // "HHmm" format e.g. "1530"
+            if (timeStr.length() == 4) {
+                int hour = Integer.parseInt(timeStr.substring(0, 2));
+                int minute = Integer.parseInt(timeStr.substring(2, 4));
+                return LocalTime.of(hour, minute);
+            }
+        } catch (Exception ignored) {}
+        return null;
     }
 }
