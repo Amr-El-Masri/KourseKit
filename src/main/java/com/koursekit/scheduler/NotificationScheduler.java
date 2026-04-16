@@ -35,6 +35,7 @@ public class NotificationScheduler {
         List<Task> overdueTasks = taskService.findByDeadlineBetween(now.minusYears(1), now);
         for (Task task : overdueTasks) {
             if (task.isCompleted()) continue;
+            notificationRepository.deleteByTask_IdAndUrgencyNot(task.getId(), "overdue");
             if (!notificationRepository.existsByTask_IdAndUrgency(task.getId(), "overdue")) {
                 notificationService.createNotification(task, "overdue");
             }
@@ -44,6 +45,7 @@ public class NotificationScheduler {
         List<Task> todayTasks = taskService.findByDeadlineBetween(now, now.plusHours(6));
         for (Task task : todayTasks) {
             if (task.isCompleted()) continue;
+            notificationRepository.deleteByTask_IdAndUrgencyNot(task.getId(), "today");
             if (!notificationRepository.existsByTask_IdAndUrgency(task.getId(), "today")) {
                 notificationService.createNotification(task, "today");
             }
@@ -53,6 +55,7 @@ public class NotificationScheduler {
         List<Task> tomorrowTasks = taskService.findByDeadlineBetween(now.plusHours(6), now.plusHours(48));
         for (Task task : tomorrowTasks) {
             if (task.isCompleted()) continue;
+            notificationRepository.deleteByTask_IdAndUrgencyNot(task.getId(), "tomorrow");
             if (!notificationRepository.existsByTask_IdAndUrgency(task.getId(), "tomorrow")) {
                 notificationService.createNotification(task, "tomorrow");
             }
@@ -62,6 +65,7 @@ public class NotificationScheduler {
         List<Task> threeDayTasks = taskService.findByDeadlineBetween(now.plusHours(48), now.plusHours(78));
         for (Task task : threeDayTasks) {
             if (task.isCompleted()) continue;
+            notificationRepository.deleteByTask_IdAndUrgencyNot(task.getId(), "3day");
             if (!notificationRepository.existsByTask_IdAndUrgency(task.getId(), "3day")) {
                 notificationService.createNotification(task, "3day");
             }
