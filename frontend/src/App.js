@@ -68,7 +68,7 @@ export default function App() {
     <>
       {page === "login"          && <Login         onLogin={() => setPage("dashboard")} onGoToRegister={() => setPage("register")} onGoToForgotPassword={() => setPage("forgot-password")} prefillEmail={prefillEmail} />}
       {page === "register"       && <Register       onRegister={() => setPage("dashboard")} onGoToLogin={goToLogin} />}
-      {page === "dashboard"      && <Dashboard      onLogout={() => { Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); setPage("login"); }} />}
+      {page === "dashboard"      && <Dashboard      onLogout={() => setPage("login")} />}
       {page === "forgot-password"&& <ForgotPassword onGoToLogin={goToLogin} />}
       {page === "reset-password" && <ResetPassword  token={resettoken} onGoToLogin={(email) => { setPrefillEmail(email || ""); goToLogin(); }} />}
       {page === "verify-email"   && <VerifyEmail    token={verifytoken} onVerified={onVerified} onGoToLogin={goToLogin} />}
