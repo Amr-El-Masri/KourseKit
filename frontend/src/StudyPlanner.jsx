@@ -1161,11 +1161,24 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
     });
     useEffect(() => {
         const handler = () => {
-            try { setGlobalCourseColors(JSON.parse(localStorage.getItem("kk_course_colors") || "{}")); } catch {}
+            try {
+                const newColors = JSON.parse(localStorage.getItem("kk_course_colors") || "{}");
+                setGlobalCourseColors(newColors);
+                setColorMap(prev => {
+                    const updated = { ...prev };
+                    (entries || []).forEach(e => {
+                        if (e.course && newColors[e.course]) {
+                            updated[String(e.id)] = newColors[e.course];
+                        }
+                    });
+                    localStorage.setItem("kk_colorMap", JSON.stringify(updated));
+                    return updated;
+                });
+            } catch {}
         };
         window.addEventListener("kk_course_colors_changed", handler);
         return () => window.removeEventListener("kk_course_colors_changed", handler);
-    }, []);
+    }, [entries]);
 
     const calBodyRef = useCallback((el) => {
         if (el) {
@@ -1263,9 +1276,11 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
             const savedColors = (() => {
                 try { return JSON.parse(localStorage.getItem('kk_colorMap') || '{}'); } catch { return {}; }
             })();
+            const courseColors = (() => { try { return JSON.parse(localStorage.getItem("kk_course_colors") || "{}"); } catch { return {}; } })();
             const next = Object.fromEntries(mapped.map(e => [String(e.id), e.color]));
             if (preserveColors) Object.assign(next, prev);
             Object.assign(next, savedColors);
+            mapped.forEach(e => { if (e.course && courseColors[e.course]) next[String(e.id)] = courseColors[e.course]; });
             return next;
         });
     }, [weekStart]);
