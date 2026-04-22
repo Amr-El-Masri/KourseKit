@@ -48,6 +48,7 @@ export default function App() {
     hasValidToken() ? "dashboard" : "login"
   );
   const [prefillEmail, setPrefillEmail] = useState("");
+  const [postVerifyToken, setPostVerifyToken] = useState(null);
 
   useEffect(() => {
     if (hasValidToken()) tryRefreshToken();
@@ -58,17 +59,31 @@ export default function App() {
     setPage("login");
   };
 
-  const onVerified = (email) => {
-    setPrefillEmail(email);
+  const onVerified = (email, token) => {
     window.history.replaceState({}, document.title, "/");
+    if (token) {
+      // Store the JWT so TranscriptModal and semester-save API calls work
+      localStorage.setItem("kk_token", token);
+      localStorage.setItem("kk_email", email);
+      setPostVerifyToken(token);
+      setPage("semester-setup");
+    } else {
+      setPrefillEmail(email);
+      setPage("login");
+    }
+  };
+
+  const logout = () => {
+    Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k));
     setPage("login");
   };
 
   return (
     <>
       {page === "login"          && <Login         onLogin={() => setPage("dashboard")} onGoToRegister={() => setPage("register")} onGoToForgotPassword={() => setPage("forgot-password")} prefillEmail={prefillEmail} />}
-      {page === "register"       && <Register       onRegister={() => setPage("dashboard")} onGoToLogin={goToLogin} />}
-      {page === "dashboard"      && <Dashboard      onLogout={() => { Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); setPage("login"); }} />}
+      {page === "register"       && <Register       onGoToLogin={goToLogin} />}
+      {page === "semester-setup" && <Register       postVerifyToken={postVerifyToken} onGoToLogin={() => setPage("dashboard")} />}
+      {page === "dashboard"      && <Dashboard      onLogout={logout} />}
       {page === "forgot-password"&& <ForgotPassword onGoToLogin={goToLogin} />}
       {page === "reset-password" && <ResetPassword  token={resettoken} onGoToLogin={(email) => { setPrefillEmail(email || ""); goToLogin(); }} />}
       {page === "verify-email"   && <VerifyEmail    token={verifytoken} onVerified={onVerified} onGoToLogin={goToLogin} />}

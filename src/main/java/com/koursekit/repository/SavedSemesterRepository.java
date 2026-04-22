@@ -16,4 +16,9 @@ public interface SavedSemesterRepository extends JpaRepository<SavedSemester, Lo
     Optional<SavedSemester> findByIdAndUserId(Long id, Long userId);
     void deleteByIdAndUserId(Long id, Long userId);
     Optional<SavedSemester> findByUserIdAndIsTemplateTrue(Long userId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query("DELETE FROM SavedSemester s WHERE s.user.id = :userId")
+    void deleteByUserId(@Param("userId") Long userId);
 }

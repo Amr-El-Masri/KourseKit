@@ -10,4 +10,5 @@ public interface UserSyllabusRepository extends JpaRepository<UserSyllabus, Long
     List<UserSyllabus> findByUserId(Long userId);
     Optional<UserSyllabus> findByUserIdAndCourseName(Long userId, String courseName);
     void deleteByUserIdAndCourseName(Long userId, String courseName);
+    void deleteByUserId(Long userId);
 }

@@ -16,4 +16,8 @@ public interface GroupMessageRepo extends JpaRepository<GroupMessage, Long> {
     @Modifying
     @Query("DELETE FROM GroupMessage message WHERE message.studyGroup.id = :groupId")
     void deleteAll_byStudyGroupID(@Param("groupId") Long groupId);
+
+    @Modifying
+    @Query("DELETE FROM GroupMessage m WHERE m.sender.id = :userId")
+    void deleteBySenderId(@Param("userId") Long userId);
 }

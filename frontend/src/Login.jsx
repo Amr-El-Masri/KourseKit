@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function Login({ onLogin, onGoToRegister, onGoToForgotPassword, prefillEmail }) {
   const [email, setEmail]           = useState(prefillEmail || localStorage.getItem("kk_remembered_email") || "");
@@ -6,6 +6,11 @@ export default function Login({ onLogin, onGoToRegister, onGoToForgotPassword, p
   const [error, setError]           = useState("");
   const [showPassword, setShowPw]   = useState(false);
   const [rememberMe,   setRememberMe] = useState(false);
+  const [notVerified,  setNotVerified]  = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMsg,     setResendMsg]     = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const cooldownRef = useRef(null);
 
   const handle = async () => {
     if (!email || !password) { setError("Please fill in all fields."); return; }
@@ -30,11 +35,34 @@ export default function Login({ onLogin, onGoToRegister, onGoToForgotPassword, p
         else localStorage.removeItem("kk_remembered_email");
         onLogin();
       } else {
-        setError(data.message || "Invalid email or password.");
+        const msg = data.message || "Invalid email or password.";
+        setError(msg);
+        setNotVerified(msg.toLowerCase().includes("not been verified") || msg.toLowerCase().includes("not verified"));
       }
     } catch (e) {
       setError("Could not connect to server.");
     }
+  };
+
+  const handleResend = async () => {
+    setResendLoading(true); setResendMsg("");
+    try {
+      const res = await fetch("http://localhost:8080/api/auth/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      setResendMsg(data.success ? "Verification email sent! Check your inbox." : (data.message || "Failed to resend."));
+      if (data.success) {
+        setResendCooldown(60);
+        cooldownRef.current = setInterval(() => {
+          setResendCooldown(prev => { if (prev <= 1) { clearInterval(cooldownRef.current); return 0; } return prev - 1; });
+        }, 1000);
+      }
+    } catch {
+      setResendMsg("Could not connect to server.");
+    } finally { setResendLoading(false); }
   };
 
   return (
@@ -62,6 +90,18 @@ export default function Login({ onLogin, onGoToRegister, onGoToForgotPassword, p
           <p style={s.subtitle}>Sign in with your AUB email to continue</p>
 
           {error && <div style={s.errorBox}>{error}</div>}
+          {notVerified && (
+            <div style={{ marginTop: -8, marginBottom: 14 }}>
+              {resendMsg && <div style={{ fontSize: 12, color: resendMsg.includes("sent") ? "#2d7a4a" : "var(--error)", marginBottom: 4 }}>{resendMsg}</div>}
+              {resendCooldown > 0
+                ? <span style={{ fontSize: 12, color: "var(--text3)" }}>Resend available in {resendCooldown}s</span>
+                : <button onClick={handleResend} disabled={resendLoading}
+                    style={{ background: "none", border: "none", fontSize: 12, color: "var(--primary)", fontWeight: 600, cursor: resendLoading ? "not-allowed" : "pointer", padding: 0, textDecoration: "underline" }}>
+                    {resendLoading ? "Sending…" : "Resend verification email"}
+                  </button>
+              }
+            </div>
+          )}
 
           <label style={s.label}>Email</label>
           <input
@@ -70,7 +110,7 @@ export default function Login({ onLogin, onGoToRegister, onGoToForgotPassword, p
             type="email"
             placeholder="yourname@mail.aub.edu"
             value={email}
-            onChange={e => { setEmail(e.target.value); setError(""); }}
+            onChange={e => { setEmail(e.target.value); setError(""); setNotVerified(false); setResendMsg(""); }}
             onKeyDown={e => e.key === "Enter" && handle()}
           />
 

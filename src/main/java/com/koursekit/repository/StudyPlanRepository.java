@@ -23,4 +23,9 @@ public interface StudyPlanRepository extends JpaRepository<StudyPlanEntry, Long>
     @org.springframework.data.jpa.repository.Modifying
     @Query("UPDATE StudyPlanEntry e SET e.completedHours = 0 WHERE e.id IN :ids")
     void resetCompletedHoursByIds(@Param("ids") List<Long> ids);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query("DELETE FROM StudyPlanEntry e WHERE e.user.id = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
 }

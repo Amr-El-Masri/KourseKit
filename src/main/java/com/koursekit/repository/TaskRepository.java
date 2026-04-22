@@ -28,6 +28,11 @@ public interface TaskRepository  extends JpaRepository<Task, Long> {
             "AND t.id NOT IN (SELECT e.task.id FROM StudyPlanEntry e)")
     void deleteTasksPastDeadline(@Param("now") LocalDateTime now, @Param("userId") Long userId);
 
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Task t WHERE t.user.id = :userId")
+    void deleteAllByUserId(@Param("userId") Long userId);
+
 
 
     @Query("SELECT t FROM Task t WHERE t.user.id = :userId AND " +
