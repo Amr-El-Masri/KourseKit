@@ -127,7 +127,7 @@ export default function SyllabusModal({ courseName, onClose, onApply, existingDa
                   return `${parsed.getFullYear()}-${pad(parsed.getMonth()+1)}-${pad(parsed.getDate())}`;
                 })();
             if (!isoDate) continue;
-            iso = `${isoDate}T23:59`;
+            iso = new Date(`${isoDate}T23:59`).toISOString().slice(0, 19);
           } catch { continue; }
           const res = await fetch(`${API}/api/tasks/add`, {
             method: "POST",

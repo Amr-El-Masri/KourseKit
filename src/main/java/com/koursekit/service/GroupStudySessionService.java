@@ -149,7 +149,7 @@ public class GroupStudySessionService {
             .orElseThrow(() -> new IllegalArgumentException("Session not found"));
 
         String course = session.getStudyGroup().getCourse().getCourseCode();
-        String title  = session.getStudyGroup().getName();
+        String title  = "Group Study Session: " + session.getStudyGroup().getName();
         LocalDateTime deadline = LocalDateTime.of(session.getDate(), session.getEndTime());
 
         if (taskRepository.existsByCourseAndTitleAndUserId(course, title, userId)) {

@@ -52,6 +52,27 @@ public class TaskService {
         task.setUserId(userId);
         task.setPriority(Task.calculatePriority(dto.deadline()));
         Task saved = taskRepository.save(task);
+
+        LocalDateTime now = LocalDateTime.now();
+        long hoursUntil = java.time.temporal.ChronoUnit.HOURS.between(now, saved.getDeadline());
+        if (hoursUntil < 0) {
+            if (!notificationRepository.existsByTask_IdAndUrgency(saved.getId(), "overdue")) {
+                notificationRepository.save(new com.koursekit.model.Notification(saved, "", "overdue", now));
+            }
+        } else if (hoursUntil <= 6) {
+            if (!notificationRepository.existsByTask_IdAndUrgency(saved.getId(), "today")) {
+                notificationRepository.save(new com.koursekit.model.Notification(saved, "", "today", now));
+            }
+        } else if (hoursUntil <= 48) {
+            if (!notificationRepository.existsByTask_IdAndUrgency(saved.getId(), "tomorrow")) {
+                notificationRepository.save(new com.koursekit.model.Notification(saved, "", "tomorrow", now));
+            }
+        } else if (hoursUntil <= 78) {
+            if (!notificationRepository.existsByTask_IdAndUrgency(saved.getId(), "3day")) {
+                notificationRepository.save(new com.koursekit.model.Notification(saved, "", "3day", now));
+            }
+        }
+
         return taskMapper.toDto(saved);
     }
 

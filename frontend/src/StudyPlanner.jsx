@@ -523,17 +523,20 @@ function AvailabilitySlot({ slot, dayKey, onDelete, onResize }) {
 function CourseBlock({ startHour, endHour, courseCode, sectionNumber, color, onDismiss, isPast }) {
     const top = hourToPx(startHour);
     const height = Math.max((endHour - startHour) * HOUR_HEIGHT - 4, 20);
+    const [hovered, setHovered] = useState(false);
     return (
         <div
             style={{ position:"absolute", top:top+2, height, left:4, right:4, zIndex:2, background:color, borderRadius:6, padding:"4px 6px", overflow:"hidden", boxShadow:`0 2px 6px ${color}55`, pointerEvents: isPast ? "none" : "auto" }}
             onMouseDown={e => e.stopPropagation()}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
         >
             <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:2, height:"100%" }}>
                 <div style={{ minWidth:0, overflow:"hidden" }}>
                     <div style={{ fontSize:10, fontWeight:800, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", textShadow:"0 1px 2px rgba(0,0,0,0.2)" }}>{courseCode} {sectionNumber}</div>
                     {height > 26 && <div style={{ fontSize:9, color:"rgba(255,255,255,0.85)" }}>{formatTime(startHour)} – {formatTime(endHour)}</div>}
                 </div>
-                {onDismiss && height > 26 && (
+                {hovered && onDismiss && height > 26 && (
                     <button onClick={e => { e.stopPropagation(); onDismiss(); }} style={{ background:"rgba(0,0,0,0.15)", border:"none", color:"#fff", cursor:"pointer", fontSize:11, padding:"1px 4px", lineHeight:1, borderRadius:3, flexShrink:0 }} title="Remove for today">×</button>
                 )}
             </div>
@@ -541,7 +544,7 @@ function CourseBlock({ startHour, endHour, courseCode, sectionNumber, color, onD
     );
 }
 
-function StudySessionBlock({ startHour, endHour, courseCode, sessionId, onDelete }) {
+function StudySessionBlock({ startHour, endHour, courseCode, groupName, sessionId, onDelete }) {
     const top = hourToPx(startHour);
     const height = Math.max((endHour - startHour) * HOUR_HEIGHT - 4, 40);
     const [hovered, setHovered] = useState(false);
@@ -556,7 +559,7 @@ function StudySessionBlock({ startHour, endHour, courseCode, sessionId, onDelete
             onMouseLeave={() => setHovered(false)}
         >
             <div style={{ fontSize:10, fontWeight:800, color:"#fff", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", textShadow:"0 1px 2px rgba(0,0,0,0.25)", paddingRight:14 }}>
-                {courseCode}
+                {groupName || courseCode}
             </div>
             {height > 26 && <div style={{ fontSize:9, color:"rgba(255,255,255,0.85)" }}>{formatTime(startHour)} – {formatTime(endHour)}</div>}
             {hovered && onDelete && (
@@ -652,7 +655,7 @@ function DayColumn({
                     onDismiss={onDismissCourse ? () => onDismissCourse(cb.crn) : null} isPast={isPastDay} />
             ))}
             {(studySessionBlocks || []).map((sb, i) => (
-                <StudySessionBlock key={`session-${i}`} startHour={sb.startHour} endHour={sb.endHour} courseCode={sb.courseCode} sessionId={sb.sessionId} onDelete={onDeleteSession} />
+                <StudySessionBlock key={`session-${i}`} startHour={sb.startHour} endHour={sb.endHour} courseCode={sb.courseCode} groupName={sb.groupName} sessionId={sb.sessionId} onDelete={onDeleteSession} />
             ))}
             {dragging && (
                 <div className="sp-drag-preview" style={{
@@ -714,7 +717,7 @@ function DayColumn({
     );
 }
 
-function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColorChange, userId, weekStart, isPastWeek, entriesLoading, onCarryOver, onNavigate, semesterCourseCodes, globalCourseColors }) {
+function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColorChange, userId, weekStart, isPastWeek, entriesLoading, onCarryOver, onNavigate, semesterCourseCodes, globalCourseColors, semester }) {
     const [tasks, setTasks] = useState([]);
     const [selectedTaskId, setSelectedTaskId] = useState("");
     const [hoursPerWeek, setHoursPerWeek] = useState("");
@@ -732,10 +735,13 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
 
 
     useEffect(() => {
-        apiFetch(`/api/tasks/list-all`).then(data => {
+        const url = semester
+            ? `/api/tasks/list-all?semester=${encodeURIComponent(semester)}`
+            : `/api/tasks/list-all`;
+        apiFetch(url).then(data => {
             if (data) setTasks(data);
         });
-    }, [userId]);
+    }, [userId, semester]);
 
     const selectedTask = tasks.find(t => String(t.id) === String(selectedTaskId));
     const addedTaskIds = new Set(entries.map(e => String(e.taskId)));
@@ -747,7 +753,7 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
         if (t.completed) return false;
         if (t.type === "Group Study Session") return false;
         if (weekStartDate && t.deadline) {
-            const deadline = new Date(t.deadline);
+            const deadline = new Date(t.deadline + "Z");
             if (deadline < weekStartDate) return false;
         }
         if (semesterCourseCodes && semesterCourseCodes.size > 0 && t.course) {
@@ -841,7 +847,7 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
                 )}
 
                 {selectedTask && (
-                    <div>
+                    <div style={{ marginBottom:12 }}>
                         <input
                             className="sp-input"
                             type="number"
@@ -851,7 +857,10 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
                             step="0.5"
                             value={hoursPerWeek}
                             onChange={e => setHoursPerWeek(e.target.value)}
-                            onKeyDown={e => ["e","E","+","-"].includes(e.key) && e.preventDefault()}
+                            onKeyDown={e => {
+                                if (["e","E","+","-"].includes(e.key)) { e.preventDefault(); return; }
+                                if (e.key === "Enter" && selectedTask && hoursPerWeek) handleAdd();
+                            }}
                         />
                         <div style={{ fontSize:11, color:"var(--text3)", marginTop:4 }}>How many hours per week to dedicate to this task</div>
                     </div>
@@ -973,12 +982,7 @@ function SlotPanel({ availability, onDeleteSlot, onClearAll }) {
 
     return (
         <div className="sp-slot-panel">
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                <div className="sp-panel-title" style={{ marginBottom: 0 }}>Availability Slots</div>
-                {allSlots.length > 0 && (
-                    <button className="sp-clear-btn" onClick={onClearAll}>Clear all</button>
-                )}
-            </div>
+            <div className="sp-panel-title">Availability Slots</div>
             {allSlots.length === 0 && (
                 <div className="sp-empty-hint">Drag on the calendar to add free slots.</div>
             )}
@@ -992,6 +996,9 @@ function SlotPanel({ availability, onDeleteSlot, onClearAll }) {
                     >×</button>
                 </div>
             ))}
+            {allSlots.length > 0 && (
+                <button className="sp-clear-btn" onClick={onClearAll} style={{ width:"100%", marginTop:10 }}>Clear All</button>
+            )}
         </div>
     );
 }
@@ -1076,6 +1083,10 @@ function CoursesPanel({ enrolledSections, globalCourseColors, dismissedSections,
 }
 
 export default function StudyPlanner({ enrolledSections = [], semester = "", onNavigate }) {
+    const semParamRef = useRef(semester ? `&semester=${encodeURIComponent(semester)}` : "");
+    semParamRef.current = semester ? `&semester=${encodeURIComponent(semester)}` : "";
+    const semesterRef = useRef(semester);
+    semesterRef.current = semester;
     const [currentDate, setCurrentDate] = useState(new Date());
     const [weekBlocks, setWeekBlocks] = useState({});
     const [availability, setAvailability] = useState({});
@@ -1094,6 +1105,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
     const [activePanel, setActivePanel] = useState(() => sessionStorage.getItem("kk_sp_panel") || "entries"); // "entries" | "slots"
     const [editingBlock, setEditingBlock] = useState(null);
     const [hasGenerated, setHasGenerated] = useState(false);
+    const [hasDefaultSlots, setHasDefaultSlots] = useState(false);
     const [showSlotOverlay, setShowSlotOverlay] = useState(true);
     const [dismissedSections, setDismissedSections] = useState(() => {
         try { return new Set(JSON.parse(localStorage.getItem("kk_dismissed_sections") || "[]")); } catch { return new Set(); }
@@ -1149,11 +1161,24 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
     });
     useEffect(() => {
         const handler = () => {
-            try { setGlobalCourseColors(JSON.parse(localStorage.getItem("kk_course_colors") || "{}")); } catch {}
+            try {
+                const newColors = JSON.parse(localStorage.getItem("kk_course_colors") || "{}");
+                setGlobalCourseColors(newColors);
+                setColorMap(prev => {
+                    const updated = { ...prev };
+                    (entries || []).forEach(e => {
+                        if (e.course && newColors[e.course]) {
+                            updated[String(e.id)] = newColors[e.course];
+                        }
+                    });
+                    localStorage.setItem("kk_colorMap", JSON.stringify(updated));
+                    return updated;
+                });
+            } catch {}
         };
         window.addEventListener("kk_course_colors_changed", handler);
         return () => window.removeEventListener("kk_course_colors_changed", handler);
-    }, []);
+    }, [entries]);
 
     const calBodyRef = useCallback((el) => {
         if (el) {
@@ -1231,7 +1256,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
 
     const loadEntries = useCallback(async (preserveColors = false) => {
         setEntriesLoading(true);
-        const data = await apiFetch(`/api/study-plan/entries?weekStart=${weekStart}`);
+        const data = await apiFetch(`/api/study-plan/entries?weekStart=${weekStart}${semParamRef.current}`);
         const list = Array.isArray(data) ? data : [];
         const mapped = list.map((entry, i) => ({
             id: entry.id,
@@ -1251,24 +1276,30 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
             const savedColors = (() => {
                 try { return JSON.parse(localStorage.getItem('kk_colorMap') || '{}'); } catch { return {}; }
             })();
+            const courseColors = (() => { try { return JSON.parse(localStorage.getItem("kk_course_colors") || "{}"); } catch { return {}; } })();
             const next = Object.fromEntries(mapped.map(e => [String(e.id), e.color]));
             if (preserveColors) Object.assign(next, prev);
             Object.assign(next, savedColors);
+            mapped.forEach(e => { if (e.course && courseColors[e.course]) next[String(e.id)] = courseColors[e.course]; });
             return next;
         });
     }, [weekStart]);
 
     const loadWeeklyView = useCallback(async () => {
         setLoading(true);
-        const data = await apiFetch(`/api/study-plan/weekly?weekStart=${weekStart}`);
+        const data = await apiFetch(`/api/study-plan/weekly?weekStart=${weekStart}${semParamRef.current}`);
         if (data) {
             const normalized = normalizeWeeklyData(data);
             setWeekBlocks(normalized);
             const hasBlocks = Object.values(normalized).some(arr => arr.length > 0);
-            if (!hasBlocks) {
+            if (hasBlocks) {
+                setHasGenerated(true);
+                setShowSlotOverlay(false);
+                localStorage.setItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`, 'true');
+            } else {
                 setHasGenerated(false);
                 setShowSlotOverlay(true);
-                localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
+                localStorage.removeItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`);
             }
         }
         setLoading(false);
@@ -1284,11 +1315,10 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
             const weekStartDate = new Date(weekStart);
             const dayOffset = { MONDAY:0, TUESDAY:1, WEDNESDAY:2, THURSDAY:3, FRIDAY:4, SATURDAY:5, SUNDAY:6 };
             const map = {};
-            let hadPastSlots = false;
             data.forEach(s => {
                 const offset = dayOffset[s.dayKey] ?? 0;
                 const slotDate = new Date(weekStartDate); slotDate.setDate(weekStartDate.getDate() + offset); slotDate.setHours(0,0,0,0);
-                if (slotDate < today) { hadPastSlots = true; return; }
+                if (slotDate < today) { return; }
                 if (!map[s.dayKey]) map[s.dayKey] = [];
                 map[s.dayKey].push({
                     id: s.id,
@@ -1297,27 +1327,18 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                     endHour: parseFloat(s.endTime.split(":")[0]) + parseFloat(s.endTime.split(":")[1]) / 60,
                 });
             });
-            if (hadPastSlots) {
-                const toTime = h => { const hrs = Math.floor(h); const mins = Math.round((h - hrs) * 60); return `${String(hrs).padStart(2,"0")}:${String(mins).padStart(2,"0")}:00`; };
-                const slots = [];
-                Object.entries(map).forEach(([dk, daySlots]) => daySlots.forEach(s => slots.push({ dayKey: dk, startTime: toTime(s.startHour), endTime: toTime(s.endHour) })));
-                const cleanUrl = semester
-                    ? `/api/study-plan/slots?weekStart=${weekStart}&semester=${encodeURIComponent(semester)}`
-                    : `/api/study-plan/slots?weekStart=${weekStart}`;
-                apiFetch(cleanUrl, { method: "POST", body: JSON.stringify(slots) }).catch(() => {});
-            }
             setAvailability(map);
             return map;
         }
         return null;
     }, [weekStart, semester]);
 
-    // Restore per-week generated state when week changes
+    // Restore per-week/semester generated state when week or semester changes
     useEffect(() => {
-        const stored = localStorage.getItem(`kk_hasGenerated_${weekStart}`) === 'true';
+        const stored = localStorage.getItem(`kk_hasGenerated_${weekStart}_${semester}`) === 'true';
         setHasGenerated(stored);
         setShowSlotOverlay(!stored);
-    }, [weekStart]);
+    }, [weekStart, semester]);
 
     const persistSlots = useCallback(async (newAvailability) => {
         const userId = getUserId();
@@ -1359,7 +1380,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         const removed = studySessions.find(s => s.id === sessionId);
         setStudySessions(prev => prev.filter(s => s.id !== sessionId));
         clearUndo();
-        setUndoToast({ msg: "Session removed from planner" });
+        setUndoToast({ msg: "Study Session Removed" });
         const commitFn = async () => {
             try { await apiFetch(`/api/group-sessions/${sessionId}/remove-from-planner`, { method: "POST" }); } catch { /* ignore */ }
         };
@@ -1381,7 +1402,14 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         loadWeeklyView();
         loadSlots();
         loadStudySessions();
-    }, [weekStart]);
+    }, [weekStart, semester]);
+
+    useEffect(() => {
+        const url = semester
+            ? `/api/study-plan/slots/has-defaults?semester=${encodeURIComponent(semester)}`
+            : `/api/study-plan/slots/has-defaults`;
+        apiFetch(url).then(data => { if (data) setHasDefaultSlots(data.hasDefaults); }).catch(() => {});
+    }, [semester]);
 
     useEffect(() => {
         const tick = () => setNowTime(new Date());
@@ -1426,7 +1454,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         if (allGone) {
             setHasGenerated(false);
             setShowSlotOverlay(true);
-            localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
+            localStorage.removeItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`);
         }
         clearUndo();
         setUndoToast({ msg: "Study block deleted" });
@@ -1443,7 +1471,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                         return { ...prev, [deletedDay]: dayBlocks };
                     });
                     setHasGenerated(true);
-                    localStorage.setItem(`kk_hasGenerated_${weekStart}`, 'true');
+                    localStorage.setItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`, 'true');
                 }
             },
             commitFn,
@@ -1538,17 +1566,50 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         };
     }, [clearUndo, persistSlots]);
 
-    const handleClearAllSlots = useCallback(async () => {
-        const userId = getUserId();
-        await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`, { method: "DELETE" });
-        await apiFetch(`/api/study-plan/blocks?weekStart=${weekStart}`, { method: "DELETE" });
+    const handleClearAllSlots = useCallback(() => {
+        const snapshotAvailability = availability;
+        const snapshotBlocks = weekBlocks;
+        const snapshotGenerated = hasGenerated;
+
         setAvailability({});
         setWeekBlocks({});
         setHasGenerated(false);
-        localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
+        localStorage.removeItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`);
         setShowSlotOverlay(true);
-        showToast("All slots cleared", "info");
-    }, [showToast, weekStart]);
+
+        clearUndo();
+        setUndoToast({ msg: "All slots cleared" });
+
+        const commitFn = async () => {
+            await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}${semParamRef.current}`, { method: "DELETE" });
+            await apiFetch(`/api/study-plan/blocks?weekStart=${weekStart}${semParamRef.current}`, { method: "DELETE" });
+        };
+
+        undoPendingRef.current = {
+            restoreFn: () => {
+                setAvailability(snapshotAvailability);
+                setWeekBlocks(snapshotBlocks);
+                setHasGenerated(snapshotGenerated);
+                if (snapshotGenerated) localStorage.setItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`, 'true');
+                setShowSlotOverlay(!snapshotGenerated);
+            },
+            commitFn,
+            timer: setTimeout(() => {
+                undoPendingRef.current = null;
+                setUndoToast(null);
+                commitFn().catch(() => {});
+            }, 5000),
+        };
+    }, [availability, weekBlocks, hasGenerated, weekStart, clearUndo]);
+
+    const handleAddFromDefault = useCallback(async () => {
+        try {
+            await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}${semParamRef.current}`, { method: "DELETE" });
+            await loadSlots();
+        } catch (e) {
+            showToast(e.message || "Failed to load default slots", "error");
+        }
+    }, [weekStart, loadSlots, showToast]);
 
     const handleResizeSlot = useCallback((dayKey, slotId, update) => {
         setAvailability(prev => {
@@ -1576,9 +1637,9 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         const savedColors = (() => { try { return JSON.parse(localStorage.getItem('kk_colorMap') || '{}'); } catch { return {}; } })();
         for (const entry of incompleteEntries) {
             const remaining = Math.max(0.5, entry.hoursPerWeek - (entry.completedHours || 0));
-            if (entry.deadline && new Date(entry.deadline) < new Date(currentWeekStart)) { expiredNames.push(entry.name); continue; }
+            if (entry.deadline && new Date(entry.deadline + "Z") < new Date(currentWeekStart)) { expiredNames.push(entry.name); continue; }
             try {
-                const res = await apiFetch(`/api/study-plan/entries/add?taskId=${entry.taskId}&estimatedWorkload=${remaining}&weekStart=${currentWeekStart}`, { method: "POST" });
+                const res = await apiFetch(`/api/study-plan/entries/add?taskId=${entry.taskId}&estimatedWorkload=${remaining}&weekStart=${currentWeekStart}${semParamRef.current}`, { method: "POST" });
                 carriedNames.push(entry.name);
                 const oldColor = colorMap[String(entry.id)];
                 if (oldColor && res?.id) savedColors[String(res.id)] = oldColor;
@@ -1601,7 +1662,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         if (!entry.taskId) { showToast("No task selected", "error"); return; }
         try {
             await apiFetch(
-                `/api/study-plan/entries/add?taskId=${entry.taskId}&estimatedWorkload=${entry.hoursPerWeek}&weekStart=${weekStart}`,
+                `/api/study-plan/entries/add?taskId=${entry.taskId}&estimatedWorkload=${entry.hoursPerWeek}&weekStart=${weekStart}${semParamRef.current}`,
                 { method: "POST" }
             );
             await loadEntries(true);
@@ -1642,7 +1703,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         if (allGone) {
             setHasGenerated(false);
             setShowSlotOverlay(true);
-            localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
+            localStorage.removeItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`);
         }
         clearUndo();
         setUndoToast({ msg: "Entry removed" });
@@ -1665,7 +1726,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                     });
                     if (Object.keys(deletedBlocks).length > 0) {
                         setHasGenerated(true);
-                        localStorage.setItem(`kk_hasGenerated_${weekStart}`, 'true');
+                        localStorage.setItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`, 'true');
                     }
                 }
             },
@@ -1720,7 +1781,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         setShowGenerateModal(false);
         try {
             const payload = buildSettingsPayload();
-            const data = await apiFetch(`/api/study-plan/generate?weekStart=${weekStart}`, {
+            const data = await apiFetch(`/api/study-plan/generate?weekStart=${weekStart}${semParamRef.current}`, {
                 method: "POST",
                 body: JSON.stringify(payload),
             });
@@ -1728,7 +1789,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                 const weeklyView = data.weeklyView ?? data;
                 setWeekBlocks(normalizeWeeklyData(weeklyView));
                 setHasGenerated(true);
-                localStorage.setItem(`kk_hasGenerated_${weekStart}`, 'true');
+                localStorage.setItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`, 'true');
                 setIsAvailabilityMode(false);
                 setShowSlotOverlay(false);
                 // Generate resets completedHours to 0 — update locally, no extra fetch needed
@@ -1751,7 +1812,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
     const handleMarkPastDone = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await apiFetch(`/api/study-plan/blocks/complete-past`, { method: "POST" });
+            const res = await apiFetch(`/api/study-plan/blocks/complete-past?weekStart=${weekStart}${semParamRef.current}`, { method: "POST" });
             const count = res?.marked ?? 0;
             if (count === 0) {
                 showToast("No past blocks to mark done", "info");
@@ -1775,11 +1836,11 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         setShowClearModal(false);
         setLoading(true);
         try {
-            await apiFetch(`/api/study-plan/blocks?weekStart=${weekStart}`, { method: "DELETE" });
-            await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}`, { method: "DELETE" });
+            await apiFetch(`/api/study-plan/blocks?weekStart=${weekStart}${semParamRef.current}`, { method: "DELETE" });
+            await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}${semParamRef.current}`, { method: "DELETE" });
             setWeekBlocks({});
             setHasGenerated(false);
-            localStorage.removeItem(`kk_hasGenerated_${weekStart}`);
+            localStorage.removeItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`);
             setShowSlotOverlay(true);
             await loadSlots(); // re-seeds from default since slots were just cleared
             showToast("Plan cleared", "info");
@@ -1827,7 +1888,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         setLoading(true);
         try {
             const payload = buildSettingsPayload(freshAvail);
-            const data = await apiFetch(`/api/study-plan/rebalance?weekStart=${weekStart}`, {
+            const data = await apiFetch(`/api/study-plan/rebalance?weekStart=${weekStart}${semParamRef.current}`, {
                 method: "POST",
                 body: JSON.stringify(payload),
             });
@@ -2672,10 +2733,14 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                     </div>
                 </div>
 
-                {slotCount === 0 && !loading && (
+                {slotCount === 0 && !loading && !weekDates.every(d => { const c = new Date(d); c.setHours(0,0,0,0); const t = new Date(); t.setHours(0,0,0,0); return c < t; }) && (
                     <div style={{ background: "var(--surface2)", borderBottom: "1px solid var(--border)", padding: "9px 16px", fontSize: 12, color: "var(--text2)", flexShrink: 0, display: "flex", alignItems: "center", gap: 10 }}>
                         <span>No availability slots set. Mark your free time so a plan can be generated.</span>
-                        {onNavigate && <button onClick={() => { localStorage.setItem("kk_profile_jump_section", "schedule"); onNavigate("profile"); }} style={{ marginLeft: "auto", fontSize: 11, fontWeight: 600, color: "var(--primary)", background: "none", border: "1px solid var(--primary)", borderRadius: 7, padding: "3px 10px", cursor: "pointer", whiteSpace: "nowrap", fontFamily: "'DM Sans',sans-serif" }}>Go to Default Schedule →</button>}
+                        {hasDefaultSlots
+                            ? <button onClick={handleAddFromDefault} style={{ marginLeft: "auto", fontSize: 11, fontWeight: 600, color: "var(--primary)", background: "none", border: "1px solid var(--primary)", borderRadius: 7, padding: "3px 10px", cursor: "pointer", whiteSpace: "nowrap", fontFamily: "'DM Sans',sans-serif" }}>Add from Default Schedule</button>
+                            : onNavigate && <button onClick={() => { localStorage.setItem("kk_profile_jump_section", "schedule"); onNavigate("profile"); }} style={{ marginLeft: "auto", fontSize: 11, fontWeight: 600, color: "var(--primary)", background: "none", border: "1px solid var(--primary)", borderRadius: 7, padding: "3px 10px", cursor: "pointer", whiteSpace: "nowrap", fontFamily: "'DM Sans',sans-serif" }}>Go to Default Schedule →</button>
+
+                        }
                     </div>
                 )}
 
@@ -2740,6 +2805,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                                     onNavigate={onNavigate}
                                     semesterCourseCodes={semesterCourseCodes}
                                     globalCourseColors={globalCourseColors}
+                                    semester={semester}
                                 />
                             </div>
                             <div style={{ display: activePanel === "slots" ? "contents" : "none" }}>
@@ -2863,7 +2929,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                             <p>This will delete all study blocks for this week and restore your default availability slots. This cannot be undone.</p>
                             <div className="sp-modal-actions">
                                 <button className="sp-btn sp-btn-ghost" onClick={() => setShowClearModal(false)}>Cancel</button>
-                                <button className="sp-btn sp-btn-primary" style={{background:"var(--error)",borderColor:"var(--error)"}} onClick={handleClearPlanConfirmed}>Clear Plan</button>
+                                <button className="sp-btn sp-btn-primary" style={{background:"#c0392b",borderColor:"#c0392b",color:"#fff"}} onClick={handleClearPlanConfirmed}>Clear Plan</button>
                             </div>
                         </div>
                     </div>

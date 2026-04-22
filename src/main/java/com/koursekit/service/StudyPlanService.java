@@ -6,8 +6,11 @@ import com.koursekit.repository.DefaultScheduleSlotRepository;
 
 import com.koursekit.exception.ResourceNotFoundException;
 import com.koursekit.model.*;
+import com.koursekit.repository.SavedSemesterRepository;
+import com.koursekit.repository.SectionRepository;
 import com.koursekit.repository.StudyBlockRepository;
 import com.koursekit.repository.StudyPlanRepository;
+import com.koursekit.repository.UserWeekSlotConfigRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -36,16 +40,25 @@ public class StudyPlanService {
     @Autowired
     private DefaultScheduleSlotRepository defaultSlotRepository;
 
+    @Autowired
+    private UserWeekSlotConfigRepository weekSlotConfigRepository;
+
+    @Autowired
+    private SavedSemesterRepository savedSemesterRepository;
+
+    @Autowired
+    private SectionRepository sectionRepository;
+
     @PersistenceContext
     private EntityManager entityManager;
 
     @Transactional
-    public StudyPlanEntry createEntry(Long userId, Long taskId, double estimatedWorkload, LocalDate weekStart) {
+    public StudyPlanEntry createEntry(Long userId, Long taskId, double estimatedWorkload, LocalDate weekStart, String semester) {
         User user = entityManager.getReference(User.class, userId);
         Task task = entityManager.find(Task.class, taskId);
         if (task == null) throw new RuntimeException("Task not found: " + taskId);
 
-        boolean duplicate = entryRepository.existsByUserIdAndTaskIdAndWeekStart(userId, taskId, weekStart);
+        boolean duplicate = entryRepository.existsByUserIdAndTaskIdAndWeekStartAndSemester(userId, taskId, weekStart, semester);
         if (duplicate) throw new RuntimeException("Entry for this task already exists this week");
 
         StudyPlanEntry entry = new StudyPlanEntry();
@@ -54,13 +67,14 @@ public class StudyPlanService {
         entry.setEstimatedWorkload(estimatedWorkload);
         entry.setCompletedHours(0);
         entry.setWeekStart(weekStart);
+        entry.setSemesterName(semester);
 
         return entryRepository.save(entry);
     }
 
     @Transactional
-    public SchedulerResult generatePlan(Long userId, SchedulerSettings settings, LocalDate weekStart) {
-        List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStart(userId, weekStart);
+    public SchedulerResult generatePlan(Long userId, SchedulerSettings settings, LocalDate weekStart, String semester) {
+        List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStartAndSemesterName(userId, weekStart, semester);
         if (entries.isEmpty()) return new SchedulerResult(Collections.emptyList(), Collections.emptyList());
 
         List<Long> entryIds = entries.stream().map(StudyPlanEntry::getId).toList();
@@ -76,6 +90,7 @@ public class StudyPlanService {
 
         // Start from today if current week, otherwise from weekStart (Monday)
         LocalDate startDate = weekStart.isAfter(LocalDate.now()) ? weekStart : LocalDate.now();
+        blockOutCourseTimes(settings, userId, semester);
         SchedulerResult result = schedulerService.generatePlan(entries, settings, startDate, weekStart);
         saveSchedule(entries, result.getBlocks());
 
@@ -83,10 +98,10 @@ public class StudyPlanService {
     }
 
     @Transactional
-    public SchedulerResult rebalance(Long userId, SchedulerSettings settings, LocalDate weekStart) {
+    public SchedulerResult rebalance(Long userId, SchedulerSettings settings, LocalDate weekStart, String semester) {
         try {
             LocalDate today = weekStart.isAfter(LocalDate.now()) ? weekStart : LocalDate.now();
-            List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStart(userId, weekStart);
+            List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStartAndSemesterName(userId, weekStart, semester);
             if (entries.isEmpty()) return new SchedulerResult(Collections.emptyList(), Collections.emptyList());
 
             List<Long> entryIds = entries.stream().map(StudyPlanEntry::getId).toList();
@@ -138,6 +153,7 @@ public class StudyPlanService {
                 entry.getAssignedBlocks().addAll(pinned);
             }
 
+            blockOutCourseTimes(settings, userId, semester);
             SchedulerResult result = schedulerService.rebalance(entries, settings, today, weekStart);
 
             List<StudyBlock> newBlocks = result.getBlocks().stream()
@@ -188,11 +204,20 @@ public class StudyPlanService {
         entryRepository.save(entry);
     }
 
-    public Map<DayOfWeek, List<StudyBlock>> getWeeklyView(Long userId, LocalDate weekStart) {
+    public Map<DayOfWeek, List<StudyBlock>> getWeeklyView(Long userId, LocalDate weekStart, String semester) {
         LocalDate weekEnd = weekStart.plusDays(6);
 
-        List<StudyBlock> blocks = blockRepository.findByStudyPlanEntry_User_IdAndDayBetween(
-                userId, weekStart, weekEnd);
+        List<StudyBlock> blocks;
+        if (semester != null && !semester.isBlank()) {
+            blocks = blockRepository.findByStudyPlanEntry_User_IdAndDayBetweenAndStudyPlanEntry_SemesterName(userId, weekStart, weekEnd, semester);
+            if (blocks.isEmpty()) {
+                // Fall back to null-semester blocks (legacy data from before semester scoping)
+                blocks = blockRepository.findByStudyPlanEntry_User_IdAndDayBetween(userId, weekStart, weekEnd)
+                        .stream().filter(b -> b.getStudyPlanEntry().getSemesterName() == null).toList();
+            }
+        } else {
+            blocks = blockRepository.findByStudyPlanEntry_User_IdAndDayBetween(userId, weekStart, weekEnd);
+        }
 
         return blocks.stream()
                 .collect(Collectors.groupingBy(
@@ -371,11 +396,11 @@ public class StudyPlanService {
     }
 
     @Transactional
-    public int markPastBlocksDone(Long userId) {
+    public int markPastBlocksDone(Long userId, LocalDate weekStart, String semester) {
         LocalDate today = LocalDate.now();
         java.time.LocalTime now = java.time.LocalTime.now();
 
-        List<StudyBlock> pastBlocks = blockRepository.findAllPastUncompletedForUser(userId, today, now);
+        List<StudyBlock> pastBlocks = blockRepository.findAllPastUncompletedForUser(userId, weekStart, today, now, semester);
         if (pastBlocks.isEmpty()) return 0;
 
         List<Long> ids = pastBlocks.stream().map(StudyBlock::getId).toList();
@@ -407,9 +432,13 @@ public class StudyPlanService {
     }
 
     @Transactional
-    public void clearBlocksByWeek(Long userId, LocalDate weekStart) {
-        List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStart(userId, weekStart);
-        blockRepository.deleteAllByUserIdAndWeekStart(userId, weekStart);
+    public void clearBlocksByWeek(Long userId, LocalDate weekStart, String semester) {
+        List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStartAndSemesterName(userId, weekStart, semester);
+        if (semester != null && !semester.isBlank()) {
+            blockRepository.deleteAllByUserIdAndWeekStartAndSemester(userId, weekStart, semester);
+        } else {
+            blockRepository.deleteAllByUserIdAndWeekStart(userId, weekStart);
+        }
         entityManager.flush();
         for (StudyPlanEntry entry : entries) {
             entry.setCompletedHours(0);
@@ -421,13 +450,35 @@ public class StudyPlanService {
         blockRepository.saveAll(blocks);
     }
 
-    public List<StudyPlanEntry> getActiveEntries(Long userId, LocalDate weekStart) {
-        return entryRepository.findByUserIdAndWeekStart(userId, weekStart);
+    @Transactional
+    public List<StudyPlanEntry> getActiveEntries(Long userId, LocalDate weekStart, String semester) {
+        List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStartAndSemesterName(userId, weekStart, semester);
+        if (!entries.isEmpty() || semester == null || semester.isBlank()) return entries;
+        // Migrate null-semester entries (legacy data from before semester scoping)
+        List<StudyPlanEntry> nullEntries = entryRepository.findByUserIdAndWeekStartAndSemesterName(userId, weekStart, null);
+        if (!nullEntries.isEmpty()) {
+            nullEntries.forEach(e -> e.setSemesterName(semester));
+            return entryRepository.saveAll(nullEntries);
+        }
+        return entries;
+    }
+
+    public boolean hasAnyEntries(Long userId, String semester) {
+        return (semester != null && !semester.isBlank())
+                ? entryRepository.existsByUserIdAndSemesterName(userId, semester)
+                : entryRepository.existsByUserId(userId);
     }
 
     public StudyPlanEntry getEntry(Long entryId) {
         return entryRepository.findById(entryId)
                 .orElseThrow(() -> new RuntimeException("Entry not found"));
+    }
+
+    public boolean hasDefaultSlots(Long userId, String semester) {
+        List<DefaultScheduleSlot> defaults = (semester != null && !semester.isBlank())
+                ? defaultSlotRepository.findByUserIdAndSemesterName(userId, semester)
+                : defaultSlotRepository.findByUserId(userId);
+        return !defaults.isEmpty();
     }
 
     @org.springframework.transaction.annotation.Transactional
@@ -441,7 +492,12 @@ public class StudyPlanService {
             existing = java.util.Collections.emptyList();
         }
 
-        // No slots for this week — seed from the user's default schedule
+        // Don't seed if the user has already manually configured this week's slots
+        if (weekSlotConfigRepository.existsByUserIdAndWeekStartAndSemesterName(userId, weekStart, semester)) {
+            return existing;
+        }
+
+        // No slots and no user config for this week — seed from the user's default schedule
         List<DefaultScheduleSlot> defaults = (semester != null && !semester.isBlank())
                 ? defaultSlotRepository.findByUserIdAndSemesterName(userId, semester)
                 : defaultSlotRepository.findByUserId(userId);
@@ -466,6 +522,10 @@ public class StudyPlanService {
     public List<AvailabilitySlot> saveSlots(Long userId, LocalDate weekStart, String semester, List<java.util.Map<String, Object>> slots) {
         slotRepository.deleteByUserIdAndWeekStart(userId, weekStart);
         entityManager.flush();
+        // Mark this week as user-configured so defaults are never re-seeded
+        if (!weekSlotConfigRepository.existsByUserIdAndWeekStartAndSemesterName(userId, weekStart, semester)) {
+            weekSlotConfigRepository.save(new UserWeekSlotConfig(userId, weekStart, semester));
+        }
         com.koursekit.model.User user = entityManager.getReference(com.koursekit.model.User.class, userId);
         List<AvailabilitySlot> toSave = new java.util.ArrayList<>();
         for (java.util.Map<String, Object> s : slots) {
@@ -482,8 +542,10 @@ public class StudyPlanService {
     }
 
     @org.springframework.transaction.annotation.Transactional
-    public void clearSlots(Long userId, LocalDate weekStart) {
+    public void clearSlots(Long userId, LocalDate weekStart, String semester) {
         slotRepository.deleteByUserIdAndWeekStart(userId, weekStart);
+        // Remove config so defaults get re-seeded on next load
+        weekSlotConfigRepository.deleteByUserIdAndWeekStartAndSemesterName(userId, weekStart, semester);
     }
 
     @org.springframework.transaction.annotation.Transactional
@@ -501,5 +563,112 @@ public class StudyPlanService {
                 slotRepository.deleteByUserIdAndWeekStart(userId, weekStart);
             }
         }
+    }
+
+    // Removes enrolled course section times from the scheduler availability so study blocks
+    // are never placed during class hours.
+    private void blockOutCourseTimes(SchedulerSettings settings, Long userId, String semester) {
+        if (semester == null || semester.isBlank()) return;
+
+        List<SavedSemester> semesters = savedSemesterRepository.findByUserIdWithCourses(userId);
+        SavedSemester matched = semesters.stream()
+                .filter(s -> semester.equalsIgnoreCase(s.getName()))
+                .findFirst()
+                .orElse(null);
+        if (matched == null) return;
+
+        for (SavedCourse course : matched.getCourses()) {
+            String crn = course.getsectioncrn();
+            if (crn == null || crn.isBlank()) continue;
+
+            sectionRepository.findByCrn(crn).ifPresent(section -> {
+                applyCourseMeetingCarveOut(settings, section.getDays1(), section.getBeginTime1(), section.getEndTime1());
+                applyCourseMeetingCarveOut(settings, section.getDays2(), section.getBeginTime2(), section.getEndTime2());
+            });
+        }
+    }
+
+    private void applyCourseMeetingCarveOut(SchedulerSettings settings, String daysStr, String beginStr, String endStr) {
+        if (daysStr == null || daysStr.isBlank()) return;
+        if (beginStr == null || beginStr.isBlank() || endStr == null || endStr.isBlank()) return;
+
+        LocalTime classStart = parseTime(beginStr);
+        LocalTime classEnd = parseTime(endStr);
+        if (classStart == null || classEnd == null || !classEnd.isAfter(classStart)) return;
+
+        for (DayOfWeek dow : parseDays(daysStr)) {
+            carveOut(settings, dow, classStart, classEnd);
+        }
+    }
+
+    private void carveOut(SchedulerSettings settings, DayOfWeek dow, LocalTime classStart, LocalTime classEnd) {
+        DaySchedule daySchedule = settings.getAvailability().get(dow);
+        if (daySchedule == null) return;
+
+        List<TimeSlot> result = new ArrayList<>();
+        for (TimeSlot slot : daySchedule.getSlots()) {
+            LocalTime s = slot.getStart();
+            LocalTime e = slot.getEnd();
+
+            boolean classStartsAfterSlot = !classStart.isBefore(e);
+            boolean classEndsBeforeSlot  = !classEnd.isAfter(s);
+            if (classStartsAfterSlot || classEndsBeforeSlot) {
+                // No overlap — keep slot unchanged
+                result.add(slot);
+            } else if (!classStart.isAfter(s) && !classEnd.isBefore(e)) {
+                // Class fully covers slot — drop it
+            } else if (!classStart.isAfter(s) && classEnd.isAfter(s) && classEnd.isBefore(e)) {
+                // Class overlaps the beginning of the slot
+                addIfLongEnough(result, classEnd, e);
+            } else if (classStart.isAfter(s) && classStart.isBefore(e) && !classEnd.isBefore(e)) {
+                // Class overlaps the end of the slot
+                addIfLongEnough(result, s, classStart);
+            } else {
+                // Class is in the middle — split into two
+                addIfLongEnough(result, s, classStart);
+                addIfLongEnough(result, classEnd, e);
+            }
+        }
+        daySchedule.setSlots(result);
+    }
+
+    private void addIfLongEnough(List<TimeSlot> list, LocalTime start, LocalTime end) {
+        // Drop slots shorter than 30 minutes — the minimum session length
+        if (java.time.Duration.between(start, end).toMinutes() >= 30) {
+            list.add(new TimeSlot(start, end));
+        }
+    }
+
+    private Set<DayOfWeek> parseDays(String daysStr) {
+        Set<DayOfWeek> days = new LinkedHashSet<>();
+        for (char c : daysStr.toCharArray()) {
+            switch (c) {
+                case 'M' -> days.add(DayOfWeek.MONDAY);
+                case 'T' -> days.add(DayOfWeek.TUESDAY);
+                case 'W' -> days.add(DayOfWeek.WEDNESDAY);
+                case 'R' -> days.add(DayOfWeek.THURSDAY);
+                case 'F' -> days.add(DayOfWeek.FRIDAY);
+                case 'S' -> days.add(DayOfWeek.SATURDAY);
+                case 'U' -> days.add(DayOfWeek.SUNDAY);
+                default -> { /* skip spaces and unknown chars */ }
+            }
+        }
+        return days;
+    }
+
+    private LocalTime parseTime(String timeStr) {
+        if (timeStr == null || timeStr.isBlank()) return null;
+        try {
+            if (timeStr.contains(":")) {
+                return LocalTime.parse(timeStr.length() == 5 ? timeStr : timeStr.substring(0, 5));
+            }
+            // "HHmm" format e.g. "1530"
+            if (timeStr.length() == 4) {
+                int hour = Integer.parseInt(timeStr.substring(0, 2));
+                int minute = Integer.parseInt(timeStr.substring(2, 4));
+                return LocalTime.of(hour, minute);
+            }
+        } catch (Exception ignored) {}
+        return null;
     }
 }

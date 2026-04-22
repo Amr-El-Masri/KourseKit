@@ -67,9 +67,9 @@ public class StudyPlanController {
     private PlanResponse buildPlanResponse(Long userId, SchedulerResult result,
                                            List<StudyPlanEntry> entries,
                                            Map<Long, Double> remainingPerEntry,
-                                           LocalDate weekStart) {
+                                           LocalDate weekStart, String semester) {
         Map<DayOfWeek, List<StudyBlock>> weeklyView =
-                studyPlanService.getWeeklyView(userId, weekStart);
+                studyPlanService.getWeeklyView(userId, weekStart, semester);
 
         Map<Long, Double> scheduledHours = result.getScheduledHoursPerEntry();
 
@@ -90,26 +90,28 @@ public class StudyPlanController {
     @PostMapping("/generate")
     public ResponseEntity<PlanResponse> generatePlan(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
+            @RequestParam(required = false) String semester,
             @RequestBody SchedulerSettings settings) {
 
         Long userId = currentUserId();
-        List<StudyPlanEntry> entriesBefore = studyPlanService.getActiveEntries(userId, weekStart);
+        List<StudyPlanEntry> entriesBefore = studyPlanService.getActiveEntries(userId, weekStart, semester);
         Map<Long, Double> remainingPerEntry = new HashMap<>();
         for (StudyPlanEntry e : entriesBefore) {
             remainingPerEntry.put(e.getId(), e.getEstimatedWorkload());
         }
 
-        SchedulerResult result = studyPlanService.generatePlan(userId, settings, weekStart);
-        return ResponseEntity.ok(buildPlanResponse(userId, result, entriesBefore, remainingPerEntry, weekStart));
+        SchedulerResult result = studyPlanService.generatePlan(userId, settings, weekStart, semester);
+        return ResponseEntity.ok(buildPlanResponse(userId, result, entriesBefore, remainingPerEntry, weekStart, semester));
     }
 
     @PostMapping("/rebalance")
     public ResponseEntity<PlanResponse> rebalance(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
+            @RequestParam(required = false) String semester,
             @RequestBody SchedulerSettings settings) {
 
         Long userId = currentUserId();
-        List<StudyPlanEntry> entriesBefore = studyPlanService.getActiveEntries(userId, weekStart);
+        List<StudyPlanEntry> entriesBefore = studyPlanService.getActiveEntries(userId, weekStart, semester);
 
         // Read all lazy-loaded task data eagerly while the transaction is still open
         Map<Long, Double> remainingPerEntry = new HashMap<>();
@@ -121,10 +123,10 @@ public class StudyPlanController {
             entryTitle.put(e.getId(),  e.getTask() != null ? e.getTask().getTitle()  : "");
         }
 
-        studyPlanService.rebalance(userId, settings, weekStart);
+        studyPlanService.rebalance(userId, settings, weekStart, semester);
 
         // Query actual uncompleted blocks after rebalance to compute real shortfalls
-        Map<DayOfWeek, List<StudyBlock>> weeklyView = studyPlanService.getWeeklyView(userId, weekStart);
+        Map<DayOfWeek, List<StudyBlock>> weeklyView = studyPlanService.getWeeklyView(userId, weekStart, semester);
         Map<Long, Double> scheduledHours = new HashMap<>();
         for (List<StudyBlock> dayBlocks : weeklyView.values()) {
             for (StudyBlock block : dayBlocks) {
@@ -152,15 +154,25 @@ public class StudyPlanController {
     }
 
     @PostMapping("/blocks/complete-past")
-    public ResponseEntity<Map<String, Integer>> markPastBlocksDone() {
-        int count = studyPlanService.markPastBlocksDone(currentUserId());
+    public ResponseEntity<Map<String, Integer>> markPastBlocksDone(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
+            @RequestParam(required = false) String semester) {
+        int count = studyPlanService.markPastBlocksDone(currentUserId(), weekStart, semester);
         return ResponseEntity.ok(Map.of("marked", count));
     }
 
     @GetMapping("/entries")
     public ResponseEntity<List<StudyPlanEntry>> getActiveEntries(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
-        return ResponseEntity.ok(studyPlanService.getActiveEntries(currentUserId(), weekStart));
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
+            @RequestParam(required = false) String semester) {
+        return ResponseEntity.ok(studyPlanService.getActiveEntries(currentUserId(), weekStart, semester));
+    }
+
+    @GetMapping("/entries/has-any")
+    public ResponseEntity<Map<String, Boolean>> hasAnyEntries(
+            @RequestParam(required = false) String semester) {
+        boolean has = studyPlanService.hasAnyEntries(currentUserId(), semester);
+        return ResponseEntity.ok(Map.of("hasEntries", has));
     }
 
     @GetMapping("/entries/{entryId}")
@@ -195,8 +207,9 @@ public class StudyPlanController {
 
     @DeleteMapping("/blocks")
     public ResponseEntity<Void> clearAllBlocks(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
-        studyPlanService.clearBlocksByWeek(currentUserId(), weekStart);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
+            @RequestParam(required = false) String semester) {
+        studyPlanService.clearBlocksByWeek(currentUserId(), weekStart, semester);
         return ResponseEntity.noContent().build();
     }
 
@@ -208,17 +221,19 @@ public class StudyPlanController {
 
     @GetMapping("/weekly")
     public ResponseEntity<Map<DayOfWeek, List<StudyBlock>>> getWeeklyView(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
-        return ResponseEntity.ok(studyPlanService.getWeeklyView(currentUserId(), weekStart));
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
+            @RequestParam(required = false) String semester) {
+        return ResponseEntity.ok(studyPlanService.getWeeklyView(currentUserId(), weekStart, semester));
     }
 
     @PostMapping("/entries/add")
     public ResponseEntity<?> createEntry(
             @RequestParam Long taskId,
             @RequestParam double estimatedWorkload,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
+            @RequestParam(required = false) String semester) {
         try {
-            StudyPlanEntry entry = studyPlanService.createEntry(currentUserId(), taskId, estimatedWorkload, weekStart);
+            StudyPlanEntry entry = studyPlanService.createEntry(currentUserId(), taskId, estimatedWorkload, weekStart, semester);
             return ResponseEntity.status(HttpStatus.CREATED).body(entry);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -230,6 +245,13 @@ public class StudyPlanController {
             @PathVariable Long blockId,
             @RequestBody Map<String, Object> updates) {
         return ResponseEntity.ok(studyPlanService.editBlock(blockId, updates));
+    }
+
+    @GetMapping("/slots/has-defaults")
+    public ResponseEntity<Map<String, Boolean>> hasDefaultSlots(
+            @RequestParam(required = false) String semester) {
+        boolean has = studyPlanService.hasDefaultSlots(currentUserId(), semester);
+        return ResponseEntity.ok(Map.of("hasDefaults", has));
     }
 
     @GetMapping("/slots")
@@ -249,8 +271,9 @@ public class StudyPlanController {
 
     @DeleteMapping("/slots")
     public ResponseEntity<Void> clearSlots(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart) {
-        studyPlanService.clearSlots(currentUserId(), weekStart);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate weekStart,
+            @RequestParam(required = false) String semester) {
+        studyPlanService.clearSlots(currentUserId(), weekStart, semester);
         return ResponseEntity.noContent().build();
     }
 

@@ -26,7 +26,8 @@ public class StudyPlanEntry {
 
     private double estimatedWorkload;
     private double completedHours;
-    private LocalDate weekStart; // which week this entry belongs to
+    private LocalDate weekStart;
+    private String semesterName;
 
     @OneToMany(mappedBy = "studyPlanEntry", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore
@@ -49,6 +50,7 @@ public class StudyPlanEntry {
     public double getCompletedHours() { return completedHours; }
     public List<StudyBlock> getAssignedBlocks() { return assignedBlocks; }
     public LocalDate getWeekStart() { return weekStart; }
+    public String getSemesterName() { return semesterName; }
 
     // Setters
     public void setTask(Task task) { this.task = task; }
@@ -57,4 +59,5 @@ public class StudyPlanEntry {
     public void setAssignedBlocks(List<StudyBlock> assignedBlocks) { this.assignedBlocks = assignedBlocks; }
     public void setUser(User user) { this.user = user; }
     public void setWeekStart(LocalDate weekStart) { this.weekStart = weekStart; }
+    public void setSemesterName(String semesterName) { this.semesterName = semesterName; }
 }

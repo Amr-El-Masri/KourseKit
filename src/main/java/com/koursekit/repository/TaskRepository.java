@@ -36,11 +36,11 @@ public interface TaskRepository  extends JpaRepository<Task, Long> {
 
 
     @Query("SELECT t FROM Task t WHERE t.user.id = :userId AND " +
-            "(LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(t.course) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+            "(LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(t.course) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(COALESCE(t.notes, '')) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     List<Task> searchByUserIdAndKeyword(@Param("userId") Long userId, @Param("keyword") String keyword);
 
     @Query("SELECT t FROM Task t WHERE t.user.id = :userId AND t.semesterName = :semesterName AND " +
-            "(LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(t.course) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+            "(LOWER(t.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(t.course) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(COALESCE(t.notes, '')) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     List<Task> searchByUserIdAndSemesterNameAndKeyword(@Param("userId") Long userId, @Param("semesterName") String semesterName, @Param("keyword") String keyword);
 
     @Query("SELECT t FROM Task t WHERE t.user.id = :userId AND t.semesterName = :semesterName ORDER BY t.deadline ASC, t.course ASC, t.title ASC")

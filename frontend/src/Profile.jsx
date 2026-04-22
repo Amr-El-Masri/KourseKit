@@ -1956,7 +1956,7 @@ const refetchSemesters = () =>
                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", background:"var(--surface2)", borderRadius:"12px 12px 0 0" }}>
                   <div>
                     <span style={{ fontWeight:700, fontSize:14, color:"var(--primary)" }}>{sem.semesterName}</span>
-                    <span style={{ fontSize:11, color:"var(--text3)", marginLeft:10 }}>{(sem.courses||[]).length} course{(sem.courses||[]).length !== 1 ? "s" : ""} · {fmtDateShort(sem.createdAt)}</span>
+                    {(() => { const n = (sem.courses||[]).filter(c => !c.componenttype).length; return <span style={{ fontSize:11, color:"var(--text3)", marginLeft:10 }}>{n} course{n !== 1 ? "s" : ""} · {fmtDateShort(sem.createdAt)}</span>; })()}
                   </div>
                   <div style={{ display:"flex", gap:6 }}>
                     <button onClick={() => editingId === sem.id ? setEditingId(null) : startEdit(sem)} style={{ fontSize:12, fontWeight:600, padding:"5px 12px", border:"1px solid var(--border)", borderRadius:8, background:"var(--surface)", color:"var(--primary)", cursor:"pointer" }}>
