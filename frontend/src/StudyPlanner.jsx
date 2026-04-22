@@ -753,7 +753,7 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
         if (t.completed) return false;
         if (t.type === "Group Study Session") return false;
         if (weekStartDate && t.deadline) {
-            const deadline = new Date(t.deadline);
+            const deadline = new Date(t.deadline + "Z");
             if (deadline < weekStartDate) return false;
         }
         if (semesterCourseCodes && semesterCourseCodes.size > 0 && t.course) {
@@ -1637,7 +1637,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         const savedColors = (() => { try { return JSON.parse(localStorage.getItem('kk_colorMap') || '{}'); } catch { return {}; } })();
         for (const entry of incompleteEntries) {
             const remaining = Math.max(0.5, entry.hoursPerWeek - (entry.completedHours || 0));
-            if (entry.deadline && new Date(entry.deadline) < new Date(currentWeekStart)) { expiredNames.push(entry.name); continue; }
+            if (entry.deadline && new Date(entry.deadline + "Z") < new Date(currentWeekStart)) { expiredNames.push(entry.name); continue; }
             try {
                 const res = await apiFetch(`/api/study-plan/entries/add?taskId=${entry.taskId}&estimatedWorkload=${remaining}&weekStart=${currentWeekStart}${semParamRef.current}`, { method: "POST" });
                 carriedNames.push(entry.name);
