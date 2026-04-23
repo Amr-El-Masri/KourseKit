@@ -1170,7 +1170,19 @@ const stopRecording = () => {
             </div>
           )}
 
-          <div style={{ flex: 1, overflowY: "auto", padding: "20px 18px" }}>
+          <div
+            style={{ flex: 1, overflowY: "auto", padding: "20px 18px" }}
+            onDragOver={e => { e.preventDefault(); e.currentTarget.style.outline = "2px dashed var(--primary)"; }}
+            onDragLeave={e => { e.currentTarget.style.outline = "none"; }}
+            onDrop={e => {
+              e.preventDefault();
+              e.currentTarget.style.outline = "none";
+              const file = e.dataTransfer.files[0];
+              if (!file) return;
+              pendingFileRef.current = file;
+              setAttachment({ fileName: file.name, fileType: detectFileType(file), fileSize: file.size });
+            }}
+          >
             {loading && (
               <div style={{ textAlign: "center", color: "var(--text3)", fontSize: 13, paddingTop: 40 }}>Loading messages…</div>
             )}
