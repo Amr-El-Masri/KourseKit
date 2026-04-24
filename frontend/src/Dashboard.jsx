@@ -15,6 +15,8 @@ import Forum from "./Forum";
 import StudyGroupFinder from "./StudyGroupFinder";
 import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Settings as SettingsIcon, MessageSquare, Users } from 'lucide-react';
 
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
+
 const AVATAR_ICONS = [
   { id:"Banana", icon: Banana },
   { id:"Telescope", icon: Telescope },
@@ -546,7 +548,7 @@ export default function Dashboard({ onLogout }) {
     widgetSaveTimer.current = setTimeout(() => {
       const token = localStorage.getItem("kk_token");
       if (!token) return;
-      fetch("http://localhost:8080/api/widget-prefs", {
+      fetch(`${API}/api/widget-prefs`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(prefs),
@@ -669,7 +671,7 @@ export default function Dashboard({ onLogout }) {
   useEffect(() => {
     const token = localStorage.getItem("kk_token");
     if (!token) return;
-    fetch("http://localhost:8080/api/widget-prefs", { headers: { "Authorization": `Bearer ${token}` } })
+    fetch(`${API}/api/widget-prefs`, { headers: { "Authorization": `Bearer ${token}` } })
       .then(r => r.status === 204 ? null : r.json())
       .then(data => {
         if (!data) return;
@@ -804,7 +806,7 @@ export default function Dashboard({ onLogout }) {
   const authHeaders = () => ({ "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("kk_token")}` });
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/user-syllabi", { headers: authHeaders() })
+    fetch(`${API}/api/user-syllabi`, { headers: authHeaders() })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data && typeof data === "object") {
@@ -856,7 +858,7 @@ export default function Dashboard({ onLogout }) {
   const loadNotifications = useCallback(() => {
     const { token, userId } = getAuthInfo();
     if (!userId) return;
-    fetch("http://localhost:8080/api/notifications", {
+    fetch(`${API}/api/notifications`, {
       headers: { "Authorization": "Bearer " + token }
     })
         .then(r => r.json())
@@ -872,7 +874,7 @@ export default function Dashboard({ onLogout }) {
   const markAllAsRead = useCallback(() => {
     const { token, userId } = getAuthInfo();
     if (!userId) return;
-    fetch("http://localhost:8080/api/notifications/read-all", {
+    fetch(`${API}/api/notifications/read-all`, {
       method: "PATCH",
       headers: { "Authorization": "Bearer " + token }
     })
@@ -1050,7 +1052,7 @@ export default function Dashboard({ onLogout }) {
 
   const fetchSemesters = () => {
     const token = localStorage.getItem("kk_token");
-    return fetch("http://localhost:8080/api/grades/saved", {
+    return fetch(`${API}/api/grades/saved`, {
       headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
     })
         .then(r => r.json())
@@ -1088,7 +1090,7 @@ export default function Dashboard({ onLogout }) {
   useEffect(() => {
     const t = localStorage.getItem("kk_token");
     if (!t) return;
-    fetch("http://localhost:8080/api/profile", {
+    fetch(`${API}/api/profile`, {
       headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
     }).then(r => r.ok ? r.json() : null).then(data => { if (data) setProfile(data); }).catch(() => {});
 

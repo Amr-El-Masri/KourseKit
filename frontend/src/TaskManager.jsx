@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Pencil, Search, ListChecks, X } from "lucide-react";
 
-const API_BASE = "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 function getToken() { return localStorage.getItem("kk_token"); }
 function getUserId() {
@@ -12,7 +12,7 @@ function getUserId() {
 async function apiFetch(path, options = {}) {
   try {
     const t = getToken();
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${API}${path}`, {
       headers: {
         "Content-Type": "application/json",
         ...(t && { "Authorization": `Bearer ${t}` }),
@@ -321,7 +321,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
 
   useEffect(() => {
     const token = localStorage.getItem("kk_token");
-    fetch(`${API_BASE}/api/grades/saved`, {
+    fetch(`${API}/api/grades/saved`, {
       headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
     }).then(r => r.json()).then(data => {
       if (Array.isArray(data) && data.length > 0) {
@@ -365,14 +365,14 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
       const token = getToken();
       if (!token) return;
       const orphanedIds = new Set(orphaned.map(t => Number(t.id)));
-      const entries = await fetch(`${API_BASE}/api/study-plan/entries`, { headers: { "Authorization": `Bearer ${token}` } })
+      const entries = await fetch(`${API}/api/study-plan/entries`, { headers: { "Authorization": `Bearer ${token}` } })
         .then(r => r.ok ? r.json() : []).catch(() => []);
       await Promise.all(
         entries.filter(e => e.task?.id && orphanedIds.has(Number(e.task.id)))
-          .map(e => fetch(`${API_BASE}/api/study-plan/entries/${e.id}`, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } }).catch(() => {}))
+          .map(e => fetch(`${API}/api/study-plan/entries/${e.id}`, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } }).catch(() => {}))
       );
       await Promise.all(orphaned.map(t =>
-        fetch(`${API_BASE}/api/tasks/delete/${t.id}`, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } }).catch(() => {})
+        fetch(`${API}/api/tasks/delete/${t.id}`, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } }).catch(() => {})
       ));
       loadTasks();
     };
@@ -446,7 +446,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
     const resolvedType = task.type === "Other" ? (task.customType?.trim() || "Other") : task.type;
     const payload = { title: task.title, course: task.course, type: resolvedType, deadline: localInputToUTC(task.due), notes: task.notes, semesterName: semester || null };
     if (isEdit) {
-      const res = await fetch(`${API_BASE}/api/tasks/edit/${task.id}`, {
+      const res = await fetch(`${API}/api/tasks/edit/${task.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getToken()}` },
         body: JSON.stringify(payload),
@@ -461,7 +461,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
         if (onError) onError(data.message || "Failed to update task.");
       }
     } else {
-      const res = await fetch(`${API_BASE}/api/tasks/add`, {
+      const res = await fetch(`${API}/api/tasks/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getToken()}` },
         body: JSON.stringify(payload),

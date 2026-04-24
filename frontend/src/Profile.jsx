@@ -6,6 +6,8 @@ import TranscriptModal from "./TranscriptModal";
 import SyllabusModal from "./SyllabusModal";
 import StudentCourses from "./StudentCourses";
 
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
+
 function getTokenRole() {
   try {
     const token = localStorage.getItem("kk_token");
@@ -144,7 +146,7 @@ const gpaColor = g => {
 
 const statusObj = id => STUDENT_STATUSES.find(s => s.id === id) || STUDENT_STATUSES[0];
 
-const API = "http://localhost:8080";
+
 const semAuthHeaders = () => ({ "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("kk_token")}` });
 const LETTER_GRADES = ["","A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
 const fmtDateShort = iso => { try { return new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); } catch { return ""; } };
@@ -790,7 +792,7 @@ export default function Profile({ onProfileSave, onSemestersUpdated, activeSemes
   useEffect(() => {
     const token = localStorage.getItem("kk_token");
     if (!token) return;
-    fetch("http://localhost:8080/api/user-syllabi", { headers: { "Authorization": `Bearer ${token}` } })
+    fetch(`${API}/api/user-syllabi`, { headers: { "Authorization": `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data && typeof data === "object") {
@@ -851,7 +853,7 @@ export default function Profile({ onProfileSave, onSemestersUpdated, activeSemes
   useEffect(() => {
     const token = localStorage.getItem("kk_token");
     if (!token) return;
-    fetch("http://localhost:8080/api/transcript-info", { headers: { "Authorization": `Bearer ${token}` } })
+    fetch(`${API}/api/transcript-info`, { headers: { "Authorization": `Bearer ${token}` } })
       .then(r => r.status === 204 ? null : r.json())
       .then(data => {
         if (data) {

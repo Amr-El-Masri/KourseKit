@@ -3,6 +3,8 @@ import { PartyPopper, Mail } from "lucide-react";
 import TranscriptModal from "./TranscriptModal";
 import StudentCourses from "./StudentCourses";
 
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
+
 const requirements = [
   { label: "At least 8 characters",       test: p => p.length >= 8 },
   { label: "One uppercase letter (A-Z)",   test: p => /[A-Z]/.test(p) },
@@ -118,7 +120,7 @@ export default function Register({ onGoToLogin, postVerifyToken }) {
 
     setLoading(true);
     try {
-      const res  = await fetch("http://localhost:8080/api/auth/signup", {
+      const res  = await fetch(`${API}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, rememberMe }),
@@ -141,7 +143,7 @@ export default function Register({ onGoToLogin, postVerifyToken }) {
   const handleResend = async () => {
     setResendLoading(true); setResendMsg("");
     try {
-      const res = await fetch("http://localhost:8080/api/auth/resend-verification", {
+      const res = await fetch(`${API}/api/auth/resend-verification`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -164,7 +166,7 @@ export default function Register({ onGoToLogin, postVerifyToken }) {
     const courses = semCourses.filter(c => c.name.trim());
     setSemSaving(true); setSemError("");
     try {
-      await fetch("http://localhost:8080/api/grades/saved", {
+      await fetch(`${API}/api/grades/saved`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${regToken}` },
         body: JSON.stringify({ semesterName: semName, courses: courses.flatMap(c => [{ courseCode: c.name.trim(), grade: "", credits: c.credits || 0, sectioncrn: c.sectioncrn || null }, ...(c.linkedSectionCrn ? [{ courseCode: c.name.trim(), grade: "", credits: 0, sectioncrn: c.linkedSectionCrn, componenttype: "Lab" }] : [])]) }),

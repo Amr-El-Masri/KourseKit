@@ -6,7 +6,8 @@ import { StudentProfileView } from "./StudentDirectoryPanel";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 
-const API_BASE = "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
+
 function getToken() { return localStorage.getItem("kk_token"); }
 function getUserId() {
   const t = getToken();
@@ -15,7 +16,7 @@ function getUserId() {
 
 async function apiFetch(path, options = {}) {
     const t = getToken();
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${API}${path}`, {
         headers: {
         "Content-Type": "application/json",
         ...(t && { Authorization: `Bearer ${t}` }),
@@ -249,13 +250,13 @@ function DecryptedMedia({ message, isOwn, onSrcReady }) {
     const load = async () => {
       try {
         if (message.rawAes) {
-          const res = await fetch(`${API_BASE}${message.attachmentUrl}`);
+          const res = await fetch(`${API}${message.attachmentUrl}`);
           const buf = await res.arrayBuffer();
           const decrypted = await decryptFile(buf, message.rawAes);
           objectUrl = URL.createObjectURL(new Blob([decrypted], { type: getMimeType(message) }));
           if (!cancelled) { setSrc(objectUrl); onSrcReady?.(objectUrl); }
         } else {
-          const fallback = `${API_BASE}${message.attachmentUrl}`;
+          const fallback = `${API}${message.attachmentUrl}`;
           if (!cancelled) { setSrc(fallback); onSrcReady?.(fallback); }
         }
       } catch {}
@@ -646,7 +647,7 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
   useEffect(() => {
     const token = getToken();
     const client = new Client({
-      webSocketFactory: () => new SockJS(`${API_BASE}/ws`),
+      webSocketFactory: () => new SockJS(`${API}/ws`),
       connectHeaders: { Authorization: `Bearer ${token}` },
       onConnect: () => {
         // Task 3: decrypt incoming WebSocket messages
@@ -695,7 +696,7 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
         formData.append("file", encFile);
         formData.append("groupId", String(group.id));
         const token = getToken();
-        const res = await fetch(`${API_BASE}/api/files/upload?groupId=${group.id}`, {
+        const res = await fetch(`${API}/api/files/upload?groupId=${group.id}`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: formData,

@@ -49,6 +49,7 @@ build/
 application-local.properties
 #ignore the environment
 .env
+.env.local
 
 #node dependencies
 node_modules/

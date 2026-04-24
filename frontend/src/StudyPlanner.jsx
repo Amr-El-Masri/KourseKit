@@ -97,7 +97,7 @@ function subtractBusyFromSlots(slots, busyPeriods) {
     return remaining;
 }
 
-const API_BASE = "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 function getUserId() {
     try {
         const t = localStorage.getItem("kk_token");
@@ -108,7 +108,7 @@ function getUserId() {
 async function apiFetch(path, options = {}) {
     const t = localStorage.getItem("kk_token");
     if (!t) throw new Error("Not logged in. Please refresh and log in again.");
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${API}${path}`, {
         headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${t}`,

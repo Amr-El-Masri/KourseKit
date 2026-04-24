@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Clock, MapPin, Users, BookOpen, Building2, Calendar, MessageSquare } from "lucide-react";
 
-const API = "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 const formatTime = (t) => {
   if (!t || t === "0000" || t.trim() === "") return null;

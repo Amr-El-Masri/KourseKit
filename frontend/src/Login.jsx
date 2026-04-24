@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
+
 export default function Login({ onLogin, onGoToRegister, onGoToForgotPassword, prefillEmail }) {
   const [email, setEmail]           = useState(prefillEmail || localStorage.getItem("kk_remembered_email") || "");
   const [password, setPassword]     = useState("");
@@ -18,7 +20,7 @@ export default function Login({ onLogin, onGoToRegister, onGoToForgotPassword, p
     if (password.length < 8) { setError("Password must be at least 8 characters"); return; }
 
     try {
-      const res  = await fetch("http://localhost:8080/api/auth/login", {
+      const res  = await fetch(`${API}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, rememberMe }),
@@ -47,7 +49,7 @@ export default function Login({ onLogin, onGoToRegister, onGoToForgotPassword, p
   const handleResend = async () => {
     setResendLoading(true); setResendMsg("");
     try {
-      const res = await fetch("http://localhost:8080/api/auth/resend-verification", {
+      const res = await fetch(`${API}/api/auth/resend-verification`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

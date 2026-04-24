@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./ThemeContext";
 
-const API = "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 const passrequirements = [
   { label: "At least 8 characters",     test: p => p.length >= 8 },

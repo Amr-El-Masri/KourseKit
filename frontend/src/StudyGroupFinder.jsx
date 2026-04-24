@@ -2,14 +2,14 @@ import { useState, useEffect } from "react";
 import { Users, Lock, Globe, Plus, ArrowRight, Search, X, Copy, Check } from "lucide-react";
 import GroupRoomPage from "./GroupRoomPage";
 
-const API_BASE = "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 function getToken() { return localStorage.getItem("kk_token"); }
 
 async function apiFetch(path, options = {}) {
   try {
     const t = getToken();
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${API}${path}`, {
       headers: {
         "Content-Type": "application/json",
         ...(t && { Authorization: `Bearer ${t}` }),

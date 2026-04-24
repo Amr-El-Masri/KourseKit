@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { LoaderCircle, MailCheck, MailWarning } from "lucide-react";
 
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
+
 export default function VerifyEmail({ token, onVerified, onGoToLogin }) {
   const [status, setStatus] = useState("loading"); // loading then success then error
   const [error,  setError]  = useState("");
@@ -19,7 +21,7 @@ export default function VerifyEmail({ token, onVerified, onGoToLogin }) {
       return;
     }
 
-    fetch("http://localhost:8080/api/auth/verify?token=" + encodeURIComponent(token))
+    fetch(`${API}/api/auth/verify?token=` + encodeURIComponent(token))
       .then(r => r.json())
       .then(data => {
         if (data.success) {

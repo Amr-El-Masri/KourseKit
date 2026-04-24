@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Pen, Search, Inbox, CheckCircle, Hourglass } from "lucide-react";
 import CourseDetails from "./CourseDetails";
 
-const API = "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 const ANON_NAMES = [
   "Apple","Blueberry","Cherry","Elderberry","Fig","Grape","Honeydew","Kiwi",

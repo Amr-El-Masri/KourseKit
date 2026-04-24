@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Banana, Cat, Dog, Eclipse, Telescope, Panda, X } from "lucide-react";
 
-const API = "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 const AVATAR_ICONS = [
   { id:"Banana", icon:Banana }, { id:"Telescope", icon:Telescope },
   { id:"Eclipse", icon:Eclipse }, { id:"Cat", icon:Cat },

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useTheme } from "./ThemeContext";
 
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
+
 const requirements = [
   { label: "At least 8 characters",       test: p => p.length >= 8 },
   { label: "One uppercase letter (A-Z)",   test: p => /[A-Z]/.test(p) },
@@ -32,7 +34,7 @@ export default function ResetPassword({ token, onGoToLogin }) {
 
     setLoading(true);
     try {
-      const res  = await fetch("http://localhost:8080/api/auth/reset-password", {
+      const res  = await fetch(`${API}/api/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, newpass: password }),
