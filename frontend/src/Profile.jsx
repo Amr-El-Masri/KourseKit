@@ -1022,6 +1022,10 @@ const refetchSemesters = () =>
     window.dispatchEvent(new CustomEvent("kk_syllabus_changed", { detail: { courseCode } }));
     delete dataMap[courseCode]; localStorage.setItem("kk_course_data", JSON.stringify(dataMap));
     delete ohMap[courseCode]; localStorage.setItem("kk_course_office_hours", JSON.stringify(ohMap));
+    // Delete from backend immediately so navigating away doesn't restore it
+    const token = localStorage.getItem("kk_token");
+    if (token) fetch(`${API}/api/user-syllabi/${encodeURIComponent(courseCode)}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{});
+
     setSyllabusUndoToast({ courseCode, snapshot, ohSnapshot, dataSnapshot });
     if (syllabusUndoTimerRef.current) clearTimeout(syllabusUndoTimerRef.current);
     syllabusUndoTimerRef.current = setTimeout(async () => {
@@ -1046,7 +1050,6 @@ const refetchSemesters = () =>
             fetch(`${API}/api/tasks/delete/${t.id}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{})
           ));
         }
-        fetch(`${API}/api/user-syllabi/${encodeURIComponent(courseCode)}`, { method:"DELETE", headers:{ "Authorization":`Bearer ${token}` } }).catch(()=>{});
       }
       // Clean up tracked IDs from localStorage
       const raw = JSON.parse(localStorage.getItem("kk_syllabus_task_ids") || "{}");
@@ -1074,6 +1077,9 @@ const refetchSemesters = () =>
       dataMap[courseCode] = dataSnapshot;
       localStorage.setItem("kk_course_data", JSON.stringify(dataMap));
     }
+    // Restore to backend
+    const tkn = localStorage.getItem("kk_token");
+    if (tkn && snapshot) fetch(`${API}/api/user-syllabi/${encodeURIComponent(courseCode)}`, { method:"PUT", headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${tkn}` }, body: JSON.stringify(snapshot) }).catch(()=>{});
     window.dispatchEvent(new Event("kk_syllabus_changed"));
     setSyllabusUndoToast(null);
   };

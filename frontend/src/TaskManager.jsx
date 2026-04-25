@@ -37,7 +37,7 @@ const FILTERS = ["All","Pending","Done","Overdue"];
 
 // Deadlines are stored as UTC on the backend (no timezone suffix).
 // These helpers ensure correct conversion for sending and display.
-const localInputToUTC = iso => iso ? new Date(iso).toISOString().slice(0, 19) : "";
+const localInputToUTC = iso => iso ? iso.slice(0, 16) : "";
 const utcToLocalInput = iso => {
   if (!iso) return "";
   const d = new Date(iso + "Z"); // treat backend string as UTC
