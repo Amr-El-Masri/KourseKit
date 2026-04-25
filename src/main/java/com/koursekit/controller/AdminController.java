@@ -123,48 +123,6 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("updated", users.size()));
     }
 
-    @DeleteMapping("/users/{userId}")
-    @Transactional
-    public ResponseEntity<?> deleteUser(@PathVariable Long userId, @AuthenticationPrincipal User currentUser) {
-        if (userId.equals(currentUser.getId())) return ResponseEntity.badRequest().body(Map.of("error", "Cannot delete your own account."));
-        User user = userrepo.findById(userId).orElseThrow(() -> new RuntimeException("User not found."));
-
-        studyBlockRepo.deleteAllByUserId(userId);
-        studyPlanRepo.deleteAllByUserId(userId);
-        notificationRepo.deleteByTaskUserId(userId);
-        taskRepo.deleteAllByUserId(userId);
-        groupReportsRepo.deleteByUserId(userId);
-
-        List<StudyGroup> hostedGroups = studyGroupRepo.findByHost_Id(userId);
-        for (StudyGroup group : hostedGroups) {
-            Long groupId = group.getId();
-            groupReportsRepo.deleteByStudyGroup_Id(groupId);
-            groupStudySessionRepo.deleteByGroupId(groupId);
-            groupMessageRepo.deleteAll_byStudyGroupID(groupId);
-            studyGroupMemberRepo.deleteAll_byStudyGroupId(groupId);
-        }
-
-        studyGroupRepo.deleteAll(hostedGroups);
-        groupMessageRepo.deleteBySenderId(userId);
-        studyGroupMemberRepo.deleteByUser_Id(userId);
-        savedSemesterRepo.deleteAll(savedSemesterRepo.findByUserIdOrderByCreatedAtDesc(userId));
-        tokenRepo.deleteByUser(user);
-        sessionRepo.deleteByUserId(userId);
-        passRepo.deleteByUser(user);
-        availabilitySlotRepo.deleteAllByUserId(userId);
-        defaultSlotRepo.deleteByUserId(userId);
-        syllabusRepo.deleteByUserId(userId);
-        transcriptInfoRepo.deleteByUserId(userId);
-        widgetPrefsRepo.deleteByUserId(userId);
-
-        try { emailconfig.accountdeletionmail(user.getEmail()); } catch (Exception e) {
-            System.err.println("Deletion email failed: " + e.getMessage());
-        }
-
-        userrepo.delete(user);
-        return ResponseEntity.ok(Map.of("deleted", true));
-    }
-
     @GetMapping("/users/flagged")
     public List<Admins> getFlaggedUsers() {
         return userrepo.findByFlagged(true).stream().map(this::toAdminsDto).collect(Collectors.toList());

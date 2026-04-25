@@ -44,7 +44,6 @@ export default function AdminDashboard({ token }) {
   const [confirmAction, setConfirmAction]= useState(null); // { id, action: "delete"|"approve"|"warn" }
   const [confirmActiveId,  setConfirmActiveId]  = useState(null);
   const [confirmAdminId,   setConfirmAdminId]   = useState(null);
-  const [confirmDeleteId,  setConfirmDeleteId]  = useState(null);
   const [selectedUser,    setSelectedUser]    = useState(null);
   const [userReviews,     setUserReviews]     = useState([]);
   const [userProfReviews, setUserProfReviews] = useState([]);
@@ -129,15 +128,6 @@ export default function AdminDashboard({ token }) {
       await fetch(`${API}/api/admin/users/${userId}/${action}`, { method: "PUT", headers: { Authorization: `Bearer ${token}` } });
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, active } : u));
     } catch { setErr("Action failed. Try again."); }
-  };
-
-  const deleteUser = async (userId) => {
-    try {
-      const res = await fetch(`${API}/api/admin/users/${userId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
-      if (res.ok) setUsers(prev => prev.filter(u => u.id !== userId));
-      else setErr("Failed to delete user.");
-    } catch { setErr("Failed to delete user."); }
-    finally { setConfirmDeleteId(null); }
   };
 
   const clearFlag = async (userId) => {
@@ -653,12 +643,12 @@ export default function AdminDashboard({ token }) {
               )}
               {!loading && displayed.length > 0 && (
                 <div className="ad-anim" style={ad.table}>
-                  <div style={{ ...ad.tableHeader, gridTemplateColumns: "1fr 90px 110px 120px 150px 140px 90px" }}>
-                      <span>Email</span><span>Role</span><span>Status</span><span>Joined</span><span>Admin</span><span>Account</span><span>Delete</span>
+                  <div style={{ ...ad.tableHeader, gridTemplateColumns: "1fr 90px 110px 120px 150px 140px" }}>
+                      <span>Email</span><span>Role</span><span>Status</span><span>Joined</span><span>Admin</span><span>Account</span>
                   </div>
                   {displayed.map((u, i) => (
                     <div key={u.id} className="ad-anim" style={{ animationDelay:`${i*0.04}s`, borderBottom: i < displayed.length - 1 ? "1px solid var(--divider)" : "none" }}>
-                      <div onClick={() => { if (!selectMode) openUser(u); }} style={{ ...ad.row, gridTemplateColumns: selectMode ? "32px 1fr 90px 110px 120px 150px 140px 90px" : "1fr 90px 110px 120px 150px 140px 90px", background: i % 2 === 0 ? "var(--surface)" : "var(--surface2)", cursor: selectMode ? "default" : "pointer" }}>
+                      <div onClick={() => { if (!selectMode) openUser(u); }} style={{ ...ad.row, gridTemplateColumns: selectMode ? "32px 1fr 90px 110px 120px 150px 140px" : "1fr 90px 110px 120px 150px 140px", background: i % 2 === 0 ? "var(--surface)" : "var(--surface2)", cursor: selectMode ? "default" : "pointer" }}>
                         {selectMode && (
                           <StyledCheckbox checked={selectedUserIds.has(u.id)}
                             onClick={e => e.stopPropagation()}
@@ -710,23 +700,6 @@ export default function AdminDashboard({ token }) {
                           </button>
                         )}
 
-                        {confirmDeleteId === u.id ? (
-                          <div style={{ display:"flex", alignItems:"center", gap:4 }} onClick={e => e.stopPropagation()}>
-                            <span style={{ fontSize:11, color:"var(--error)", fontWeight:600 }}>Sure?</span>
-                            <button onClick={e => { e.stopPropagation(); deleteUser(u.id); }} style={{ padding:"3px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background:"var(--error-bg)", color:"var(--error)", cursor:"pointer" }}>Yes</button>
-                            <button onClick={e => { e.stopPropagation(); setConfirmDeleteId(null); }} style={{ padding:"3px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:700, background:"var(--surface2)", color:"var(--text2)", cursor:"pointer" }}>No</button>
-                          </div>
-                        ) : (
-                          <button className="action-btn"
-                            disabled={String(u.id) === myId}
-                            onClick={e => { e.stopPropagation(); setConfirmDeleteId(u.id); }}
-                            style={{ padding:"4px 10px", border:"none", borderRadius:6, fontSize:11, fontWeight:600, width:"fit-content",
-                              cursor: String(u.id) === myId ? "not-allowed" : "pointer",
-                              opacity: String(u.id) === myId ? 0.4 : 1,
-                              background:"var(--error-bg)", color:"var(--error)" }}>
-                            Delete
-                          </button>
-                        )}
                       </div>
 
                       {selectedUser?.id === u.id && !selectMode && (
