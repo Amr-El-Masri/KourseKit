@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { initE2EE } from "./e2ee";
+import { initE2EE, backupKey } from "./e2ee";
 import GradeCalculator from "./GradeCalculator";
 import Reviews from "./Reviews";
 import TaskManager from "./TaskManager";
@@ -14,6 +14,8 @@ import StudentDirectory from "./StudentDirectoryPanel";
 import Forum from "./Forum";
 import StudyGroupFinder from "./StudyGroupFinder";
 import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Settings as SettingsIcon, MessageSquare, Users } from 'lucide-react';
+
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 const AVATAR_ICONS = [
   { id:"Banana", icon: Banana },
@@ -546,7 +548,7 @@ export default function Dashboard({ onLogout }) {
     widgetSaveTimer.current = setTimeout(() => {
       const token = localStorage.getItem("kk_token");
       if (!token) return;
-      fetch("http://localhost:8080/api/widget-prefs", {
+      fetch(`${API}/api/widget-prefs`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify(prefs),
@@ -595,6 +597,15 @@ export default function Dashboard({ onLogout }) {
       .catch(() => {});
   }, []);
 
+  const [backupModal, setBackupModal] = useState(false);
+  const [backupPassword, setBackupPassword] = useState("");
+  const [backupConfirm, setBackupConfirm] = useState("");
+  const [backupError, setBackupError] = useState("");
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupDone, setBackupDone] = useState(false);
+  const e2eeUserIdRef = useRef(null);
+  const e2eeApiFetchRef = useRef(null);
+
   // generate + upload E2EE public key on login so other members can encrypt for us
   // even before we open the groupchat for the first time
   useEffect(() => {
@@ -606,9 +617,21 @@ export default function Dashboard({ onLogout }) {
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         ...opts,
       }).then(r => r.json());
+      e2eeUserIdRef.current = String(userId);
+      e2eeApiFetchRef.current = apiFetch;
       initE2EE(String(userId), apiFetch).catch(() => {});
     } catch { /* non-critical */ }
   }, []);
+
+  const handleBackup = async () => {
+    if (!backupPassword || backupPassword !== backupConfirm) { setBackupError("Passwords don't match."); return; }
+    setBackupLoading(true); setBackupError("");
+    try {
+      await backupKey(e2eeUserIdRef.current, backupPassword, e2eeApiFetchRef.current);
+      setBackupDone(true);
+    } catch { setBackupError("Backup failed. Try again."); }
+    finally { setBackupLoading(false); }
+  };
   useEffect(() => {
     localStorage.setItem("kk_activePage", activePage);
     if (activePage === "grades" || activePage === "dashboard" || activePage === "profile") fetchSemesters();
@@ -648,7 +671,7 @@ export default function Dashboard({ onLogout }) {
   useEffect(() => {
     const token = localStorage.getItem("kk_token");
     if (!token) return;
-    fetch("http://localhost:8080/api/widget-prefs", { headers: { "Authorization": `Bearer ${token}` } })
+    fetch(`${API}/api/widget-prefs`, { headers: { "Authorization": `Bearer ${token}` } })
       .then(r => r.status === 204 ? null : r.json())
       .then(data => {
         if (!data) return;
@@ -783,7 +806,7 @@ export default function Dashboard({ onLogout }) {
   const authHeaders = () => ({ "Content-Type": "application/json", "Authorization": `Bearer ${localStorage.getItem("kk_token")}` });
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/user-syllabi", { headers: authHeaders() })
+    fetch(`${API}/api/user-syllabi`, { headers: authHeaders() })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data && typeof data === "object") {
@@ -835,7 +858,7 @@ export default function Dashboard({ onLogout }) {
   const loadNotifications = useCallback(() => {
     const { token, userId } = getAuthInfo();
     if (!userId) return;
-    fetch("http://localhost:8080/api/notifications", {
+    fetch(`${API}/api/notifications`, {
       headers: { "Authorization": "Bearer " + token }
     })
         .then(r => r.json())
@@ -851,7 +874,7 @@ export default function Dashboard({ onLogout }) {
   const markAllAsRead = useCallback(() => {
     const { token, userId } = getAuthInfo();
     if (!userId) return;
-    fetch("http://localhost:8080/api/notifications/read-all", {
+    fetch(`${API}/api/notifications/read-all`, {
       method: "PATCH",
       headers: { "Authorization": "Bearer " + token }
     })
@@ -1029,7 +1052,7 @@ export default function Dashboard({ onLogout }) {
 
   const fetchSemesters = () => {
     const token = localStorage.getItem("kk_token");
-    return fetch("http://localhost:8080/api/grades/saved", {
+    return fetch(`${API}/api/grades/saved`, {
       headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
     })
         .then(r => r.json())
@@ -1067,7 +1090,7 @@ export default function Dashboard({ onLogout }) {
   useEffect(() => {
     const t = localStorage.getItem("kk_token");
     if (!t) return;
-    fetch("http://localhost:8080/api/profile", {
+    fetch(`${API}/api/profile`, {
       headers: { "Authorization": "Bearer " + t, "Content-Type": "application/json" },
     }).then(r => r.ok ? r.json() : null).then(data => { if (data) setProfile(data); }).catch(() => {});
 
@@ -1781,6 +1804,39 @@ export default function Dashboard({ onLogout }) {
         .cal-day:hover { background:var(--surface3) !important; border-radius:6px; }
         .toggle-opt:hover { background:var(--surface3); }
       `}</style>
+
+        {backupModal && (
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <div style={{ background:"var(--surface)", borderRadius:16, padding:28, width:380, boxShadow:"0 8px 32px rgba(0,0,0,0.18)", fontFamily:"'DM Sans',sans-serif" }}>
+              {backupDone ? (
+                <>
+                  <div style={{ fontFamily:"'Fraunces',serif", fontSize:20, color:"var(--primary)", marginBottom:8 }}>Backup Saved</div>
+                  <div style={{ fontSize:13, color:"var(--text2)", marginBottom:20, lineHeight:1.5 }}>Your encryption keys are backed up. You can restore them on any device using this password.</div>
+                  <button onClick={() => { setBackupModal(false); setBackupPassword(""); setBackupConfirm(""); setBackupDone(false); }} style={{ width:"100%", padding:"10px 0", borderRadius:9, border:"none", background:"var(--primary)", color:"#fff", fontWeight:600, fontSize:13, cursor:"pointer" }}>Done</button>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontFamily:"'Fraunces',serif", fontSize:20, color:"var(--primary)", marginBottom:8 }}>Back Up Your Keys</div>
+                  <div style={{ fontSize:13, color:"var(--text2)", marginBottom:18, lineHeight:1.5 }}>
+                    Your encryption keys are stored in this browser only. Set a backup password so you can restore them on another device.
+                  </div>
+                  <input type="password" value={backupPassword} onChange={e => { setBackupPassword(e.target.value); setBackupError(""); }} placeholder="Backup password" style={{ width:"100%", padding:"10px 14px", borderRadius:9, border:"1.5px solid var(--border)", background:"var(--surface2)", color:"var(--text)", fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:"none", marginBottom:8, boxSizing:"border-box" }} />
+                  <input type="password" value={backupConfirm} onChange={e => { setBackupConfirm(e.target.value); setBackupError(""); }} onKeyDown={e => e.key === "Enter" && handleBackup()} placeholder="Confirm password" style={{ width:"100%", padding:"10px 14px", borderRadius:9, border:"1.5px solid var(--border)", background:"var(--surface2)", color:"var(--text)", fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:"none", marginBottom:8, boxSizing:"border-box" }} />
+                  {backupError && <div style={{ fontSize:12, color:"var(--error)", marginBottom:8 }}>{backupError}</div>}
+                  <div style={{ display:"flex", gap:8, marginTop:4 }}>
+                    <button onClick={handleBackup} disabled={backupLoading || !backupPassword || !backupConfirm} style={{ flex:1, padding:"10px 0", borderRadius:9, border:"none", background:"var(--primary)", color:"#fff", fontWeight:600, fontSize:13, cursor: backupLoading || !backupPassword || !backupConfirm ? "not-allowed" : "pointer", opacity: backupLoading || !backupPassword || !backupConfirm ? 0.6 : 1 }}>
+                      {backupLoading ? "Saving…" : "Save Backup"}
+                    </button>
+                    <button onClick={() => { setBackupModal(false); setBackupPassword(""); setBackupConfirm(""); }} style={{ flex:1, padding:"10px 0", borderRadius:9, border:"1.5px solid var(--border)", background:"var(--surface)", color:"var(--text2)", fontWeight:500, fontSize:13, cursor:"pointer" }}>
+                      Skip
+                    </button>
+                  </div>
+                  <div style={{ fontSize:11, color:"var(--text3)", marginTop:10, lineHeight:1.4 }}>Skipping means you won't be able to decrypt old messages if you switch devices or clear your browser.</div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         <aside onClick={() => setSidebarOpen(o=>!o)} style={{ ...s.sidebar, width:sidebarOpen ? 224 : 66, cursor:"pointer" }}>
           <div style={{ ...s.sidebarTop, justifyContent: sidebarOpen ? "flex-start" : "center" }}>

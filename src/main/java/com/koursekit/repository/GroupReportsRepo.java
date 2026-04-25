@@ -20,4 +20,8 @@ public interface GroupReportsRepo extends JpaRepository<GroupReport, Long> {
     @Modifying
     @Query("DELETE FROM GroupReport r WHERE r.studyGroup.id = :groupId")
     void deleteByStudyGroup_Id(@Param("groupId") Long groupId);
+
+    @Modifying
+    @Query("DELETE FROM GroupReport r WHERE r.reportedBy.id = :userId OR r.reportedUser.id = :userId")
+    void deleteByUserId(@Param("userId") Long userId);
 }

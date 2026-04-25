@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Pencil, Search, ListChecks, X } from "lucide-react";
 
-const API_BASE = "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 function getToken() { return localStorage.getItem("kk_token"); }
 function getUserId() {
@@ -12,7 +12,7 @@ function getUserId() {
 async function apiFetch(path, options = {}) {
   try {
     const t = getToken();
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${API}${path}`, {
       headers: {
         "Content-Type": "application/json",
         ...(t && { "Authorization": `Bearer ${t}` }),
@@ -34,6 +34,16 @@ const PRIORITIES = [
 ];
 const TYPES   = ["Midterm Exam","Final Exam","Assignment","Project","Quiz","Lab","Attendance","Other"];
 const FILTERS = ["All","Pending","Done","Overdue"];
+
+// Deadlines are stored as UTC on the backend (no timezone suffix).
+// These helpers ensure correct conversion for sending and display.
+const localInputToUTC = iso => iso ? new Date(iso).toISOString().slice(0, 19) : "";
+const utcToLocalInput = iso => {
+  if (!iso) return "";
+  const d = new Date(iso + "Z"); // treat backend string as UTC
+  const pad = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 const priority  = id => PRIORITIES.find(p => p.id === id) || PRIORITIES[1];
 const fmt       = iso => {
@@ -311,7 +321,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
 
   useEffect(() => {
     const token = localStorage.getItem("kk_token");
-    fetch(`${API_BASE}/api/grades/saved`, {
+    fetch(`${API}/api/grades/saved`, {
       headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
     }).then(r => r.json()).then(data => {
       if (Array.isArray(data) && data.length > 0) {
@@ -328,7 +338,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
   const loadTasks = useCallback(async () => {
     const data = await apiFetch(`/api/tasks/list-all${semester ? `?semester=${encodeURIComponent(semester)}` : ""}`);
     if (data) {
-      const mapped = data.map(t => ({ ...t, due: t.deadline, done: t.completed }));
+      const mapped = data.map(t => ({ ...t, due: utcToLocalInput(t.deadline), done: t.completed }));
       setTasks(mapped);
       setAllCourses([...new Set(mapped.map(t => t.course).filter(Boolean))].sort());
     }
@@ -355,14 +365,14 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
       const token = getToken();
       if (!token) return;
       const orphanedIds = new Set(orphaned.map(t => Number(t.id)));
-      const entries = await fetch(`${API_BASE}/api/study-plan/entries`, { headers: { "Authorization": `Bearer ${token}` } })
+      const entries = await fetch(`${API}/api/study-plan/entries`, { headers: { "Authorization": `Bearer ${token}` } })
         .then(r => r.ok ? r.json() : []).catch(() => []);
       await Promise.all(
         entries.filter(e => e.task?.id && orphanedIds.has(Number(e.task.id)))
-          .map(e => fetch(`${API_BASE}/api/study-plan/entries/${e.id}`, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } }).catch(() => {}))
+          .map(e => fetch(`${API}/api/study-plan/entries/${e.id}`, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } }).catch(() => {}))
       );
       await Promise.all(orphaned.map(t =>
-        fetch(`${API_BASE}/api/tasks/delete/${t.id}`, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } }).catch(() => {})
+        fetch(`${API}/api/tasks/delete/${t.id}`, { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } }).catch(() => {})
       ));
       loadTasks();
     };
@@ -373,7 +383,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
     if (!search.trim()) { loadTasks(); return; }
     const timeout = setTimeout(async () => {
       const data = await apiFetch(`/api/tasks/search?keyword=${encodeURIComponent(search)}${semParam}`);
-      if (data) setTasks(data.map(t => ({ ...t, due: t.deadline, done: t.completed })));
+      if (data) setTasks(data.map(t => ({ ...t, due: utcToLocalInput(t.deadline), done: t.completed })));
     }, 400);
     return () => clearTimeout(timeout);
   }, [search]);
@@ -382,7 +392,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
     if (!courseFilter) { loadTasks(); return; }
     const fetchByCourse = async () => {
       const data = await apiFetch(`/api/tasks/list?course=${encodeURIComponent(courseFilter)}${semParam}`);
-      if (data) setTasks(data.map(t => ({ ...t, due: t.deadline, done: t.completed })));
+      if (data) setTasks(data.map(t => ({ ...t, due: utcToLocalInput(t.deadline), done: t.completed })));
     };
     fetchByCourse();
   }, [courseFilter]);
@@ -394,7 +404,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
       method: "PATCH",
       body: JSON.stringify({ ...task, completed: !task.done }),
     });
-    if (updated) { setTasks(p => p.map(t => t.id === id ? { ...updated, due: updated.deadline, done: updated.completed } : t)); onNotificationsChanged?.(); }
+    if (updated) { setTasks(p => p.map(t => t.id === id ? { ...updated, due: utcToLocalInput(updated.deadline), done: updated.completed } : t)); onNotificationsChanged?.(); }
   };
 
   const handleDeleteTask = useCallback((id) => {
@@ -434,16 +444,16 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
   const saveTask = async (task, onError) => {
     const isEdit = tasks.some(t => t.id === task.id);
     const resolvedType = task.type === "Other" ? (task.customType?.trim() || "Other") : task.type;
-    const payload = { title: task.title, course: task.course, type: resolvedType, deadline: task.due, notes: task.notes, semesterName: semester || null };
+    const payload = { title: task.title, course: task.course, type: resolvedType, deadline: localInputToUTC(task.due), notes: task.notes, semesterName: semester || null };
     if (isEdit) {
-      const res = await fetch(`${API_BASE}/api/tasks/edit/${task.id}`, {
+      const res = await fetch(`${API}/api/tasks/edit/${task.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getToken()}` },
         body: JSON.stringify(payload),
       });
       if (res.ok) {
         const updated = await res.json();
-        setTasks(p => p.map(t => t.id === task.id ? { ...updated, due: updated.deadline, done: updated.completed } : t));
+        setTasks(p => p.map(t => t.id === task.id ? { ...updated, due: utcToLocalInput(updated.deadline), done: updated.completed } : t));
         setEditing(null);
         onNotificationsChanged?.();
       } else {
@@ -451,7 +461,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
         if (onError) onError(data.message || "Failed to update task.");
       }
     } else {
-      const res = await fetch(`${API_BASE}/api/tasks/add`, {
+      const res = await fetch(`${API}/api/tasks/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${getToken()}` },
         body: JSON.stringify(payload),

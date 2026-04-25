@@ -21,22 +21,56 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.koursekit.config.EmailConfig;
 import com.koursekit.model.DefaultScheduleSlot;
+import com.koursekit.model.StudyGroup;
 import com.koursekit.model.User;
+import com.koursekit.repository.AvailabilitySlotRepository;
 import com.koursekit.repository.DefaultScheduleSlotRepository;
+import com.koursekit.repository.GroupMessageRepo;
+import com.koursekit.repository.GroupReportsRepo;
+import com.koursekit.repository.GroupStudySessionRepo;
+import com.koursekit.repository.NotificationRepository;
+import com.koursekit.repository.PassRepo;
+import com.koursekit.repository.SavedSemesterRepository;
+import com.koursekit.repository.StudyBlockRepository;
+import com.koursekit.repository.StudyGroupMemberRepo;
+import com.koursekit.repository.StudyGroupRepo;
+import com.koursekit.repository.StudyPlanRepository;
+import com.koursekit.repository.TaskRepository;
+import com.koursekit.repository.TokenRepo;
 import com.koursekit.repository.UserRepo;
+import com.koursekit.repository.UserSessionRepo;
+import com.koursekit.repository.UserSyllabusRepository;
+import com.koursekit.repository.UserTranscriptInfoRepository;
+import com.koursekit.repository.UserWidgetPrefsRepository;
 import com.koursekit.service.StudyPlanService;
 
 @RestController
 @RequestMapping("/api/profile")
 public class ProfileController {
     private final UserRepo userRepo;
-    @Autowired
-    private ObjectMapper objectMapper;
-    @Autowired
-    private DefaultScheduleSlotRepository defaultSlotRepo;
-    @Autowired
-    private StudyPlanService studyPlanService;
+    @Autowired private ObjectMapper objectMapper;
+    @Autowired private DefaultScheduleSlotRepository defaultSlotRepo;
+    @Autowired private StudyPlanService studyPlanService;
+    @Autowired private TokenRepo tokenRepo;
+    @Autowired private PassRepo passRepo;
+    @Autowired private SavedSemesterRepository savedSemesterRepo;
+    @Autowired private TaskRepository taskRepo;
+    @Autowired private StudyPlanRepository studyPlanRepo;
+    @Autowired private StudyBlockRepository studyBlockRepo;
+    @Autowired private NotificationRepository notificationRepo;
+    @Autowired private AvailabilitySlotRepository availabilitySlotRepo;
+    @Autowired private UserSessionRepo sessionRepo;
+    @Autowired private UserSyllabusRepository syllabusRepo;
+    @Autowired private UserTranscriptInfoRepository transcriptInfoRepo;
+    @Autowired private UserWidgetPrefsRepository widgetPrefsRepo;
+    @Autowired private StudyGroupRepo studyGroupRepo;
+    @Autowired private StudyGroupMemberRepo studyGroupMemberRepo;
+    @Autowired private GroupMessageRepo groupMessageRepo;
+    @Autowired private GroupStudySessionRepo groupStudySessionRepo;
+    @Autowired private GroupReportsRepo groupReportsRepo;
+    @Autowired private EmailConfig emailConfig;
 
     public ProfileController(UserRepo userRepo) { this.userRepo = userRepo; }
 
@@ -265,8 +299,44 @@ public class ProfileController {
     }
 
     @DeleteMapping
+    @Transactional
     public ResponseEntity<Map<String, Object>> deleteAccount() {
         User user = getAuthenticatedUser();
+        Long userId = user.getId();
+
+        studyBlockRepo.deleteAllByUserId(userId);
+        studyPlanRepo.deleteAllByUserId(userId);
+        notificationRepo.deleteByTaskUserId(userId);
+        taskRepo.deleteAllByUserId(userId);
+        groupReportsRepo.deleteByUserId(userId);
+
+        List<StudyGroup> hostedGroups = studyGroupRepo.findByHost_Id(userId);
+        for (StudyGroup group : hostedGroups) {
+            Long groupId = group.getId();
+            groupReportsRepo.deleteByStudyGroup_Id(groupId);
+            groupStudySessionRepo.deleteByGroupId(groupId);
+            groupMessageRepo.deleteAll_byStudyGroupID(groupId);
+            studyGroupMemberRepo.deleteAll_byStudyGroupId(groupId);
+        }
+
+        studyGroupRepo.deleteAll(hostedGroups);
+        groupMessageRepo.deleteBySenderId(userId);
+        studyGroupMemberRepo.deleteByUser_Id(userId);
+        // entity-based delete so JPA cascades to SavedCourse → SavedAssessment
+        savedSemesterRepo.deleteAll(savedSemesterRepo.findByUserIdOrderByCreatedAtDesc(userId));
+        tokenRepo.deleteByUser(user);
+        sessionRepo.deleteByUserId(userId);
+        passRepo.deleteByUser(user);
+        availabilitySlotRepo.deleteAllByUserId(userId);
+        defaultSlotRepo.deleteByUserId(userId);
+        syllabusRepo.deleteByUserId(userId);
+        transcriptInfoRepo.deleteByUserId(userId);
+        widgetPrefsRepo.deleteByUserId(userId);
+
+        try { emailConfig.accountdeletionmail(user.getEmail()); } catch (Exception e) {
+            System.err.println("Deletion email failed: " + e.getMessage());
+        }
+
         userRepo.delete(user);
         Map<String, Object> resp = new HashMap<>();
         resp.put("deleted", true);

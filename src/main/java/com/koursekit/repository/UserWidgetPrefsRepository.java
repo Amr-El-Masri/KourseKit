@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface UserWidgetPrefsRepository extends JpaRepository<UserWidgetPrefs, Long> {
     Optional<UserWidgetPrefs> findByUserId(Long userId);
+    void deleteByUserId(Long userId);
 }

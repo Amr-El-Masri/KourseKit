@@ -27,7 +27,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable()) 
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/verify", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/refresh", "/api/auth/logout-all", "/api/auth/sessions", "/api/auth/sessions/**").permitAll()
+                .requestMatchers("/api/auth/signup", "/api/auth/login", "/api/auth/verify", "/api/auth/resend-verification", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/refresh", "/api/auth/logout-all", "/api/auth/sessions", "/api/auth/sessions/**").permitAll()
                 .requestMatchers("/*.html", "/css/**", "/js/**", "/images/**").permitAll() // static files no token need
                 .requestMatchers("/api/courses/search", "/api/courses/*/sections", "/api/courses/professors", "/api/courses/*").permitAll()
                 .requestMatchers("/api/reviews/course/**", "/api/reviews/section/**").permitAll()
@@ -56,12 +56,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
+
         configuration.setAllowedOrigins(Arrays.asList(
-            "http://localhost:8080",
             "http://localhost:3000",
             "http://localhost:5173",
-            "http://localhost:5500",
-            "http://127.0.0.1:5500"
+            "https://koursekit-frontend-production.up.railway.app"
         ));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));

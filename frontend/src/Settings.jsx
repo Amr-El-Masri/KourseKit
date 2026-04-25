@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./ThemeContext";
 
-const API = "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 const passrequirements = [
   { label: "At least 8 characters",     test: p => p.length >= 8 },
@@ -89,6 +89,7 @@ export default function Settings({ onLogout }) {
   const [notifPrefs, setNotifPrefs] = useState({ overdue: true, dueToday: true, threeDays: true });
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("kk_token");
@@ -114,14 +115,22 @@ export default function Settings({ onLogout }) {
 
   const handleDeleteAccount = async () => {
     setDeleting(true);
+    setDeleteError("");
     try {
       const token = localStorage.getItem("kk_token");
       const res = await fetch(`${API}/api/profile`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k));
         onLogout();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setDeleteError(data.message || `Failed to delete account (${res.status}). Please try again.`);
+        setDeleting(false);
       }
-    } catch { setDeleting(false); }
+    } catch {
+      setDeleteError("Could not connect to server.");
+      setDeleting(false);
+    }
   };
 
   const [changing,    setChanging]    = useState(false);
@@ -402,6 +411,7 @@ export default function Settings({ onLogout }) {
         ) : (
           <div>
             <div style={{ fontSize: 13, color: "var(--error)", fontWeight: 600, marginBottom: 12 }}>Are you sure? This will permanently delete your account and all your data.</div>
+            {deleteError && <div style={{ fontSize: 12, color: "var(--error)", background: "var(--error-bg)", border: "1px solid var(--error-border)", borderRadius: 8, padding: "8px 12px", marginBottom: 12 }}>{deleteError}</div>}
             <div style={{ display: "flex", gap: 10 }}>
               <button onClick={handleDeleteAccount} disabled={deleting} style={{ padding: "8px 18px", borderRadius: 9, border: "none", background: "var(--error)", color: "white", fontSize: 13, fontWeight: 700, cursor: deleting ? "not-allowed" : "pointer", fontFamily: "'DM Sans', sans-serif", opacity: deleting ? 0.7 : 1 }}>
                 {deleting ? "Deleting..." : "Yes, delete my account"}

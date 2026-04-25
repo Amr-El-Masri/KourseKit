@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,13 +30,31 @@ import com.koursekit.model.ProfessorReview;
 import com.koursekit.model.Report;
 import com.koursekit.model.Review;
 import com.koursekit.model.ReviewStatus;
+import com.koursekit.model.StudyGroup;
 import com.koursekit.model.User;
+import com.koursekit.repository.AvailabilitySlotRepository;
+import com.koursekit.repository.DefaultScheduleSlotRepository;
 import com.koursekit.repository.ForumPostRepository;
+import com.koursekit.repository.GroupMessageRepo;
 import com.koursekit.repository.GroupReportsRepo;
+import com.koursekit.repository.GroupStudySessionRepo;
+import com.koursekit.repository.NotificationRepository;
+import com.koursekit.repository.PassRepo;
 import com.koursekit.repository.ProfessorReviewRepository;
 import com.koursekit.repository.ReportRepository;
 import com.koursekit.repository.ReviewRepository;
+import com.koursekit.repository.SavedSemesterRepository;
+import com.koursekit.repository.StudyBlockRepository;
+import com.koursekit.repository.StudyGroupMemberRepo;
+import com.koursekit.repository.StudyGroupRepo;
+import com.koursekit.repository.StudyPlanRepository;
+import com.koursekit.repository.TaskRepository;
+import com.koursekit.repository.TokenRepo;
 import com.koursekit.repository.UserRepo;
+import com.koursekit.repository.UserSessionRepo;
+import com.koursekit.repository.UserSyllabusRepository;
+import com.koursekit.repository.UserTranscriptInfoRepository;
+import com.koursekit.repository.UserWidgetPrefsRepository;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -47,6 +66,23 @@ public class AdminController {
     @Autowired private ReportRepository reportRepo;
     @Autowired private ForumPostRepository forumPostRepo;
     @Autowired private GroupReportsRepo groupReportsRepo;
+    @Autowired private TokenRepo tokenRepo;
+    @Autowired private PassRepo passRepo;
+    @Autowired private SavedSemesterRepository savedSemesterRepo;
+    @Autowired private TaskRepository taskRepo;
+    @Autowired private StudyPlanRepository studyPlanRepo;
+    @Autowired private StudyBlockRepository studyBlockRepo;
+    @Autowired private NotificationRepository notificationRepo;
+    @Autowired private AvailabilitySlotRepository availabilitySlotRepo;
+    @Autowired private UserSessionRepo sessionRepo;
+    @Autowired private UserSyllabusRepository syllabusRepo;
+    @Autowired private UserTranscriptInfoRepository transcriptInfoRepo;
+    @Autowired private UserWidgetPrefsRepository widgetPrefsRepo;
+    @Autowired private StudyGroupRepo studyGroupRepo;
+    @Autowired private StudyGroupMemberRepo studyGroupMemberRepo;
+    @Autowired private GroupMessageRepo groupMessageRepo;
+    @Autowired private GroupStudySessionRepo groupStudySessionRepo;
+    @Autowired private DefaultScheduleSlotRepository defaultSlotRepo;
 
     private Admins toAdminsDto(User u) {
         return new Admins(u.getId(), u.getEmail(), u.getRole(), u.isActive(), u.getCreatedAt(),
@@ -85,6 +121,48 @@ public class AdminController {
             } catch (Exception ignored) {}
         }
         return ResponseEntity.ok(Map.of("updated", users.size()));
+    }
+
+    @DeleteMapping("/users/{userId}")
+    @Transactional
+    public ResponseEntity<?> deleteUser(@PathVariable Long userId, @AuthenticationPrincipal User currentUser) {
+        if (userId.equals(currentUser.getId())) return ResponseEntity.badRequest().body(Map.of("error", "Cannot delete your own account."));
+        User user = userrepo.findById(userId).orElseThrow(() -> new RuntimeException("User not found."));
+
+        studyBlockRepo.deleteAllByUserId(userId);
+        studyPlanRepo.deleteAllByUserId(userId);
+        notificationRepo.deleteByTaskUserId(userId);
+        taskRepo.deleteAllByUserId(userId);
+        groupReportsRepo.deleteByUserId(userId);
+
+        List<StudyGroup> hostedGroups = studyGroupRepo.findByHost_Id(userId);
+        for (StudyGroup group : hostedGroups) {
+            Long groupId = group.getId();
+            groupReportsRepo.deleteByStudyGroup_Id(groupId);
+            groupStudySessionRepo.deleteByGroupId(groupId);
+            groupMessageRepo.deleteAll_byStudyGroupID(groupId);
+            studyGroupMemberRepo.deleteAll_byStudyGroupId(groupId);
+        }
+
+        studyGroupRepo.deleteAll(hostedGroups);
+        groupMessageRepo.deleteBySenderId(userId);
+        studyGroupMemberRepo.deleteByUser_Id(userId);
+        savedSemesterRepo.deleteAll(savedSemesterRepo.findByUserIdOrderByCreatedAtDesc(userId));
+        tokenRepo.deleteByUser(user);
+        sessionRepo.deleteByUserId(userId);
+        passRepo.deleteByUser(user);
+        availabilitySlotRepo.deleteAllByUserId(userId);
+        defaultSlotRepo.deleteByUserId(userId);
+        syllabusRepo.deleteByUserId(userId);
+        transcriptInfoRepo.deleteByUserId(userId);
+        widgetPrefsRepo.deleteByUserId(userId);
+
+        try { emailconfig.accountdeletionmail(user.getEmail()); } catch (Exception e) {
+            System.err.println("Deletion email failed: " + e.getMessage());
+        }
+
+        userrepo.delete(user);
+        return ResponseEntity.ok(Map.of("deleted", true));
     }
 
     @GetMapping("/users/flagged")

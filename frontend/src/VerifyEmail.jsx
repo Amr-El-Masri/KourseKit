@@ -1,23 +1,32 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { LoaderCircle, MailCheck, MailWarning } from "lucide-react";
+
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 export default function VerifyEmail({ token, onVerified, onGoToLogin }) {
   const [status, setStatus] = useState("loading"); // loading then success then error
   const [error,  setError]  = useState("");
+  const didRun = useRef(false);
 
   useEffect(() => {
+    // Guard against React StrictMode double-invocation which would mark the
+    // token as used on the first call and produce a false "already used" error
+    // on the second call, causing a brief flash of the failure state.
+    if (didRun.current) return;
+    didRun.current = true;
+
     if (!token) {
       setStatus("error");
       setError("No token");
       return;
     }
 
-    fetch("http://localhost:8080/api/auth/verify?token=" + encodeURIComponent(token))
+    fetch(`${API}/api/auth/verify?token=` + encodeURIComponent(token))
       .then(r => r.json())
       .then(data => {
         if (data.success) {
           setStatus("success");
-          setTimeout(() => onVerified(data.email), 1500);
+          setTimeout(() => onVerified(data.email, data.token), 1500);
         } else {
           setStatus("error");
           setError(data.message || "Verification failed. The link may have expired.");

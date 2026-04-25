@@ -97,7 +97,7 @@ function subtractBusyFromSlots(slots, busyPeriods) {
     return remaining;
 }
 
-const API_BASE = "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 function getUserId() {
     try {
         const t = localStorage.getItem("kk_token");
@@ -108,7 +108,7 @@ function getUserId() {
 async function apiFetch(path, options = {}) {
     const t = localStorage.getItem("kk_token");
     if (!t) throw new Error("Not logged in. Please refresh and log in again.");
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${API}${path}`, {
         headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${t}`,
@@ -753,7 +753,7 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
         if (t.completed) return false;
         if (t.type === "Group Study Session") return false;
         if (weekStartDate && t.deadline) {
-            const deadline = new Date(t.deadline);
+            const deadline = new Date(t.deadline + "Z");
             if (deadline < weekStartDate) return false;
         }
         if (semesterCourseCodes && semesterCourseCodes.size > 0 && t.course) {
@@ -1637,7 +1637,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         const savedColors = (() => { try { return JSON.parse(localStorage.getItem('kk_colorMap') || '{}'); } catch { return {}; } })();
         for (const entry of incompleteEntries) {
             const remaining = Math.max(0.5, entry.hoursPerWeek - (entry.completedHours || 0));
-            if (entry.deadline && new Date(entry.deadline) < new Date(currentWeekStart)) { expiredNames.push(entry.name); continue; }
+            if (entry.deadline && new Date(entry.deadline + "Z") < new Date(currentWeekStart)) { expiredNames.push(entry.name); continue; }
             try {
                 const res = await apiFetch(`/api/study-plan/entries/add?taskId=${entry.taskId}&estimatedWorkload=${remaining}&weekStart=${currentWeekStart}${semParamRef.current}`, { method: "POST" });
                 carriedNames.push(entry.name);

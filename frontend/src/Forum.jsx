@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { MessageSquare, ArrowLeft, Trash2, Flag, Search, ChevronUp, BookOpen, GraduationCap, LayoutGrid, Check, User } from "lucide-react";
 
-const API = "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 const timeAgo = ts => {
   const s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
@@ -770,7 +770,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
 
   useEffect(() => {
     if (!token) return;
-    fetch("http://localhost:8080/api/profile", { headers: { "Authorization": "Bearer " + token } })
+    fetch(`${API}/api/profile`, { headers: { "Authorization": "Bearer " + token } })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
         if (data) {

@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 
-const API = "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
+
 const token = () => localStorage.getItem("kk_token");
 
 const LETTER_GRADES = ["A+","A","A-","B+","B","B-","C+","C","C-","D+","D","F"];
@@ -107,7 +108,7 @@ export default function TranscriptModal({ onClose, onApply }) {
       // Persist to backend
       try {
         const token = localStorage.getItem("kk_token");
-        await fetch("http://localhost:8080/api/transcript-info", {
+        await fetch(`${API}/api/transcript-info`, {
           method: "PUT",
           headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
           body: JSON.stringify({ uploadedAt: uploadedAt.replace("Z", "").slice(0, 19), semesterCount: semCount, courseCount, semIds: JSON.stringify(allIds) }),

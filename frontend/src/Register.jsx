@@ -1,7 +1,9 @@
-import { useState } from "react";
-import { PartyPopper } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { PartyPopper, Mail } from "lucide-react";
 import TranscriptModal from "./TranscriptModal";
 import StudentCourses from "./StudentCourses";
+
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 const requirements = [
   { label: "At least 8 characters",       test: p => p.length >= 8 },
@@ -18,14 +20,82 @@ const AUB_SEMESTERS = [
   "Spring 22-23","Summer 22-23","Fall 22-23",
 ];
 
-export default function Register({ onGoToLogin }) {
+function SemesterDropdown({ value, onChange, semesters }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position: "relative", marginBottom: 16 }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          width: "100%", padding: "11px 14px",
+          border: `1px solid ${open ? "var(--border2)" : "var(--border)"}`,
+          borderRadius: 10, background: "var(--surface2)",
+          cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+          fontSize: 14, color: value ? "var(--text)" : "var(--text2)",
+          transition: "border-color 0.15s",
+        }}
+      >
+        <span>{value || "Select your semester…"}</span>
+        <span style={{ color: "var(--text2)", fontSize: 11, display: "inline-block", transition: "transform .2s", transform: open ? "rotate(0deg)" : "rotate(-90deg)" }}>▼</span>
+      </button>
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
+          background: "var(--surface)", borderRadius: 12,
+          boxShadow: "0 8px 32px rgba(49,72,122,0.15)", border: "1px solid var(--border)",
+          zIndex: 999, padding: 6, maxHeight: 240, overflowY: "auto",
+        }}>
+          {semesters.map(sem => (
+            <div
+              key={sem}
+              onClick={() => { onChange(sem); setOpen(false); }}
+              style={{
+                padding: "10px 14px", borderRadius: 8, cursor: "pointer",
+                fontSize: 13, fontFamily: "'DM Sans', sans-serif",
+                display: "flex", alignItems: "center",
+                background: sem === value ? "var(--surface3, var(--surface2))" : "transparent",
+                color: sem === value ? "var(--primary)" : "var(--text)",
+                fontWeight: sem === value ? 600 : 400,
+                transition: "background .12s",
+              }}
+              onMouseEnter={e => { if (sem !== value) e.currentTarget.style.background = "var(--surface2)"; }}
+              onMouseLeave={e => { if (sem !== value) e.currentTarget.style.background = "transparent"; }}
+            >
+              {sem === value && <span style={{ color: "var(--accent)", marginRight: 8, fontSize: 12 }}>✓</span>}
+              {sem}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function Register({ onGoToLogin, postVerifyToken }) {
   const [email,     setEmail]     = useState("");
   const [password,  setPassword]  = useState("");
   const [confirm,   setConfirm]   = useState("");
   const [error,     setError]     = useState("");
   const [success,   setSuccess]   = useState(false);
-  const [semStep,   setSemStep]   = useState(false);
-  const [regToken,  setRegToken]  = useState("");
+  // When postVerifyToken is provided, skip signup and jump straight to semester setup
+  const [semStep,   setSemStep]   = useState(!!postVerifyToken);
+  const [regToken,  setRegToken]  = useState(postVerifyToken || "");
+  // "checkEmail" shows after signup asking user to verify before semester setup
+  const [checkEmail, setCheckEmail] = useState(false);
+  const [resendLoading,  setResendLoading]  = useState(false);
+  const [resendMsg,      setResendMsg]      = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const cooldownRef = useRef(null);
 
   const [semName,       setSemName]       = useState("");
   const [semCourses,    setSemCourses]    = useState([{ id:1, name:"" }]);
@@ -50,7 +120,7 @@ export default function Register({ onGoToLogin }) {
 
     setLoading(true);
     try {
-      const res  = await fetch("http://localhost:8080/api/auth/signup", {
+      const res  = await fetch(`${API}/api/auth/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, rememberMe }),
@@ -59,7 +129,7 @@ export default function Register({ onGoToLogin }) {
       if (data.success) {
         localStorage.setItem("kk_theme", "light");
         setRegToken(data.token || "");
-        setSemStep(true);
+        setCheckEmail(true);
       } else {
         setError(data.message?.replace(/^error:\s*/i, "") || "Registration failed.");
       }
@@ -70,12 +140,33 @@ export default function Register({ onGoToLogin }) {
     }
   };
 
+  const handleResend = async () => {
+    setResendLoading(true); setResendMsg("");
+    try {
+      const res = await fetch(`${API}/api/auth/resend-verification`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      setResendMsg(data.success ? "Verification email resent! Check your inbox." : (data.message || "Failed to resend. Try again."));
+      if (data.success) {
+        setResendCooldown(60);
+        cooldownRef.current = setInterval(() => {
+          setResendCooldown(prev => { if (prev <= 1) { clearInterval(cooldownRef.current); return 0; } return prev - 1; });
+        }, 1000);
+      }
+    } catch {
+      setResendMsg("Could not connect to server.");
+    } finally { setResendLoading(false); }
+  };
+
   const handleSemesterSubmit = async () => {
     if (!semName) { setSemError("Please select your current semester."); return; }
     const courses = semCourses.filter(c => c.name.trim());
     setSemSaving(true); setSemError("");
     try {
-      await fetch("http://localhost:8080/api/grades/saved", {
+      await fetch(`${API}/api/grades/saved`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${regToken}` },
         body: JSON.stringify({ semesterName: semName, courses: courses.flatMap(c => [{ courseCode: c.name.trim(), grade: "", credits: c.credits || 0, sectioncrn: c.sectioncrn || null }, ...(c.linkedSectionCrn ? [{ courseCode: c.name.trim(), grade: "", credits: 0, sectioncrn: c.linkedSectionCrn, componenttype: "Lab" }] : [])]) }),
@@ -119,9 +210,39 @@ export default function Register({ onGoToLogin }) {
               <div style={{ marginBottom: 16 }}><PartyPopper size={52} color="#6C63FF" /></div>
               <h2 style={s.title}>You're all set!</h2>
               <p style={{ fontSize: 14, color: "var(--text2)", marginBottom: 24, lineHeight: 1.6 }}>
-                Your account has been created. Check your AUB email to verify your account, then log in.
+                {postVerifyToken
+                  ? "Your courses have been saved. You can now use KourseKit."
+                  : "Your semester has been saved. You can now log in."}
               </p>
-              <button className="reg-btn" onClick={onGoToLogin} style={s.btn}>Go to Login</button>
+              <button className="reg-btn" onClick={onGoToLogin} style={s.btn}>
+                {postVerifyToken ? "Go to Dashboard" : "Go to Login"}
+              </button>
+            </div>
+          ) : checkEmail ? (
+            <div style={{ textAlign: "center", padding: "20px 0" }}>
+              <div style={{ marginBottom: 16 }}><Mail size={52} color="#31487A" /></div>
+              <h2 style={s.title}>Check your email</h2>
+              <p style={{ fontSize: 14, color: "var(--text2)", marginBottom: 24, lineHeight: 1.6 }}>
+                We sent a verification link to <strong>{email}</strong>.<br />
+                Click the link to verify your account and set up your courses.<br />
+                <span style={{ fontSize: 12, color: "var(--text3)" }}>The link expires in 15 minutes. Check your spam folder if you don't see it.</span>
+              </p>
+              {resendMsg && (
+                <div style={{ fontSize: 13, color: resendMsg.includes("resent") ? "#2d7a4a" : "var(--error)", marginBottom: 14 }}>
+                  {resendMsg}
+                </div>
+              )}
+              {resendCooldown > 0
+                ? <div style={{ fontSize: 13, color: "var(--text3)", marginBottom: 10 }}>Resend available in {resendCooldown}s</div>
+                : <button className="reg-btn" onClick={handleResend} disabled={resendLoading}
+                    style={{ ...s.btn, marginBottom: 10, opacity: resendLoading ? 0.7 : 1, cursor: resendLoading ? "not-allowed" : "pointer" }}>
+                    {resendLoading ? "Sending…" : "Resend verification email"}
+                  </button>
+              }
+              <button onClick={onGoToLogin}
+                style={{ width: "100%", background: "none", border: "none", color: "var(--text2)", fontSize: 13, cursor: "pointer", padding: "6px 0" }}>
+                Go to Login
+              </button>
             </div>
           ) : semStep ? (
             <div>
@@ -139,12 +260,11 @@ export default function Register({ onGoToLogin }) {
               {semError && <div style={s.errorBox}>{semError}</div>}
 
               <label style={s.label}>Current Semester</label>
-              <select value={semName} onChange={e => { setSemName(e.target.value); setSemError(""); }}
-                className="reg-input"
-                style={{ ...s.input, cursor:"pointer", color: semName ? "var(--text)" : "var(--text2)" }}>
-                <option value="">Select your semester…</option>
-                {AUB_SEMESTERS.map(sem => <option key={sem} value={sem}>{sem}</option>)}
-              </select>
+              <SemesterDropdown
+                value={semName}
+                onChange={val => { setSemName(val); setSemError(""); }}
+                semesters={AUB_SEMESTERS}
+              />
 
               <label style={s.label}>Your Courses <span style={{ fontWeight:400, color:"var(--text3)" }}>(optional)</span></label>
               <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:8 }}>

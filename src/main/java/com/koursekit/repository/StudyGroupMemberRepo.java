@@ -24,6 +24,10 @@ public interface StudyGroupMemberRepo extends JpaRepository<StudyGroupMember, Lo
     @Query("DELETE FROM StudyGroupMember member WHERE member.studyGroup.id = :groupId")
     void deleteAll_byStudyGroupId(@Param("groupId") Long groupId);
 
+    @Modifying
+    @Query("DELETE FROM StudyGroupMember member WHERE member.user.id = :userId")
+    void deleteByUser_Id(@Param("userId") Long userId);
+
     @Query("SELECT member.studyGroup.id, COUNT(member) FROM StudyGroupMember member WHERE member.studyGroup.id IN :groupIds GROUP BY member.studyGroup.id")
     List<Object[]> countMembersByGroupIds(@Param("groupIds") List<Long> groupIds);
 }

@@ -86,6 +86,23 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/resend-verification")
+    public ResponseEntity<AuthResponse> resendVerification(@RequestBody Map<String, String> body, HttpServletRequest http) {
+        String ip = getClientIP(http);
+        if (!rateLimiter.isallowed("Resend:" + ip, signupMax, signupWindow)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(errormessage("Too many requests. Please try again later."));
+        }
+        try {
+            AuthResponse response = service.resendVerification(body.get("email"));
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(errormessage(e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(errormessage("Server Error"));
+        }
+    }
+
     @GetMapping("/verify")
     public ResponseEntity<AuthResponse> verifyemail(@RequestParam String token) {
         try {

@@ -47,7 +47,7 @@ public class AuthService {
         passhistoryrepo.save(new PassHistory(user, passhash));
 
         String veriftoken = UUID.randomUUID().toString();
-        Token token = new Token(user, veriftoken, "EMAIL_VERIFICATION", LocalDateTime.now().plusMinutes(rememberMe ? 1440 : 10));
+        Token token = new Token(user, veriftoken, "EMAIL_VERIFICATION", LocalDateTime.now().plusMinutes(15));
         tokenrepo.save(token);
 
         try {
@@ -82,10 +82,35 @@ public class AuthService {
         veriftoken.used();
         tokenrepo.save(veriftoken);
 
+        String jwttoken = jwtutil.generate(user.getId(), user.getEmail(), user.getRole(), false);
+
         AuthResponse response = new AuthResponse();
         response.setsuccess(true);
         response.setmessage("Email Verified!");
         response.setemail(user.getEmail());
+        response.settoken(jwttoken);
+        return response;
+    }
+
+    public AuthResponse resendVerification(String email) {
+        if (!isvalidaubmail(email)) { throw new IllegalArgumentException("Invalid email."); }
+        User user = userrepo.findByEmail(email)
+            .orElseThrow(() -> new IllegalArgumentException("No account found for this email."));
+        if (user.isVerified()) { throw new IllegalArgumentException("This email is already verified."); }
+
+        String veriftoken = UUID.randomUUID().toString();
+        Token token = new Token(user, veriftoken, "EMAIL_VERIFICATION", LocalDateTime.now().plusMinutes(15));
+        tokenrepo.save(token);
+
+        try {
+            emailconfig.verificationmail(email, token.getValue());
+        } catch (Exception emailexception) {
+            System.err.println("Resend verification email failed: " + emailexception.getMessage());
+        }
+
+        AuthResponse response = new AuthResponse();
+        response.setsuccess(true);
+        response.setmessage("Verification email resent. Check your inbox.");
         return response;
     }
 

@@ -2,14 +2,14 @@ import { useState, useEffect } from "react";
 import { Users, Lock, Globe, Plus, ArrowRight, Search, X, Copy, Check } from "lucide-react";
 import GroupRoomPage from "./GroupRoomPage";
 
-const API_BASE = "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 function getToken() { return localStorage.getItem("kk_token"); }
 
 async function apiFetch(path, options = {}) {
   try {
     const t = getToken();
-    const res = await fetch(`${API_BASE}${path}`, {
+    const res = await fetch(`${API}${path}`, {
       headers: {
         "Content-Type": "application/json",
         ...(t && { Authorization: `Bearer ${t}` }),
@@ -447,10 +447,15 @@ export default function StudyGroupFinder({ courses = [] }) {
   const [error,           setError]           = useState("");
   const [showCreate,      setShowCreate]      = useState(false);
   const [showJoinPrivate, setShowJoinPrivate] = useState(false);
-  const [openGroup, setOpenGroup] = useState(null);
   const [courseDropOpen, setCourseDropOpen] = useState(false);
   const [myGroupsFilter, setMyGroupsFilter] = useState("all");
 
+  const [openGroup, setOpenGroup] = useState(() => {
+    try {
+      const saved = localStorage.getItem("kk_last_group");
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
   useEffect(() => {
     if (!selectedCourse) return;
     setLoadingPublic(true);
@@ -513,9 +518,15 @@ export default function StudyGroupFinder({ courses = [] }) {
   if (openGroup) {
     return <GroupRoomPage
       group={openGroup}
-      onBack={() => setOpenGroup(null)}
+      onBack={() => {
+        setOpenGroup(null);
+        localStorage.removeItem("kk_last_group");
+      }}
       myGroups={myGroups}
-      onSwitchGroup={(g) => setOpenGroup(g)}
+      onSwitchGroup={(g) => {
+        setOpenGroup(g);
+        localStorage.setItem("kk_last_group", JSON.stringify(g));
+      }}
     />; }
 
   return (
@@ -692,7 +703,10 @@ export default function StudyGroupFinder({ courses = [] }) {
                 <MyGroupCard
                   key={g.id}
                   group={g}
-                  onOpen={(group) => setOpenGroup(group)}
+                  onOpen={(group) => {
+                  setOpenGroup(group);
+                  localStorage.setItem("kk_last_group", JSON.stringify(group));
+                }}
                 />
               ))}
             </div>
