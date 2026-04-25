@@ -879,7 +879,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
         <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 26, color: "var(--primary)", marginBottom: 4 }}>
           Discussion Forum
         </div>
-        {token && (
+        {token && !showMyPosts && (
           <button className="f-primary-btn" onClick={() => setComposing(c => !c)}
             style={{ padding:"10px 20px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s" }}>
             {composing ? "Cancel" : "+ New Post"}

@@ -639,6 +639,7 @@ export default function Dashboard({ onLogout }) {
   const [semester,       setSemesterState] = useState(() => localStorage.getItem("kk_activeSemester") || "");
   const setSemester = (val) => { setSemesterState(val); localStorage.setItem("kk_activeSemester", val); };
   const [apiSemesters,   setApiSemesters]  = useState([]);
+  const [courseColorsVer, setCourseColorsVer] = useState(0);
 
   const knownIds = new Set(ALL_WIDGETS.map(w => w.id));
   const defaultVisible = () => Object.fromEntries(ALL_WIDGETS.map(w => [w.id, true]));
@@ -1042,7 +1043,7 @@ export default function Dashboard({ onLogout }) {
     const dd = String(d).padStart(2, "0");
     return `${calYear}-${mm}-${dd}`;};
 
-  const handleLogout = () => { Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); onLogout(); };
+  const handleLogout = () => { const keep = ["kk_course_colors","kk_colorMap"]; const saved = Object.fromEntries(keep.map(k => [k, localStorage.getItem(k)]).filter(([,v]) => v)); Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); Object.entries(saved).forEach(([k,v]) => localStorage.setItem(k,v)); onLogout(); };
 
   const navigateToForum = (courseTag, profTag) => {
     setForumCourseTag(courseTag || "");
@@ -1086,6 +1087,7 @@ export default function Dashboard({ onLogout }) {
   };
 
   useEffect(() => { fetchSemesters(); }, []);
+  useEffect(() => { const h = () => setCourseColorsVer(v => v + 1); window.addEventListener("kk_course_colors_changed", h); return () => window.removeEventListener("kk_course_colors_changed", h); }, []);
 
   useEffect(() => {
     const t = localStorage.getItem("kk_token");
@@ -1244,7 +1246,7 @@ export default function Dashboard({ onLogout }) {
 
                 const semCourses = (apiSemesters.find(s=>s.semesterName===semester)?.courses||[]).filter(c=>c.section);
                 const mainCourses = semCourses.filter(c => !c.componenttype);
-                const savedCourseColors = (() => { try { return JSON.parse(localStorage.getItem("kk_course_colors") || "{}"); } catch { return {}; } })();
+                const savedCourseColors = (() => { void courseColorsVer; try { return JSON.parse(localStorage.getItem("kk_course_colors") || "{}"); } catch { return {}; } })();
                 const SCHED_FALLBACK = ["var(--sched1)","var(--sched2)","var(--sched3)","var(--sched4)","var(--sched5)","var(--sched6)","var(--sched7)"];
                 const courseColorMap = {};
                 mainCourses.forEach((c, ci) => { courseColorMap[c.courseCode] = savedCourseColors[c.courseCode] || SCHED_FALLBACK[ci % 7]; });
@@ -2068,7 +2070,7 @@ export default function Dashboard({ onLogout }) {
                   onNotificationsChanged={loadNotifications}
               />
           )}
-          {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} />}
+          {activePage === "reviews" && <Reviews initialCourse={courseDetailsTarget} onNavigateToForum={navigateToForum} />}
           {activePage === "forum" && <Forum initialCourseTag={forumCourseTag} initialProfTag={forumProfTag} />}
           {activePage === "planner" && <StudyPlanner enrolledSections={enrolledSections} semester={semester} onNavigate={setActivePage} />}
           {activePage === "groups" && <StudyGroupFinder courses={[...new Map(semCourseList.map(c => [c.name, { id: c.name, name: c.name }])).values()]} />}

@@ -79,7 +79,7 @@ export default function Settings({ onLogout }) {
         headers: { Authorization: `Bearer ${token}` },
       });
     } catch {}
-    Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k));
+    const keep = ["kk_course_colors","kk_colorMap"]; const saved = Object.fromEntries(keep.map(k => [k, localStorage.getItem(k)]).filter(([,v]) => v)); Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); Object.entries(saved).forEach(([k,v]) => localStorage.setItem(k,v));
     onLogout();
   };
 
@@ -120,7 +120,7 @@ export default function Settings({ onLogout }) {
       const token = localStorage.getItem("kk_token");
       const res = await fetch(`${API}/api/profile`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
-        Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k));
+        const keep = ["kk_course_colors","kk_colorMap"]; const saved = Object.fromEntries(keep.map(k => [k, localStorage.getItem(k)]).filter(([,v]) => v)); Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); Object.entries(saved).forEach(([k,v]) => localStorage.setItem(k,v));
         onLogout();
       } else {
         const data = await res.json().catch(() => ({}));

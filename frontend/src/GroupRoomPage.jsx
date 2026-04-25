@@ -818,6 +818,7 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
   const [renameValue, setRenameValue] = useState(group.name);
   const [renameLoading, setRenameLoading] = useState(false);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null); // { message, onConfirm }
     
   const loadSessions = async () => {
     try {
@@ -918,12 +919,13 @@ const stopRecording = () => {
   setRecordingTime(0);
 };
 
-  const deleteSession = async (sessionId) => {
-    if (!window.confirm("Delete this session?")) return;
-    try {
-      await apiFetch(`/api/group-sessions/${sessionId}`, { method: "DELETE" });
-      setSessions(prev => prev.filter(s => s.id !== sessionId));
-    } catch (e) { setError(e.message); }
+  const deleteSession = (sessionId) => {
+    setConfirmAction({ message: "Delete this session?", onConfirm: async () => {
+      try {
+        await apiFetch(`/api/group-sessions/${sessionId}`, { method: "DELETE" });
+        setSessions(prev => prev.filter(s => s.id !== sessionId));
+      } catch (e) { setError(e.message); }
+    }});
   };
 
   const openEditSession = (s) => {
@@ -982,16 +984,28 @@ const stopRecording = () => {
     setRenameLoading(false);
   };
 
-  const deleteGroup = async () => {
-    if (!window.confirm("Are you sure you want to delete this group? This cannot be undone.")) return;
-    try {
-      await apiFetch(`/api/study-groups/${group.id}`, { method: "DELETE" });
-      onBack();
-    } catch (e) { setError(e.message); }
+  const deleteGroup = () => {
+    setConfirmAction({ message: "Delete this group? This cannot be undone.", onConfirm: async () => {
+      try {
+        await apiFetch(`/api/study-groups/${group.id}`, { method: "DELETE" });
+        onBack();
+      } catch (e) { setError(e.message); }
+    }});
   };
 
   return (
     <div style={{ padding: "28px 28px 0", maxWidth: "100%", fontFamily: "'DM Sans',sans-serif", height: "calc(100vh - 56px)", display: "flex", flexDirection: "column" }}>
+      {confirmAction && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.35)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <div style={{ background:"var(--surface)", borderRadius:16, padding:"28px 32px", boxShadow:"0 8px 32px rgba(0,0,0,0.18)", maxWidth:360, width:"90%", textAlign:"center" }}>
+            <div style={{ fontSize:15, color:"var(--text)", marginBottom:20, fontWeight:500 }}>{confirmAction.message}</div>
+            <div style={{ display:"flex", gap:10, justifyContent:"center" }}>
+              <button onClick={() => setConfirmAction(null)} style={{ padding:"9px 22px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface2)", color:"var(--text2)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Cancel</button>
+              <button onClick={async () => { const fn = confirmAction.onConfirm; setConfirmAction(null); await fn(); }} style={{ padding:"9px 22px", borderRadius:9, border:"none", background:"var(--error-bg)", color:"var(--error)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
         * { box-sizing: border-box; }
@@ -1556,10 +1570,10 @@ const stopRecording = () => {
               </div>
 
               <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                <button className="kk-pill" onClick={async () => {
+                <button className="kk-pill" onClick={() => setConfirmAction({ message: "Leave this group?", onConfirm: async () => {
                   try { await apiFetch(`/api/study-groups/${group.id}/leave`, { method: "DELETE" }); onBack(); }
                   catch (e) { setError(e.message); }
-                }}
+                }})}
                   style={{ padding:"10px", borderRadius:9, border:"1px solid var(--border)", background:"var(--surface2)", color:"var(--text2)", fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"inherit", transition:"all .15s" }}>
                   Leave Group
                 </button>
