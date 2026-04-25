@@ -27,22 +27,45 @@ public class SyllabusService {
     private final HttpClient http = HttpClient.newHttpClient();
 
     public Map<String, Object> extract(MultipartFile file) throws Exception {
-        String text = extractText(file);
-        if (text.isBlank()) throw new IllegalArgumentException("Could not extract text from file.");
+        byte[] bytes = file.getBytes();
+        String name = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
+        if (!name.endsWith(".pdf") || bytes.length < 4 || bytes[0] != '%' || bytes[1] != 'P' || bytes[2] != 'D' || bytes[3] != 'F')
+            throw new IllegalArgumentException("Please upload a PDF file.");
+        String text = extractText(bytes);
+        if (text.isBlank()) throw new IllegalArgumentException("Could not extract text from the PDF.");
         if (text.length() > 30000) text = text.substring(0, 30000);
+        if (!isSyllabus(text)) throw new IllegalArgumentException("This does not appear to be a course syllabus. Please upload the correct PDF.");
         return callOpenAI(text);
     }
 
-    private String extractText(MultipartFile file) throws Exception {
-        String name = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
-        if (name.endsWith(".pdf")) {
-            try (PDDocument doc = Loader.loadPDF(file.getBytes())) {
-                PDFTextStripper stripper = new PDFTextStripper();
-                stripper.setSortByPosition(true);
-                return stripper.getText(doc);
-            }
+    private String extractText(byte[] bytes) throws Exception {
+        try (PDDocument doc = Loader.loadPDF(bytes)) {
+            PDFTextStripper stripper = new PDFTextStripper();
+            stripper.setSortByPosition(true);
+            return stripper.getText(doc);
         }
-        return new String(file.getBytes(), StandardCharsets.UTF_8);
+    }
+
+    private boolean isSyllabus(String text) throws Exception {
+        String sample = text.length() > 3000 ? text.substring(0, 3000) : text;
+        String body = mapper.writeValueAsString(Map.of(
+            "model", "gpt-4o-mini",
+            "max_tokens", 5,
+            "messages", List.of(
+                Map.of("role", "system", "content", "Answer only YES or NO."),
+                Map.of("role", "user", "content", "Is the following document a course syllabus (containing course info, assessments, grading policy, or schedule)? Answer YES or NO only.\n\n" + sample)
+            )
+        ));
+        HttpRequest req = HttpRequest.newBuilder()
+            .uri(URI.create("https://api.openai.com/v1/chat/completions"))
+            .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer " + apiKey)
+            .POST(HttpRequest.BodyPublishers.ofString(body))
+            .build();
+        HttpResponse<String> res = http.send(req, HttpResponse.BodyHandlers.ofString());
+        JsonNode root = mapper.readTree(res.body());
+        String answer = root.path("choices").get(0).path("message").path("content").asText().trim().toUpperCase();
+        return answer.startsWith("YES");
     }
 
     private Map<String, Object> callOpenAI(String syllabusText) throws Exception {

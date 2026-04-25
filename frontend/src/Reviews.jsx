@@ -1041,19 +1041,21 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
       {selected && (
         <>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, marginBottom:18 }}>
-            <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}> {selected}</div>
-            {onNavigateToForum && (
-              <button
-                onClick={() => onNavigateToForum("", selected)}
-                style={{
-                  padding:"7px 16px", background:"var(--accent2)", color:"white",
-                  border:"none", borderRadius:10, fontSize:12,
-                  fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
-                }}
-              >
-                Discuss this Professor
-              </button>
-            )}
+            <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+              <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>{selected}</div>
+              {onNavigateToForum && (
+                <button
+                  onClick={() => onNavigateToForum("", selected)}
+                  style={{
+                    padding:"7px 16px", background:"var(--accent2)", color:"white",
+                    border:"none", borderRadius:10, fontSize:12,
+                    fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+                  }}
+                >
+                  Discuss this Professor
+                </button>
+              )}
+            </div>
             <div style={{ display:"flex", gap:8 }}>
               <div style={{ display:"flex", gap:4, background:"var(--surface2)", padding:4, borderRadius:10 }}>
                 {[{id:"top",label:"Top"},{id:"new",label:"New"}].map(s => (

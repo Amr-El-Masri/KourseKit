@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { PartyPopper, Mail } from "lucide-react";
 import TranscriptModal from "./TranscriptModal";
+import SyllabusModal from "./SyllabusModal";
 import StudentCourses from "./StudentCourses";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
@@ -102,6 +103,9 @@ export default function Register({ onGoToLogin, postVerifyToken }) {
   const [semSaving,     setSemSaving]     = useState(false);
   const [semError,      setSemError]      = useState("");
   const [showTranscript, setShowTranscript] = useState(false);
+  const [syllabusStep, setSyllabusStep] = useState(false);
+  const [syllabusForCourse, setSyllabusForCourse] = useState(null);
+  const [uploadedSyllabi, setUploadedSyllabi] = useState({});
 
   const [loading,      setLoading]      = useState(false);
   const [passfocused,  setpassfocused]  = useState(false);
@@ -173,7 +177,9 @@ export default function Register({ onGoToLogin, postVerifyToken }) {
       });
     } catch {}
     finally { setSemSaving(false); }
-    setSuccess(true);
+    const hasCourses = semCourses.some(c => c.name.trim());
+    if (hasCourses) setSyllabusStep(true);
+    else setSuccess(true);
   };
 
   return (
@@ -193,7 +199,7 @@ export default function Register({ onGoToLogin, postVerifyToken }) {
         <div style={s.brandTagline}>Your AUB academic life,<br />organized.</div>
 
         <div style={s.featureList}>
-          {["Grade Calculator", "Task Manager", "Study Planner", "Reviews"].map(f => (
+          {["Grade Calculator", "Task Manager", "Study Planner", "Reviews", "Discussion Forum", "Study Groups"].map(f => (
             <div key={f} style={s.featurePill}>{f}</div>
           ))}
         </div>
@@ -242,6 +248,42 @@ export default function Register({ onGoToLogin, postVerifyToken }) {
               <button onClick={onGoToLogin}
                 style={{ width: "100%", background: "none", border: "none", color: "var(--text2)", fontSize: 13, cursor: "pointer", padding: "6px 0" }}>
                 Go to Login
+              </button>
+            </div>
+          ) : syllabusStep ? (
+            <div>
+              {syllabusForCourse && (
+                <SyllabusModal
+                  courseName={syllabusForCourse}
+                  onClose={() => setSyllabusForCourse(null)}
+                  onApply={() => { setUploadedSyllabi(p => ({ ...p, [syllabusForCourse]: true })); setSyllabusForCourse(null); }}
+                />
+              )}
+              <h2 style={s.title}>Upload your syllabi</h2>
+              <p style={{ fontSize:13, color:"var(--text2)", marginBottom:20, lineHeight:1.6 }}>
+                Upload a syllabus for each course to auto-import deadlines and grading info — or skip and add manually later.
+              </p>
+              <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
+                {semCourses.filter(c => c.name.trim()).map(c => (
+                  <div key={c.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", background:"var(--surface2)", borderRadius:12, border:"1px solid var(--border)" }}>
+                    <span style={{ fontSize:14, fontWeight:600, color:"var(--text)" }}>{c.name}</span>
+                    {uploadedSyllabi[c.name] ? (
+                      <span style={{ fontSize:12, color:"var(--accent2)", fontWeight:600 }}>✓ Uploaded</span>
+                    ) : (
+                      <button onClick={() => setSyllabusForCourse(c.name)} style={{ padding:"6px 14px", background:"color-mix(in srgb, var(--primary) 12%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 25%, transparent)", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
+                        Upload PDF
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button className="reg-btn" onClick={() => setSuccess(true)}
+                style={{ ...s.btn, marginBottom:8 }}>
+                {Object.keys(uploadedSyllabi).length > 0 ? "Continue to Dashboard" : "I'll add manually later"}
+              </button>
+              <button onClick={() => setSuccess(true)}
+                style={{ width:"100%", background:"none", border:"none", color:"var(--text2)", fontSize:13, cursor:"pointer", padding:"6px 0" }}>
+                Skip for now
               </button>
             </div>
           ) : semStep ? (

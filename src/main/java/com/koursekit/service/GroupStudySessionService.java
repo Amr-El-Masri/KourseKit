@@ -207,6 +207,12 @@ public class GroupStudySessionService {
         if (!memberRepo.existsByStudyGroup_IdAndUser_IdAndRole(session.getStudyGroup().getId(), hostId, StudyGroupMember.Role.HOST))
             throw new IllegalStateException("Only the host(s) can delete sessions");
 
+        String course = session.getStudyGroup().getCourse().getCourseCode();
+        String title  = "Group Study Session: " + session.getStudyGroup().getName();
+        List<Long> memberIds = memberRepo.findByStudyGroup_Id(session.getStudyGroup().getId())
+            .stream().map(m -> m.getUser().getId()).toList();
+        taskRepository.deleteByCourseAndTitleAndUserIdIn(course, title, memberIds);
+
         sessionRepo.deleteById(sessionId);
     }
 }
