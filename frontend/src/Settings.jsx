@@ -79,7 +79,7 @@ export default function Settings({ onLogout }) {
         headers: { Authorization: `Bearer ${token}` },
       });
     } catch {}
-    const keepKeys = [...["kk_course_colors","kk_colorMap"], ...Object.keys(localStorage).filter(k => k.startsWith("kk_schedule_onboarded_"))]; const saved = Object.fromEntries(keepKeys.map(k => [k, localStorage.getItem(k)]).filter(([,v]) => v)); Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); Object.entries(saved).forEach(([k,v]) => localStorage.setItem(k,v));
+    const keepKeys = [...["kk_course_colors","kk_colorMap","kk_course_data","kk_course_syllabus","kk_course_office_hours"], ...Object.keys(localStorage).filter(k => k.startsWith("kk_schedule_onboarded_"))]; const saved = Object.fromEntries(keepKeys.map(k => [k, localStorage.getItem(k)]).filter(([,v]) => v)); Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); Object.entries(saved).forEach(([k,v]) => localStorage.setItem(k,v));
     onLogout();
   };
 
@@ -120,7 +120,7 @@ export default function Settings({ onLogout }) {
       const token = localStorage.getItem("kk_token");
       const res = await fetch(`${API}/api/profile`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
-        const keepKeys = [...["kk_course_colors","kk_colorMap"], ...Object.keys(localStorage).filter(k => k.startsWith("kk_schedule_onboarded_"))]; const saved = Object.fromEntries(keepKeys.map(k => [k, localStorage.getItem(k)]).filter(([,v]) => v)); Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); Object.entries(saved).forEach(([k,v]) => localStorage.setItem(k,v));
+        const keepKeys = [...["kk_course_colors","kk_colorMap","kk_course_data","kk_course_syllabus","kk_course_office_hours"], ...Object.keys(localStorage).filter(k => k.startsWith("kk_schedule_onboarded_"))]; const saved = Object.fromEntries(keepKeys.map(k => [k, localStorage.getItem(k)]).filter(([,v]) => v)); Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); Object.entries(saved).forEach(([k,v]) => localStorage.setItem(k,v));
         onLogout();
       } else {
         const data = await res.json().catch(() => ({}));
