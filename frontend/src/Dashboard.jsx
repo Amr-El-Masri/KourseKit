@@ -2091,8 +2091,8 @@ export default function Dashboard({ onLogout }) {
         </main>
 
         {showOnboarding && (
-          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:"32px 24px" }}>
-            <div style={{ background:"var(--surface)", borderRadius:24, padding:"28px 32px", maxWidth:880, width:"100%", boxShadow:"0 8px 40px rgba(0,0,0,0.18)" }}>
+          <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:"32px 24px", overflowY:"auto" }}>
+            <div style={{ background:"var(--surface)", borderRadius:24, padding:"28px 32px", maxWidth:880, width:"100%", boxShadow:"0 8px 40px rgba(0,0,0,0.18)", maxHeight:"calc(100vh - 64px)", overflowY:"auto", margin:"auto" }}>
               <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:22, color:"var(--primary)", marginBottom:6 }}>Mark your availability</div>
               <div style={{ fontSize:13, color:"var(--text2)", marginBottom:16, lineHeight:1.5 }}>
                 Drag on the grid to mark when you're free to study. The Study Planner uses this to schedule your sessions.

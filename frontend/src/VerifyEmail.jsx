@@ -66,6 +66,10 @@ export default function VerifyEmail({ token, onVerified, onGoToLogin }) {
 
       <div style={s.rightPanel}>
         <div style={{ ...s.card, textAlign: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 28 }}>
+            <img src="/logo.png" alt="KourseKit" style={{ width: 36, height: 36, objectFit: "contain" }} />
+            <span style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 22, color: "var(--primary)" }}>KourseKit</span>
+          </div>
           <div style={{ marginBottom: 16 }}>{icon}</div>
           <h2 style={s.title}>{title}</h2>
           <p style={s.msg}>{message}</p>
