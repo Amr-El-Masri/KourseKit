@@ -1,67 +1,59 @@
 package com.koursekit.config;
 
-import java.util.Properties;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.JavaMailSenderImpl;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
 
-
-@Configuration
 @Component
 public class EmailConfig {
-    @Value("${email.username}")
-    private String user;
-    @Value("${email.password}")
-    private String pass;
+
+    @Value("${RESEND_API_KEY}")
+    private String resendApiKey;
+
+    @Value("${RESEND_FROM_EMAIL:KourseKit <onboarding@resend.dev>}")
+    private String fromEmail;
+
     @Value("${frontend.url:http://localhost:3000}")
     private String frontendUrl;
 
-    @Autowired
-    @Lazy
-    private JavaMailSender mailSender;
+    private static final HttpClient HTTP = HttpClient.newHttpClient();
 
-    @Bean
-    public JavaMailSender javaMailSender() {
-        JavaMailSenderImpl sentby = new JavaMailSenderImpl();
-        
-        sentby.setHost("smtp.gmail.com");
-        sentby.setPort(587);
-        sentby.setUsername(user); 
-        sentby.setPassword(pass); 
-        
-        Properties props = sentby.getJavaMailProperties();
-        props.put("mail.transport.protocol", "smtp");
-        props.put("mail.smtp.auth", "true");
-        props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.debug", "true"); 
-        return sentby;
-    }
-    
     private void sendHtmlEmail(String toEmail, String subject, String htmlContent) {
         try {
-            var message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(user, "KourseKit");
-            helper.setTo(toEmail);
-            helper.setReplyTo(user);
-            helper.setSubject(subject);
-            helper.setText(htmlContent, true);
-            mailSender.send(message);
+            String escaped = htmlContent
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "");
+
+            String body = "{\"from\":\"" + fromEmail + "\","
+                + "\"to\":[\"" + toEmail + "\"],"
+                + "\"subject\":\"" + subject + "\","
+                + "\"html\":\"" + escaped + "\"}";
+
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("https://api.resend.com/emails"))
+                .header("Authorization", "Bearer " + resendApiKey)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+            HttpResponse<String> response = HTTP.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 300) {
+                System.err.println("Resend error " + response.statusCode() + ": " + response.body());
+            }
         } catch (Exception e) {
             System.err.println("Failed to send email to " + toEmail + ": " + e.getMessage());
         }
     }
-    
+
     public void verificationmail(String email, String token) {
         String verificationLink = frontendUrl + "?verify_token=" + token;
-        
+
         String html = """
             <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #e8e8f0; border-radius: 12px; overflow: hidden; border: 1px solid #c8c8d8;">
               <div style="background: #1f3060; padding: 24px 28px;">
@@ -81,7 +73,7 @@ public class EmailConfig {
               </div>
             </div>
             """.formatted(verificationLink, verificationLink);
-        
+
         sendHtmlEmail(email, "KourseKit - Verify Your Email", html);
     }
 
@@ -127,7 +119,7 @@ public class EmailConfig {
               </div>
             </div>
             """;
-        
+
         sendHtmlEmail(email, "KourseKit - Your Account Has Been Deactivated", html);
     }
 
@@ -144,19 +136,19 @@ public class EmailConfig {
                   Your KourseKit account has been reactivated by an administrator.
                 </p>
                 <div style="text-align: center; margin: 28px 0;">
-                  <a href="http://localhost:3000" style="background: #1f3060; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Log in now!</a>
+                  <a href="%s" style="background: #1f3060; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">Log in now!</a>
                 </div>
                 <p style="font-size: 13px; color: #888; margin-top: 24px; margin-bottom: 0;">Welcome back! — The KourseKit Team</p>
               </div>
             </div>
-            """;
-        
+            """.formatted(frontendUrl);
+
         sendHtmlEmail(email, "KourseKit - Your Account Has Been Reactivated", html);
     }
 
     public void resetpasswordmail(String email, String token) {
         String resetLink = frontendUrl + "?reset_token=" + token;
-        
+
         String html = """
             <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #e8e8f0; border-radius: 12px; overflow: hidden; border: 1px solid #c8c8d8;">
               <div style="background: #1f3060; padding: 24px 28px;">
@@ -178,7 +170,7 @@ public class EmailConfig {
               </div>
             </div>
             """.formatted(resetLink, resetLink);
-        
+
         sendHtmlEmail(email, "KourseKit - Reset Your Password", html);
     }
 }
