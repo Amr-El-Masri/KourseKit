@@ -26,11 +26,13 @@ function hasValidToken() {
   }
 }
 
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
+
 async function tryRefreshToken() {
   const token = localStorage.getItem("kk_token");
   if (!token) return;
   try {
-    const res = await fetch("http://localhost:8080/api/auth/refresh", {
+    const res = await fetch(`${API}/api/auth/refresh`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
     });

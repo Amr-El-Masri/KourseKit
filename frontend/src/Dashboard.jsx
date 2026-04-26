@@ -15,7 +15,7 @@ import Forum from "./Forum";
 import StudyGroupFinder from "./StudyGroupFinder";
 import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Settings as SettingsIcon, MessageSquare, Users } from 'lucide-react';
 
-const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "${API}";
 
 const AVATAR_ICONS = [
   { id:"Banana", icon: Banana },
@@ -587,7 +587,7 @@ export default function Dashboard({ onLogout }) {
     if (!email) return;
     if (localStorage.getItem(`kk_schedule_onboarded_${email}`)) return;
     // Check if they already have a default schedule — if so, silently mark as onboarded
-    fetch(`http://localhost:8080/api/profile/default-schedule`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API}/api/profile/default-schedule`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : [])
       .then(slots => {
         localStorage.setItem(`kk_schedule_onboarded_${email}`, "true");
@@ -613,7 +613,7 @@ export default function Dashboard({ onLogout }) {
     if (!token) return;
     try {
       const userId = JSON.parse(atob(token.split(".")[1])).sub;
-      const apiFetch = (path, opts = {}) => fetch(`http://localhost:8080${path}`, {
+      const apiFetch = (path, opts = {}) => fetch(`${API}${path}`, {
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         ...opts,
       }).then(r => r.json());
@@ -890,7 +890,7 @@ export default function Dashboard({ onLogout }) {
     const token = localStorage.getItem("kk_token");
     const userId = token ? JSON.parse(atob(token.split(".")[1])).sub : null;
     if (!userId) return;
-    fetch(`http://localhost:8080/api/tasks/list-all`, {
+    fetch(`${API}/api/tasks/list-all`, {
       headers: { "Authorization": `Bearer ${token}` }
     })
         .then(r => r.json())
@@ -981,10 +981,10 @@ export default function Dashboard({ onLogout }) {
     if (!userId) return;
     const weekStart = getWeekStartForOffset(offset);
     try { const s = localStorage.getItem("kk_colorMap"); if (s) setSchedColorMap(JSON.parse(s)); } catch {}
-    fetch(`http://localhost:8080/api/study-plan/weekly?weekStart=${weekStart}`, {
+    fetch(`${API}/api/study-plan/weekly?weekStart=${weekStart}`, {
       headers: { "Authorization": `Bearer ${token}` }
     }).then(r => r.json()).then(data => { if (data) setStudyBlocks(data); }).catch(() => {});
-    fetch(`http://localhost:8080/api/study-plan/slots?weekStart=${weekStart}`, {
+    fetch(`${API}/api/study-plan/slots?weekStart=${weekStart}`, {
       headers: { "Authorization": `Bearer ${token}` }
     }).then(r => r.json()).then(data => {
       if (Array.isArray(data)) {
@@ -993,7 +993,7 @@ export default function Dashboard({ onLogout }) {
         setStudySlots(map);
       }
     }).catch(() => {});
-    fetch(`http://localhost:8080/api/study-plan/entries?weekStart=${weekStart}`, {
+    fetch(`${API}/api/study-plan/entries?weekStart=${weekStart}`, {
       headers: { "Authorization": `Bearer ${token}` }
     }).then(r => r.json()).then(data => {
       if (Array.isArray(data)) setStudyEntries(data);
@@ -2265,7 +2265,7 @@ export default function Dashboard({ onLogout }) {
                       const next = { ...all, [name]: payload };
                       localStorage.setItem("kk_course_syllabus", JSON.stringify(next));
                       setCourseSyllabi(next);
-                      fetch(`http://localhost:8080/api/user-syllabi/${encodeURIComponent(name)}`, {
+                      fetch(`${API}/api/user-syllabi/${encodeURIComponent(name)}`, {
                         method: "PUT",
                         headers: authHeaders(),
                         body: JSON.stringify(payload),

@@ -6,7 +6,7 @@ import { StudentProfileView } from "./StudentDirectoryPanel";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 
-const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "${API}";
 
 function getToken() { return localStorage.getItem("kk_token"); }
 function getUserId() {
@@ -61,10 +61,10 @@ function MemberProfilePanel({ member, onClose }) {
    useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetch(`http://localhost:8080/api/students/search?query=${encodeURIComponent(member.firstName)}`, {
+      fetch(`${API}/api/students/search?query=${encodeURIComponent(member.firstName)}`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()),
-      fetch(`http://localhost:8080/api/students/${member.userId}/is-following`, {
+      fetch(`${API}/api/students/${member.userId}/is-following`, {
         headers: { "Authorization": `Bearer ${token}` }
       }).then(r => r.json()).catch(() => false)
     ])

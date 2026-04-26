@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 
 const ThemeContext = createContext();
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState(() => {
@@ -15,7 +16,7 @@ export function ThemeProvider({ children }) {
     if (!token) return;
 
     try {
-      const response = await fetch("http://localhost:8080/api/profile", {
+      const response = await fetch("${API}/api/profile", {
         headers: { "Authorization": `Bearer ${token}` }
       });
       
@@ -40,7 +41,7 @@ export function ThemeProvider({ children }) {
 
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:8080/api/profile/theme", {
+      const response = await fetch("${API}/api/profile/theme", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

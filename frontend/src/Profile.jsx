@@ -6,7 +6,7 @@ import TranscriptModal from "./TranscriptModal";
 import SyllabusModal from "./SyllabusModal";
 import StudentCourses from "./StudentCourses";
 
-const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
+const API = process.env.REACT_APP_API_URL || "${API}";
 
 function getTokenRole() {
   try {
@@ -1834,7 +1834,7 @@ const refetchSemesters = () =>
                 allSyllabi[code] = updated;
                 localStorage.setItem("kk_course_syllabus", JSON.stringify(allSyllabi));
                 // Persist to backend
-                fetch(`http://localhost:8080/api/user-syllabi/${encodeURIComponent(code)}`, {
+                fetch(`${API}/api/user-syllabi/${encodeURIComponent(code)}`, {
                   method: "PUT",
                   headers: { "Content-Type": "application/json", "Authorization": `Bearer ${t}` },
                   body: JSON.stringify(updated),
