@@ -49,6 +49,27 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Query("DELETE FROM Notification n WHERE n.createdAt < :cutoff AND n.urgency <> 'overdue'")
     void deleteOlderThanAndNotOverdue(@Param("cutoff") LocalDateTime cutoff);
 
+    /**
+     * Removes every notification whose urgency no longer matches the task's current
+     * deadline, and any notification for a completed task.
+     * Call this before creating new notifications so stale ones from changed deadlines
+     * are always purged regardless of which time window the task moved to or from.
+     */
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM Notification n WHERE " +
+           "n.task.completed = true OR " +
+           "(n.urgency = 'overdue'   AND n.task.deadline > :now) OR " +
+           "(n.urgency = 'today'     AND (n.task.deadline <= :now    OR n.task.deadline > :sixH)) OR " +
+           "(n.urgency = 'tomorrow'  AND (n.task.deadline <= :sixH   OR n.task.deadline > :fortyEightH)) OR " +
+           "(n.urgency = '3day'      AND (n.task.deadline <= :fortyEightH OR n.task.deadline > :seventyEightH))")
+    void deleteStaleNotifications(
+        @Param("now")          LocalDateTime now,
+        @Param("sixH")         LocalDateTime sixH,
+        @Param("fortyEightH")  LocalDateTime fortyEightH,
+        @Param("seventyEightH") LocalDateTime seventyEightH
+    );
+
     @Modifying
     @Transactional
     @Query("DELETE FROM Notification n WHERE n.task.user.id = :userId")

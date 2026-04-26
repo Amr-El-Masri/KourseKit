@@ -31,6 +31,15 @@ public class NotificationScheduler {
     public void createDeadlineNotifications() {
         LocalDateTime now = LocalDateTime.now();
 
+        // Purge notifications that no longer match their task's current deadline
+        // (covers: deadline changed, task completed, deadline moved outside all windows)
+        notificationRepository.deleteStaleNotifications(
+            now,
+            now.plusHours(6),
+            now.plusHours(48),
+            now.plusHours(78)
+        );
+
         // Overdue: deadline has already passed, task not completed
         List<Task> overdueTasks = taskService.findByDeadlineBetween(now.minusYears(1), now);
         for (Task task : overdueTasks) {
