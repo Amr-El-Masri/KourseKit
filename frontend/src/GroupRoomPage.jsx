@@ -249,14 +249,15 @@ function DecryptedMedia({ message, isOwn, onSrcReady }) {
     let objectUrl;
     const load = async () => {
       try {
+        const resolveUrl = url => url?.startsWith("http") ? url : `${API}${url}`;
         if (message.rawAes) {
-          const res = await fetch(`${API}${message.attachmentUrl}`);
+          const res = await fetch(resolveUrl(message.attachmentUrl));
           const buf = await res.arrayBuffer();
           const decrypted = await decryptFile(buf, message.rawAes);
           objectUrl = URL.createObjectURL(new Blob([decrypted], { type: getMimeType(message) }));
           if (!cancelled) { setSrc(objectUrl); onSrcReady?.(objectUrl); }
         } else {
-          const fallback = `${API}${message.attachmentUrl}`;
+          const fallback = resolveUrl(message.attachmentUrl);
           if (!cancelled) { setSrc(fallback); onSrcReady?.(fallback); }
         }
       } catch {}
@@ -707,6 +708,11 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
           attachmentType = attachment?.fileType ?? null;
           attachmentName = file.name;
           attachmentSize = file.size;
+        } else {
+          const err = await res.json().catch(() => ({}));
+          setError(err.message || "Could not upload file.");
+          setUploading(false);
+          return;
         }
         pendingFileRef.current = null;
         setAttachment(null);
