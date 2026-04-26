@@ -206,7 +206,7 @@ function PomodoroTimer() {
   );
 }
 
-function CourseGradeSummaryWidget({ apiSemesters, selectedSemester, footer }) {
+function CourseGradeSummaryWidget({ apiSemesters, selectedSemester, footer, onUploadTranscript }) {
   const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
 
   const semObj = apiSemesters.find(s => s.semesterName === selectedSemester);
@@ -291,7 +291,7 @@ function CourseGradeSummaryWidget({ apiSemesters, selectedSemester, footer }) {
         {courses.length === 0 ? (
             <div style={{ textAlign:"center", padding:"24px 0" }}>
               <div style={{ fontSize:13, color:"var(--text3)", marginBottom:10 }}>No grade data for this semester.</div>
-              <span style={{ fontSize:12, fontWeight:600, color:"var(--accent)", background:"none", border:"1px solid var(--border)", borderRadius:8, padding:"5px 12px", cursor:"pointer", fontFamily:"inherit" }} onClick={() => setShowTranscript(true)}>Upload transcript to fill in →</span>
+              <span style={{ fontSize:12, fontWeight:600, color:"var(--accent)", background:"none", border:"1px solid var(--border)", borderRadius:8, padding:"5px 12px", cursor:"pointer", fontFamily:"inherit" }} onClick={onUploadTranscript}>Upload transcript to fill in →</span>
             </div>
         ) : (
             <>
@@ -389,7 +389,7 @@ function CourseGradeSummaryWidget({ apiSemesters, selectedSemester, footer }) {
   );
 }
 
-function GPASummaryWidget({ apiSemesters, selectedSemester, onNavigate, footer }) {
+function GPASummaryWidget({ apiSemesters, selectedSemester, onNavigate, footer, onUploadTranscript }) {
   const gradePoints = {"A+":4.3,"A":4.0,"A-":3.7,"B+":3.3,"B":3.0,"B-":2.7,"C+":2.3,"C":2.0,"C-":1.7,"D+":1.3,"D":1.0,"F":0.0};
 
   const gpaColor = g => {
@@ -457,7 +457,7 @@ function GPASummaryWidget({ apiSemesters, selectedSemester, onNavigate, footer }
               <div style={{ fontSize:13, color:"var(--text3)", marginBottom: cumGPA ? 0 : 10 }}>
                 {cumGPA ? "Select a semester to see breakdown." : "No grade history yet."}
               </div>
-              {!cumGPA && <span style={{ fontSize:12, fontWeight:600, color:"var(--accent)", border:"1px solid var(--border)", borderRadius:8, padding:"5px 12px", cursor:"pointer" }} onClick={() => setShowTranscript(true)}>Upload transcript to get started →</span>}
+              {!cumGPA && <span style={{ fontSize:12, fontWeight:600, color:"var(--accent)", border:"1px solid var(--border)", borderRadius:8, padding:"5px 12px", cursor:"pointer" }} onClick={onUploadTranscript}>Upload transcript to get started →</span>}
             </div>
         ) : !allGraded ? (
             <>
@@ -1422,8 +1422,8 @@ export default function Dashboard({ onLogout }) {
                 {gradeTabs.map(t=><button key={t.id} className="kk-tab" data-active={gradesTab===t.id} onClick={()=>setGradesTab(t.id)} style={{padding:"3px 10px",borderRadius:7,border:"none",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"inherit",background:gradesTab===t.id?"var(--surface)":"transparent",color:gradesTab===t.id?"var(--primary)":"var(--text2)",boxShadow:gradesTab===t.id?"0 1px 4px rgba(49,72,122,0.08)":"none",transition:"all .15s"}}>{t.label}</button>)}
               </div>
             </div>
-            {gradesTab==="grades" && <CourseGradeSummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} footer={null}/>}
-            {gradesTab==="gpa"    && <GPASummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} onNavigate={setActivePage} footer={null}/>}
+            {gradesTab==="grades" && <CourseGradeSummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} footer={null} onUploadTranscript={() => setShowTranscript(true)}/>}
+            {gradesTab==="gpa"    && <GPASummaryWidget apiSemesters={apiSemesters} selectedSemester={semester} onNavigate={setActivePage} footer={null} onUploadTranscript={() => setShowTranscript(true)}/>}
             {gradesTab==="goals"  && (
               semCourses.length===0 ? (
                 <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"28px 0"}}>Select a semester with courses to set goals.</div>
