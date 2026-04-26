@@ -720,7 +720,9 @@ function CropCanvas({ cropModal, setCropModal }) {
   useEffect(() => {
     setImgLoaded(false);
     const img = new Image();
+    if (!cropModal.src.startsWith("data:")) img.crossOrigin = "anonymous";
     img.onload = () => { imgRef.current = img; setImgLoaded(true); };
+    img.onerror = () => { setImgLoaded(false); };
     img.src = cropModal.src;
   }, [cropModal.src]);
 
@@ -793,7 +795,7 @@ function CropCanvas({ cropModal, setCropModal }) {
 
   return (
     <div ref={containerRef} onMouseDown={onMouseDown}
-      style={{ width: CANVAS, height: CANVAS, borderRadius: "50%", margin: "0 auto 20px", border: "2px solid var(--border)", cursor: "grab", userSelect: "none", touchAction: "none", overflow: "hidden" }}>
+      style={{ width: CANVAS, height: CANVAS, borderRadius: "50%", margin: "0 auto 20px", border: "2px solid var(--border)", cursor: "grab", userSelect: "none", touchAction: "none", overflow: "hidden", background: "var(--surface2)" }}>
       <canvas ref={canvasRef} width={CANVAS} height={CANVAS} style={{ display: "block", borderRadius: "50%" }} />
     </div>
   );
@@ -1244,13 +1246,15 @@ const refetchSemesters = () =>
     const oy = cropModal.offsetY;
     setCropModal(null);
     const img = new Image();
-    img.crossOrigin = "anonymous";
+    if (!src.startsWith("data:")) img.crossOrigin = "anonymous";
     img.onload = () => {
       const OUT = 200;
       const PREVIEW = 220;
       const canvas = document.createElement("canvas");
       canvas.width = OUT; canvas.height = OUT;
       const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, OUT, OUT);
       ctx.beginPath();
       ctx.arc(OUT / 2, OUT / 2, OUT / 2, 0, Math.PI * 2);
       ctx.clip();
