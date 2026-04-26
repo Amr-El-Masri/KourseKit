@@ -1016,16 +1016,16 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
       </div>
 
       {/* Context header when deep-linked */}
-        {initialCourseTag && (
+        {initialCourseTag && category === "COURSE" && (
           <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 12 }}>
             Showing posts tagged with <strong style={{ color: "var(--primary)" }}>{initialCourseTag}</strong>
-            <button onClick={() => loadPosts("ALL")}
+            <button onClick={() => setCategory("ALL")}
               style={{ marginLeft: 10, fontSize: 12, color: "var(--text3)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
               View all posts
             </button>
           </div>
         )}
-        {initialProfTag && (
+        {initialProfTag && category === "PROFESSOR" && (
           <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 12 }}>
             Showing posts tagged with <strong style={{ color: "var(--accent2)" }}>{initialProfTag}</strong>
           </div>
