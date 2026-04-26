@@ -102,7 +102,7 @@ public class StudyGroupService {
         }
 
         public void joinPrivateGroup(String inviteCode, Long userID) {
-             StudyGroup g = studyGroupRepo.findByInviteCode(inviteCode)
+             StudyGroup g = studyGroupRepo.findByInviteCodeIgnoreCase(inviteCode.trim())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid invite code."));
 
             if (studyGroupMemberRepo.existsByStudyGroup_IdAndUser_Id(g.getId(), userID)) {
@@ -223,6 +223,8 @@ public class StudyGroupService {
         StudyGroupMember newHostMember = studyGroupMemberRepo.findByStudyGroup_IdAndUser_Id(groupId, newHostId).get(0);
         newHostMember.setRole(StudyGroupMember.Role.HOST);
         studyGroupMemberRepo.save(newHostMember);
+        group.setHost(newHost);
+        studyGroupRepo.save(group);
     }
 
     @Transactional

@@ -750,7 +750,7 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
     try {
         await apiFetch(`/api/group-messages/reports`, {
         method: "POST",
-        body: JSON.stringify({ messageId, reportedUserId, reason, groupId: group.id }),
+        body: JSON.stringify({ messageId, reportedUserId, reason, studyGroupId: group.id }),
         });
     } catch (e) {
         setError(e.message || "Could not submit report."); }

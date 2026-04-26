@@ -40,7 +40,7 @@ const FILTERS = ["All","Pending","Done","Overdue"];
 const localInputToUTC = iso => iso ? iso.slice(0, 16) : "";
 const utcToLocalInput = iso => {
   if (!iso) return "";
-  const d = new Date(iso + "Z"); // treat backend string as UTC
+  const d = new Date(iso);
   const pad = n => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
