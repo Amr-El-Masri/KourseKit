@@ -6,7 +6,7 @@ import TranscriptModal from "./TranscriptModal";
 import SyllabusModal from "./SyllabusModal";
 import StudentCourses from "./StudentCourses";
 
-const API = process.env.REACT_APP_API_URL || "${API}";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 function getTokenRole() {
   try {

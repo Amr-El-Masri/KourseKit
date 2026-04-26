@@ -584,10 +584,6 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
   // Task 1: init E2EE — load or generate keypair from IndexedDB, upload public key
   useEffect(() => {
     initE2EE(String(currentUserId), apiFetch).then((result) => {
-      if (result.needsRestore) {
-        setRestoreModal({ encryptedPrivateKey: result.encryptedPrivateKey });
-        return;
-      }
       privateKeyRef.current = result.privateKey;
       memberKeysRef.current[String(currentUserId)] = result.publicKey;
       setE2eeReady(true);

@@ -51,7 +51,8 @@ async function importPrivateKey(b64) {
   );
 }
 
-// private key stored
+const autoPassword = (userId) => `kk-auto-${userId}`;
+
 export async function initE2EE(userId, apiFetch) {
   const db = await openDB();
   const PRIV_KEY = `privKeyB64_${userId}`;
@@ -61,16 +62,22 @@ export async function initE2EE(userId, apiFetch) {
   let publicB64  = await idbGet(db, PUB_KEY);
 
   if (!privateB64 || !publicB64) {
-    // check if server has an encrypted backup before generating a new keypair
     try {
       const backup = await apiFetch("/api/keys/private");
       if (backup?.hasKey) {
-        console.log("[E2EE] found encrypted backup on server — need password to restore");
-        return { needsRestore: true, encryptedPrivateKey: backup.encryptedPrivateKey };
+        const restored = await restorePrivateKey(backup.encryptedPrivateKey, autoPassword(userId));
+        const keyData  = await apiFetch("/api/keys/me");
+        if (keyData?.publicKey) {
+          await idbPut(db, PRIV_KEY, restored);
+          await idbPut(db, PUB_KEY,  keyData.publicKey);
+          await apiFetch("/api/keys", { method: "POST", body: JSON.stringify({ publicKey: keyData.publicKey }) });
+          const privateKey = await importPrivateKey(restored);
+          const publicKey  = await importPublicKey(keyData.publicKey);
+          return { privateKey, publicKey };
+        }
       }
     } catch { /* non-critical */ }
 
-    // no backup — generate fresh keypair
     const kp = await crypto.subtle.generateKey(
       { name: "RSA-OAEP", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" },
       true, ["encrypt", "decrypt"]
@@ -80,7 +87,10 @@ export async function initE2EE(userId, apiFetch) {
     await idbPut(db, PRIV_KEY, privateB64);
     await idbPut(db, PUB_KEY,  publicB64);
     await apiFetch("/api/keys", { method: "POST", body: JSON.stringify({ publicKey: publicB64 }) });
-    console.log("[E2EE] generated new keypair & uploaded public key");
+    try {
+      const encryptedB64 = await backupPrivateKey(privateB64, autoPassword(userId));
+      await apiFetch("/api/keys/private", { method: "POST", body: JSON.stringify({ encryptedPrivateKey: encryptedB64 }) });
+    } catch { /* non-critical */ }
     const privateKey = await importPrivateKey(privateB64);
     const publicKey  = await importPublicKey(publicB64);
     return { privateKey, publicKey, isNew: true };
@@ -88,7 +98,13 @@ export async function initE2EE(userId, apiFetch) {
     try {
       await apiFetch("/api/keys", { method: "POST", body: JSON.stringify({ publicKey: publicB64 }) });
     } catch { /* non-critical */ }
-    console.log("[E2EE] loaded existing keypair from indexeddb");
+    try {
+      const backup = await apiFetch("/api/keys/private");
+      if (!backup?.hasKey) {
+        const encryptedB64 = await backupPrivateKey(privateB64, autoPassword(userId));
+        await apiFetch("/api/keys/private", { method: "POST", body: JSON.stringify({ encryptedPrivateKey: encryptedB64 }) });
+      }
+    } catch { /* non-critical */ }
   }
 
   const privateKey = await importPrivateKey(privateB64);

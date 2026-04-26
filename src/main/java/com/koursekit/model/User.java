@@ -55,7 +55,7 @@ public class User {
     private String totalCredits;
     @Column(name = "bio", columnDefinition = "TEXT")
     private String bio;
-    @Column(name = "avatar", columnDefinition = "TEXT")
+    @Column(name = "avatar", columnDefinition = "MEDIUMTEXT")
     private String avatar;
     @Column(name = "double_major", columnDefinition = "TINYINT(1) DEFAULT 0")
     private boolean doubleMajor = false;
