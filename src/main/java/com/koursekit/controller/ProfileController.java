@@ -14,11 +14,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.koursekit.service.FileStorageService;
+
+import java.io.IOException;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.koursekit.config.EmailConfig;
@@ -71,6 +77,7 @@ public class ProfileController {
     @Autowired private GroupStudySessionRepo groupStudySessionRepo;
     @Autowired private GroupReportsRepo groupReportsRepo;
     @Autowired private EmailConfig emailConfig;
+    @Autowired private FileStorageService fileStorageService;
 
     public ProfileController(UserRepo userRepo) { this.userRepo = userRepo; }
 
@@ -78,6 +85,21 @@ public class ProfileController {
     public ResponseEntity<Map<String, Object>> getProfile() {
         User user = getAuthenticatedUser();
         return ResponseEntity.ok(toMap(user));
+    }
+
+    @PostMapping("/avatar")
+    public ResponseEntity<?> uploadAvatar(@RequestParam MultipartFile file) {
+        User user = getAuthenticatedUser();
+        try {
+            String old = user.getAvatar();
+            if (old != null && old.startsWith("http")) fileStorageService.deleteFile(old);
+            String url = fileStorageService.storeFile(file);
+            user.setAvatar(url);
+            userRepo.save(user);
+            return ResponseEntity.ok(Map.of("avatarUrl", url));
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", "Could not upload avatar"));
+        }
     }
 
     @PutMapping

@@ -14,7 +14,7 @@ const STATUS_LABELS = {
 };
 
 function AvatarIcon({ avatarId, size = 38 }) {
-  if (avatarId?.startsWith("data:")) {
+  if (avatarId?.startsWith("data:") || avatarId?.startsWith("http")) {
     return <img src={avatarId} alt="avatar" style={{ width:size, height:size, borderRadius:"50%", objectFit:"cover", flexShrink:0 }} />;
   }
   const found = AVATAR_ICONS.find(a => a.id === avatarId);

@@ -34,7 +34,7 @@ async function apiFetch(path, options = {}) {
 }
 
 function MemberAvatar({ firstName, lastName, avatar, size = 30 }) {
-  if (avatar?.startsWith("data:")) {
+  if (avatar?.startsWith("data:") || avatar?.startsWith("http")) {
     return <img src={avatar} alt="avatar" style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", flexShrink: 0 }} />;
   }
   const initials = `${firstName?.[0] || ""}${lastName?.[0] || ""}`;

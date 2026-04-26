@@ -1244,6 +1244,7 @@ const refetchSemesters = () =>
     const oy = cropModal.offsetY;
     setCropModal(null);
     const img = new Image();
+    img.crossOrigin = "anonymous";
     img.onload = () => {
       const OUT = 200;
       const PREVIEW = 220;
@@ -1258,7 +1259,22 @@ const refetchSemesters = () =>
       const sx = Math.max(0, Math.min(img.width - side, (img.width - side) / 2 - ox * canvasToImg));
       const sy = Math.max(0, Math.min(img.height - side, (img.height - side) / 2 - oy * canvasToImg));
       ctx.drawImage(img, sx, sy, side, side, 0, 0, OUT, OUT);
-      saveAvatar(canvas.toDataURL("image/jpeg", 0.85));
+      canvas.toBlob(async (blob) => {
+        const formData = new FormData();
+        formData.append("file", blob, "avatar.jpg");
+        const token = localStorage.getItem("kk_token");
+        try {
+          const res = await fetch(`${API}/api/profile/avatar`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+          });
+          if (res.ok) {
+            const data = await res.json();
+            saveAvatar(data.avatarUrl);
+          }
+        } catch {}
+      }, "image/jpeg", 0.85);
     };
     img.src = src;
   };
@@ -1362,7 +1378,7 @@ const refetchSemesters = () =>
                 fontFamily:"'Fraunces',serif", boxShadow:"0 4px 12px rgba(49,72,122,0.18)",
                 cursor:"pointer", overflow:"hidden",
               }}>
-                {profile.avatar?.startsWith("data:")
+                {(profile.avatar?.startsWith("data:") || profile.avatar?.startsWith("http"))
                   ? <img src={profile.avatar} alt="avatar" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
                   : (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={32} color="white" /> : initials; })()}
               </div>
@@ -1398,7 +1414,7 @@ const refetchSemesters = () =>
                       <Icon size={18} color="white" />
                     </div>
                   ))}
-                  {profile.avatar?.startsWith("data:") ? (
+                  {(profile.avatar?.startsWith("data:") || profile.avatar?.startsWith("http")) ? (
                     <div style={{ position:"relative" }}>
                       <div
                         onClick={() => setPhotoMenu(o => !o)}

@@ -1865,7 +1865,7 @@ export default function Dashboard({ onLogout }) {
           <div onClick={e => e.stopPropagation()} style={{margin:"0 8px 16px",borderRadius:10,border:"1px solid rgba(255,255,255,0.18)",background:"rgba(255,255,255,0.10)",display:"flex",alignItems:"center",padding:"8px 10px",gap:8,justifyContent:sidebarOpen?"flex-start":"center"}}>
             <div className="nav-btn" onClick={() => setActivePage("profile")} style={{display:"flex",alignItems:"center",justifyContent:sidebarOpen?"flex-start":"center",gap:8,flex:1,cursor:"pointer",userSelect:"none",minWidth:0,borderRadius:8,padding:"2px 4px",background:activePage==="profile"?"rgba(255,255,255,0.12)":"transparent"}}>
               <div style={{width:28,height:28,borderRadius:"50%",background:"#31487A",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,border:activePage==="profile"?"2px solid rgba(255,255,255,0.6)":"2px solid transparent",transition:"border-color .15s",overflow:"hidden"}}>
-                {profile.avatar?.startsWith("data:")
+                {(profile.avatar?.startsWith("data:") || profile.avatar?.startsWith("http"))
                     ? <img src={profile.avatar} alt="avatar" style={{width:"100%",height:"100%",objectFit:"cover"}} />
                     : (() => { const a = AVATAR_ICONS.find(x => x.id === profile.avatar); return a ? <a.icon size={13} color="white" /> : <span style={{fontWeight:700,fontSize:11,color:"white",lineHeight:1,display:"flex",alignItems:"center",justifyContent:"center"}}>{email[0].toUpperCase()}</span>; })()}
               </div>
