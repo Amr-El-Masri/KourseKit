@@ -768,9 +768,9 @@ function CropCanvas({ cropModal, setCropModal }) {
 
   return (
     <div ref={divRef} onMouseDown={onMouseDown}
-      style={{ width:CANVAS, height:CANVAS, borderRadius:"50%", overflow:"hidden", margin:"0 auto 20px", border:"2px solid var(--border)", cursor:"grab", userSelect:"none", touchAction:"pan-x pan-y" }}>
+      style={{ width:CANVAS, height:CANVAS, borderRadius:"50%", overflow:"hidden", margin:"0 auto 20px", border:"2px solid var(--border)", cursor:"grab", userSelect:"none", touchAction:"none", position:"relative" }}>
       <img src={cropModal.src} alt="crop preview" draggable={false} style={{
-        width:"100%", height:"100%", objectFit:"cover", pointerEvents:"none",
+        display:"block", width:"100%", height:"100%", objectFit:"cover", pointerEvents:"none",
         transform:`scale(${cropModal.zoom}) translate(${cropModal.offsetX / cropModal.zoom}px, ${cropModal.offsetY / cropModal.zoom}px)`,
         transformOrigin:"center",
       }} />
@@ -919,7 +919,7 @@ export default function Profile({ onProfileSave, onSemestersUpdated, activeSemes
     setProfile(prev => {
       if (String(prev.cumGPA) === computed) return prev;
       const updated = { ...prev, cumGPA: computed };
-      profileFetch("/api/profile", { method: "PUT", body: JSON.stringify(updated) }).catch(() => {});
+      profileFetch("/api/profile", { method: "PUT", body: JSON.stringify({ cumGPA: computed }) }).catch(() => {});
       return updated;
     });
     setDraft(d => ({ ...d, cumGPA: computed }));
@@ -1195,12 +1195,12 @@ const refetchSemesters = () =>
 
   const saveAvatar = async (value) => {
     const updated = { ...profile, avatar: value };
-    try {
-      await profileFetch("/api/profile", { method: "PUT", body: JSON.stringify({ avatar: value }) });
-    } catch {}
     setProfile(updated);
     setProfilepic(false);
     if (onProfileSave) onProfileSave(updated);
+    try {
+      await profileFetch("/api/profile", { method: "PUT", body: JSON.stringify({ avatar: value }) });
+    } catch {}
   };
 
   const onFileSelected = (e) => {
@@ -1217,25 +1217,27 @@ const refetchSemesters = () =>
 
   const cropAndSave = () => {
     if (!cropModal) return;
-    const canvas = document.createElement("canvas");
-    canvas.width = 200; canvas.height = 200;
-    const ctx = canvas.getContext("2d");
-    ctx.beginPath();
-    ctx.arc(100, 100, 100, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
+    const src = cropModal.src;
+    const z = cropModal.zoom;
+    const ox = cropModal.offsetX;
+    const oy = cropModal.offsetY;
+    setCropModal(null);
     const img = new Image();
     img.onload = () => {
-      const z = cropModal.zoom;
+      const canvas = document.createElement("canvas");
+      canvas.width = 200; canvas.height = 200;
+      const ctx = canvas.getContext("2d");
+      ctx.beginPath();
+      ctx.arc(100, 100, 100, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.clip();
       const side = Math.min(img.width, img.height) / z;
-      const sx = (img.width - side) / 2 + cropModal.offsetX;
-      const sy = (img.height - side) / 2 + cropModal.offsetY;
+      const sx = (img.width - side) / 2 + ox;
+      const sy = (img.height - side) / 2 + oy;
       ctx.drawImage(img, sx, sy, side, side, 0, 0, 200, 200);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
-      saveAvatar(dataUrl);
-      setCropModal(null);
+      saveAvatar(canvas.toDataURL("image/jpeg", 0.85));
     };
-    img.src = cropModal.src;
+    img.src = src;
   };
 
   const displayName = profile.firstName || profile.lastName
