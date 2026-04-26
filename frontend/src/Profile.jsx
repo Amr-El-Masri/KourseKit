@@ -839,6 +839,7 @@ export default function Profile({ onProfileSave, onSemestersUpdated, activeSemes
   const [syllabusEditProf, setSyllabusEditProf] = useState("");
   const [syllabusEditOH, setSyllabusEditOH] = useState([]);
   const [showDirectory, setShowDirectory] = useState(false);
+  const [photoErr, setPhotoErr] = useState("");
 
   // Transcript uploader
   const [transcriptModal, setTranscriptModal] = useState(false);
@@ -1198,14 +1199,22 @@ const refetchSemesters = () =>
     } catch {}
   };
 
+  const SUPPORTED_IMG = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
   const onFileSelected = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     fileRef.current.value = "";
+    if (!SUPPORTED_IMG.includes(file.type)) {
+      setPhotoErr("Unsupported format. Please use a JPEG, PNG, GIF, or WebP image. To use a HEIC photo, first convert it (open in Preview → Export as JPEG).");
+      return;
+    }
+    setPhotoErr("");
     const reader = new FileReader();
     reader.onload = (ev) => {
-      lastImageSrc.current = ev.target.result;
-      setCropModal({ src: ev.target.result, zoom: 1, offsetX: 0, offsetY: 0 });
+      const result = ev.target?.result;
+      if (!result) return;
+      lastImageSrc.current = result;
+      setCropModal({ src: result, zoom: 1, offsetX: 0, offsetY: 0 });
     };
     reader.readAsDataURL(file);
   };
@@ -1345,7 +1354,7 @@ const refetchSemesters = () =>
 
           <div style={{ display:"flex", alignItems:"flex-end", gap:16, marginBottom:20 }}>
             <div style={{ position:"relative", flexShrink:0 }}>
-              <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={onFileSelected} />
+              <input ref={fileRef} type="file" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" style={{ display:"none" }} onChange={onFileSelected} />
               <div onClick={() => setProfilepic(o => !o)} style={{
                 width:72, height:72, borderRadius:"50%", border:"3px solid var(--border)",
                 background:"linear-gradient(135deg,#8FB3E2,#7B5EA7)",
@@ -1457,6 +1466,9 @@ const refetchSemesters = () =>
               }
             </div>
           </div>
+          {photoErr && (
+            <div style={{ fontSize:12, color:"var(--error)", marginBottom:10, lineHeight:1.5 }}>{photoErr}</div>
+          )}
 
           <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom: editing ? 24 : 0 }}>
             <StatChip label="Status"         value={`${st.label} · ${st.desc}`} color="var(--accent)" bg="var(--surface3)" />
