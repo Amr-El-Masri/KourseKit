@@ -76,7 +76,7 @@ export default function App() {
   };
 
   const logout = () => {
-    const keep = ["kk_course_colors","kk_colorMap"]; const saved = Object.fromEntries(keep.map(k => [k, localStorage.getItem(k)]).filter(([,v]) => v)); Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); Object.entries(saved).forEach(([k,v]) => localStorage.setItem(k,v));
+    const keepKeys = [...["kk_course_colors","kk_colorMap"], ...Object.keys(localStorage).filter(k => k.startsWith("kk_schedule_onboarded_"))]; const saved = Object.fromEntries(keepKeys.map(k => [k, localStorage.getItem(k)]).filter(([,v]) => v)); Object.keys(localStorage).filter(k => k.startsWith("kk_")).forEach(k => localStorage.removeItem(k)); Object.entries(saved).forEach(([k,v]) => localStorage.setItem(k,v));
     setPage("login");
   };
 
