@@ -712,43 +712,10 @@ function PfDropdown({ value, options, onChange, placeholder = "Select…", mb = 
 
 function CropCanvas({ cropModal, setCropModal }) {
   const CANVAS = 220;
-  const canvasRef = useRef(null);
-  const imgRef = useRef(null);
-  const containerRef = useRef(null);
-  const [imgLoaded, setImgLoaded] = useState(false);
+  const divRef = useRef(null);
 
   useEffect(() => {
-    setImgLoaded(false);
-    const img = new Image();
-    if (!cropModal.src.startsWith("data:")) img.crossOrigin = "anonymous";
-    img.onload = () => { imgRef.current = img; setImgLoaded(true); };
-    img.onerror = () => { setImgLoaded(false); };
-    img.src = cropModal.src;
-  }, [cropModal.src]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const img = imgRef.current;
-    if (!canvas || !img || !imgLoaded) return;
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, CANVAS, CANVAS);
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(CANVAS / 2, CANVAS / 2, CANVAS / 2, 0, Math.PI * 2);
-    ctx.clip();
-    const z = cropModal.zoom;
-    const ox = cropModal.offsetX;
-    const oy = cropModal.offsetY;
-    const side = Math.min(img.width, img.height) / z;
-    const canvasToImg = side / CANVAS;
-    const sx = Math.max(0, Math.min(img.width - side, (img.width - side) / 2 - ox * canvasToImg));
-    const sy = Math.max(0, Math.min(img.height - side, (img.height - side) / 2 - oy * canvasToImg));
-    ctx.drawImage(img, sx, sy, side, side, 0, 0, CANVAS, CANVAS);
-    ctx.restore();
-  }, [imgLoaded, cropModal.zoom, cropModal.offsetX, cropModal.offsetY]);
-
-  useEffect(() => {
-    const el = containerRef.current;
+    const el = divRef.current;
     if (!el) return;
     const onWheel = (e) => {
       e.preventDefault();
@@ -794,9 +761,13 @@ function CropCanvas({ cropModal, setCropModal }) {
   };
 
   return (
-    <div ref={containerRef} onMouseDown={onMouseDown}
-      style={{ width: CANVAS, height: CANVAS, borderRadius: "50%", margin: "0 auto 20px", border: "2px solid var(--border)", cursor: "grab", userSelect: "none", touchAction: "none", overflow: "hidden", background: "var(--surface2)" }}>
-      <canvas ref={canvasRef} width={CANVAS} height={CANVAS} style={{ display: "block", borderRadius: "50%" }} />
+    <div ref={divRef} onMouseDown={onMouseDown}
+      style={{ width: CANVAS, height: CANVAS, borderRadius: "50%", overflow: "hidden", margin: "0 auto 20px", border: "2px solid var(--border)", cursor: "grab", userSelect: "none", touchAction: "pan-x pan-y" }}>
+      <img src={cropModal.src} alt="crop preview" draggable={false} style={{
+        width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none",
+        transform: `scale(${cropModal.zoom}) translate(${cropModal.offsetX / cropModal.zoom}px, ${cropModal.offsetY / cropModal.zoom}px)`,
+        transformOrigin: "center",
+      }} />
     </div>
   );
 }
