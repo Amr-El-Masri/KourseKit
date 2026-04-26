@@ -327,7 +327,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
       if (Array.isArray(data) && data.length > 0) {
         const match = semester ? data.find(s => s.semesterName === semester) : null;
         const sem = match || data[0];
-        const names = (sem.courses || []).map(c => c.courseCode).filter(Boolean).sort();
+        const names = [...new Set((sem.courses || []).filter(c => !c.componenttype).map(c => c.courseCode).filter(Boolean))].sort();
         setSavedCourses(names);
       }
     }).catch(() => {});
