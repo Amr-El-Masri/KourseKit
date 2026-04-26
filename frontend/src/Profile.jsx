@@ -1920,7 +1920,7 @@ const refetchSemesters = () =>
       )}
 
       {/* My Semesters */}
-      <div className="pf-anim" style={{ animationDelay:"0.12s", background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", marginTop:20, overflow:"hidden" }}>
+      <div className="pf-anim" style={{ animationDelay:"0.12s", background:"var(--surface)", borderRadius:16, border:"1px solid var(--border)", boxShadow:"0 2px 14px rgba(49,72,122,0.07)", marginTop:20 }}>
         <div className="kk-tab" onClick={() => toggleSect("semesters")} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"18px 28px", cursor:"pointer", userSelect:"none", transition:"background .15s", borderRadius:"16px 16px 0 0" }}>
           <div style={{ fontFamily:"'Fraunces',serif", fontWeight:700, fontSize:17, color:"var(--primary)" }}>My Semesters</div>
           <div style={{ display:"flex", alignItems:"center", gap:10 }} onClick={e => e.stopPropagation()}>
@@ -1972,7 +1972,7 @@ const refetchSemesters = () =>
                           {c.grade || "—"}<span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openGradeDrop === `new-${c.id}` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
                         </button>
                         {openGradeDrop === `new-${c.id}` && (
-                          <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:300, padding:4, maxHeight:200, overflowY:"auto" }}>
+                          <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:300, padding:4, maxHeight:108, overflowY:"auto" }}>
                             {LETTER_GRADES.map(g => (
                               <div key={g} onClick={() => { setNewSemCourses(p => p.map(r => r.id===c.id ? {...r,grade:g} : r)); setOpenGradeDrop(null); }} className="kk-option" style={{ padding:"7px 12px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600, transition:"background .15s", background: c.grade === g ? "var(--divider)" : "transparent", color: c.grade === g ? "var(--accent)" : "var(--primary)" }}>{g === "" ? "—" : g}</div>
                             ))}
@@ -2066,7 +2066,7 @@ const refetchSemesters = () =>
                               {c.grade || "—"}<span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openGradeDrop === `edit-${c.id}` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
                             </button>
                             {openGradeDrop === `edit-${c.id}` && (
-                              <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:300, padding:4, maxHeight:200, overflowY:"auto" }}>
+                              <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:300, padding:4, maxHeight:108, overflowY:"auto" }}>
                                 {LETTER_GRADES.map(g => (
                                   <div key={g} onClick={() => { setEditCourses(p => p.map(r => r.id===c.id ? {...r,grade:g} : r)); setOpenGradeDrop(null); }} className="kk-option" style={{ padding:"7px 12px", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:600, transition:"background .15s", background: c.grade === g ? "var(--divider)" : "transparent", color: c.grade === g ? "var(--accent)" : "var(--primary)" }}>{g === "" ? "—" : g}</div>
                                 ))}

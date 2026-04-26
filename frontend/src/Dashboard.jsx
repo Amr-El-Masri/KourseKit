@@ -1388,7 +1388,7 @@ export default function Dashboard({ onLogout }) {
                     <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,width:"100%",color:isToday(d)?"#fff":d?"var(--text)":"transparent",fontWeight:isToday(d)?700:400}}>{d||""}</div>
                     {dayTasks.map((t,ti)=>{
                       const color = t.done?"var(--success)":new Date(t.due)<new Date()?"var(--error)":"var(--text2)";
-                      return <div key={ti} onMouseEnter={e=>{const rect=e.target.getBoundingClientRect();const cardRect=e.target.closest("section").getBoundingClientRect();setHoveredTask({task:t,x:rect.left-cardRect.left,y:rect.bottom-cardRect.top+4});}} onMouseLeave={()=>setHoveredTask(null)} onClick={()=>{setEditingTask(t);setActivePage("tasks");}} style={{width:"90%",height:3,borderRadius:2,background:color,marginBottom:1,cursor:"pointer",transition:"height .1s"}} className="cal-task-line" />;
+                      return <div key={ti} onMouseEnter={e=>{const rect=e.target.getBoundingClientRect();setHoveredTask({task:t,x:rect.left,y:rect.bottom+4,above:rect.bottom+120>window.innerHeight});}} onMouseLeave={()=>setHoveredTask(null)} onClick={()=>{setEditingTask(t);setActivePage("tasks");}} style={{width:"90%",height:3,borderRadius:2,background:color,marginBottom:1,cursor:"pointer",transition:"height .1s"}} className="cal-task-line" />;
                     })}
                   </div>
                 );
@@ -1398,7 +1398,7 @@ export default function Dashboard({ onLogout }) {
           </div>
           )}
           {calTab==="calendar" && hoveredTask && (
-            <div style={{position:"absolute",left:Math.min(hoveredTask.x,220),top:hoveredTask.y,background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"9px 13px",boxShadow:"0 6px 24px color-mix(in srgb, var(--primary) 13%, transparent)",zIndex:300,minWidth:170,maxWidth:220,pointerEvents:"none"}}>
+            <div style={{position:"fixed",left:Math.min(hoveredTask.x,window.innerWidth-230),top:hoveredTask.above?undefined:hoveredTask.y,bottom:hoveredTask.above?window.innerHeight-hoveredTask.y+8:undefined,background:"var(--surface)",border:"1px solid var(--border)",borderRadius:10,padding:"9px 13px",boxShadow:"0 6px 24px color-mix(in srgb, var(--primary) 13%, transparent)",zIndex:9999,minWidth:170,maxWidth:220,pointerEvents:"none"}}>
               <div style={{fontSize:11,fontWeight:700,color:"var(--text2)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:4}}>{hoveredTask.task.type} · {hoveredTask.task.course}</div>
               <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4,lineHeight:1.3}}>{hoveredTask.task.title}</div>
               <div style={{fontSize:11,color:"var(--text3)"}}>{hoveredTask.task.due?new Date(hoveredTask.task.due).toLocaleDateString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit",hour12:false}):"No due date"}</div>
