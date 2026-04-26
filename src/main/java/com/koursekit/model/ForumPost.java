@@ -27,6 +27,9 @@ public class ForumPost {
     private String courseTag;
     private String professorTag;
 
+    @jakarta.persistence.Transient
+    private String avatar;
+
     private int relateCount = 0;  //like "liking a post"
 
     private int commentCount = 0;
@@ -44,6 +47,9 @@ public class ForumPost {
 
     public String getDisplayName() { return displayName; }
     public void setDisplayName(String displayName) { this.displayName = displayName; }
+
+    public String getAvatar() { return avatar; }
+    public void setAvatar(String avatar) { this.avatar = avatar; }
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }

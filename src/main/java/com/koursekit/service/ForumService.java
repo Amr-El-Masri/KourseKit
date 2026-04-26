@@ -25,13 +25,24 @@ public class ForumService {
     @Autowired private ForumRelateRepository relateRepo;
     @Autowired private UserRepo userRepo;
 
-    private String resolveDisplayName(String email, String fallback) {
-        return userRepo.findByEmail(email).map(u -> {
+    private void enrichPost(com.koursekit.model.ForumPost post) {
+        userRepo.findByEmail(post.getUserId()).ifPresent(u -> {
             String fn = u.getFirstName() != null ? u.getFirstName().trim() : "";
             String ln = u.getLastName() != null ? u.getLastName().trim() : "";
             String name = (fn + " " + ln).trim();
-            return name.isBlank() ? fallback : name;
-        }).orElse(fallback);
+            if (!name.isBlank()) post.setDisplayName(name);
+            if (u.getAvatar() != null && !u.getAvatar().isBlank()) post.setAvatar(u.getAvatar());
+        });
+    }
+
+    private void enrichComment(com.koursekit.model.ForumComment comment) {
+        userRepo.findByEmail(comment.getUserId()).ifPresent(u -> {
+            String fn = u.getFirstName() != null ? u.getFirstName().trim() : "";
+            String ln = u.getLastName() != null ? u.getLastName().trim() : "";
+            String name = (fn + " " + ln).trim();
+            if (!name.isBlank()) comment.setDisplayName(name);
+            if (u.getAvatar() != null && !u.getAvatar().isBlank()) comment.setAvatar(u.getAvatar());
+        });
     }
 
     // ─── POSTS ───────────────────────────────────────────────
@@ -70,7 +81,7 @@ public class ForumService {
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<ForumPost> getAllPosts() {
         List<ForumPost> posts = postRepo.findByStatusOrderByCreatedAtDesc(ReviewStatus.APPROVED);
-        posts.forEach(p -> p.setDisplayName(resolveDisplayName(p.getUserId(), p.getDisplayName())));
+        posts.forEach(this::enrichPost);
         return posts;
     }
 
@@ -78,7 +89,7 @@ public class ForumService {
     public List<ForumPost> getPostsByCategory(String category) {
         List<ForumPost> posts = postRepo.findByCategoryAndStatusOrderByCreatedAtDesc(
                 category.toUpperCase(), ReviewStatus.APPROVED);
-        posts.forEach(p -> p.setDisplayName(resolveDisplayName(p.getUserId(), p.getDisplayName())));
+        posts.forEach(this::enrichPost);
         return posts;
     }
 
@@ -86,7 +97,7 @@ public class ForumService {
     public List<ForumPost> getPostsByCourseTag(String courseTag) {
         List<ForumPost> posts = postRepo.findByCourseTagAndStatusOrderByCreatedAtDesc(
                 courseTag, ReviewStatus.APPROVED);
-        posts.forEach(p -> p.setDisplayName(resolveDisplayName(p.getUserId(), p.getDisplayName())));
+        posts.forEach(this::enrichPost);
         return posts;
     }
 
@@ -94,7 +105,7 @@ public class ForumService {
     public List<ForumPost> getPostsByProfessorTag(String professorTag) {
         List<ForumPost> posts = postRepo.findByProfessorTagAndStatusOrderByCreatedAtDesc(
                 professorTag, ReviewStatus.APPROVED);
-        posts.forEach(p -> p.setDisplayName(resolveDisplayName(p.getUserId(), p.getDisplayName())));
+        posts.forEach(this::enrichPost);
         return posts;
     }
 
@@ -103,7 +114,7 @@ public class ForumService {
         ForumPost post = postRepo.findById(postId)
                 .filter(p -> p.getStatus() == ReviewStatus.APPROVED)
                 .orElseThrow(() -> new RuntimeException("Post not found."));
-        post.setDisplayName(resolveDisplayName(post.getUserId(), post.getDisplayName()));
+        enrichPost(post);
         return post;
     }
 
@@ -146,7 +157,7 @@ public class ForumService {
     public List<ForumComment> getCommentsForPost(Long postId) {
         List<ForumComment> comments = commentRepo.findByPostIdAndStatusOrderByCreatedAtAsc(
                 postId, ReviewStatus.APPROVED);
-        comments.forEach(c -> c.setDisplayName(resolveDisplayName(c.getUserId(), c.getDisplayName())));
+        comments.forEach(this::enrichComment);
         return comments;
     }
 
@@ -192,7 +203,7 @@ public class ForumService {
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<ForumPost> getPostsByUser(String userId) {
         List<ForumPost> posts = postRepo.findByUserId(userId);
-        posts.forEach(p -> p.setDisplayName(resolveDisplayName(p.getUserId(), p.getDisplayName())));
+        posts.forEach(this::enrichPost);
         return posts;
     }
 }

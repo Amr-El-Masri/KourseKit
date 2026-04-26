@@ -14,6 +14,9 @@ public class ForumComment {
     private String userId;      // email of the author
     private String displayName; // name shown on the forum
 
+    @jakarta.persistence.Transient
+    private String avatar;
+
     @ManyToOne
     @JoinColumn(name = "post_id")
     private ForumPost post;
@@ -34,6 +37,9 @@ public class ForumComment {
 
     public String getDisplayName() { return displayName; }
     public void setDisplayName(String displayName) { this.displayName = displayName; }
+
+    public String getAvatar() { return avatar; }
+    public void setAvatar(String avatar) { this.avatar = avatar; }
 
     public ForumPost getPost() { return post; }
     public void setPost(ForumPost post) { this.post = post; }

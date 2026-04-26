@@ -419,7 +419,7 @@ function MessageBubble({ message, isOwn, showName, showTime, onDelete, onReact, 
       </div>
       {showTime && (
         <div style={{ fontSize:10, color:"var(--text3)", marginTop:3, textAlign: isOwn ? "right" : "left", marginLeft: isOwn ? 0 : 34 }}>
-          {new Date(message.sentAt + "Z").toLocaleTimeString("en-US", { hour:"2-digit", minute:"2-digit", hour12:true })}
+          {new Date(message.sentAt).toLocaleTimeString("en-US", { hour:"2-digit", minute:"2-digit", hour12:true })}
         </div>
       )}
 
@@ -641,7 +641,7 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
           memberKeysRef.current = { ...memberKeysRef.current, ...fetched };
         }
       })
-      .catch(() => { setIsKicked(true); localStorage.removeItem("kk_last_group"); });
+      .catch(() => { /* network/server error — don't assume kicked */ });
   }, [group.id, e2eeReady]);
 
   // Task 3: load history and decrypt each message

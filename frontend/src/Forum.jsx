@@ -1,10 +1,54 @@
 import { useState, useEffect, useCallback } from "react";
-import { MessageSquare, ArrowLeft, Trash2, Flag, Search, ChevronUp, BookOpen, GraduationCap, LayoutGrid, Check, User, Plus } from "lucide-react";
+import { MessageSquare, ArrowLeft, Trash2, Flag, Search, ChevronUp, BookOpen, GraduationCap, LayoutGrid, Check, User, Plus, Banana, Cat, Dog, Eclipse, Telescope, Panda } from "lucide-react";
+import { StudentProfileView } from "./StudentDirectoryPanel";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
+const AVATAR_ICONS = [
+  { id:"Banana", icon:Banana }, { id:"Telescope", icon:Telescope },
+  { id:"Eclipse", icon:Eclipse }, { id:"Cat", icon:Cat },
+  { id:"Dog", icon:Dog }, { id:"Panda", icon:Panda },
+];
+
+function ForumAvatar({ avatar, displayName, size = 30, onClick }) {
+  const base = { width: size, height: size, borderRadius: "50%", flexShrink: 0, cursor: onClick ? "pointer" : "default" };
+  if (avatar?.startsWith("data:") || avatar?.startsWith("http")) {
+    return <img src={avatar} alt="avatar" style={{ ...base, objectFit: "cover" }} onClick={onClick} />;
+  }
+  const found = AVATAR_ICONS.find(a => a.id === avatar);
+  return (
+    <div style={{ ...base, background: "linear-gradient(135deg, var(--primary), var(--accent))", display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClick}>
+      {found
+        ? <found.icon size={size * 0.45} color="white" />
+        : <span style={{ fontWeight: 700, fontSize: size * 0.38, color: "white" }}>{displayName?.[0]?.toUpperCase() || "?"}</span>}
+    </div>
+  );
+}
+
+function ForumProfileModal({ email, token, onClose }) {
+  const [student, setStudent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    fetch(`${API}/api/students/by-email?email=${encodeURIComponent(email)}`, {
+      headers: token ? { "Authorization": `Bearer ${token}` } : {}
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { setStudent(data); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [email]);
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
+      <div style={{ background: "var(--bg)", borderRadius: 16, padding: "24px 22px", width: 360, maxWidth: "calc(100vw - 32px)", boxShadow: "0 8px 40px rgba(0,0,0,0.18)", maxHeight: "80vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+        {loading && <div style={{ textAlign: "center", padding: 40, color: "var(--text3)" }}>Loading…</div>}
+        {!loading && !student && <div style={{ textAlign: "center", padding: 40, color: "var(--text3)" }}>Profile not found.</div>}
+        {!loading && student && <StudentProfileView student={student} onBack={onClose} />}
+      </div>
+    </div>
+  );
+}
+
 const timeAgo = ts => {
-  const s = Math.floor((Date.now() - new Date(ts + "Z").getTime()) / 1000);
+  const s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
   if (s < 60)    return "just now";
   if (s < 3600)  return `${Math.floor(s/60)}m ago`;
   if (s < 86400) return `${Math.floor(s/3600)}h ago`;
@@ -213,7 +257,7 @@ function ReportButton({ targetId, type, token, userEmail }) {
 }
 
 //Single post view
-function PostView({ post, token, userEmail, userId, displayName, onBack, onDelete }) {
+function PostView({ post, token, userEmail, userId, displayName, onBack, onDelete, onViewProfile }) {
   const [comments,    setComments]    = useState([]);
   const [commentText, setCommentText] = useState("");
   const [submitting,  setSubmitting]  = useState(false);
@@ -315,9 +359,9 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={f.avatar}>{post.displayName?.[0]?.toUpperCase() || "?"}</div>
+            <ForumAvatar avatar={post.avatar} displayName={post.displayName} size={30} onClick={() => onViewProfile?.(post.userId)} />
             <div>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)" }}>{post.displayName}</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--primary)", cursor: "pointer" }} onClick={() => onViewProfile?.(post.userId)}>{post.displayName}</span>
               <span style={{ fontSize: 11, color: "var(--text3)", marginLeft: 8 }}>{timeAgo(post.createdAt)}</span>
             </div>
           </div>
@@ -348,8 +392,8 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
             <p style={{ fontSize: 14, color: "var(--text)", lineHeight: 1.65, margin: "0 0 10px" }}>{c.body}</p>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ ...f.avatar, width: 24, height: 24, fontSize: 10 }}>{c.displayName?.[0]?.toUpperCase() || "?"}</div>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--primary)" }}>{c.displayName}</span>
+                <ForumAvatar avatar={c.avatar} displayName={c.displayName} size={24} onClick={() => onViewProfile?.(c.userId)} />
+                <span style={{ fontSize: 12, fontWeight: 600, color: "var(--primary)", cursor: "pointer" }} onClick={() => onViewProfile?.(c.userId)}>{c.displayName}</span>
                 <span style={{ fontSize: 11, color: "var(--text3)" }}>{timeAgo(c.createdAt)}</span>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
@@ -550,7 +594,7 @@ function CreatePost({ token, userEmail, userId, displayName, onDone, initialCate
 }
 
 //Post card in the feed
-function PostCard({ post, onOpenComments, token, userEmail }) {
+function PostCard({ post, onOpenComments, token, userEmail, onViewProfile }) {
   const categoryColor = { COURSE: "var(--primary)", PROFESSOR: "var(--accent2)", GENERAL: "var(--accent)" };
   const CatIcon = CATEGORIES.find(c => c.id === post.category)?.icon || MessageSquare;
 
@@ -614,8 +658,8 @@ function PostCard({ post, onOpenComments, token, userEmail }) {
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={f.avatar}>{post.displayName?.[0]?.toUpperCase() || "?"}</div>
-          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--primary)" }}>{post.displayName}</span>
+          <ForumAvatar avatar={post.avatar} displayName={post.displayName} size={30} onClick={e => { e.stopPropagation(); onViewProfile?.(post.userId); }} />
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--primary)", cursor: "pointer" }} onClick={e => { e.stopPropagation(); onViewProfile?.(post.userId); }}>{post.displayName}</span>
           <span style={{ fontSize: 11, color: "var(--text3)" }}>· {timeAgo(post.createdAt)}</span>
         </div>
 
@@ -796,6 +840,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
   const [composing,  setComposing]  = useState(false);
   const [activePost, setActivePost] = useState(null);
   const [showMyPosts,  setShowMyPosts]  = useState(false);
+  const [viewingProfileEmail, setViewingProfileEmail] = useState(null);
   const [visibleCount, setVisibleCount] = useState(10);
 
   const loadPosts = useCallback(async (cat) => {
@@ -853,19 +898,25 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
 
   if (activePost) {
     return (
-      <PostView
-        post={activePost}
-        token={token}
-        userEmail={userEmail}
-        userId={userId}
-        displayName={displayName}
-        onBack={() => { setActivePost(null); loadPosts(category); }}
-        onDelete={async (id) => { await deletePost(id); }}
-      />
+      <>
+        {viewingProfileEmail && <ForumProfileModal email={viewingProfileEmail} token={token} onClose={() => setViewingProfileEmail(null)} />}
+        <PostView
+          post={activePost}
+          token={token}
+          userEmail={userEmail}
+          userId={userId}
+          displayName={displayName}
+          onBack={() => { setActivePost(null); loadPosts(category); }}
+          onDelete={async (id) => { await deletePost(id); }}
+          onViewProfile={email => setViewingProfileEmail(email)}
+        />
+      </>
     );
   }
 
   return (
+    <>
+    {viewingProfileEmail && <ForumProfileModal email={viewingProfileEmail} token={token} onClose={() => setViewingProfileEmail(null)} />}
     <div style={{ padding: "28px 28px 60px", fontFamily: "'DM Sans', sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Fraunces:ital,wght@0,700;1,400&display=swap');
@@ -1007,6 +1058,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
                   onOpenComments={() => setActivePost(p)}
                   token={token}
                   userEmail={userEmail}
+                  onViewProfile={email => setViewingProfileEmail(email)}
                 />
               </div>
             ))}
@@ -1025,6 +1077,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
       )}
       </>}
     </div>
+    </>
   );
 }
 

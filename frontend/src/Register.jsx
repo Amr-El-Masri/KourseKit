@@ -82,22 +82,6 @@ export default function Register({ onGoToLogin }) {
     } finally { setResendLoading(false); }
   };
 
-  const handleSemesterSubmit = async () => {
-    if (!semName) { setSemError("Please select your current semester."); return; }
-    const courses = semCourses.filter(c => c.name.trim());
-    setSemSaving(true); setSemError("");
-    try {
-      await fetch(`${API}/api/grades/saved`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${regToken}` },
-        body: JSON.stringify({ semesterName: semName, courses: courses.flatMap(c => [{ courseCode: c.name.trim(), grade: "", credits: c.credits || 0, sectioncrn: c.sectioncrn || null }, ...(c.linkedSectionCrn ? [{ courseCode: c.name.trim(), grade: "", credits: 0, sectioncrn: c.linkedSectionCrn, componenttype: "Lab" }] : [])]) }),
-      });
-    } catch {}
-    finally { setSemSaving(false); }
-    const hasCourses = semCourses.some(c => c.name.trim());
-    if (hasCourses) setSyllabusStep(true);
-    else setSuccess(true);
-  };
 
   return (
     <div style={s.page}>

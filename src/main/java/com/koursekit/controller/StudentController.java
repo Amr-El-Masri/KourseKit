@@ -35,9 +35,14 @@ public class StudentController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getStudent(@PathVariable Long id) {
-        User currentUser = getAuthenticatedUser();
-
         return userRepo.findById(id)
+            .map(user -> ResponseEntity.ok(toPublicMap(user)))
+            .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/by-email")
+    public ResponseEntity<Map<String, Object>> getStudentByEmail(@RequestParam String email) {
+        return userRepo.findByEmail(email)
             .map(user -> ResponseEntity.ok(toPublicMap(user)))
             .orElse(ResponseEntity.notFound().build());
     }
