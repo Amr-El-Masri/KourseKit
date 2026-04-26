@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { Plus } from "lucide-react";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 const token = () => localStorage.getItem("kk_token");
@@ -263,7 +264,7 @@ const btn = { padding: "10px 20px", borderRadius: 10, fontWeight: 600, fontSize:
                     <button onClick={() => setAssessments(p => p.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", fontSize: 14 }}>✕</button>
                   </div>
                 ))}
-                <button onClick={() => setAssessments(p => [...p, { id: Date.now(), name: "", weight: "" }])} style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}>+ Add assessment</button>
+                <button onClick={() => setAssessments(p => [...p, { id: Date.now(), name: "", weight: "" }])} style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}><><Plus size={13} /> Add assessment</></button>
               </div>
             )}
 
@@ -312,7 +313,7 @@ const btn = { padding: "10px 20px", borderRadius: 10, fontWeight: 600, fontSize:
                   <button onClick={() => setDeadlines(p => p.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", fontSize: 14, flexShrink: 0 }}>✕</button>
                 </div>
               ))}
-              <button onClick={() => setDeadlines(p => [...p, { id: Date.now(), title: "", date: "", type: "Assignment", include: false }])} style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}>+ Add task</button>
+              <button onClick={() => setDeadlines(p => [...p, { id: Date.now(), title: "", date: "", type: "Assignment", include: false }])} style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}><><Plus size={13} /> Add task</></button>
             </div>
 
             {/* Office Hours */}
@@ -344,7 +345,7 @@ const btn = { padding: "10px 20px", borderRadius: 10, fontWeight: 600, fontSize:
                   <button onClick={() => setOfficeHours(p => p.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "var(--error)", cursor: "pointer", fontSize: 14 }}>✕</button>
                 </div>
               ))}
-              <button onClick={() => setOfficeHours(p => [...p, { day: "", time: "", location: "" }])} style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}>+ Add office hours</button>
+              <button onClick={() => setOfficeHours(p => [...p, { day: "", time: "", location: "" }])} style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", marginTop: 4 }}><><Plus size={13} /> Add office hours</></button>
             </div>
 
             {/* Apply to Calculator checkbox */}

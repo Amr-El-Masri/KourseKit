@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Pencil, Search, ListChecks, X } from "lucide-react";
+import { Pencil, Search, ListChecks, X, Plus } from "lucide-react";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
@@ -531,7 +531,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
             </div>
           </div>
           <button className="f-primary-btn" onClick={() => { setEditing(null); setComposing(true); }} style={tm.newBtn}>
-            + New Task
+            <><Plus size={13} /> New Task</>
           </button>
         </div>
 

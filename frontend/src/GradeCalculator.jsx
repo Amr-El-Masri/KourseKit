@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Plus } from "lucide-react";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 const authHeaders = () => ({
@@ -761,7 +762,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
               )}
             </div>
           ))}
-          <button className="gc-addbtn" onClick={() => addRow(setSemCourses)} style={gc.addRowBtn}>+ Add Course</button>
+          <button className="gc-addbtn" onClick={() => addRow(setSemCourses)} style={gc.addRowBtn}><><Plus size={13} /> Add Course</></button>
           <div style={{ display:"flex", gap:12, marginTop:20, alignItems:"center", flexWrap:"wrap" }}>
             <button className="gc-calcbtn" onClick={calcSemGPA} disabled={semLoading} style={gc.calcBtn}>
               {semLoading ? "Calculating…" : "Calculate GPA"}
@@ -909,7 +910,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
               )}
             </div>
           ))}
-          <button className="gc-addbtn" onClick={() => addRow(setCumSems)} style={gc.addRowBtn}>+ Add Semester</button>
+          <button className="gc-addbtn" onClick={() => addRow(setCumSems)} style={gc.addRowBtn}><><Plus size={13} /> Add Semester</></button>
           <div style={{ display:"flex", gap:12, marginTop:20, alignItems:"center", flexWrap:"wrap" }}>
             <button className="gc-calcbtn" onClick={calcCumGPA} disabled={cumLoading} style={gc.calcBtn}>
               {cumLoading ? "Calculating…" : "Calculate Cumulative GPA"}
@@ -1066,7 +1067,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
               <button onClick={() => { const row = components.find(r => r.id === c.id); removeRow(setComponents, c.id); setCourseResult(null); showUndo("Component removed", () => setComponents(p => [...p, row])); }} style={gc.removeBtn}>✕</button>
             </div>
           ))}
-          <button className="gc-addbtn" onClick={() => addRow(setComponents)} style={gc.addRowBtn}>+ Add Component</button>
+          <button className="gc-addbtn" onClick={() => addRow(setComponents)} style={gc.addRowBtn}><><Plus size={13} /> Add Component</></button>
           <div style={{ display:"flex", gap:12, marginTop:16, alignItems:"center", flexWrap:"wrap" }}>
             <WeightIndicator total={components.reduce((s,c) => s + (parseFloat(c.weight)||0), 0)} />
           </div>
@@ -1139,7 +1140,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                   <button onClick={() => { const row = graded.find(r => r.id === g.id); removeRow(setGraded, g.id); setTargetResult(null); showUndo("Component removed", () => setGraded(p => [...p, row])); }} style={gc.removeBtn}>✕</button>
                 </div>
               ))}
-              <button className="gc-addbtn" onClick={() => addRow(setGraded)} style={gc.addRowBtn}>+ Add Component</button>
+              <button className="gc-addbtn" onClick={() => addRow(setGraded)} style={gc.addRowBtn}><><Plus size={13} /> Add Component</></button>
             </>
           )}
 
@@ -1278,7 +1279,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
               </div>
             );
           })}
-          {!selectedCourse && <button className="gc-addbtn" onClick={() => addRow(setSimPast)} style={{ ...gc.addRowBtn, marginTop:6 }}>+ Add Component</button>}
+          {!selectedCourse && <button className="gc-addbtn" onClick={() => addRow(setSimPast)} style={{ ...gc.addRowBtn, marginTop:6 }}><><Plus size={13} /> Add Component</></button>}
 
           {/* Live result */}
           {simLive ? (

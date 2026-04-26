@@ -57,7 +57,7 @@ export default function VerifyEmail({ token, onVerified, onGoToLogin }) {
       `}</style>
 
       <div style={s.leftPanel}>
-        <img src="/logo.png" alt="KourseKit" style={{ width:72, height:72, objectFit:"contain", marginBottom:4 }} />
+        <img src="/KourseKit.jpeg" alt="KourseKit" style={{ width:72, height:72, objectFit:"cover", borderRadius:14, marginBottom:4 }} />
         <div style={s.brandName}>KourseKit</div>
         <div style={s.brandTagline}>Your academic life,<br />organized.</div>
         <div style={s.decorCircle1} />
@@ -67,7 +67,7 @@ export default function VerifyEmail({ token, onVerified, onGoToLogin }) {
       <div style={s.rightPanel}>
         <div style={{ ...s.card, textAlign: "center" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 28 }}>
-            <img src="/logo.png" alt="KourseKit" style={{ width: 36, height: 36, objectFit: "contain" }} />
+            <img src="/KourseKit.jpeg" alt="KourseKit" style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 8 }} />
             <span style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 22, color: "var(--primary)" }}>KourseKit</span>
           </div>
           <div style={{ marginBottom: 16 }}>{icon}</div>

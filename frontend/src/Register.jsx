@@ -1,8 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { PartyPopper, Mail } from "lucide-react";
-import TranscriptModal from "./TranscriptModal";
-import SyllabusModal from "./SyllabusModal";
-import StudentCourses from "./StudentCourses";
+import { useState, useRef } from "react";
+import { Mail } from "lucide-react";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
@@ -14,98 +11,17 @@ const requirements = [
   { label: "One special character",        test: p => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(p) },
 ];
 
-const AUB_SEMESTERS = [
-  "Spring 25-26","Summer 25-26","Fall 25-26",
-  "Spring 24-25","Summer 24-25","Fall 24-25",
-  "Spring 23-24","Summer 23-24","Fall 23-24",
-  "Spring 22-23","Summer 22-23","Fall 22-23",
-];
 
-function SemesterDropdown({ value, onChange, semesters }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  return (
-    <div ref={ref} style={{ position: "relative", marginBottom: 16 }}>
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          width: "100%", padding: "11px 14px",
-          border: `1px solid ${open ? "var(--border2)" : "var(--border)"}`,
-          borderRadius: 10, background: "var(--surface2)",
-          cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
-          fontSize: 14, color: value ? "var(--text)" : "var(--text2)",
-          transition: "border-color 0.15s",
-        }}
-      >
-        <span>{value || "Select your semester…"}</span>
-        <span style={{ color: "var(--text2)", fontSize: 11, display: "inline-block", transition: "transform .2s", transform: open ? "rotate(0deg)" : "rotate(-90deg)" }}>▼</span>
-      </button>
-      {open && (
-        <div style={{
-          position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
-          background: "var(--surface)", borderRadius: 12,
-          boxShadow: "0 8px 32px rgba(49,72,122,0.15)", border: "1px solid var(--border)",
-          zIndex: 999, padding: 6, maxHeight: 240, overflowY: "auto",
-        }}>
-          {semesters.map(sem => (
-            <div
-              key={sem}
-              onClick={() => { onChange(sem); setOpen(false); }}
-              style={{
-                padding: "10px 14px", borderRadius: 8, cursor: "pointer",
-                fontSize: 13, fontFamily: "'DM Sans', sans-serif",
-                display: "flex", alignItems: "center",
-                background: sem === value ? "var(--surface3, var(--surface2))" : "transparent",
-                color: sem === value ? "var(--primary)" : "var(--text)",
-                fontWeight: sem === value ? 600 : 400,
-                transition: "background .12s",
-              }}
-              onMouseEnter={e => { if (sem !== value) e.currentTarget.style.background = "var(--surface2)"; }}
-              onMouseLeave={e => { if (sem !== value) e.currentTarget.style.background = "transparent"; }}
-            >
-              {sem === value && <span style={{ color: "var(--accent)", marginRight: 8, fontSize: 12 }}>✓</span>}
-              {sem}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function Register({ onGoToLogin, postVerifyToken }) {
+export default function Register({ onGoToLogin }) {
   const [email,     setEmail]     = useState("");
   const [password,  setPassword]  = useState("");
   const [confirm,   setConfirm]   = useState("");
   const [error,     setError]     = useState("");
-  const [success,   setSuccess]   = useState(false);
-  // When postVerifyToken is provided, skip signup and jump straight to semester setup
-  const [semStep,   setSemStep]   = useState(!!postVerifyToken);
-  const [regToken,  setRegToken]  = useState(postVerifyToken || "");
-  // "checkEmail" shows after signup asking user to verify before semester setup
   const [checkEmail, setCheckEmail] = useState(false);
   const [resendLoading,  setResendLoading]  = useState(false);
   const [resendMsg,      setResendMsg]      = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
   const cooldownRef = useRef(null);
-
-  const [semName,       setSemName]       = useState("");
-  const [semCourses,    setSemCourses]    = useState([{ id:1, name:"" }]);
-  const [semSaving,     setSemSaving]     = useState(false);
-  const [semError,      setSemError]      = useState("");
-  const [showTranscript, setShowTranscript] = useState(false);
-  const [syllabusStep, setSyllabusStep] = useState(false);
-  const [syllabusForCourse, setSyllabusForCourse] = useState(null);
-  const [uploadedSyllabi, setUploadedSyllabi] = useState({});
 
   const [loading,      setLoading]      = useState(false);
   const [passfocused,  setpassfocused]  = useState(false);
@@ -211,20 +127,7 @@ export default function Register({ onGoToLogin, postVerifyToken }) {
       <div style={s.rightPanel}>
         <div style={s.card}>
 
-          {success ? (
-            <div style={{ textAlign: "center", padding: "20px 0" }}>
-              <div style={{ marginBottom: 16 }}><PartyPopper size={52} color="#6C63FF" /></div>
-              <h2 style={s.title}>You're all set!</h2>
-              <p style={{ fontSize: 14, color: "var(--text2)", marginBottom: 24, lineHeight: 1.6 }}>
-                {postVerifyToken
-                  ? "Your courses have been saved. You can now use KourseKit."
-                  : "Your semester has been saved. You can now log in."}
-              </p>
-              <button className="reg-btn" onClick={onGoToLogin} style={s.btn}>
-                {postVerifyToken ? "Go to Dashboard" : "Go to Login"}
-              </button>
-            </div>
-          ) : checkEmail ? (
+          {checkEmail ? (
             <div style={{ textAlign: "center", padding: "20px 0" }}>
               <div style={{ marginBottom: 16 }}><Mail size={52} color="#31487A" /></div>
               <h2 style={s.title}>Check your email</h2>
@@ -248,98 +151,6 @@ export default function Register({ onGoToLogin, postVerifyToken }) {
               <button onClick={onGoToLogin}
                 style={{ width: "100%", background: "none", border: "none", color: "var(--text2)", fontSize: 13, cursor: "pointer", padding: "6px 0" }}>
                 Go to Login
-              </button>
-            </div>
-          ) : syllabusStep ? (
-            <div>
-              {syllabusForCourse && (
-                <SyllabusModal
-                  courseName={syllabusForCourse}
-                  onClose={() => setSyllabusForCourse(null)}
-                  onApply={() => { setUploadedSyllabi(p => ({ ...p, [syllabusForCourse]: true })); setSyllabusForCourse(null); }}
-                />
-              )}
-              <h2 style={s.title}>Upload your syllabi</h2>
-              <p style={{ fontSize:13, color:"var(--text2)", marginBottom:20, lineHeight:1.6 }}>
-                Upload a syllabus for each course to auto-import deadlines and grading info — or skip and add manually later.
-              </p>
-              <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
-                {semCourses.filter(c => c.name.trim()).map(c => (
-                  <div key={c.id} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", background:"var(--surface2)", borderRadius:12, border:"1px solid var(--border)" }}>
-                    <span style={{ fontSize:14, fontWeight:600, color:"var(--text)" }}>{c.name}</span>
-                    {uploadedSyllabi[c.name] ? (
-                      <span style={{ fontSize:12, color:"var(--accent2)", fontWeight:600 }}>✓ Uploaded</span>
-                    ) : (
-                      <button onClick={() => setSyllabusForCourse(c.name)} style={{ padding:"6px 14px", background:"color-mix(in srgb, var(--primary) 12%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 25%, transparent)", borderRadius:8, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit" }}>
-                        Upload PDF
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <button className="reg-btn" onClick={() => setSuccess(true)}
-                style={{ ...s.btn, marginBottom:8 }}>
-                {Object.keys(uploadedSyllabi).length > 0 ? "Continue to Dashboard" : "I'll add manually later"}
-              </button>
-              <button onClick={() => setSuccess(true)}
-                style={{ width:"100%", background:"none", border:"none", color:"var(--text2)", fontSize:13, cursor:"pointer", padding:"6px 0" }}>
-                Skip for now
-              </button>
-            </div>
-          ) : semStep ? (
-            <div>
-              {showTranscript && (
-                <TranscriptModal
-                  onClose={() => setShowTranscript(false)}
-                  onApply={() => { setShowTranscript(false); setSuccess(true); }}
-                />
-              )}
-              <h2 style={s.title}>One last step</h2>
-              <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 20, lineHeight: 1.6 }}>
-                Tell us your current semester so we can set up your courses.
-              </p>
-
-              {semError && <div style={s.errorBox}>{semError}</div>}
-
-              <label style={s.label}>Current Semester</label>
-              <SemesterDropdown
-                value={semName}
-                onChange={val => { setSemName(val); setSemError(""); }}
-                semesters={AUB_SEMESTERS}
-              />
-
-              <label style={s.label}>Your Courses <span style={{ fontWeight:400, color:"var(--text3)" }}>(optional)</span></label>
-              <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:8 }}>
-                {semCourses.map(c => (
-                  <div key={c.id} style={{ display:"flex", gap:8, alignItems:"center" }}>
-                    <div style={{ flex:1 }}>
-                      <StudentCourses
-                        value={{ code: c.name, sectioncrn: c.sectioncrn, sectionNumber: c.sectionNumber }}
-                        onSelect={data => setSemCourses(p => p.map(r => r.id===c.id ? {...r, name:data.code, sectioncrn:data.sectioncrn, sectionNumber:data.sectionNumber, professorName:data.profname, credits:data.credits||0, linkedSectionCrn:data.linkedSectionCrn||null} : r))}
-                        inputStyle={{ ...s.input, marginBottom:0 }}
-                      />
-                    </div>
-                    {semCourses.length > 1 && (
-                      <button onClick={() => setSemCourses(p => p.filter(r => r.id !== c.id))}
-                        style={{ background:"none", border:"none", cursor:"pointer", color:"var(--error)", fontSize:20, lineHeight:1, padding:"0 4px" }}>×</button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <button onClick={() => setSemCourses(p => [...p, { id:Date.now(), name:"" }])}
-                style={{ fontSize:13, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", fontWeight:600, marginBottom:20, padding:0 }}>+ Add Course</button>
-
-              <button className="reg-btn" onClick={handleSemesterSubmit} disabled={semSaving || !semName}
-                style={{ ...s.btn, opacity: semSaving || !semName ? 0.7 : 1, cursor: semSaving || !semName ? "not-allowed" : "pointer", marginBottom:10 }}>
-                {semSaving ? "Saving…" : "Get Started"}
-              </button>
-              <button onClick={() => setShowTranscript(true)}
-                style={{ width:"100%", background:"none", border:"1px solid var(--border)", borderRadius:10, color:"var(--primary)", fontSize:13, fontWeight:600, cursor:"pointer", padding:"10px 0", marginBottom:6, fontFamily:"'DM Sans',sans-serif" }}>
-                Upload Transcript Instead
-              </button>
-              <button onClick={() => setSuccess(true)}
-                style={{ width:"100%", background:"none", border:"none", color:"var(--text2)", fontSize:13, cursor:"pointer", padding:"6px 0" }}>
-                Skip for now
               </button>
             </div>
           ) : (

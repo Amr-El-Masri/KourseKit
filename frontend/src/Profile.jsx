@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import StudentDirectoryPanel from "./StudentDirectoryPanel";
-import { Banana, Cat, Dog, Eclipse, Telescope, Panda, TriangleAlert } from "lucide-react";
+import { Banana, Cat, Dog, Eclipse, Telescope, Panda, TriangleAlert, Plus } from "lucide-react";
 import AdminDashboard from "./AdminDashboard";
 import TranscriptModal from "./TranscriptModal";
 import SyllabusModal from "./SyllabusModal";
@@ -1820,7 +1820,7 @@ const refetchSemesters = () =>
               </div>
             ))}
             <button onClick={() => setSyllabusEditOH(p => [...p, { day:"", time:"", location:"" }])}
-              style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600, marginBottom:20 }}>+ Add office hours</button>
+              style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600, marginBottom:20 }}><><Plus size={13} /> Add office hours</></button>
 
             <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
               <button onClick={() => setSyllabusEditCourse(null)} style={pf.cancelBtn}>Cancel</button>
@@ -1895,7 +1895,7 @@ const refetchSemesters = () =>
             )}
             {sectOpen.semesters && !creating && (
               <button onClick={() => { setCreating(true); setEditingId(null); }} style={{ background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, padding:"6px 14px", fontSize:12, fontWeight:600, cursor:"pointer" }}>
-                + New Semester
+                <><Plus size={13} /> New Semester</>
               </button>
             )}
             <span onClick={() => toggleSect("semesters")} style={{ fontSize:16, color:"var(--text3)", cursor:"pointer" }}>{sectOpen.semesters ? "▾" : "▸"}</span>
@@ -1947,7 +1947,7 @@ const refetchSemesters = () =>
                     </div>
                   </div>
                 ))}
-                <button onClick={() => setNewSemCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"", components:[] }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
+                <button onClick={() => setNewSemCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"", components:[] }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}><><Plus size={13} /> Add Course</></button>
                 {semErr && <div style={{ fontSize:12, color:"var(--error)", background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:8, padding:"8px 12px", marginTop:8 }}>{semErr}</div>}
                 <div style={{ display:"flex", gap:8, marginTop:12 }}>
                   <button onClick={createSemester} disabled={semSaveLoad || !newSemName.trim()} style={{ ...pf.saveBtn, fontSize:13, opacity: semSaveLoad || !newSemName.trim() ? 0.6 : 1 }}>{semSaveLoad ? "Saving…" : "Save Semester"}</button>
@@ -2052,12 +2052,12 @@ const refetchSemesters = () =>
                           </div>
                         ) : c.code ? (
                           <div style={{ marginBottom:4, paddingLeft:2 }}>
-                            <button onClick={() => setSyllabusUploadCourse(c.code)} style={{ fontSize:11, color:"var(--primary)", background:"color-mix(in srgb,var(--primary) 12%,transparent)", border:"1px solid color-mix(in srgb,var(--primary) 25%,transparent)", borderRadius:6, cursor:"pointer", padding:"2px 8px", fontWeight:600, fontFamily:"inherit", transition:"all .15s" }} className="kk-pill">+ Upload Syllabus</button>
+                            <button onClick={() => setSyllabusUploadCourse(c.code)} style={{ fontSize:11, color:"var(--primary)", background:"color-mix(in srgb,var(--primary) 12%,transparent)", border:"1px solid color-mix(in srgb,var(--primary) 25%,transparent)", borderRadius:6, cursor:"pointer", padding:"2px 8px", fontWeight:600, fontFamily:"inherit", transition:"all .15s" }} className="kk-pill"><><Plus size={13} /> Upload Syllabus</></button>
                           </div>
                         ) : null}
                       </div>
                     ))}
-                    <button onClick={() => setEditCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"", components:[] }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
+                    <button onClick={() => setEditCourses(p => [...p, { id:Date.now(), code:"", credits:"", grade:"", components:[] }])} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}><><Plus size={13} /> Add Course</></button>
                     {semErr && <div style={{ fontSize:12, color:"var(--error)", background:"var(--error-bg)", border:"1px solid var(--error-border)", borderRadius:8, padding:"8px 12px", marginTop:8 }}>{semErr}</div>}
                     <div style={{ display:"flex", gap:8, marginTop:12 }}>
                       <button onClick={saveEdit} disabled={semSaveLoad} style={{ ...pf.saveBtn, fontSize:13, opacity: semSaveLoad ? 0.6 : 1 }}>{semSaveLoad ? "Saving…" : "Save Changes"}</button>

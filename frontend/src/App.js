@@ -50,7 +50,6 @@ export default function App() {
     hasValidToken() ? "dashboard" : "login"
   );
   const [prefillEmail, setPrefillEmail] = useState("");
-  const [postVerifyToken, setPostVerifyToken] = useState(null);
 
   useEffect(() => {
     if (hasValidToken()) tryRefreshToken();
@@ -64,11 +63,9 @@ export default function App() {
   const onVerified = (email, token) => {
     window.history.replaceState({}, document.title, "/");
     if (token) {
-      // Store the JWT so TranscriptModal and semester-save API calls work
       localStorage.setItem("kk_token", token);
       localStorage.setItem("kk_email", email);
-      setPostVerifyToken(token);
-      setPage("semester-setup");
+      setPage("dashboard");
     } else {
       setPrefillEmail(email);
       setPage("login");
@@ -84,7 +81,6 @@ export default function App() {
     <>
       {page === "login"          && <Login         onLogin={() => setPage("dashboard")} onGoToRegister={() => setPage("register")} onGoToForgotPassword={() => setPage("forgot-password")} prefillEmail={prefillEmail} />}
       {page === "register"       && <Register       onGoToLogin={goToLogin} />}
-      {page === "semester-setup" && <Register       postVerifyToken={postVerifyToken} onGoToLogin={() => setPage("dashboard")} />}
       {page === "dashboard"      && <Dashboard      onLogout={logout} />}
       {page === "forgot-password"&& <ForgotPassword onGoToLogin={goToLogin} />}
       {page === "reset-password" && <ResetPassword  token={resettoken} onGoToLogin={(email) => { setPrefillEmail(email || ""); goToLogin(); }} />}

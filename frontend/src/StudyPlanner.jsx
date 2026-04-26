@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Pencil, Zap, RotateCcw } from "lucide-react";
+import { Pencil, Zap, RotateCcw, Plus } from "lucide-react";
 
 const HOUR_HEIGHT = 80;
 const START_HOUR = 0;
@@ -867,7 +867,7 @@ function EntryPanel({ entries, onAdd, onDelete, onUpdateHours, colorMap, onColor
                 )}
 
                 <button className="sp-add-btn" onClick={handleAdd} disabled={!selectedTask || !hoursPerWeek}>
-                    + Add Entry
+                    <><Plus size={13} /> Add Entry</>
                 </button>
             </div>}
 

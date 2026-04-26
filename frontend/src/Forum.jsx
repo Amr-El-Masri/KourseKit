@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { MessageSquare, ArrowLeft, Trash2, Flag, Search, ChevronUp, BookOpen, GraduationCap, LayoutGrid, Check, User } from "lucide-react";
+import { MessageSquare, ArrowLeft, Trash2, Flag, Search, ChevronUp, BookOpen, GraduationCap, LayoutGrid, Check, User, Plus } from "lucide-react";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
@@ -882,7 +882,7 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
         {token && !showMyPosts && (
           <button className="f-primary-btn" onClick={() => setComposing(c => !c)}
             style={{ padding:"10px 20px", background:"color-mix(in srgb, var(--primary) 15%, transparent)", color:"var(--primary)", border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s" }}>
-            {composing ? "Cancel" : "+ New Post"}
+            {composing ? "Cancel" : <><Plus size={13} /> New Post</>}
           </button>
         )}
       </div>

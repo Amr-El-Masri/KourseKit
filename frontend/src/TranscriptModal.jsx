@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { Plus } from "lucide-react";
 
 const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
@@ -232,7 +233,7 @@ export default function TranscriptModal({ onClose, onApply }) {
                         <button onClick={() => removeCourse(sem.id, c.id)} style={{ background:"none", border:"none", color:"var(--text3)", cursor:"pointer", fontSize:14, padding:0 }}>✕</button>
                       </div>
                     ))}
-                    <button onClick={() => addCourse(sem.id)} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}>+ Add Course</button>
+                    <button onClick={() => addCourse(sem.id)} style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", padding:"4px 0", fontWeight:600 }}><><Plus size={13} /> Add Course</></button>
                   </div>
                 )}
               </div>
@@ -242,7 +243,7 @@ export default function TranscriptModal({ onClose, onApply }) {
               onClick={() => setSemesters(p => [...p, { id: Date.now(), name: "", include: true, courses: [{ id: 1, code: "", credits: "", grade: "" }] }])}
               style={{ fontSize:12, color:"var(--accent)", background:"none", border:"none", cursor:"pointer", marginBottom:16, fontWeight:600, padding:0 }}
             >
-              + Add Semester
+              <><Plus size={13} /> Add Semester</>
             </button>
 
             {applyError && <div style={{ fontSize:12, color:"var(--error)", marginBottom:10 }}>{applyError}</div>}

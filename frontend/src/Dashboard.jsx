@@ -8,12 +8,13 @@ import Settings from "./Settings";
 import StudyPlanner from "./StudyPlanner";
 import CourseDetails from "./CourseDetails";
 import SyllabusModal from "./SyllabusModal";
+import TranscriptModal from "./TranscriptModal";
 import ThemeToggle from "./ThemeToggle";
 import { useTheme } from "./ThemeContext";
 import StudentDirectory from "./StudentDirectoryPanel";
 import Forum from "./Forum";
 import StudyGroupFinder from "./StudyGroupFinder";
-import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Settings as SettingsIcon, MessageSquare, Users } from 'lucide-react';
+import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Settings as SettingsIcon, MessageSquare, Users, Plus } from 'lucide-react';
 
 const API = process.env.REACT_APP_API_URL || "${API}";
 
@@ -290,7 +291,7 @@ function CourseGradeSummaryWidget({ apiSemesters, selectedSemester, footer }) {
         {courses.length === 0 ? (
             <div style={{ textAlign:"center", padding:"24px 0" }}>
               <div style={{ fontSize:13, color:"var(--text3)", marginBottom:10 }}>No grade data for this semester.</div>
-              <span style={{ fontSize:12, fontWeight:600, color:"var(--accent)", background:"none", border:"1px solid var(--border)", borderRadius:8, padding:"5px 12px", cursor:"pointer", fontFamily:"inherit" }} onClick={() => {}}>Upload transcript to fill in →</span>
+              <span style={{ fontSize:12, fontWeight:600, color:"var(--accent)", background:"none", border:"1px solid var(--border)", borderRadius:8, padding:"5px 12px", cursor:"pointer", fontFamily:"inherit" }} onClick={() => setShowTranscript(true)}>Upload transcript to fill in →</span>
             </div>
         ) : (
             <>
@@ -456,7 +457,7 @@ function GPASummaryWidget({ apiSemesters, selectedSemester, onNavigate, footer }
               <div style={{ fontSize:13, color:"var(--text3)", marginBottom: cumGPA ? 0 : 10 }}>
                 {cumGPA ? "Select a semester to see breakdown." : "No grade history yet."}
               </div>
-              {!cumGPA && <span style={{ fontSize:12, fontWeight:600, color:"var(--accent)", border:"1px solid var(--border)", borderRadius:8, padding:"5px 12px", cursor:"pointer" }} onClick={() => {}}>Upload transcript to get started →</span>}
+              {!cumGPA && <span style={{ fontSize:12, fontWeight:600, color:"var(--accent)", border:"1px solid var(--border)", borderRadius:8, padding:"5px 12px", cursor:"pointer" }} onClick={() => setShowTranscript(true)}>Upload transcript to get started →</span>}
             </div>
         ) : !allGraded ? (
             <>
@@ -556,6 +557,7 @@ export default function Dashboard({ onLogout }) {
     }, 600);
   };
 
+  const [showTranscript, setShowTranscript] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [courseDetailsTarget, setCourseDetailsTarget] = useState(null);
   const [forumCourseTag, setForumCourseTag] = useState("");
@@ -1129,7 +1131,7 @@ export default function Dashboard({ onLogout }) {
                   {!courseSyllabi[c.name] && (
                     <div style={{marginTop:8}}>
                       <button className="kk-pill" onClick={e=>{e.stopPropagation();setSyllabusTarget(c.name);}} style={{fontSize:11,color:"var(--primary)",background:"color-mix(in srgb,var(--primary) 12%,transparent)",border:"1px solid color-mix(in srgb,var(--primary) 25%,transparent)",borderRadius:6,padding:"3px 8px",cursor:"pointer",transition:"all .15s"}}>
-                        + Upload Syllabus
+                        <><Plus size={13} /> Upload Syllabus</>
                       </button>
                     </div>
                   )}
@@ -1199,7 +1201,7 @@ export default function Dashboard({ onLogout }) {
           <SectionTitle>To-Do List</SectionTitle>
           <div style={{display:"flex",gap:8,marginTop:14}}>
             <input value={todoInput} onChange={e=>{setTodoInput(e.target.value);setTodoError(false);}} onKeyDown={e=>e.key==="Enter"&&addTodo()} placeholder="Add a task…" style={{...s.todoInput,borderColor:todoError?"var(--error)":"var(--border)"}}/>
-            <button className="add-btn" onClick={addTodo} style={s.addBtn}>+</button>
+            <button className="add-btn" onClick={addTodo} style={s.addBtn}><Plus size={18} /></button>
           </div>
           {todoError && <div style={{fontSize:12,color:"var(--error)",marginTop:4}}>Please type a task first, then add.</div>}
           <div style={{marginTop:10,maxHeight:160,overflowY:"auto",display:"flex",flexDirection:"column",gap:5}}>
@@ -2207,13 +2209,20 @@ export default function Dashboard({ onLogout }) {
                 {/* Actions */}
                 <div style={{padding:"16px 24px",borderTop:"1px solid var(--border)",display:"flex",gap:8}}>
                   <button className="kk-pill" onClick={()=>{setCourseDetailsTarget(null);setSyllabusTarget(cn);}} style={{flex:1,padding:"10px",borderRadius:9,border:"1px solid color-mix(in srgb,var(--primary) 30%,transparent)",background:"color-mix(in srgb,var(--primary) 15%,transparent)",color:"var(--primary)",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
-                    {syllabus ? "Edit Syllabus" : "+ Upload Syllabus"}
+                    {syllabus ? "Edit Syllabus" : "<><Plus size={13} /> Upload Syllabus</>"}
                   </button>
                 </div>
               </div>
             </div>
           );
         })()}
+
+        {showTranscript && (
+          <TranscriptModal
+            onClose={() => setShowTranscript(false)}
+            onApply={() => { setShowTranscript(false); fetchSemesters(); }}
+          />
+        )}
 
         {syllabusTarget && (
             <SyllabusModal
