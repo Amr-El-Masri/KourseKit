@@ -683,21 +683,27 @@ export function DefaultScheduleEditor({ token, onDone, extraAction, showSectionN
 
 function PfDropdown({ value, options, onChange, placeholder = "Select…", mb = 14 }) {
   const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState(null);
   const ref = useRef(null);
+  const btnRef = useRef(null);
   useEffect(() => {
     if (!open) return;
     const close = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [open]);
+  const handleOpen = () => {
+    if (btnRef.current) setRect(btnRef.current.getBoundingClientRect());
+    setOpen(o => !o);
+  };
   return (
     <div ref={ref} style={{ position:"relative", marginBottom:mb }}>
-      <button type="button" onClick={() => setOpen(o => !o)} style={{ width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", background:"var(--surface2)", color: value ? "var(--text)" : "var(--text3)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, transition:"border-color .15s", outline:"none" }}>
+      <button ref={btnRef} type="button" onClick={handleOpen} style={{ width:"100%", padding:"10px 14px", border:"1px solid var(--border)", borderRadius:10, fontSize:13, fontFamily:"'DM Sans',sans-serif", background:"var(--surface2)", color: value ? "var(--text)" : "var(--text3)", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, transition:"border-color .15s", outline:"none" }}>
         <span>{value || placeholder}</span>
         <span style={{ fontSize:8, opacity:0.6, flexShrink:0, display:"inline-block", transform: open ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
       </button>
-      {open && (
-        <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:10, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", zIndex:400, padding:4, maxHeight:220, overflowY:"auto" }}>
+      {open && rect && (
+        <div style={{ position:"fixed", top: rect.bottom + 4, left: rect.left, width: rect.width, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:10, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", zIndex:9999, padding:4, maxHeight:220, overflowY:"auto" }}>
           {options.map(opt => (
             <div key={opt} className="kk-option" onClick={() => { onChange(opt); setOpen(false); }}
               style={{ padding:"8px 12px", borderRadius:7, cursor:"pointer", fontSize:13, fontWeight: value===opt ? 600 : 400, color: value===opt ? "var(--accent)" : "var(--primary)", background: value===opt ? "var(--divider)" : "transparent", transition:"background .15s" }}>
@@ -1656,12 +1662,11 @@ const refetchSemesters = () =>
 
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
                 <div style={{ flex:1, minWidth:140 }}>
-                  <label style={pf.label}>Cumulative GPA {semesters.length > 0 ? <span style={{ color:"var(--primary)", fontWeight:500, fontSize:11 }}>(auto-calculated from transcript)</span> : <span style={{ color:"var(--text3)", fontWeight:400 }}>(optional)</span>}</label>
+                  <label style={pf.label}>Cumulative GPA <span style={{ color:"var(--text3)", fontWeight:400 }}>(optional)</span></label>
                   <input className="pf-input" value={draft.cumGPA}
-                    onChange={e => { if (semesters.length > 0) return; const v = e.target.value; if (v === "" || (parseFloat(v) >= 0 && parseFloat(v) <= 4.3)) set("cumGPA", v); }}
-                    placeholder="e.g. 3.45" type="number" step="0.01" min="0" max="4.3"
-                    readOnly={semesters.length > 0}
-                    style={{ ...pf.input, ...(semesters.length > 0 ? { opacity:0.7, cursor:"default" } : {}) }} />
+                    onChange={e => { const v = e.target.value; if (v === "" || (parseFloat(v) >= 1.0 && parseFloat(v) <= 4.3)) set("cumGPA", v); }}
+                    placeholder="e.g. 3.45" type="number" step="0.01" min="1.0" max="4.3"
+                    style={pf.input} />
                 </div>
                 <div style={{ flex:1, minWidth:140 }}>
                   <label style={pf.label}>Total Credits <span style={{ color:"var(--text3)", fontWeight:400 }}>(optional)</span></label>

@@ -158,7 +158,7 @@ function SectionCard({ section, index }) {
           )}
           <span style={{
             fontSize: 9, opacity: 0.55, transition: "transform 0.2s",
-            display: "inline-block", transform: expanded ? "rotate(180deg)" : "rotate(0deg)"
+            display: "inline-block", transform: expanded ? "rotate(0deg)" : "rotate(-90deg)"
           }}>▼</span>
         </div>
       </div>

@@ -842,16 +842,18 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
   const [showMyPosts,  setShowMyPosts]  = useState(false);
   const [viewingProfileEmail, setViewingProfileEmail] = useState(null);
   const [visibleCount, setVisibleCount] = useState(10);
+  const [activeTagFilter, setActiveTagFilter] = useState(initialCourseTag || null);
+  const [activeProfTagFilter, setActiveProfTagFilter] = useState(initialProfTag || null);
 
   const loadPosts = useCallback(async (cat) => {
       setLoading(true);
       try {
         const resolvedCat = cat ?? category;
         let url;
-        if (initialCourseTag && resolvedCat === "COURSE") {
-          url = `${API}/api/forum/posts/course/${encodeURIComponent(initialCourseTag)}`;
-        } else if (initialProfTag && resolvedCat === "PROFESSOR") {
-          url = `${API}/api/forum/posts/professor/${encodeURIComponent(initialProfTag)}`;
+        if (activeTagFilter && resolvedCat === "COURSE") {
+          url = `${API}/api/forum/posts/course/${encodeURIComponent(activeTagFilter)}`;
+        } else if (activeProfTagFilter && resolvedCat === "PROFESSOR") {
+          url = `${API}/api/forum/posts/professor/${encodeURIComponent(activeProfTagFilter)}`;
         } else if (resolvedCat === "ALL") {
           url = `${API}/api/forum/posts`;
         } else {
@@ -862,10 +864,11 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
       setPosts(Array.isArray(data) ? data : []);
     } catch { setPosts([]); }
     finally { setLoading(false); }
-  }, [category]);
+  }, [category, activeTagFilter, activeProfTagFilter]);
 
   useEffect(() => { loadPosts(initCat); }, []);
   useEffect(() => { loadPosts(category); setVisibleCount(10); }, [category]);
+  useEffect(() => { loadPosts(category); setVisibleCount(10); }, [activeTagFilter, activeProfTagFilter]);
 
   const deletePost = async (postId) => {
       if (!window.confirm("Delete this post?")) return;
@@ -1016,18 +1019,30 @@ export default function Forum({ initialCourseTag, initialProfTag }) {
       </div>
 
       {/* Context header when deep-linked */}
-        {initialCourseTag && category === "COURSE" && (
+        {activeTagFilter && category === "COURSE" && (
           <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 12 }}>
-            Showing posts tagged with <strong style={{ color: "var(--primary)" }}>{initialCourseTag}</strong>
-            <button onClick={() => setCategory("ALL")}
+            Showing posts tagged with <strong style={{ color: "var(--primary)" }}>{activeTagFilter}</strong>
+            <button onClick={() => setActiveTagFilter(null)}
+              style={{ marginLeft: 10, fontSize: 12, color: "var(--text3)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+              View all course posts
+            </button>
+            <button onClick={() => { setActiveTagFilter(null); setCategory("ALL"); }}
               style={{ marginLeft: 10, fontSize: 12, color: "var(--text3)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
               View all posts
             </button>
           </div>
         )}
-        {initialProfTag && category === "PROFESSOR" && (
+        {activeProfTagFilter && category === "PROFESSOR" && (
           <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 12 }}>
-            Showing posts tagged with <strong style={{ color: "var(--accent2)" }}>{initialProfTag}</strong>
+            Showing posts tagged with <strong style={{ color: "var(--accent2)" }}>{activeProfTagFilter}</strong>
+            <button onClick={() => setActiveProfTagFilter(null)}
+              style={{ marginLeft: 10, fontSize: 12, color: "var(--text3)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+              View all professor posts
+            </button>
+            <button onClick={() => { setActiveProfTagFilter(null); setCategory("ALL"); }}
+              style={{ marginLeft: 10, fontSize: 12, color: "var(--text3)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+              View all posts
+            </button>
           </div>
       )}
 
