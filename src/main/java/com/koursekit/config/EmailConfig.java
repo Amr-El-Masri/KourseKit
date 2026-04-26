@@ -20,6 +20,8 @@ public class EmailConfig {
     private String user;
     @Value("${email.password}")
     private String pass;
+    @Value("${app.frontend.url:http://localhost:3000}")
+    private String frontendUrl;
     @Autowired
     @Lazy
     private JavaMailSender mailSender;
@@ -57,7 +59,7 @@ public class EmailConfig {
     }
     
     public void verificationmail(String email, String token) {
-        String verificationLink = "http://localhost:3000?verify_token=" + token;
+        String verificationLink = frontendUrl + "?verify_token=" + token;
         
         String html = """
             <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #e8e8f0; border-radius: 12px; overflow: hidden; border: 1px solid #c8c8d8;">
