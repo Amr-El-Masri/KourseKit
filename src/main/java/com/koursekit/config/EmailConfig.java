@@ -20,8 +20,9 @@ public class EmailConfig {
     private String user;
     @Value("${email.password}")
     private String pass;
-    @Value("${app.frontend.url:http://localhost:3000}")
+    @Value("${frontend.url:http://localhost:3000}")
     private String frontendUrl;
+
     @Autowired
     @Lazy
     private JavaMailSender mailSender;
@@ -154,7 +155,7 @@ public class EmailConfig {
     }
 
     public void resetpasswordmail(String email, String token) {
-        String resetLink = "http://localhost:3000?reset_token=" + token;
+        String resetLink = frontendUrl + "?reset_token=" + token;
         
         String html = """
             <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; background: #e8e8f0; border-radius: 12px; overflow: hidden; border: 1px solid #c8c8d8;">
