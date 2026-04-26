@@ -66,14 +66,16 @@ const MAJORS_BY_FACULTY = {
 const MINORS_BY_FACULTY = {
   "Arts & Sciences": [
     "Applied Mathematics", "Arabic Studies", "Archaeology", "Art History",
-    "Biology", "Chemistry", "Computer Science", "Economics", "English Literature",
+    "Biology", "Chemistry", "Computer Science", "Computational Science", "Data Science", "Economics", "English Literature",
     "Environmental Studies", "History", "Mathematics", "Media and Communication",
     "Philosophy", "Physics", "Political Studies", "Psychology",
     "Public Administration", "Sociology-Anthropology", "Statistics", "Studio Arts",
   ],
   "Engineering & Architecture": [
     "Architecture", "Computer and Communications Engineering",
-    "Electrical and Computer Engineering", "Industrial Engineering",
+    "Electrical and Computer Engineering", "Industrial Engineering", "Bioengineering Design", "Applied Energy",
+    "Sustainable Design and Systems", "Artificial Intelligence", "Petroleum Engineering", "Urban Studies",
+    "Humanitarian Engineering & Public Health Innovations", "Business Sustainability"
   ],
   "Business": ["Business Administration", "Finance", "Marketing"],
   "Health Sciences": ["Health Communication", "Nutrition and Dietetics"],

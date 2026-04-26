@@ -43,7 +43,7 @@ public class GroupStudySessionService {
 
         StudyGroup group = studyGroupRepo.findById(groupId)
             .orElseThrow(() -> new IllegalArgumentException("Group not found"));
-        if (!group.getHost().getId().equals(hostId))
+        if (!memberRepo.existsByStudyGroup_IdAndUser_IdAndRole(groupId, hostId, StudyGroupMember.Role.HOST))
             throw new IllegalStateException("Sorry, only the host(s) can schedule sessions");
 
         User host = userRepo.findById(hostId)
