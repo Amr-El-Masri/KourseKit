@@ -5,37 +5,69 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.*;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.UUID;
 
 @Service
 public class FileStorageService {
-    @Value("${file.upload-dir}")
-    private String uploadDir;
+
+    @Value("${SUPABASE_URL}")
+    private String supabaseUrl;
+
+    @Value("${SUPABASE_KEY}")
+    private String supabaseKey;
+
+    @Value("${SUPABASE_BUCKET:koursekit}")
+    private String bucket;
+
+    private final HttpClient httpClient = HttpClient.newHttpClient();
 
     public String storeFile(MultipartFile file) throws IOException {
-        Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
-        Files.createDirectories(uploadPath);
-
         String originalName = file.getOriginalFilename();
         String extension = "";
-        if (originalName != null && originalName.contains(".")) {
-            extension = originalName.substring(originalName.lastIndexOf(".")); }
+        if (originalName != null && originalName.contains("."))
+            extension = originalName.substring(originalName.lastIndexOf("."));
 
         String fileName = UUID.randomUUID().toString() + extension;
-        Path targetLocation = uploadPath.resolve(fileName);
-        Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+        String contentType = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
 
-        return fileName;
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(supabaseUrl + "/storage/v1/object/" + bucket + "/" + fileName))
+            .header("Authorization", "Bearer " + supabaseKey)
+            .header("Content-Type", contentType)
+            .POST(HttpRequest.BodyPublishers.ofByteArray(file.getBytes()))
+            .build();
+
+        try {
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() >= 400)
+                throw new IOException("Upload failed: " + response.body());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Upload interrupted", e);
+        }
+
+        return supabaseUrl + "/storage/v1/object/public/" + bucket + "/" + fileName;
     }
 
-    public Path getFilePath(String fileName) {
-        return Paths.get(uploadDir).toAbsolutePath().normalize().resolve(fileName); }
-
-    public void deleteFile(String fileName) throws IOException {
+    public void deleteFile(String fileUrl) {
         try {
-            Path filePath = getFilePath(fileName);
-            Files.deleteIfExists(filePath);
-        } catch (IOException ignored) {}
+            String prefix = supabaseUrl + "/storage/v1/object/public/" + bucket + "/";
+            if (!fileUrl.startsWith(prefix)) return;
+            String path = fileUrl.substring(prefix.length());
+            String body = "[\"" + path.replace("\"", "\\\"") + "\"]";
+
+            HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(supabaseUrl + "/storage/v1/object/" + bucket))
+                .header("Authorization", "Bearer " + supabaseKey)
+                .header("Content-Type", "application/json")
+                .method("DELETE", HttpRequest.BodyPublishers.ofString(body))
+                .build();
+
+            httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        } catch (Exception ignored) {}
     }
 }

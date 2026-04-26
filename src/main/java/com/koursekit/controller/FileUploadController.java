@@ -3,18 +3,12 @@ package com.koursekit.controller;
 import com.koursekit.model.User;
 import com.koursekit.repository.StudyGroupMemberRepo;
 import com.koursekit.service.FileStorageService;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.nio.file.Path;
 import java.util.Map;
 import java.util.Set;
 
@@ -37,16 +31,18 @@ public class FileUploadController {
 
     public FileUploadController(FileStorageService fileStorageService, StudyGroupMemberRepo studyGroupMemberRepo) {
         this.fileStorageService = fileStorageService;
-        this.studyGroupMemberRepo = studyGroupMemberRepo; }
+        this.studyGroupMemberRepo = studyGroupMemberRepo;
+    }
 
     private User currentUser() {
-        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal(); }
+        return (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    }
 
     @PostMapping("/upload")
-    public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file, @RequestParam("groupId") Long groupId) {
+    public ResponseEntity<?> uploadFile(@RequestParam MultipartFile file, @RequestParam Long groupId) {
         Long userId = currentUser().getId();
-        if (!studyGroupMemberRepo.existsByStudyGroup_IdAndUser_Id(groupId, userId)) {
-            return ResponseEntity.status(403).body(Map.of("error", "Not a member of this study group")); }
+        if (!studyGroupMemberRepo.existsByStudyGroup_IdAndUser_Id(groupId, userId))
+            return ResponseEntity.status(403).body(Map.of("error", "Not a member of this study group"));
 
         String contentType = file.getContentType();
         if (contentType == null || !ALLOWED_TYPES.contains(contentType))
@@ -56,41 +52,16 @@ public class FileUploadController {
             return ResponseEntity.badRequest().body(Map.of("message", "File too large. Max 50MB"));
 
         try {
-            String fileName = fileStorageService.storeFile(file);
-            String fileUrl = "/api/files/" + fileName;
-            String attachmentType = determineAttachmentType(contentType);
-
+            String fileUrl = fileStorageService.storeFile(file);
             return ResponseEntity.ok(Map.of(
                 "url", fileUrl,
                 "fileName", file.getOriginalFilename(),
-                "fileType", attachmentType,
+                "fileType", determineAttachmentType(contentType),
                 "fileSize", file.getSize(),
                 "mimeType", contentType
             ));
         } catch (IOException e) {
-            return ResponseEntity.internalServerError()
-                .body(Map.of("message", "Could not upload file"));
-        }
-    }
-
-    @GetMapping("/{fileName:.+}")
-    public ResponseEntity<Resource> serveFile(@PathVariable String fileName) {
-        try {
-            Path filePath = fileStorageService.getFilePath(fileName);
-            Resource resource = new UrlResource(filePath.toUri());
-
-            if (!resource.exists() || !resource.isReadable())
-                return ResponseEntity.notFound().build();
-
-            String contentType = determineContentType(fileName);
-
-            return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                    "inline; filename=\"" + resource.getFilename() + "\"")
-                .body(resource);
-        } catch (MalformedURLException e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.internalServerError().body(Map.of("message", "Could not upload file"));
         }
     }
 
@@ -99,19 +70,5 @@ public class FileUploadController {
         if (mimeType.startsWith("audio/")) return "AUDIO";
         if (mimeType.equals("application/pdf")) return "PDF";
         return "DOC";
-    }
-
-    private String determineContentType(String fileName) {
-        String lower = fileName.toLowerCase();
-        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
-        if (lower.endsWith(".png")) return "image/png";
-        if (lower.endsWith(".gif")) return "image/gif";
-        if (lower.endsWith(".webp")) return "image/webp";
-        if (lower.endsWith(".pdf")) return "application/pdf";
-        if (lower.endsWith(".mp3")) return "audio/mpeg";
-        if (lower.endsWith(".wav")) return "audio/wav";
-        if (lower.endsWith(".ogg")) return "audio/ogg";
-        if (lower.endsWith(".webm")) return "audio/webm";
-        return "application/octet-stream";
     }
 }
