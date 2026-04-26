@@ -12,6 +12,7 @@ import com.koursekit.model.ReviewStatus;
 import com.koursekit.repository.ForumCommentRepository;
 import com.koursekit.repository.ForumPostRepository;
 import com.koursekit.repository.ForumRelateRepository;
+import com.koursekit.repository.UserRepo;
 
 import jakarta.transaction.Transactional;
 
@@ -22,6 +23,16 @@ public class ForumService {
     @Autowired private ForumCommentRepository commentRepo;
     @Autowired private ContentFilterService contentFilterService;
     @Autowired private ForumRelateRepository relateRepo;
+    @Autowired private UserRepo userRepo;
+
+    private String resolveDisplayName(String email, String fallback) {
+        return userRepo.findByEmail(email).map(u -> {
+            String fn = u.getFirstName() != null ? u.getFirstName().trim() : "";
+            String ln = u.getLastName() != null ? u.getLastName().trim() : "";
+            String name = (fn + " " + ln).trim();
+            return name.isBlank() ? fallback : name;
+        }).orElse(fallback);
+    }
 
     // ─── POSTS ───────────────────────────────────────────────
 
@@ -56,29 +67,44 @@ public class ForumService {
         return postRepo.save(post);
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<ForumPost> getAllPosts() {
-        return postRepo.findByStatusOrderByCreatedAtDesc(ReviewStatus.APPROVED);
+        List<ForumPost> posts = postRepo.findByStatusOrderByCreatedAtDesc(ReviewStatus.APPROVED);
+        posts.forEach(p -> p.setDisplayName(resolveDisplayName(p.getUserId(), p.getDisplayName())));
+        return posts;
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<ForumPost> getPostsByCategory(String category) {
-        return postRepo.findByCategoryAndStatusOrderByCreatedAtDesc(
+        List<ForumPost> posts = postRepo.findByCategoryAndStatusOrderByCreatedAtDesc(
                 category.toUpperCase(), ReviewStatus.APPROVED);
+        posts.forEach(p -> p.setDisplayName(resolveDisplayName(p.getUserId(), p.getDisplayName())));
+        return posts;
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<ForumPost> getPostsByCourseTag(String courseTag) {
-        return postRepo.findByCourseTagAndStatusOrderByCreatedAtDesc(
+        List<ForumPost> posts = postRepo.findByCourseTagAndStatusOrderByCreatedAtDesc(
                 courseTag, ReviewStatus.APPROVED);
+        posts.forEach(p -> p.setDisplayName(resolveDisplayName(p.getUserId(), p.getDisplayName())));
+        return posts;
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<ForumPost> getPostsByProfessorTag(String professorTag) {
-        return postRepo.findByProfessorTagAndStatusOrderByCreatedAtDesc(
+        List<ForumPost> posts = postRepo.findByProfessorTagAndStatusOrderByCreatedAtDesc(
                 professorTag, ReviewStatus.APPROVED);
+        posts.forEach(p -> p.setDisplayName(resolveDisplayName(p.getUserId(), p.getDisplayName())));
+        return posts;
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ForumPost getPostById(Long postId) {
-        return postRepo.findById(postId)
+        ForumPost post = postRepo.findById(postId)
                 .filter(p -> p.getStatus() == ReviewStatus.APPROVED)
                 .orElseThrow(() -> new RuntimeException("Post not found."));
+        post.setDisplayName(resolveDisplayName(post.getUserId(), post.getDisplayName()));
+        return post;
     }
 
     public void deletePost(Long postId, String userId, boolean isAdmin) {
@@ -116,9 +142,12 @@ public class ForumService {
         return saved;
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<ForumComment> getCommentsForPost(Long postId) {
-        return commentRepo.findByPostIdAndStatusOrderByCreatedAtAsc(
+        List<ForumComment> comments = commentRepo.findByPostIdAndStatusOrderByCreatedAtAsc(
                 postId, ReviewStatus.APPROVED);
+        comments.forEach(c -> c.setDisplayName(resolveDisplayName(c.getUserId(), c.getDisplayName())));
+        return comments;
     }
 
     public void deleteComment(Long commentId, String userId, boolean isAdmin) {
@@ -160,7 +189,10 @@ public class ForumService {
         return postRepo.save(post);
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<ForumPost> getPostsByUser(String userId) {
-        return postRepo.findByUserId(userId);
+        List<ForumPost> posts = postRepo.findByUserId(userId);
+        posts.forEach(p -> p.setDisplayName(resolveDisplayName(p.getUserId(), p.getDisplayName())));
+        return posts;
     }
 }

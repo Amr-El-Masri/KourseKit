@@ -27,6 +27,7 @@ export default function Register({ onGoToLogin }) {
   const [passfocused,  setpassfocused]  = useState(false);
   const [showpass,     setshowpass]     = useState(false);
   const [rememberMe,   setRememberMe]   = useState(false);
+  const [regToken,     setRegToken]     = useState("");
 
   const passwordOk   = requirements.every(r => r.test(password));
   const confirmMatch = confirm.length > 0 && password === confirm;
