@@ -191,7 +191,6 @@ public class StudyGroupService {
                 )); }
 
     @Transactional
-    @Transactional
     public void removeMember(Long hostId, Long groupId, Long memberId) {
         StudyGroup group = studyGroupRepo.findById(groupId)
             .orElseThrow(() -> new IllegalArgumentException("Group not found"));
