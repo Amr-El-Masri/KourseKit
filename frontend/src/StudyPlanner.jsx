@@ -666,7 +666,11 @@ function DayColumn({
                 </div>
             )}
             {(() => {
-                const blockList = blocks || [];
+                const blockList = (blocks || []).slice().sort((a, b) => {
+                    const aH = parseFloat(a.startTime.split(":")[0]) + parseFloat(a.startTime.split(":")[1]) / 60;
+                    const bH = parseFloat(b.startTime.split(":")[0]) + parseFloat(b.startTime.split(":")[1]) / 60;
+                    return aH - bH;
+                });
                 // Group overlapping blocks into columns
                 const columns = [];
                 blockList.forEach(block => {

@@ -533,7 +533,7 @@ public class StudyPlanService {
             slot.setUser(user);
             slot.setDayKey((String) s.get("dayKey"));
             slot.setStartTime(java.time.LocalTime.parse((String) s.get("startTime")));
-            slot.setEndTime(java.time.LocalTime.parse((String) s.get("endTime")));
+            slot.setEndTime( java.time.LocalTime.parse((String) s.get("endTime")));
             slot.setWeekStart(weekStart);
             slot.setSemesterName(semester);
             toSave.add(slot);
