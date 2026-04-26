@@ -16,7 +16,7 @@ import Forum from "./Forum";
 import StudyGroupFinder from "./StudyGroupFinder";
 import { LayoutDashboard, Calculator, CheckSquare, Star, User, BookOpen, Bell, Pause, Play, Power, LayoutList, Banana, Cat, Eclipse, Dog, Telescope, Panda, Settings as SettingsIcon, MessageSquare, Users, Plus } from 'lucide-react';
 
-const API = process.env.REACT_APP_API_URL || "${API}";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 const AVATAR_ICONS = [
   { id:"Banana", icon: Banana },

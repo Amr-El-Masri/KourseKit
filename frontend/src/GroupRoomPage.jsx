@@ -6,7 +6,7 @@ import { StudentProfileView } from "./StudentDirectoryPanel";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 
-const API = process.env.REACT_APP_API_URL || "${API}";
+const API = process.env.REACT_APP_API_URL || "http://localhost:8080";
 
 function getToken() { return localStorage.getItem("kk_token"); }
 function getUserId() {

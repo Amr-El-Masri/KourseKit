@@ -1190,6 +1190,7 @@ const refetchSemesters = () =>
   const saveAvatar = async (value) => {
     const updated = { ...profile, avatar: value };
     setProfile(updated);
+    setDraft(updated);
     setProfilepic(false);
     if (onProfileSave) onProfileSave(updated);
     try {
