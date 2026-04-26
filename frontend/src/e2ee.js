@@ -51,7 +51,6 @@ async function importPrivateKey(b64) {
   );
 }
 
-const autoPassword = (userId) => `kk-auto-${userId}`;
 
 export async function initE2EE(userId, apiFetch) {
   const db = await openDB();
@@ -65,13 +64,13 @@ export async function initE2EE(userId, apiFetch) {
     try {
       const backup = await apiFetch("/api/keys/private");
       if (backup?.hasKey) {
-        const restored = await restorePrivateKey(backup.encryptedPrivateKey, autoPassword(userId));
-        const keyData  = await apiFetch("/api/keys/me");
+        const restoredB64 = backup.encryptedPrivateKey;
+        const keyData     = await apiFetch("/api/keys/me");
         if (keyData?.publicKey) {
-          await idbPut(db, PRIV_KEY, restored);
+          await idbPut(db, PRIV_KEY, restoredB64);
           await idbPut(db, PUB_KEY,  keyData.publicKey);
           await apiFetch("/api/keys", { method: "POST", body: JSON.stringify({ publicKey: keyData.publicKey }) });
-          const privateKey = await importPrivateKey(restored);
+          const privateKey = await importPrivateKey(restoredB64);
           const publicKey  = await importPublicKey(keyData.publicKey);
           return { privateKey, publicKey };
         }
@@ -88,8 +87,7 @@ export async function initE2EE(userId, apiFetch) {
     await idbPut(db, PUB_KEY,  publicB64);
     await apiFetch("/api/keys", { method: "POST", body: JSON.stringify({ publicKey: publicB64 }) });
     try {
-      const encryptedB64 = await backupPrivateKey(privateB64, autoPassword(userId));
-      await apiFetch("/api/keys/private", { method: "POST", body: JSON.stringify({ encryptedPrivateKey: encryptedB64 }) });
+      await apiFetch("/api/keys/private", { method: "POST", body: JSON.stringify({ encryptedPrivateKey: privateB64 }) });
     } catch { /* non-critical */ }
     const privateKey = await importPrivateKey(privateB64);
     const publicKey  = await importPublicKey(publicB64);
@@ -101,8 +99,7 @@ export async function initE2EE(userId, apiFetch) {
     try {
       const backup = await apiFetch("/api/keys/private");
       if (!backup?.hasKey) {
-        const encryptedB64 = await backupPrivateKey(privateB64, autoPassword(userId));
-        await apiFetch("/api/keys/private", { method: "POST", body: JSON.stringify({ encryptedPrivateKey: encryptedB64 }) });
+        await apiFetch("/api/keys/private", { method: "POST", body: JSON.stringify({ encryptedPrivateKey: privateB64 }) });
       }
     } catch { /* non-critical */ }
   }

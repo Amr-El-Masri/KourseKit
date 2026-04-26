@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.koursekit.config.EmailConfig;
 import com.koursekit.dto.Admins;
 import com.koursekit.dto.MassRequest;
+import com.koursekit.model.ForumComment;
 import com.koursekit.model.ForumPost;
 import com.koursekit.model.GroupReport;
 import com.koursekit.model.ProfessorReview;
@@ -34,6 +35,7 @@ import com.koursekit.model.StudyGroup;
 import com.koursekit.model.User;
 import com.koursekit.repository.AvailabilitySlotRepository;
 import com.koursekit.repository.DefaultScheduleSlotRepository;
+import com.koursekit.repository.ForumCommentRepository;
 import com.koursekit.repository.ForumPostRepository;
 import com.koursekit.repository.GroupMessageRepo;
 import com.koursekit.repository.GroupReportsRepo;
@@ -65,6 +67,7 @@ public class AdminController {
     @Autowired private ProfessorReviewRepository profReviewRepo;
     @Autowired private ReportRepository reportRepo;
     @Autowired private ForumPostRepository forumPostRepo;
+    @Autowired private ForumCommentRepository forumCommentRepo;
     @Autowired private GroupReportsRepo groupReportsRepo;
     @Autowired private TokenRepo tokenRepo;
     @Autowired private PassRepo passRepo;
@@ -477,6 +480,91 @@ public class AdminController {
             userrepo.save(author);
         });
         return ResponseEntity.ok("Post deleted.");
+    }
+
+    // ─── FORUM COMMENTS ──────────────────────────────────────────────────────
+
+    private Map<String, Object> forumCommentToMap(ForumComment c) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id",          c.getId());
+        m.put("userid",      c.getUserId());
+        m.put("displayname", c.getDisplayName());
+        m.put("body",        c.getBody());
+        m.put("status",      c.getStatus());
+        m.put("createdat",   c.getCreatedAt());
+        m.put("postid",      c.getPost() != null ? c.getPost().getId() : null);
+        m.put("posttitle",   c.getPost() != null ? c.getPost().getTitle() : null);
+        List<Report> reports = reportRepo.findByForumCommentId(c.getId());
+        m.put("reportcount",   reports.size());
+        m.put("reportreasons", reports.stream().map(Report::getReason).collect(Collectors.toList()));
+        return m;
+    }
+
+    @GetMapping("/forum-comments/flagged")
+    public ResponseEntity<Map<String, Object>> getFlaggedForumComments(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size) {
+        Page<ForumComment> p = forumCommentRepo.findByStatusInOrderByCreatedAtDesc(
+            List.of(ReviewStatus.FLAGGED, ReviewStatus.PENDING), PageRequest.of(page, size));
+        List<Map<String, Object>> content = p.getContent().stream().map(this::forumCommentToMap).collect(Collectors.toList());
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", content);
+        response.put("totalpages", p.getTotalPages());
+        response.put("totalelements", p.getTotalElements());
+        response.put("number", p.getNumber());
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/forum-comments/reported")
+    public ResponseEntity<Map<String, Object>> getReportedForumComments(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "15") int size) {
+        Page<ForumComment> p = forumCommentRepo.findByStatusOrderByCreatedAtDesc(
+            ReviewStatus.REPORTED, PageRequest.of(page, size));
+        List<Map<String, Object>> content = p.getContent().stream().map(this::forumCommentToMap).collect(Collectors.toList());
+        Map<String, Object> response = new HashMap<>();
+        response.put("content", content);
+        response.put("totalpages", p.getTotalPages());
+        response.put("totalelements", p.getTotalElements());
+        response.put("number", p.getNumber());
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/forum-comments/{id}/approve")
+    public ResponseEntity<?> approveForumComment(@PathVariable Long id) {
+        ForumComment c = forumCommentRepo.findById(id).orElseThrow(() -> new RuntimeException("Comment not found."));
+        c.setStatus(ReviewStatus.APPROVED);
+        forumCommentRepo.save(c);
+        return ResponseEntity.ok("Comment approved.");
+    }
+
+    @PutMapping("/forum-comments/{id}/warn")
+    public ResponseEntity<?> warnForumComment(@PathVariable Long id) {
+        ForumComment c = forumCommentRepo.findById(id).orElseThrow(() -> new RuntimeException("Comment not found."));
+        forumCommentRepo.delete(c);
+        userrepo.findByEmail(c.getUserId()).ifPresent(author -> {
+            int strikes = author.getStrikeCount() + 1;
+            author.setStrikeCount(strikes);
+            author.setFlagged(true);
+            if (strikes >= 5) author.setActive(false);
+            userrepo.save(author);
+        });
+        return ResponseEntity.ok("User warned.");
+    }
+
+    @DeleteMapping("/forum-comments/{id}")
+    public ResponseEntity<?> deleteForumComment(@PathVariable Long id) {
+        ForumComment c = forumCommentRepo.findById(id).orElse(null);
+        if (c == null) return ResponseEntity.notFound().build();
+        forumCommentRepo.delete(c);
+        userrepo.findByEmail(c.getUserId()).ifPresent(author -> {
+            int strikes = author.getStrikeCount() + 1;
+            author.setStrikeCount(strikes);
+            author.setFlagged(true);
+            if (strikes >= 5) author.setActive(false);
+            userrepo.save(author);
+        });
+        return ResponseEntity.ok("Comment deleted.");
     }
 
     // ─── GROUP REPORTS ────────────────────────────────────────────────────────

@@ -52,11 +52,23 @@ export default function AdminDashboard({ token }) {
 
   // forum posts
   const [forumPostStatus,      setForumPostStatus]      = useState("flagged");
+  const [forumType,            setForumType]            = useState("posts");
   const [flaggedForumPosts,    setFlaggedForumPosts]    = useState([]);
   const [flaggedForumLoading,  setFlaggedForumLoading]  = useState(false);
   const [reportedForumPosts,   setReportedForumPosts]   = useState([]);
   const [reportedForumLoading, setReportedForumLoading] = useState(false);
   const [confirmForumAction,   setConfirmForumAction]   = useState(null);
+
+  // forum comments
+  const [flaggedForumComments,    setFlaggedForumComments]    = useState([]);
+  const [flaggedCommentLoading,   setFlaggedCommentLoading]   = useState(false);
+  const [reportedForumComments,   setReportedForumComments]   = useState([]);
+  const [reportedCommentLoading,  setReportedCommentLoading]  = useState(false);
+  const [confirmCommentAction,    setConfirmCommentAction]    = useState(null);
+  const [commentFlaggedPage,      setCommentFlaggedPage]      = useState(0);
+  const [commentFlaggedTotal,     setCommentFlaggedTotal]     = useState(1);
+  const [commentReportedPage,     setCommentReportedPage]     = useState(0);
+  const [commentReportedTotal,    setCommentReportedTotal]    = useState(1);
 
   // group reports
   const [groupReports,        setGroupReports]        = useState([]);
@@ -237,6 +249,22 @@ export default function AdminDashboard({ token }) {
     } catch {} finally { setReportedForumLoading(false); }
   }, [token]);
 
+  const loadFlaggedForumComments = useCallback(async (pg = 0) => {
+    setFlaggedCommentLoading(true);
+    try {
+      const res = await fetch(`${API}/api/admin/forum-comments/flagged?page=${pg}&size=15`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { const data = await res.json(); setFlaggedForumComments(data.content); setCommentFlaggedTotal(data.totalpages); setCommentFlaggedPage(data.number); }
+    } catch {} finally { setFlaggedCommentLoading(false); }
+  }, [token]);
+
+  const loadReportedForumComments = useCallback(async (pg = 0) => {
+    setReportedCommentLoading(true);
+    try {
+      const res = await fetch(`${API}/api/admin/forum-comments/reported?page=${pg}&size=15`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) { const data = await res.json(); setReportedForumComments(data.content); setCommentReportedTotal(data.totalpages); setCommentReportedPage(data.number); }
+    } catch {} finally { setReportedCommentLoading(false); }
+  }, [token]);
+
   const loadGroupReports = useCallback(async (pg = 0) => {
     setGroupReportsLoading(true);
     try {
@@ -246,8 +274,8 @@ export default function AdminDashboard({ token }) {
   }, [token]);
 
   useEffect(() => {
-    if (tab === "forum") { loadFlaggedForumPosts(0); loadReportedForumPosts(0); }
-  }, [tab, loadFlaggedForumPosts, loadReportedForumPosts]);
+    if (tab === "forum") { loadFlaggedForumPosts(0); loadReportedForumPosts(0); loadFlaggedForumComments(0); loadReportedForumComments(0); }
+  }, [tab, loadFlaggedForumPosts, loadReportedForumPosts, loadFlaggedForumComments, loadReportedForumComments]);
 
   useEffect(() => {
     if (tab === "studygroups") loadGroupReports(0);
@@ -326,6 +354,25 @@ export default function AdminDashboard({ token }) {
     try {
       const res = await fetch(`${API}/api/admin/forum-posts/${postId}/warn`, { method: "PUT", headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) removeForumPost(postId); else setErr("Action failed.");
+    } catch { setErr("Action failed."); }
+  };
+
+  const removeForumComment = (id) => {
+    setFlaggedForumComments(prev => prev.filter(c => c.id !== id));
+    setReportedForumComments(prev => prev.filter(c => c.id !== id));
+  };
+
+  const approveForumComment = async (id) => {
+    try {
+      const res = await fetch(`${API}/api/admin/forum-comments/${id}/approve`, { method: "PUT", headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) removeForumComment(id); else setErr("Action failed.");
+    } catch { setErr("Action failed."); }
+  };
+
+  const warnForumComment = async (id) => {
+    try {
+      const res = await fetch(`${API}/api/admin/forum-comments/${id}/warn`, { method: "PUT", headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) removeForumComment(id); else setErr("Action failed.");
     } catch { setErr("Action failed."); }
   };
 
@@ -781,9 +828,20 @@ export default function AdminDashboard({ token }) {
       {/* forum tab */}
       {tab === "forum" && (
         <>
+          <div style={{ display:"flex", gap:6, marginBottom:12, width:"fit-content" }}>
+            {[{id:"posts",label:"Posts"},{id:"comments",label:"Comments"}].map(t => (
+              <button key={t.id} className="kk-tab" data-active={forumType === t.id} onClick={() => { setForumType(t.id); setConfirmForumAction(null); setConfirmCommentAction(null); }} style={{
+                padding:"7px 16px", borderRadius:9, fontSize:13,
+                fontWeight: forumType === t.id ? 600 : 400, cursor:"pointer", transition:"all .15s",
+                border: forumType === t.id ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
+                background: forumType === t.id ? "color-mix(in srgb, var(--accent) 14%, var(--surface))" : "var(--surface)",
+                color:      forumType === t.id ? "var(--accent)" : "var(--text2)",
+              }}>{t.label}</button>
+            ))}
+          </div>
           <div style={{ display:"flex", gap:6, marginBottom:16, width:"fit-content" }}>
             {[{id:"flagged",label:"Flagged"},{id:"reported",label:"Reported"}].map(t => (
-              <button key={t.id} className="kk-tab" data-active={forumPostStatus === t.id} onClick={() => { setForumPostStatus(t.id); setConfirmForumAction(null); }} style={{
+              <button key={t.id} className="kk-tab" data-active={forumPostStatus === t.id} onClick={() => { setForumPostStatus(t.id); setConfirmForumAction(null); setConfirmCommentAction(null); }} style={{
                 padding:"8px 18px", borderRadius:9, fontSize:13,
                 fontWeight: forumPostStatus === t.id ? 600 : 400, cursor:"pointer", transition:"all .15s",
                 border: forumPostStatus === t.id ? "1.5px solid var(--primary)" : "1.5px solid var(--border)",
@@ -801,7 +859,7 @@ export default function AdminDashboard({ token }) {
             {forumSearch && <button onClick={() => setForumSearch("")} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--text3)", fontSize:14, padding:0, marginLeft:6 }}>✕</button>}
           </div>
 
-          {(() => {
+          {forumType === "posts" && (() => {
             const list    = (forumPostStatus === "flagged" ? flaggedForumPosts : reportedForumPosts).filter(p => matchSearch(forumSearch, p.userid, p.title, p.body, p.category, p.coursetag, p.professortag));
             const loading = forumPostStatus === "flagged" ? flaggedForumLoading : reportedForumLoading;
             const page       = forumPostStatus === "flagged" ? forumFlaggedPage       : forumReportedPage;
@@ -869,6 +927,66 @@ export default function AdminDashboard({ token }) {
                 )}
                 <Pagination page={page} totalPages={totalPages} onPrev={() => loadPage(page - 1)} onNext={() => loadPage(page + 1)} />
                 <div style={{ marginTop:14, fontSize:12, color:"var(--text3)" }}>{list.length} post{list.length !== 1 ? "s" : ""} shown{forumSearch && ` (filtered)`}</div>
+              </>
+            );
+          })()}
+
+          {forumType === "comments" && (() => {
+            const list    = (forumPostStatus === "flagged" ? flaggedForumComments : reportedForumComments).filter(c => matchSearch(forumSearch, c.userid, c.body, c.posttitle));
+            const loading = forumPostStatus === "flagged" ? flaggedCommentLoading : reportedCommentLoading;
+            const page       = forumPostStatus === "flagged" ? commentFlaggedPage  : commentReportedPage;
+            const totalPages = forumPostStatus === "flagged" ? commentFlaggedTotal : commentReportedTotal;
+            const loadPage   = forumPostStatus === "flagged" ? loadFlaggedForumComments : loadReportedForumComments;
+            const cols = "1.5fr 2fr 50px 1fr 200px";
+            return (
+              <>
+                {loading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
+                {!loading && list.length === 0 && (
+                  <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>
+                    <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>No {forumPostStatus} comments</div>
+                  </div>
+                )}
+                {!loading && list.length > 0 && (
+                  <div className="ad-anim" style={ad.table}>
+                    <div style={{ ...ad.tableHeader, gridTemplateColumns: cols }}>
+                      <span>User</span><span>Post</span><span>Reports</span><span style={{ paddingLeft:16 }}>Reasons</span><span>Actions</span>
+                    </div>
+                    {list.map((c, i) => {
+                      const isConfirming = confirmCommentAction?.id === c.id;
+                      return (
+                        <div key={c.id} className="ad-anim" style={{ animationDelay:`${i*0.04}s`, padding:"10px 20px 12px", background: i % 2 === 0 ? "var(--surface)" : "var(--surface2)", borderBottom: i < list.length - 1 ? "1px solid var(--divider)" : "none" }}>
+                          <div style={{ display:"grid", gridTemplateColumns: cols, alignItems:"center", marginBottom:8 }}>
+                            <span style={{ fontSize:12, color:"var(--text2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:8 }}>{c.userid || "—"}</span>
+                            <span style={{ fontSize:12, color:"var(--primary)", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:8 }}>{c.posttitle || "—"}</span>
+                            <span style={{ fontSize:12, color: c.reportcount > 0 ? "var(--error)" : "var(--text3)", fontWeight: c.reportcount > 0 ? 700 : 400 }}>{c.reportcount ?? 0}</span>
+                            <span style={{ fontSize:11, color:"var(--text2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", paddingRight:8, paddingLeft:16 }}>
+                              {(c.reportreasons || []).length > 0 ? [...new Set(c.reportreasons)].join(", ") : "—"}
+                            </span>
+                            {isConfirming ? (
+                              <div style={{ display:"flex", alignItems:"center", gap:4 }}>
+                                <span style={{ fontSize:11, fontWeight:600, color: confirmCommentAction.action === "approve" ? "var(--success)" : "var(--accent)" }}>Sure?</span>
+                                <button onClick={() => { if (confirmCommentAction.action === "approve") approveForumComment(c.id); else warnForumComment(c.id); setConfirmCommentAction(null); }}
+                                  style={{ padding:"4px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:600, cursor:"pointer", background: confirmCommentAction.action === "approve" ? "rgba(0,180,100,0.12)" : "var(--divider)", color: confirmCommentAction.action === "approve" ? "var(--success)" : "var(--accent)" }}>Yes</button>
+                                <button onClick={() => setConfirmCommentAction(null)} style={{ padding:"4px 8px", border:"1px solid var(--border)", borderRadius:6, fontSize:11, cursor:"pointer", background:"var(--surface)", color:"var(--text2)" }}>No</button>
+                              </div>
+                            ) : (
+                              <div style={{ display:"flex", gap:4 }}>
+                                <button className="action-btn" onClick={() => setConfirmCommentAction({ id: c.id, action:"approve" })} style={{ padding:"4px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:600, cursor:"pointer", background:"rgba(0,180,100,0.12)", color:"var(--success)" }}>Approve</button>
+                                <button className="action-btn" onClick={() => setConfirmCommentAction({ id: c.id, action:"warn" })} style={{ padding:"4px 8px", border:"none", borderRadius:6, fontSize:11, fontWeight:600, cursor:"pointer", background:"var(--divider)", color:"var(--accent)" }}>Warn</button>
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ fontSize:12, color:"var(--text2)", lineHeight:1.5, paddingLeft:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                            <span style={{ fontSize:10, fontWeight:700, color:"var(--text3)", textTransform:"uppercase", letterSpacing:.5, marginRight:6 }}>Comment</span>
+                            {c.body || "—"}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <Pagination page={page} totalPages={totalPages} onPrev={() => loadPage(page - 1)} onNext={() => loadPage(page + 1)} />
+                <div style={{ marginTop:14, fontSize:12, color:"var(--text3)" }}>{list.length} comment{list.length !== 1 ? "s" : ""} shown{forumSearch && ` (filtered)`}</div>
               </>
             );
           })()}

@@ -14,4 +14,5 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     boolean existsByUserIdAndForumPostId(String userId, Long forumPostId);
     boolean existsByUserIdAndForumCommentId(String userId, Long forumCommentId);
     List<Report> findByForumPostId(Long forumPostId);
+    List<Report> findByForumCommentId(Long forumCommentId);
 }
