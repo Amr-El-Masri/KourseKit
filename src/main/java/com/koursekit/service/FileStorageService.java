@@ -14,10 +14,10 @@ import java.util.UUID;
 @Service
 public class FileStorageService {
 
-    @Value("${SUPABASE_URL}")
+    @Value("${SUPABASE_URL:}")
     private String supabaseUrl;
 
-    @Value("${SUPABASE_KEY}")
+    @Value("${SUPABASE_KEY:}")
     private String supabaseKey;
 
     @Value("${SUPABASE_BUCKET:koursekit}")
@@ -26,6 +26,8 @@ public class FileStorageService {
     private final HttpClient httpClient = HttpClient.newHttpClient();
 
     public String storeFile(MultipartFile file) throws IOException {
+        if (supabaseUrl == null || supabaseUrl.isBlank() || supabaseKey == null || supabaseKey.isBlank())
+            throw new IOException("Supabase storage is not configured (SUPABASE_URL / SUPABASE_KEY missing).");
         String originalName = file.getOriginalFilename();
         String extension = "";
         if (originalName != null && originalName.contains("."))
