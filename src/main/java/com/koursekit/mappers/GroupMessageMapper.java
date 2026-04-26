@@ -29,7 +29,8 @@ public class GroupMessageMapper {
             message.getAttachmentType(),
             message.getAttachmentName(),
             message.getAttachmentSize(),
-            message.getPinned()
+            message.getPinned(),
+            message.getIsSystem()
         );
     }
 }

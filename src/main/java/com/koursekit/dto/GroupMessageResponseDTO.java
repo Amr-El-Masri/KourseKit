@@ -19,5 +19,6 @@ public record GroupMessageResponseDTO (
     String attachmentType,
     String attachmentName,
     Long attachmentSize,
-    boolean pinned
+    boolean pinned,
+    boolean isSystem
 ) {}

@@ -66,6 +66,9 @@ public class GroupMessage {
     @Column(name = "pinned", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
     private Boolean pinned = false;
 
+    @Column(name = "is_system", nullable = false, columnDefinition = "TINYINT(1) DEFAULT 0")
+    private Boolean isSystem = false;
+
     @Column(name = "pinned_at")
     private java.time.LocalDateTime pinnedAt;
 
@@ -165,4 +168,7 @@ public class GroupMessage {
 
     public java.time.LocalDateTime getPinnedAt() { return pinnedAt; }
     public void setPinnedAt(java.time.LocalDateTime pinnedAt) { this.pinnedAt = pinnedAt; }
+
+    public Boolean getIsSystem() { return isSystem != null && isSystem; }
+    public void setIsSystem(Boolean isSystem) { this.isSystem = isSystem; }
 }

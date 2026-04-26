@@ -337,6 +337,16 @@ function MessageBubble({ message, isOwn, showName, showTime, onDelete, onReact, 
     setShowMenu(false);
   };
 
+  if (message.isSystem) {
+    return (
+      <div style={{ textAlign: "center", margin: "10px 0", padding: "0 16px" }}>
+        <span style={{ fontSize: 11, color: "var(--text3)", background: "var(--surface2)", borderRadius: 99, padding: "3px 12px", display: "inline-block" }}>
+          {message.content}
+        </span>
+      </div>
+    );
+  }
+
   if (message.isDeleted) {
     return (
       <div style={{ textAlign: isOwn ? "right" : "left", marginBottom: 8 }}>

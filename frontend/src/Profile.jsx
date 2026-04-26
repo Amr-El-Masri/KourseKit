@@ -712,23 +712,49 @@ function PfDropdown({ value, options, onChange, placeholder = "Select…", mb = 
 
 function CropCanvas({ cropModal, setCropModal }) {
   const CANVAS = 220;
-  const divRef = useRef(null);
+  const canvasRef = useRef(null);
+  const imgRef = useRef(null);
+  const containerRef = useRef(null);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   useEffect(() => {
-    const el = divRef.current;
-    if (!el) return;
+    setImgLoaded(false);
+    const img = new Image();
+    img.onload = () => { imgRef.current = img; setImgLoaded(true); };
+    img.src = cropModal.src;
+  }, [cropModal.src]);
 
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const img = imgRef.current;
+    if (!canvas || !img || !imgLoaded) return;
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, CANVAS, CANVAS);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(CANVAS / 2, CANVAS / 2, CANVAS / 2, 0, Math.PI * 2);
+    ctx.clip();
+    const z = cropModal.zoom;
+    const ox = cropModal.offsetX;
+    const oy = cropModal.offsetY;
+    const side = Math.min(img.width, img.height) / z;
+    const canvasToImg = side / CANVAS;
+    const sx = Math.max(0, Math.min(img.width - side, (img.width - side) / 2 - ox * canvasToImg));
+    const sy = Math.max(0, Math.min(img.height - side, (img.height - side) / 2 - oy * canvasToImg));
+    ctx.drawImage(img, sx, sy, side, side, 0, 0, CANVAS, CANVAS);
+    ctx.restore();
+  }, [imgLoaded, cropModal.zoom, cropModal.offsetX, cropModal.offsetY]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
     const onWheel = (e) => {
       e.preventDefault();
       setCropModal(m => ({ ...m, zoom: Math.min(4, Math.max(1, m.zoom - e.deltaY * 0.005)) }));
     };
-
     const state = { lastX: null, lastY: null };
     const onTouchStart = (e) => {
-      if (e.touches.length === 1) {
-        state.lastX = e.touches[0].clientX;
-        state.lastY = e.touches[0].clientY;
-      }
+      if (e.touches.length === 1) { state.lastX = e.touches[0].clientX; state.lastY = e.touches[0].clientY; }
     };
     const onTouchMove = (e) => {
       e.preventDefault();
@@ -741,16 +767,15 @@ function CropCanvas({ cropModal, setCropModal }) {
       }
     };
     const onTouchEnd = () => { state.lastX = null; state.lastY = null; };
-
-    el.addEventListener("wheel",      onWheel,      { passive: false });
+    el.addEventListener("wheel", onWheel, { passive: false });
     el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchmove",  onTouchMove,  { passive: false });
-    el.addEventListener("touchend",   onTouchEnd,   { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
     return () => {
-      el.removeEventListener("wheel",      onWheel);
+      el.removeEventListener("wheel", onWheel);
       el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove",  onTouchMove);
-      el.removeEventListener("touchend",   onTouchEnd);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
     };
   }, [setCropModal]);
 
@@ -767,13 +792,9 @@ function CropCanvas({ cropModal, setCropModal }) {
   };
 
   return (
-    <div ref={divRef} onMouseDown={onMouseDown}
-      style={{ width:CANVAS, height:CANVAS, borderRadius:"50%", overflow:"hidden", margin:"0 auto 20px", border:"2px solid var(--border)", cursor:"grab", userSelect:"none", touchAction:"none", position:"relative" }}>
-      <img src={cropModal.src} alt="crop preview" draggable={false} style={{
-        display:"block", width:"100%", height:"100%", objectFit:"cover", pointerEvents:"none",
-        transform:`scale(${cropModal.zoom}) translate(${cropModal.offsetX / cropModal.zoom}px, ${cropModal.offsetY / cropModal.zoom}px)`,
-        transformOrigin:"center",
-      }} />
+    <div ref={containerRef} onMouseDown={onMouseDown}
+      style={{ width: CANVAS, height: CANVAS, borderRadius: "50%", margin: "0 auto 20px", border: "2px solid var(--border)", cursor: "grab", userSelect: "none", touchAction: "none", overflow: "hidden" }}>
+      <canvas ref={canvasRef} width={CANVAS} height={CANVAS} style={{ display: "block", borderRadius: "50%" }} />
     </div>
   );
 }
@@ -1224,17 +1245,19 @@ const refetchSemesters = () =>
     setCropModal(null);
     const img = new Image();
     img.onload = () => {
+      const OUT = 200;
+      const PREVIEW = 220;
       const canvas = document.createElement("canvas");
-      canvas.width = 200; canvas.height = 200;
+      canvas.width = OUT; canvas.height = OUT;
       const ctx = canvas.getContext("2d");
       ctx.beginPath();
-      ctx.arc(100, 100, 100, 0, Math.PI * 2);
-      ctx.closePath();
+      ctx.arc(OUT / 2, OUT / 2, OUT / 2, 0, Math.PI * 2);
       ctx.clip();
       const side = Math.min(img.width, img.height) / z;
-      const sx = (img.width - side) / 2 + ox;
-      const sy = (img.height - side) / 2 + oy;
-      ctx.drawImage(img, sx, sy, side, side, 0, 0, 200, 200);
+      const canvasToImg = side / PREVIEW;
+      const sx = Math.max(0, Math.min(img.width - side, (img.width - side) / 2 - ox * canvasToImg));
+      const sy = Math.max(0, Math.min(img.height - side, (img.height - side) / 2 - oy * canvasToImg));
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, OUT, OUT);
       saveAvatar(canvas.toDataURL("image/jpeg", 0.85));
     };
     img.src = src;

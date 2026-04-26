@@ -191,20 +191,28 @@ public class StudyGroupService {
                 )); }
 
     @Transactional
+    @Transactional
     public void removeMember(Long hostId, Long groupId, Long memberId) {
         StudyGroup group = studyGroupRepo.findById(groupId)
             .orElseThrow(() -> new IllegalArgumentException("Group not found"));
 
         if (!studyGroupMemberRepo.existsByStudyGroup_IdAndUser_IdAndRole(groupId, hostId, StudyGroupMember.Role.HOST))
             throw new IllegalStateException("Only the host can remove members");
-        
+
         if (hostId.equals(memberId))
-        throw new IllegalStateException("Host cannot remove themselves");
-        
-        if (!studyGroupMemberRepo.existsByStudyGroup_IdAndUser_Id(groupId, memberId))
-        throw new IllegalArgumentException("Member not found");
-        
+            throw new IllegalStateException("Host cannot remove themselves");
+
+        User removed = userRepo.findById(memberId)
+            .orElseThrow(() -> new IllegalArgumentException("Member not found"));
+
         studyGroupMemberRepo.deleteByStudyGroup_IdAndUser_Id(groupId, memberId);
+
+        User host = userRepo.findById(hostId).orElseThrow();
+        String name = (removed.getFirstName() != null ? removed.getFirstName() : "") +
+                      (removed.getLastName() != null ? " " + removed.getLastName() : "");
+        GroupMessage sysMsg = new GroupMessage(group, host, name.trim() + " was removed from the group.");
+        sysMsg.setIsSystem(true);
+        groupMessageRepo.save(sysMsg);
     }
 
     @Transactional
