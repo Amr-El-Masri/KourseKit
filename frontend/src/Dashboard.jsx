@@ -54,7 +54,7 @@ const EVENT_TYPES  = [
 
 const ALL_WIDGETS = [
   { id:"courses",       label:"My Courses",              span:3, pinned:true },
-  { id:"progress",      label:"Semester Overview",       span:1, pinned:true },
+  { id:"progress",      label:"Semester Overview",       span:1 },
   { id:"todo",          label:"To-Do List",              span:1 },
   { id:"pomodoro",      label:"Pomodoro Timer",          span:1 },
   { id:"calendar",      label:"Calendar & Deadlines",    span:1 },

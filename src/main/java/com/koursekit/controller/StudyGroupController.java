@@ -94,14 +94,14 @@ public class StudyGroupController {
     public ResponseEntity<?> myGroups() {
         try {
             Long userId = currentUserId();
-            List<StudyGroup> groups = studyGroupService.getGroupsForUser(userId);
-            List<Long> ids = groups.stream().map(StudyGroup::getId).toList();
+            List<com.koursekit.model.StudyGroupMember> memberships = studyGroupService.getMembershipsForUser(userId);
+            List<Long> ids = memberships.stream().map(m -> m.getStudyGroup().getId()).toList();
             Map<Long, Integer> counts = studyGroupService.getMemberCounts(ids);
-            List<StudyGroupResponseDTO> response = groups.stream()
-                .map(g -> studyGroupMapper.toResponseDTO(
-                    g,
-                    counts.getOrDefault(g.getId(), 0),
-                    g.getHost().getId().equals(userId)
+            List<StudyGroupResponseDTO> response = memberships.stream()
+                .map(m -> studyGroupMapper.toResponseDTO(
+                    m.getStudyGroup(),
+                    counts.getOrDefault(m.getStudyGroup().getId(), 0),
+                    m.getRole() == com.koursekit.model.StudyGroupMember.Role.HOST
                 ))
                 .toList();
             return ResponseEntity.ok(response);

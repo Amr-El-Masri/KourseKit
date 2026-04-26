@@ -161,15 +161,16 @@ public class StudyGroupService {
         public List<StudyGroup> getGroupsForCourse(String courseCode) {
             return studyGroupRepo.findByCourse_CourseCodeAndIsPrivateFalse(courseCode); }
 
-        public List<StudyGroup> getGroupsForUser(Long userId) {
+        public List<StudyGroupMember> getMembershipsForUser(Long userId) {
             if (!userRepo.existsById(userId)) {
                 throw new IllegalArgumentException("User not found"); }
+            return studyGroupMemberRepo.findByUser_Id(userId);
+        }
 
-            List<StudyGroup> groupsMemberIsIn = studyGroupMemberRepo.findByUser_Id(userId).stream()
+        public List<StudyGroup> getGroupsForUser(Long userId) {
+            return getMembershipsForUser(userId).stream()
                 .map(StudyGroupMember::getStudyGroup)
                 .toList();
-            
-            return groupsMemberIsIn;
         }
 
         public List<StudyGroupMember> getMembers(Long groupId) {

@@ -565,6 +565,7 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
   const privateKeyRef = useRef(null);
   const memberKeysRef = useRef({});
   const [e2eeReady, setE2eeReady] = useState(false);
+  const [isKicked, setIsKicked] = useState(false);
   const [restoreModal, setRestoreModal] = useState(null); // { encryptedPrivateKey }
   const [restorePassword, setRestorePassword] = useState("");
   const [restoreError, setRestoreError] = useState("");
@@ -621,6 +622,12 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
       .then(async data => {
         const mems = data || [];
         setMembers(mems);
+        const inGroup = mems.some(m => String(m.userId) === String(currentUserId));
+        if (!inGroup) {
+          setIsKicked(true);
+          localStorage.removeItem("kk_last_group");
+          return;
+        }
         const ids = mems.map(m => m.userId).filter(Boolean);
         if (ids.length) {
           const fetched = await fetchMemberPublicKeys(ids, apiFetch);
@@ -628,7 +635,7 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
           memberKeysRef.current = { ...memberKeysRef.current, ...fetched };
         }
       })
-      .catch(() => {});
+      .catch(() => { setIsKicked(true); localStorage.removeItem("kk_last_group"); });
   }, [group.id, e2eeReady]);
 
   // Task 3: load history and decrypt each message
@@ -998,6 +1005,19 @@ const stopRecording = () => {
       } catch (e) { setError(e.message); }
     }});
   };
+
+  if (isKicked) {
+    return (
+      <div style={{ padding: "28px 28px 60px", fontFamily: "'DM Sans',sans-serif", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 400, gap: 16 }}>
+        <div style={{ background: "var(--error-bg)", border: "1px solid var(--error-border,color-mix(in srgb,var(--error) 30%,transparent))", borderRadius: 14, padding: "28px 36px", textAlign: "center", maxWidth: 380 }}>
+          <div style={{ fontSize: 32, marginBottom: 10 }}>🚪</div>
+          <div style={{ fontFamily: "'Fraunces',serif", fontWeight: 700, fontSize: 18, color: "var(--error)", marginBottom: 8 }}>You've been removed</div>
+          <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 20 }}>You're no longer a member of <strong>{group.name}</strong>. You can ask the host for a new invite code to rejoin.</div>
+          <button onClick={onBack} style={{ padding: "9px 24px", borderRadius: 10, border: "none", background: "var(--error)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Back to Groups</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: "28px 28px 0", maxWidth: "100%", fontFamily: "'DM Sans',sans-serif", height: "calc(100vh - 56px)", display: "flex", flexDirection: "column" }}>
