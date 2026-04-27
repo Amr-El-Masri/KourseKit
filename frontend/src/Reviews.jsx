@@ -487,6 +487,9 @@ export default function Reviews({ onNavigateToForum }) {
   const [activeCourse, setActiveCourse] = useState(() => {
     try { return JSON.parse(sessionStorage.getItem("kk_reviews_course") || "null"); } catch { return null; }
   });
+  const [selectedProfessor, setSelectedProfessor] = useState(() => {
+    try { return sessionStorage.getItem("kk_reviews_prof") || null; } catch { return null; }
+  });
   const [visibleCount,   setVisibleCount]   = useState(10);
   const [recentReviews,  setRecentReviews]  = useState([]);
   const [recentLoading,  setRecentLoading]  = useState(false);
@@ -573,7 +576,7 @@ export default function Reviews({ onNavigateToForum }) {
         ))}
       </div>
 
-      {tab === "professor" && <ProfessorReviewsTab token={token} userEmail={userEmail} onNavigateToForum={onNavigateToForum} />}
+      {tab === "professor" && <ProfessorReviewsTab token={token} userEmail={userEmail} onNavigateToForum={onNavigateToForum} selectedProfessor={selectedProfessor} onSelectProfessor={name => { setSelectedProfessor(name); try { sessionStorage.setItem("kk_reviews_prof", name); } catch {} }} />}
       {tab === "mine" && <MyReviewsTab token={token} userEmail={userEmail} />}
 
       {tab === "course" && <>
@@ -987,8 +990,8 @@ function MyReviewsTab({ token, userEmail }) {
   );
 }
 
-function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
-  const [selected,  setSelected]  = useState(() => { try { return sessionStorage.getItem("kk_reviews_prof") || null; } catch { return null; } });
+function ProfessorReviewsTab({ token, userEmail, onNavigateToForum, selectedProfessor, onSelectProfessor }) {
+  const selected = selectedProfessor;
   const [reviews,   setReviews]   = useState([]);
   const [loading,   setLoading]   = useState(false);
   const [composing, setComposing] = useState(false);
@@ -1017,20 +1020,12 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
       .then(data => { setReviews(Array.isArray(data) ? data : []); })
       .catch(() => setReviews([]))
       .finally(() => setLoading(false));
-  }, []);
+  }, [selected]);
 
   const selectProfessor = async (name) => {
-    setSelected(name);
+    onSelectProfessor(name);
     setComposing(false);
-    setLoading(true);
     setVisibleCount(10);
-    try { sessionStorage.setItem("kk_reviews_prof", name); } catch {}
-    try {
-      const res = await fetch(`${API}/api/professor-reviews?professorName=${encodeURIComponent(name)}`, { headers: authHeaders });
-      const data = await res.json();
-      setReviews(data);
-    } catch { setReviews([]); }
-    finally { setLoading(false); }
   };
 
   let displayed = reviews
