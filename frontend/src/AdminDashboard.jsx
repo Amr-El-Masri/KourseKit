@@ -794,7 +794,7 @@ export default function AdminDashboard({ token }) {
 
           {userSubTab === "flagged" && (
             <>
-              <div style={{ marginBottom:16, fontSize:13, color:"var(--text2)" }}>Users flagged after accumulating 3+ reports on their reviews.</div>
+              <div style={{ marginBottom:16, fontSize:13, color:"var(--text2)" }}>Users flagged after receiving a strike.</div>
               {flaggedUsersLoading && <div style={{ textAlign:"center", padding:40, color:"var(--text3)" }}>Loading…</div>}
               {!flaggedUsersLoading && flaggedUsers.length === 0 && (
                 <div style={{ textAlign:"center", padding:"60px 0", color:"var(--text3)" }}>

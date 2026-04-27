@@ -988,7 +988,7 @@ function MyReviewsTab({ token, userEmail }) {
 }
 
 function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
-  const [selected,  setSelected]  = useState(null);
+  const [selected,  setSelected]  = useState(() => { try { return sessionStorage.getItem("kk_reviews_prof") || null; } catch { return null; } });
   const [reviews,   setReviews]   = useState([]);
   const [loading,   setLoading]   = useState(false);
   const [composing, setComposing] = useState(false);
@@ -1009,11 +1009,22 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum }) {
         .finally(() => setRecentLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (!selected) return;
+    setLoading(true);
+    fetch(`${API}/api/professor-reviews?professorName=${encodeURIComponent(selected)}`, { headers: authHeaders })
+      .then(r => r.json())
+      .then(data => { setReviews(Array.isArray(data) ? data : []); })
+      .catch(() => setReviews([]))
+      .finally(() => setLoading(false));
+  }, []);
+
   const selectProfessor = async (name) => {
     setSelected(name);
     setComposing(false);
     setLoading(true);
     setVisibleCount(10);
+    try { sessionStorage.setItem("kk_reviews_prof", name); } catch {}
     try {
       const res = await fetch(`${API}/api/professor-reviews?professorName=${encodeURIComponent(name)}`, { headers: authHeaders });
       const data = await res.json();
