@@ -1110,39 +1110,71 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             What do you need on the final exam to hit your target grade?
           </p>
 
-          {useAuto ? (
-            <>
-              <div style={{ fontSize:12, color:"var(--accent)", background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:8, padding:"8px 12px", marginBottom:14 }}>
-                Using your graded components from <strong>{selectedCourse}</strong> — edit them in the Course Grade tab.
-              </div>
-              <div style={{ marginBottom:16 }}>
-                {autoRows.map((c) => (
-                  <div key={c.id} style={{ display:"flex", gap:12, alignItems:"center", padding:"5px 0", borderBottom:"1px solid var(--divider)", fontSize:13 }}>
-                    <span style={{ flex:2, color:"var(--text2)", fontWeight:500 }}>{c.type === "Other" ? (c.customType || "Other") : c.type}</span>
-                    <span style={{ color:"var(--text2)" }}>{c.weight}%</span>
-                    <span style={{ fontWeight:700, color:"var(--primary)" }}>{c.grade}</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            <>
-              {selectedCourse && <div style={{ fontSize:12, color:"var(--text2)", marginBottom:12 }}>No grades logged yet — enter grades in the Course Grade tab, or fill in manually below.</div>}
-              <div style={gc.headerRow}>
-                <span style={gc.colHead}>Weight %</span>
-                <span style={gc.colHead}>Grade (letter or 0–100)</span>
-                <span style={{ width:28 }} />
-              </div>
-              {graded.map(g => (
-                <div key={g.id} style={gc.row}>
-                  <input className="gc-input" value={g.weight} onChange={e=>updateRow(setGraded,g.id,"weight",e.target.value)} placeholder="e.g. 30" type="number" style={gc.input} />
-                  <input className="gc-input" value={g.grade}  onChange={e=>updateRow(setGraded,g.id,"grade",e.target.value)}  placeholder="e.g. 78 or B+" style={gc.input} />
-                  <button onClick={() => { const row = graded.find(r => r.id === g.id); removeRow(setGraded, g.id); setTargetResult(null); showUndo("Component removed", () => setGraded(p => [...p, row])); }} style={gc.removeBtn}>✕</button>
-                </div>
-              ))}
-              <button className="gc-addbtn" onClick={() => addRow(setGraded)} style={gc.addRowBtn}><><Plus size={13} /> Add Component</></button>
-            </>
+          {useAuto && (
+            <div style={{ fontSize:12, color:"var(--accent)", background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:8, padding:"8px 12px", marginBottom:14 }}>
+              Components from <strong>{selectedCourse}</strong> — edits here apply to the Course Grade tab too.
+            </div>
           )}
+          {!useAuto && selectedCourse && (
+            <div style={{ fontSize:12, color:"var(--text2)", marginBottom:12 }}>No grades logged yet — enter grades in the Course Grade tab, or fill in manually below.</div>
+          )}
+          <div style={gc.headerRow}>
+            <span style={{ ...gc.colHead, flex:1, maxWidth:140 }}>Type</span>
+            <span style={{ ...gc.colHead, flex:1, maxWidth:110 }}>Weight %</span>
+            <span style={{ ...gc.colHead, flex:1, maxWidth:110 }}>Grade</span>
+            <span style={{ width:28 }} />
+          </div>
+          {(useAuto ? components : graded).map(c => (
+            <div key={c.id} style={{ ...gc.row, alignItems: c.type === "Other" ? "flex-start" : "center", position:"relative", overflow:"visible" }}>
+              {useAuto ? (
+                <div style={{ flex:1, maxWidth:140, position:"relative" }}>
+                  <button onClick={() => setOpenDropId(openDropId === `tgt-${c.id}-type` ? "" : `tgt-${c.id}-type`)} style={{
+                    padding:"9px 12px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
+                    display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
+                    background:"var(--surface2)", border:"1px solid var(--border)", color: c.type ? "var(--text)" : "var(--text3)",
+                    fontFamily:"'DM Sans',sans-serif",
+                  }}>
+                    {c.type || "Select type…"}
+                    <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `tgt-${c.id}-type` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+                  </button>
+                  {openDropId === `tgt-${c.id}-type` && (
+                    <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
+                      {COMP_TYPES.map(t => (
+                        <div key={t} onClick={() => { updateRow(setComponents, c.id, "type", t); setOpenDropId(""); }}
+                          className="kk-option"
+                          style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, transition:"background .15s",
+                            background: c.type === t ? "var(--divider)" : "transparent",
+                            color:      c.type === t ? "var(--accent)"  : "var(--primary)" }}>
+                          {t}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {c.type === "Other" && (
+                    <input className="gc-input" value={c.customType||""} onChange={e=>updateRow(setComponents,c.id,"customType",e.target.value)} placeholder="Specify (optional)" style={{ ...gc.input, width:"100%", marginTop:4, fontSize:12 }} />
+                  )}
+                </div>
+              ) : (
+                <input className="gc-input" value={c.type||""} onChange={e=>updateRow(setGraded,c.id,"type",e.target.value)} placeholder="Component" style={{ ...gc.input, flex:1, maxWidth:140 }} />
+              )}
+              <input className="gc-input" value={c.weight} onChange={e => {
+                const val = e.target.value;
+                if (useAuto) {
+                  const otherTotal = components.filter(r => r.id !== c.id).reduce((s, r) => s + (parseFloat(r.weight) || 0), 0);
+                  if (parseFloat(val) + otherTotal > 100) return;
+                  updateRow(setComponents, c.id, "weight", val);
+                } else {
+                  updateRow(setGraded, c.id, "weight", val);
+                }
+              }} placeholder="e.g. 30" type="number" style={{ ...gc.input, maxWidth:110 }} />
+              <input className="gc-input" value={c.grade} onChange={e => useAuto ? updateRow(setComponents, c.id, "grade", e.target.value) : updateRow(setGraded, c.id, "grade", e.target.value)} placeholder="e.g. 85 or A-" style={{ ...gc.input, maxWidth:110 }} />
+              <button onClick={() => {
+                if (useAuto) { const row = components.find(r => r.id === c.id); removeRow(setComponents, c.id); setCourseResult(null); showUndo("Component removed", () => setComponents(p => [...p, row])); }
+                else { const row = graded.find(r => r.id === c.id); removeRow(setGraded, c.id); setTargetResult(null); showUndo("Component removed", () => setGraded(p => [...p, row])); }
+              }} style={gc.removeBtn}>✕</button>
+            </div>
+          ))}
+          <button className="gc-addbtn" onClick={() => useAuto ? addRow(setComponents) : addRow(setGraded)} style={gc.addRowBtn}><><Plus size={13} /> Add Component</></button>
 
           {/* Weight indicator */}
           <div style={{ display:"flex", gap:12, marginTop:16, alignItems:"center", flexWrap:"wrap" }}>
@@ -1221,53 +1253,49 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
           </div>}
 
           <div style={gc.headerRow}>
-            <span style={{ ...gc.colHead, flex:2 }}>Component</span>
-            <span style={{ ...gc.colHead, flex:1, maxWidth:80 }}>Weight</span>
+            <span style={{ ...gc.colHead, flex:1, maxWidth:140 }}>Type</span>
+            <span style={{ ...gc.colHead, flex:1, maxWidth:110 }}>Weight %</span>
             <span style={{ ...gc.colHead, flex:1, maxWidth:130 }}>Grade (actual or "what if")</span>
-            {!selectedCourse && <span style={{ width:28 }} />}
+            <span style={{ width:28 }} />
           </div>
 
-          {simPast.map((c, i) => {
+          {simPast.map((c) => {
             const hasGrade = c.grade && isValidGrade(c.grade);
             return (
-              <div key={c.id} style={{ ...gc.row, alignItems:"center", background: "transparent", borderRadius:8, marginBottom:4 }}>
-                {selectedCourse ? (
-                  <span style={{ flex:2, fontSize:13, color:"var(--text)", fontWeight:500 }}>
-                    {c.type === "Other" ? (c.customType || "Other") : c.type}
-                    {!hasGrade && <span style={{ fontSize:11, color:"var(--text3)", fontWeight:400, marginLeft:6 }}>← enter a grade to include</span>}
-                  </span>
-                ) : (
-                  <div style={{ flex:2, position:"relative" }}>
-                    <button onClick={() => setOpenDropId(openDropId === `sim-${c.id}-type` ? "" : `sim-${c.id}-type`)} style={{
-                      padding:"9px 12px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
-                      display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
-                      background:"var(--surface2)", border:"1px solid var(--border)", color: c.type ? "var(--text)" : "var(--text3)",
-                      fontFamily:"'DM Sans',sans-serif",
-                    }}>
-                      {c.type || "Select type…"}
-                      <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `sim-${c.id}-type` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
-                    </button>
-                    {openDropId === `sim-${c.id}-type` && (
-                      <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
-                        {COMP_TYPES.map(t => (
-                          <div key={t} onClick={() => { updateRow(setSimPast, c.id, "type", t); setOpenDropId(""); }}
-                            className="kk-option"
-                            style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600,
-                              transition:"background .15s",
-                              background: c.type === t ? "var(--divider)" : "transparent",
-                              color:      c.type === t ? "var(--accent)"  : "var(--primary)" }}>
-                            {t}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {selectedCourse ? (
-                  <span style={{ flex:1, maxWidth:80, fontSize:13, color:"var(--text2)" }}>{c.weight}%</span>
-                ) : (
-                  <input className="gc-input" value={c.weight} onChange={e=>updateRow(setSimPast,c.id,"weight",e.target.value)} placeholder="%" type="number" style={{ ...gc.input, flex:1, maxWidth:80 }} />
-                )}
+              <div key={c.id} style={{ ...gc.row, alignItems: c.type === "Other" ? "flex-start" : "center", position:"relative", overflow:"visible" }}>
+                <div style={{ flex:1, maxWidth:140, position:"relative" }}>
+                  <button onClick={() => setOpenDropId(openDropId === `sim-${c.id}-type` ? "" : `sim-${c.id}-type`)} style={{
+                    padding:"9px 12px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
+                    display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
+                    background:"var(--surface2)", border:"1px solid var(--border)", color: c.type ? "var(--text)" : "var(--text3)",
+                    fontFamily:"'DM Sans',sans-serif",
+                  }}>
+                    {c.type || "Select type…"}
+                    <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `sim-${c.id}-type` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+                  </button>
+                  {openDropId === `sim-${c.id}-type` && (
+                    <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
+                      {COMP_TYPES.map(t => (
+                        <div key={t} onClick={() => { updateRow(setSimPast, c.id, "type", t); setOpenDropId(""); }}
+                          className="kk-option"
+                          style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, transition:"background .15s",
+                            background: c.type === t ? "var(--divider)" : "transparent",
+                            color:      c.type === t ? "var(--accent)"  : "var(--primary)" }}>
+                          {t}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {c.type === "Other" && (
+                    <input className="gc-input" value={c.customType||""} onChange={e=>updateRow(setSimPast,c.id,"customType",e.target.value)} placeholder="Specify (optional)" style={{ ...gc.input, width:"100%", marginTop:4, fontSize:12 }} />
+                  )}
+                </div>
+                <input className="gc-input" value={c.weight} onChange={e => {
+                  const val = e.target.value;
+                  const otherTotal = simPast.filter(r => r.id !== c.id).reduce((s, r) => s + (parseFloat(r.weight) || 0), 0);
+                  if (parseFloat(val) + otherTotal > 100) return;
+                  updateRow(setSimPast, c.id, "weight", val);
+                }} placeholder="e.g. 30" type="number" style={{ ...gc.input, maxWidth:110 }} />
                 <input
                   className="gc-input"
                   value={c.grade}
@@ -1275,11 +1303,11 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
                   placeholder="e.g. 85 or A-"
                   style={{ ...gc.input, flex:1, maxWidth:130, background: hasGrade ? "var(--surface)" : "var(--bg)", fontWeight: hasGrade ? 600 : 400 }}
                 />
-                {!selectedCourse && <button onClick={() => { const row = simPast.find(r => r.id === c.id); removeRow(setSimPast, c.id); showUndo("Row removed", () => setSimPast(p => [...p, row])); }} style={gc.removeBtn}>✕</button>}
+                <button onClick={() => { const row = simPast.find(r => r.id === c.id); removeRow(setSimPast, c.id); showUndo("Row removed", () => setSimPast(p => [...p, row])); }} style={gc.removeBtn}>✕</button>
               </div>
             );
           })}
-          {!selectedCourse && <button className="gc-addbtn" onClick={() => addRow(setSimPast)} style={{ ...gc.addRowBtn, marginTop:6 }}><><Plus size={13} /> Add Component</></button>}
+          <button className="gc-addbtn" onClick={() => addRow(setSimPast)} style={{ ...gc.addRowBtn, marginTop:6 }}><><Plus size={13} /> Add Component</></button>
 
           {/* Live result */}
           {simLive ? (
