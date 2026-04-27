@@ -426,9 +426,9 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
   const [selectedCourse, setSelectedCourse] = useState(() => sessionStorage.getItem("kk_gc_course") || "");
   const notBESection = (c) => !c.section?.sectionNumber || !(/^B(?!L)/i.test(c.section.sectionNumber) || /^E/i.test(c.section.sectionNumber));
   const semesterCourses = semToLoad
-    ? (savedSemesters.find(s => String(s.id) === String(semToLoad))?.courses || []).filter(c => c.courseCode && notBESection(c)).map(c => ({ name: c.courseCode }))
+    ? [...new Set((savedSemesters.find(s => String(s.id) === String(semToLoad))?.courses || []).filter(c => c.courseCode && !c.componenttype && notBESection(c)).map(c => c.courseCode))].map(name => ({ name }))
     : selectedSemester
-      ? (savedSemesters.find(s => s.semesterName === selectedSemester)?.courses || []).filter(c => c.courseCode && notBESection(c)).map(c => ({ name: c.courseCode }))
+      ? [...new Set((savedSemesters.find(s => s.semesterName === selectedSemester)?.courses || []).filter(c => c.courseCode && !c.componenttype && notBESection(c)).map(c => c.courseCode))].map(name => ({ name }))
       : dashboardCourses;
 
   // Switch course — loads saved state or falls back to syllabus extract
