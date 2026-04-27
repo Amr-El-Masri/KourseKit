@@ -448,9 +448,18 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
     const saved = loadCourseData(courseName);
     const syl = loadSyllabus(courseName);
     const hasSavedComponents = saved?.components?.some(c => c.type || c.weight || c.grade);
+    const hasSavedGraded = saved?.graded?.some(g => g.weight || g.grade);
     let compData;
     if (hasSavedComponents) {
       compData = saved.components;
+    } else if (hasSavedGraded) {
+      compData = saved.graded.map((g, i) => ({
+        id: Date.now() + i,
+        type: "",
+        weight: g.weight || "",
+        grade: g.grade || "",
+        customType: "",
+      }));
     } else if (syl?.assessments?.length) {
       compData = syl.assessments.map((a, i) => {
         const t = inferType(a.name);
