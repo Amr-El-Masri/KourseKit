@@ -167,7 +167,12 @@ public class ForumService {
         if (!isAdmin && !comment.getUserId().equals(userId)) {
             throw new RuntimeException("You can only delete your own comments.");
         }
+        ForumPost post = comment.getPost();
         commentRepo.delete(comment);
+        if (post != null) {
+            post.setCommentCount(Math.max(0, post.getCommentCount() - 1));
+            postRepo.save(post);
+        }
     }
 
     // ─── HELPERS ─────────────────────────────────────────────
