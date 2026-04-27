@@ -47,6 +47,37 @@ function ForumProfileModal({ email, token, onClose }) {
   );
 }
 
+function ConfirmDeleteModal({ title, message, onConfirm, onCancel }) {
+  return (
+    <div
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center" }}
+      onClick={onCancel}
+    >
+      <div
+        style={{ background: "var(--bg)", borderRadius: 16, padding: "28px 24px", width: 360, maxWidth: "calc(100vw - 32px)", boxShadow: "0 8px 40px rgba(0,0,0,0.22)", fontFamily: "'DM Sans', sans-serif" }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 20, color: "var(--primary)", marginBottom: 10 }}>{title}</div>
+        <p style={{ fontSize: 14, color: "var(--text2)", lineHeight: 1.6, margin: "0 0 24px" }}>{message}</p>
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <button
+            onClick={onCancel}
+            style={{ padding: "9px 20px", background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 10, fontSize: 14, fontWeight: 600, color: "var(--text2)", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            style={{ padding: "9px 20px", background: "#c0392b", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600, color: "#fff", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const timeAgo = ts => {
   const s = Math.floor((Date.now() - new Date(ts + "Z").getTime()) / 1000);
   if (s < 60)    return "just now";
@@ -265,6 +296,7 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
   const [relateCount, setRelateCount] = useState(post.relateCount || 0);
   const [related,     setRelated]     = useState(false);
   const [relating,    setRelating]    = useState(false);
+  const [pendingDelete, setPendingDelete] = useState(null); // { type: "post"|"comment", id }
 
   useEffect(() => {
     if (!token || !userEmail) return;
@@ -308,7 +340,6 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
   };
 
   const deleteComment = async (commentId) => {
-    if (!window.confirm("Delete this comment?")) return;
     try {
       await fetch(`${API}/api/forum/comments/${commentId}`,
         { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } });
@@ -337,6 +368,24 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
   const CatIcon = CATEGORIES.find(c => c.id === post.category)?.icon || MessageSquare;
 
   return (
+    <>
+    {pendingDelete && (
+      <ConfirmDeleteModal
+        title={pendingDelete.type === "post" ? "Delete post?" : "Delete comment?"}
+        message={pendingDelete.type === "post"
+          ? "This will permanently remove your post and all its comments."
+          : "This will permanently remove your comment."}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={async () => {
+          if (pendingDelete.type === "post") {
+            await onDelete(pendingDelete.id);
+          } else {
+            await deleteComment(pendingDelete.id);
+          }
+          setPendingDelete(null);
+        }}
+      />
+    )}
     <div style={{ padding: "28px 28px 60px", fontFamily: "'DM Sans', sans-serif" }}>
       <button onClick={onBack} style={f.backBtn}>
         <ArrowLeft size={14} /> Back to Forum
@@ -373,7 +422,7 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
             </button>
             {token && <ReportButton targetId={post.id} type="post" token={token} userEmail={userEmail} />}
             {userId === post.userId && (
-              <button onClick={() => onDelete(post.id)} style={{ ...f.ghostBtn, color: "var(--danger, #c0392b)" }}>
+              <button onClick={() => setPendingDelete({ type: "post", id: post.id })} style={{ ...f.ghostBtn, color: "var(--danger, #c0392b)" }}>
                 <Trash2 size={12} /> Delete
               </button>
             )}
@@ -399,7 +448,7 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
               <div style={{ display: "flex", gap: 8 }}>
                 {token && <ReportButton targetId={c.id} type="comment" token={token} userEmail={userEmail} />}
                 {userId === c.userId && (
-                  <button onClick={() => deleteComment(c.id)} style={{ ...f.ghostBtn, color: "var(--danger, #c0392b)" }}>
+                  <button onClick={() => setPendingDelete({ type: "comment", id: c.id })} style={{ ...f.ghostBtn, color: "var(--danger, #c0392b)" }}>
                     <Trash2 size={12} /> Delete
                   </button>
                 )}
@@ -443,6 +492,7 @@ function PostView({ post, token, userEmail, userId, displayName, onBack, onDelet
         )}
       </div>
     </div>
+    </>
   );
 }
 
@@ -871,7 +921,6 @@ export default function Forum({ initialCourseTag, initialProfTag, onClearFilter 
   useEffect(() => { loadPosts(category); setVisibleCount(10); }, [activeTagFilter, activeProfTagFilter]);
 
   const deletePost = async (postId) => {
-      if (!window.confirm("Delete this post?")) return;
       try {
         const res = await fetch(`${API}/api/forum/posts/${postId}`,
           { method: "DELETE", headers: { "Authorization": `Bearer ${token}` } });
