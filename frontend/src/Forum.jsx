@@ -1034,14 +1034,15 @@ export default function Forum({ initialCourseTag, initialProfTag, onClearFilter 
           </div>
         )}
         {activeProfTagFilter && category === "PROFESSOR" && (
-          <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 12 }}>
-            Showing posts tagged with <strong style={{ color: "var(--accent2)" }}>{activeProfTagFilter}</strong>
-            <button onClick={() => { setActiveProfTagFilter(null); onClearFilter?.(); }}
-              style={{ marginLeft: 10, fontSize: 12, color: "var(--text3)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
-              View all professor posts
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+            <button onClick={() => { setActiveProfTagFilter(null); onClearFilter?.(); }} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 8, padding: "5px 12px", fontSize: 12, fontWeight: 600, color: "var(--primary)", cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}>
+              <ArrowLeft size={12} /> Back
             </button>
+            <span style={{ fontSize: 13, color: "var(--text2)" }}>
+              Showing posts tagged with <strong style={{ color: "var(--accent2)" }}>{activeProfTagFilter}</strong>
+            </span>
             <button onClick={() => { setActiveProfTagFilter(null); setCategory("ALL"); onClearFilter?.(); }}
-              style={{ marginLeft: 10, fontSize: 12, color: "var(--text3)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline" }}>
+              style={{ fontSize: 12, color: "var(--text3)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", fontFamily: "'DM Sans', sans-serif" }}>
               View all posts
             </button>
           </div>

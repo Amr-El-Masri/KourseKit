@@ -351,12 +351,9 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
   const calcTarget = async () => {
     setTargetError(null);
-    const autoRows = selectedCourse ? components.filter(c => c.weight && c.grade && isValidGrade(c.grade) && isValidWeight(c.weight)) : [];
-    const activeGraded = autoRows.length > 0 ? autoRows : graded;
+    const gradedComponents = components.filter(c => c.weight && c.grade && isValidGrade(c.grade) && isValidWeight(c.weight));
     if (!finalWeight || !targetGoal) { setTargetError("Please fill in the final exam weight and your target grade."); return; }
-    if (activeGraded.length === 0) { setTargetError("No graded components found. Log grades in the Course Grade tab first."); return; }
-    const badGrade = activeGraded.find(g => !isValidGrade(g.grade));
-    if (badGrade) { setTargetError(`"${badGrade.grade}" is not a valid grade.`); return; }
+    if (gradedComponents.length === 0) { setTargetError("No graded components found. Fill in grades above first."); return; }
     if (!isValidWeight(finalWeight)) { setTargetError(`"${finalWeight}" is not a valid final exam weight.`); return; }
     if (!isValidGrade(targetGoal)) { setTargetError(`"${targetGoal}" is not a valid target grade.`); return; }
     setTargetLoading(true);
@@ -365,7 +362,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({
-          completedAssessments: activeGraded.map(g => ({
+          completedAssessments: gradedComponents.map(g => ({
             name: "Component",
             grade: letterToNumeric(g.grade),
             weight: parseFloat(g.weight) || 0,
@@ -1100,9 +1097,6 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
 
       {/* Target Grade */}
       {activeTab==="target" && (() => {
-        const autoRows = selectedCourse ? components.filter(c => c.weight && c.grade && isValidGrade(c.grade) && isValidWeight(c.weight)) : [];
-        const useAuto = autoRows.length > 0;
-        const activeGraded = useAuto ? autoRows : graded;
         return (
         <div key="target" className="gc-anim" style={{ ...gc.card, marginTop:24 }}>
           <SectionTitle>Target Course Grade</SectionTitle>
@@ -1110,75 +1104,62 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             What do you need on the final exam to hit your target grade?
           </p>
 
-          {useAuto && (
+          {selectedCourse && (
             <div style={{ fontSize:12, color:"var(--accent)", background:"var(--surface2)", border:"1px solid var(--border)", borderRadius:8, padding:"8px 12px", marginBottom:14 }}>
               Components from <strong>{selectedCourse}</strong> — edits here apply to the Course Grade tab too.
             </div>
           )}
-          {!useAuto && selectedCourse && (
-            <div style={{ fontSize:12, color:"var(--text2)", marginBottom:12 }}>No grades logged yet — enter grades in the Course Grade tab, or fill in manually below.</div>
-          )}
+
           <div style={gc.headerRow}>
             <span style={{ ...gc.colHead, flex:1, maxWidth:140 }}>Type</span>
             <span style={{ ...gc.colHead, flex:1, maxWidth:110 }}>Weight %</span>
             <span style={{ ...gc.colHead, flex:1, maxWidth:110 }}>Grade</span>
             <span style={{ width:28 }} />
           </div>
-          {(useAuto ? components : graded).map(c => (
+          {components.map(c => (
             <div key={c.id} style={{ ...gc.row, alignItems: c.type === "Other" ? "flex-start" : "center", position:"relative", overflow:"visible" }}>
-              {useAuto ? (
-                <div style={{ flex:1, maxWidth:140, position:"relative" }}>
-                  <button onClick={() => setOpenDropId(openDropId === `tgt-${c.id}-type` ? "" : `tgt-${c.id}-type`)} style={{
-                    padding:"9px 12px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
-                    display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
-                    background:"var(--surface2)", border:"1px solid var(--border)", color: c.type ? "var(--text)" : "var(--text3)",
-                    fontFamily:"'DM Sans',sans-serif",
-                  }}>
-                    {c.type || "Select type…"}
-                    <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `tgt-${c.id}-type` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
-                  </button>
-                  {openDropId === `tgt-${c.id}-type` && (
-                    <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
-                      {COMP_TYPES.map(t => (
-                        <div key={t} onClick={() => { updateRow(setComponents, c.id, "type", t); setOpenDropId(""); }}
-                          className="kk-option"
-                          style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, transition:"background .15s",
-                            background: c.type === t ? "var(--divider)" : "transparent",
-                            color:      c.type === t ? "var(--accent)"  : "var(--primary)" }}>
-                          {t}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {c.type === "Other" && (
-                    <input className="gc-input" value={c.customType||""} onChange={e=>updateRow(setComponents,c.id,"customType",e.target.value)} placeholder="Specify (optional)" style={{ ...gc.input, width:"100%", marginTop:4, fontSize:12 }} />
-                  )}
-                </div>
-              ) : (
-                <input className="gc-input" value={c.type||""} onChange={e=>updateRow(setGraded,c.id,"type",e.target.value)} placeholder="Component" style={{ ...gc.input, flex:1, maxWidth:140 }} />
-              )}
+              <div style={{ flex:1, maxWidth:140, position:"relative" }}>
+                <button onClick={() => setOpenDropId(openDropId === `tgt-${c.id}-type` ? "" : `tgt-${c.id}-type`)} style={{
+                  padding:"9px 12px", borderRadius:10, fontSize:13, fontWeight:600, cursor:"pointer",
+                  display:"flex", alignItems:"center", gap:6, width:"100%", justifyContent:"space-between",
+                  background:"var(--surface2)", border:"1px solid var(--border)", color: c.type ? "var(--text)" : "var(--text3)",
+                  fontFamily:"'DM Sans',sans-serif",
+                }}>
+                  {c.type || "Select type…"}
+                  <span style={{ fontSize:7, opacity:0.6, display:"inline-block", transform: openDropId === `tgt-${c.id}-type` ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+                </button>
+                {openDropId === `tgt-${c.id}-type` && (
+                  <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:"100%", maxHeight:220, overflowY:"auto" }}>
+                    {COMP_TYPES.map(t => (
+                      <div key={t} onClick={() => { updateRow(setComponents, c.id, "type", t); setOpenDropId(""); }}
+                        className="kk-option"
+                        style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, transition:"background .15s",
+                          background: c.type === t ? "var(--divider)" : "transparent",
+                          color:      c.type === t ? "var(--accent)"  : "var(--primary)" }}>
+                        {t}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {c.type === "Other" && (
+                  <input className="gc-input" value={c.customType||""} onChange={e=>updateRow(setComponents,c.id,"customType",e.target.value)} placeholder="Specify (optional)" style={{ ...gc.input, width:"100%", marginTop:4, fontSize:12 }} />
+                )}
+              </div>
               <input className="gc-input" value={c.weight} onChange={e => {
                 const val = e.target.value;
-                if (useAuto) {
-                  const otherTotal = components.filter(r => r.id !== c.id).reduce((s, r) => s + (parseFloat(r.weight) || 0), 0);
-                  if (parseFloat(val) + otherTotal > 100) return;
-                  updateRow(setComponents, c.id, "weight", val);
-                } else {
-                  updateRow(setGraded, c.id, "weight", val);
-                }
+                const otherTotal = components.filter(r => r.id !== c.id).reduce((s, r) => s + (parseFloat(r.weight) || 0), 0);
+                if (parseFloat(val) + otherTotal > 100) return;
+                updateRow(setComponents, c.id, "weight", val);
               }} placeholder="e.g. 30" type="number" style={{ ...gc.input, maxWidth:110 }} />
-              <input className="gc-input" value={c.grade} onChange={e => useAuto ? updateRow(setComponents, c.id, "grade", e.target.value) : updateRow(setGraded, c.id, "grade", e.target.value)} placeholder="e.g. 85 or A-" style={{ ...gc.input, maxWidth:110 }} />
-              <button onClick={() => {
-                if (useAuto) { const row = components.find(r => r.id === c.id); removeRow(setComponents, c.id); setCourseResult(null); showUndo("Component removed", () => setComponents(p => [...p, row])); }
-                else { const row = graded.find(r => r.id === c.id); removeRow(setGraded, c.id); setTargetResult(null); showUndo("Component removed", () => setGraded(p => [...p, row])); }
-              }} style={gc.removeBtn}>✕</button>
+              <input className="gc-input" value={c.grade} onChange={e => updateRow(setComponents, c.id, "grade", e.target.value)} placeholder="e.g. 85 or A-" style={{ ...gc.input, maxWidth:110 }} />
+              <button onClick={() => { const row = components.find(r => r.id === c.id); removeRow(setComponents, c.id); setCourseResult(null); setTargetResult(null); showUndo("Component removed", () => setComponents(p => [...p, row])); }} style={gc.removeBtn}>✕</button>
             </div>
           ))}
-          <button className="gc-addbtn" onClick={() => useAuto ? addRow(setComponents) : addRow(setGraded)} style={gc.addRowBtn}><><Plus size={13} /> Add Component</></button>
+          <button className="gc-addbtn" onClick={() => addRow(setComponents)} style={gc.addRowBtn}><><Plus size={13} /> Add Component</></button>
 
           {/* Weight indicator */}
           <div style={{ display:"flex", gap:12, marginTop:16, alignItems:"center", flexWrap:"wrap" }}>
-            <WeightIndicator total={activeGraded.reduce((s,g) => s + (parseFloat(g.weight)||0), 0) + (parseFloat(finalWeight)||0)} />
+            <WeightIndicator total={components.reduce((s,c) => s + (parseFloat(c.weight)||0), 0) + (parseFloat(finalWeight)||0)} />
           </div>
 
           {/* Final exam weight + target grade row */}
@@ -1195,7 +1176,7 @@ export default function GradeCalculator({ dashboardCourses = [], savedSemesters 
             <button className="gc-calcbtn" onClick={calcTarget} disabled={targetLoading} style={gc.calcBtn}>
               {targetLoading ? "Calculating…" : "Calculate"}
             </button>
-            {!useAuto && <button onClick={() => { const snapG = [...graded]; const snapFW = finalWeight; const snapTG = targetGoal; setGraded([{ id:Date.now(), weight:"", grade:"" }]); setFinalWeight(""); setTargetGoal(""); setTargetResult(null); setTargetError(null); showUndo("Target cleared", () => { setGraded(snapG); setFinalWeight(snapFW); setTargetGoal(snapTG); }); }} style={gc.clearBtn}>Clear All</button>}
+            <button onClick={() => { const snap = [...components]; setComponents([{ id:Date.now(), type:"", weight:"", grade:"", customType:"" }]); setFinalWeight(""); setTargetGoal(""); setTargetResult(null); setTargetError(null); showUndo("Target cleared", () => setComponents(snap)); }} style={gc.clearBtn}>Clear All</button>
           </div>
 
           {targetError && <ErrorBox>{targetError}</ErrorBox>}
