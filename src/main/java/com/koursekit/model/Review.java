@@ -32,6 +32,7 @@ public class Review {
     private int rating; // 1 to 5
 
     @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "VARCHAR(20)")
     private ReviewStatus status = ReviewStatus.APPROVED; // Defaulting to APPROVED for now
 
     private LocalDateTime createdAt = LocalDateTime.now();
