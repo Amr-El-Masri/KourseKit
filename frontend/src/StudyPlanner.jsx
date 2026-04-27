@@ -1108,7 +1108,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
     const [entriesLoading, setEntriesLoading] = useState(true);
     const [activePanel, setActivePanel] = useState(() => sessionStorage.getItem("kk_sp_panel") || "entries"); // "entries" | "slots"
     const [editingBlock, setEditingBlock] = useState(null);
-    const [hasGenerated, setHasGenerated] = useState(false);
+    const hasGenerated = Object.values(weekBlocks).some(arr => arr.length > 0);
     const [hasDefaultSlots, setHasDefaultSlots] = useState(false);
     const [showSlotOverlay, setShowSlotOverlay] = useState(true);
     const [dismissedSections, setDismissedSections] = useState(() => {
@@ -1297,13 +1297,9 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
             setWeekBlocks(normalized);
             const hasBlocks = Object.values(normalized).some(arr => arr.length > 0);
             if (hasBlocks) {
-                setHasGenerated(true);
                 setShowSlotOverlay(false);
-                localStorage.setItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`, 'true');
             } else {
-                setHasGenerated(false);
                 setShowSlotOverlay(true);
-                localStorage.removeItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`);
             }
         }
         setLoading(false);
@@ -1337,12 +1333,6 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
         return null;
     }, [weekStart, semester]);
 
-    // Restore per-week/semester generated state when week or semester changes
-    useEffect(() => {
-        const stored = localStorage.getItem(`kk_hasGenerated_${weekStart}_${semester}`) === 'true';
-        setHasGenerated(stored);
-        setShowSlotOverlay(!stored);
-    }, [weekStart, semester]);
 
     const persistSlots = useCallback(async (newAvailability) => {
         const userId = getUserId();
@@ -1456,9 +1446,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
             return next;
         });
         if (allGone) {
-            setHasGenerated(false);
             setShowSlotOverlay(true);
-            localStorage.removeItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`);
         }
         clearUndo();
         setUndoToast({ msg: "Study block deleted" });
@@ -1474,8 +1462,6 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                         dayBlocks.sort((a, b) => a.startHour - b.startHour);
                         return { ...prev, [deletedDay]: dayBlocks };
                     });
-                    setHasGenerated(true);
-                    localStorage.setItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`, 'true');
                 }
             },
             commitFn,
@@ -1577,8 +1563,6 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
 
         setAvailability({});
         setWeekBlocks({});
-        setHasGenerated(false);
-        localStorage.removeItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`);
         setShowSlotOverlay(true);
 
         clearUndo();
@@ -1593,8 +1577,6 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
             restoreFn: () => {
                 setAvailability(snapshotAvailability);
                 setWeekBlocks(snapshotBlocks);
-                setHasGenerated(snapshotGenerated);
-                if (snapshotGenerated) localStorage.setItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`, 'true');
                 setShowSlotOverlay(!snapshotGenerated);
             },
             commitFn,
@@ -1604,7 +1586,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                 commitFn().catch(() => {});
             }, 5000),
         };
-    }, [availability, weekBlocks, hasGenerated, weekStart, clearUndo]);
+    }, [availability, weekBlocks, weekStart, clearUndo]);
 
     const handleAddFromDefault = useCallback(async () => {
         try {
@@ -1705,9 +1687,7 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
             return next;
         });
         if (allGone) {
-            setHasGenerated(false);
             setShowSlotOverlay(true);
-            localStorage.removeItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`);
         }
         clearUndo();
         setUndoToast({ msg: "Entry removed" });
@@ -1728,10 +1708,6 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
                         }
                         return next;
                     });
-                    if (Object.keys(deletedBlocks).length > 0) {
-                        setHasGenerated(true);
-                        localStorage.setItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`, 'true');
-                    }
                 }
             },
             commitFn,
@@ -1792,8 +1768,6 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
             if (data) {
                 const weeklyView = data.weeklyView ?? data;
                 setWeekBlocks(normalizeWeeklyData(weeklyView));
-                setHasGenerated(true);
-                localStorage.setItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`, 'true');
                 setIsAvailabilityMode(false);
                 setShowSlotOverlay(false);
                 // Generate resets completedHours to 0 — update locally, no extra fetch needed
@@ -1843,8 +1817,6 @@ export default function StudyPlanner({ enrolledSections = [], semester = "", onN
             await apiFetch(`/api/study-plan/blocks?weekStart=${weekStart}${semParamRef.current}`, { method: "DELETE" });
             await apiFetch(`/api/study-plan/slots?weekStart=${weekStart}${semParamRef.current}`, { method: "DELETE" });
             setWeekBlocks({});
-            setHasGenerated(false);
-            localStorage.removeItem(`kk_hasGenerated_${weekStart}_${semesterRef.current}`);
             setShowSlotOverlay(true);
             await loadSlots(); // re-seeds from default since slots were just cleared
             showToast("Plan cleared", "info");
