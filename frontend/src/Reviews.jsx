@@ -576,7 +576,7 @@ export default function Reviews({ onNavigateToForum }) {
         ))}
       </div>
 
-      {tab === "professor" && <ProfessorReviewsTab token={token} userEmail={userEmail} onNavigateToForum={onNavigateToForum} selectedProfessor={selectedProfessor} onSelectProfessor={name => { setSelectedProfessor(name); try { sessionStorage.setItem("kk_reviews_prof", name); } catch {} }} />}
+      {tab === "professor" && <ProfessorReviewsTab token={token} userEmail={userEmail} onNavigateToForum={onNavigateToForum} selectedProfessor={selectedProfessor} onSelectProfessor={name => { setSelectedProfessor(name); try { if (name) sessionStorage.setItem("kk_reviews_prof", name); else sessionStorage.removeItem("kk_reviews_prof"); } catch {} }} />}
       {tab === "mine" && <MyReviewsTab token={token} userEmail={userEmail} />}
 
       {tab === "course" && <>
@@ -1038,14 +1038,19 @@ function ProfessorReviewsTab({ token, userEmail, onNavigateToForum, selectedProf
 
   return (
     <div>
-      <div style={{ marginBottom:20 }}>
-        <label style={{ ...rv.label, fontSize:13, fontWeight:400, color:"var(--text2)" }}>Browse reviews by professor</label>
-        <ProfessorSearch onSelect={selectProfessor} />
-        <p style={{ fontSize:12, color:"var(--text3)", marginTop:6 }}>Search for any professor to read and write student reviews.</p>
-      </div>
+      {!selected && (
+        <div style={{ marginBottom:20 }}>
+          <label style={{ ...rv.label, fontSize:13, fontWeight:400, color:"var(--text2)" }}>Browse reviews by professor</label>
+          <ProfessorSearch onSelect={selectProfessor} />
+          <p style={{ fontSize:12, color:"var(--text3)", marginTop:6 }}>Search for any professor to read and write student reviews.</p>
+        </div>
+      )}
 
       {selected && (
         <>
+          <button onClick={() => onSelectProfessor(null)} style={{ display:"flex", alignItems:"center", gap:6, background:"none", border:"none", color:"var(--text2)", fontSize:13, fontWeight:600, cursor:"pointer", padding:"0 0 20px", fontFamily:"'DM Sans',sans-serif" }}>
+            ← Back to search
+          </button>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, marginBottom:18 }}>
             <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
               <div style={{ fontFamily:"'Fraunces',serif", fontSize:18, color:"var(--primary)" }}>{selected}</div>
