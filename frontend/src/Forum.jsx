@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { MessageSquare, ArrowLeft, Trash2, Flag, Search, ChevronUp, BookOpen, GraduationCap, LayoutGrid, Check, User, Plus, Banana, Cat, Dog, Eclipse, Telescope, Panda } from "lucide-react";
 import { StudentProfileView } from "./StudentDirectoryPanel";
 
@@ -48,9 +49,9 @@ function ForumProfileModal({ email, token, onClose }) {
 }
 
 function ConfirmDeleteModal({ title, message, onConfirm, onCancel }) {
-  return (
+  return createPortal(
     <div
-      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center" }}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }}
       onClick={onCancel}
     >
       <div
@@ -74,7 +75,8 @@ function ConfirmDeleteModal({ title, message, onConfirm, onCancel }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
