@@ -702,8 +702,12 @@ function PfDropdown({ value, options, onChange, placeholder = "Select…", mb = 
         <span>{value || placeholder}</span>
         <span style={{ fontSize:8, opacity:0.6, flexShrink:0, display:"inline-block", transform: open ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
       </button>
-      {open && rect && (
-        <div style={{ position:"fixed", top: rect.bottom + 4, left: rect.left, width: rect.width, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:10, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", zIndex:9999, padding:4, maxHeight:220, overflowY:"auto" }}>
+      {open && rect && (() => {
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const dropHeight = Math.min(220, options.length * 37 + 8);
+        const openUp = spaceBelow < dropHeight + 8 && rect.top > dropHeight + 8;
+        return (
+        <div style={{ position:"fixed", top: openUp ? undefined : rect.bottom + 4, bottom: openUp ? window.innerHeight - rect.top + 4 : undefined, left: rect.left, width: rect.width, background:"var(--surface)", border:"1px solid var(--border)", borderRadius:10, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", zIndex:9999, padding:4, maxHeight:220, overflowY:"auto" }}>
           {options.map(opt => (
             <div key={opt} className="kk-option" onClick={() => { onChange(opt); setOpen(false); }}
               style={{ padding:"8px 12px", borderRadius:7, cursor:"pointer", fontSize:13, fontWeight: value===opt ? 600 : 400, color: value===opt ? "var(--accent)" : "var(--primary)", background: value===opt ? "var(--divider)" : "transparent", transition:"background .15s" }}>
@@ -711,7 +715,8 @@ function PfDropdown({ value, options, onChange, placeholder = "Select…", mb = 
             </div>
           ))}
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
