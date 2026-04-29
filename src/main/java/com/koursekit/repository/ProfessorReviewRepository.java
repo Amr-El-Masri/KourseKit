@@ -8,6 +8,7 @@ import java.util.List;
 public interface ProfessorReviewRepository extends JpaRepository<ProfessorReview, Long> {
 
     List<ProfessorReview> findByProfessorNameAndStatus(String professorName, ReviewStatus status);
+    List<ProfessorReview> findByProfessorNameAndStatusIn(String professorName, List<ReviewStatus> statuses);
 
     boolean existsByUserIdAndProfessorName(String userId, String professorName);
     List<ProfessorReview> findByStatus(ReviewStatus status);

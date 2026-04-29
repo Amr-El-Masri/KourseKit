@@ -35,7 +35,7 @@ public class ProfessorReviewService {
     }
 
     public List<ProfessorReview> getReviewsForProfessor(String professorName) {
-        return professorReviewRepo.findByProfessorNameAndStatus(professorName, ReviewStatus.APPROVED);
+        return professorReviewRepo.findByProfessorNameAndStatusIn(professorName, List.of(ReviewStatus.APPROVED, ReviewStatus.PENDING, ReviewStatus.REPORTED));
     }
 
     public List<ProfessorReview> getRecentApprovedReviews(int limit) {

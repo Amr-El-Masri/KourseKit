@@ -869,7 +869,7 @@ function MyReviewsTab({ token, userEmail }) {
       fetch(`${API}/api/professor-reviews/my?userId=${encodeURIComponent(userEmail)}`, { headers }).then(r => r.json()),
     ])
       .then(([cr, pr]) => {
-        const visible = s => s !== "FLAGGED" && s !== "REPORTED";
+        const visible = s => s !== "FLAGGED";
         setCourseReviews(Array.isArray(cr) ? cr.filter(r => visible(r.status)) : []);
         setProfReviews(Array.isArray(pr) ? pr.filter(r => visible(r.status)) : []);
       })
