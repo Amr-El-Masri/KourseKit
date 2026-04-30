@@ -10,6 +10,7 @@ import java.util.List;
 public interface ForumCommentRepository extends JpaRepository<ForumComment, Long> {
 
     List<ForumComment> findByPostIdAndStatusOrderByCreatedAtAsc(Long postId, ReviewStatus status);
+    List<ForumComment> findByPostIdAndStatusInOrderByCreatedAtAsc(Long postId, List<ReviewStatus> statuses);
 
     List<ForumComment> findByUserId(String userId);
 

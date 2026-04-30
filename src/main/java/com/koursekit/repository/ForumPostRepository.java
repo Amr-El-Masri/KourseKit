@@ -13,10 +13,13 @@ public interface ForumPostRepository extends JpaRepository<ForumPost, Long> {
     Page<ForumPost> findByStatusOrderByCreatedAtDesc(ReviewStatus status, Pageable pageable);
 
     List<ForumPost> findByCategoryAndStatusOrderByCreatedAtDesc(String category, ReviewStatus status);
+    List<ForumPost> findByCategoryAndStatusInOrderByCreatedAtDesc(String category, List<ReviewStatus> statuses);
 
     List<ForumPost> findByCourseTagAndStatusOrderByCreatedAtDesc(String courseTag, ReviewStatus status);
+    List<ForumPost> findByCourseTagAndStatusInOrderByCreatedAtDesc(String courseTag, List<ReviewStatus> statuses);
 
     List<ForumPost> findByProfessorTagAndStatusOrderByCreatedAtDesc(String professorTag, ReviewStatus status);
+    List<ForumPost> findByProfessorTagAndStatusInOrderByCreatedAtDesc(String professorTag, List<ReviewStatus> statuses);
 
     List<ForumPost> findByStatusInOrderByCreatedAtDesc(List<ReviewStatus> statuses);
     Page<ForumPost> findByStatusInOrderByCreatedAtDesc(List<ReviewStatus> statuses, Pageable pageable);

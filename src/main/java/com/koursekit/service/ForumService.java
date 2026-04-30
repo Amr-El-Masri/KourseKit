@@ -78,33 +78,36 @@ public class ForumService {
         return postRepo.save(post);
     }
 
+    private static final List<ReviewStatus> VISIBLE_STATUSES =
+            List.of(ReviewStatus.APPROVED, ReviewStatus.PENDING, ReviewStatus.REPORTED);
+
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<ForumPost> getAllPosts() {
-        List<ForumPost> posts = postRepo.findByStatusOrderByCreatedAtDesc(ReviewStatus.APPROVED);
+        List<ForumPost> posts = postRepo.findByStatusInOrderByCreatedAtDesc(VISIBLE_STATUSES);
         posts.forEach(this::enrichPost);
         return posts;
     }
 
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<ForumPost> getPostsByCategory(String category) {
-        List<ForumPost> posts = postRepo.findByCategoryAndStatusOrderByCreatedAtDesc(
-                category.toUpperCase(), ReviewStatus.APPROVED);
+        List<ForumPost> posts = postRepo.findByCategoryAndStatusInOrderByCreatedAtDesc(
+                category.toUpperCase(), VISIBLE_STATUSES);
         posts.forEach(this::enrichPost);
         return posts;
     }
 
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<ForumPost> getPostsByCourseTag(String courseTag) {
-        List<ForumPost> posts = postRepo.findByCourseTagAndStatusOrderByCreatedAtDesc(
-                courseTag, ReviewStatus.APPROVED);
+        List<ForumPost> posts = postRepo.findByCourseTagAndStatusInOrderByCreatedAtDesc(
+                courseTag, VISIBLE_STATUSES);
         posts.forEach(this::enrichPost);
         return posts;
     }
 
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<ForumPost> getPostsByProfessorTag(String professorTag) {
-        List<ForumPost> posts = postRepo.findByProfessorTagAndStatusOrderByCreatedAtDesc(
-                professorTag, ReviewStatus.APPROVED);
+        List<ForumPost> posts = postRepo.findByProfessorTagAndStatusInOrderByCreatedAtDesc(
+                professorTag, VISIBLE_STATUSES);
         posts.forEach(this::enrichPost);
         return posts;
     }
@@ -112,7 +115,7 @@ public class ForumService {
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ForumPost getPostById(Long postId) {
         ForumPost post = postRepo.findById(postId)
-                .filter(p -> p.getStatus() == ReviewStatus.APPROVED)
+                .filter(p -> VISIBLE_STATUSES.contains(p.getStatus()))
                 .orElseThrow(() -> new RuntimeException("Post not found."));
         enrichPost(post);
         return post;
@@ -155,8 +158,8 @@ public class ForumService {
 
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<ForumComment> getCommentsForPost(Long postId) {
-        List<ForumComment> comments = commentRepo.findByPostIdAndStatusOrderByCreatedAtAsc(
-                postId, ReviewStatus.APPROVED);
+        List<ForumComment> comments = commentRepo.findByPostIdAndStatusInOrderByCreatedAtAsc(
+                postId, VISIBLE_STATUSES);
         comments.forEach(this::enrichComment);
         return comments;
     }
