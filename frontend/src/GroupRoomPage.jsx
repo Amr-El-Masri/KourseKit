@@ -1013,8 +1013,10 @@ const stopRecording = () => {
     if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
     return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
   };
-  const isSameDay = (ts1, ts2) =>
-    new Date(ts1 + "Z").toDateString() === new Date(ts2 + "Z").toDateString();
+  const isSameDay = (ts1, ts2) => {
+    if (!ts1 || !ts2) return true;
+    return new Date(ts1 + "Z").toDateString() === new Date(ts2 + "Z").toDateString();
+  };
 
   const deleteGroup = () => {
     setConfirmAction({ message: "Delete this group? This cannot be undone.", onConfirm: async () => {
@@ -1258,7 +1260,7 @@ const stopRecording = () => {
                 const isOwn = String(m.senderId) === String(currentUserId);
                 const sameAsPrev = prev && String(prev.senderId) === String(m.senderId) && isSameDay(prev.sentAt, m.sentAt);
                 const sameAsNext = next && String(next.senderId) === String(m.senderId);
-                const showDateSep = !m.isSystem && (i === 0 || !isSameDay(messages[i - 1].sentAt, m.sentAt));
+                const showDateSep = !m.isSystem && m.sentAt && (i === 0 || !isSameDay(messages[i - 1].sentAt, m.sentAt));
                 return (
                 <div key={m.id}>
                   {showDateSep && (
