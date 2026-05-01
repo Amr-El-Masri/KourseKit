@@ -599,7 +599,7 @@ export default function TaskManager({ initialEditTask, onNavigate, semester, onN
                      className="tm-input"
                      style={{ border:"none", outline:"none", background:"transparent", fontSize:13, color:"var(--text)", width:"100%", fontFamily:"'DM Sans',sans-serif" }} />
             </div>
-            <div style={{ fontSize:11, color:"var(--text3)", marginTop:4, paddingLeft:2 }}>Searches by title, type, and notes</div>
+            <div style={{ fontSize:11, color:"var(--text3)", marginTop:4, paddingLeft:2 }}>Searches title, type, course, and notes</div>
           </div>
           <div style={{ position:"relative", flex:"1 1 160px", maxWidth:200 }}>
             <button onClick={() => setCourseFilterDropOpen(o => !o)} style={{
