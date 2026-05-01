@@ -30,14 +30,17 @@ public class NotificationScheduler {
     @Scheduled(fixedRate = 10000)
     public void createDeadlineNotifications() {
         LocalDateTime now = LocalDateTime.now();
+        LocalDateTime tomorrowStart  = now.toLocalDate().plusDays(1).atStartOfDay();
+        LocalDateTime dayAfterStart  = now.toLocalDate().plusDays(2).atStartOfDay();
+        LocalDateTime day3Start      = now.toLocalDate().plusDays(3).atStartOfDay();
 
         // Purge notifications that no longer match their task's current deadline
         // (covers: deadline changed, task completed, deadline moved outside all windows)
         notificationRepository.deleteStaleNotifications(
             now,
-            now.plusHours(6),
-            now.plusHours(48),
-            now.plusHours(78)
+            tomorrowStart,
+            dayAfterStart,
+            day3Start
         );
 
         // Overdue: deadline has already passed, task not completed
@@ -50,8 +53,8 @@ public class NotificationScheduler {
             }
         }
 
-        // Today: due within 6 hours
-        List<Task> todayTasks = taskService.findByDeadlineBetween(now, now.plusHours(6));
+        // Today: due any time remaining today (now → midnight tonight)
+        List<Task> todayTasks = taskService.findByDeadlineBetween(now, tomorrowStart);
         for (Task task : todayTasks) {
             if (task.isCompleted()) continue;
             notificationRepository.deleteByTask_IdAndUrgencyNot(task.getId(), "today");
@@ -60,8 +63,8 @@ public class NotificationScheduler {
             }
         }
 
-        // Tomorrow: due between 6h and 48h from now
-        List<Task> tomorrowTasks = taskService.findByDeadlineBetween(now.plusHours(6), now.plusHours(48));
+        // Tomorrow: due any time on the next calendar day (midnight tonight → midnight day after)
+        List<Task> tomorrowTasks = taskService.findByDeadlineBetween(tomorrowStart, dayAfterStart);
         for (Task task : tomorrowTasks) {
             if (task.isCompleted()) continue;
             notificationRepository.deleteByTask_IdAndUrgencyNot(task.getId(), "tomorrow");
@@ -70,8 +73,8 @@ public class NotificationScheduler {
             }
         }
 
-        // 3 days: due between 48h and 78h from now
-        List<Task> threeDayTasks = taskService.findByDeadlineBetween(now.plusHours(48), now.plusHours(78));
+        // 3 days: due any time on the calendar day 2 days from now (midnight day after → midnight day+3)
+        List<Task> threeDayTasks = taskService.findByDeadlineBetween(dayAfterStart, day3Start);
         for (Task task : threeDayTasks) {
             if (task.isCompleted()) continue;
             notificationRepository.deleteByTask_IdAndUrgencyNot(task.getId(), "3day");

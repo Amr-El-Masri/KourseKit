@@ -17,8 +17,12 @@ public class NotificationMapper {
         // Read stored urgency tier; fall back to recalculating for old notifications without it
         String urgency = notification.getUrgency();
         if (urgency == null) {
-            long hours = java.time.temporal.ChronoUnit.HOURS.between(now, task.getDeadline());
-            urgency = hours < 0 ? "overdue" : hours <= 6 ? "today" : hours <= 48 ? "tomorrow" : "3day";
+            java.time.LocalDate deadlineDate = task.getDeadline().toLocalDate();
+            java.time.LocalDate today = now.toLocalDate();
+            urgency = task.getDeadline().isBefore(now) ? "overdue"
+                    : deadlineDate.equals(today)            ? "today"
+                    : deadlineDate.equals(today.plusDays(1)) ? "tomorrow"
+                    : "3day";
         }
 
         Duration timeLeft = Duration.between(now, task.getDeadline());
