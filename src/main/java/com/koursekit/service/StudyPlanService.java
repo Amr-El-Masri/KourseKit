@@ -79,14 +79,18 @@ public class StudyPlanService {
 
         List<Long> entryIds = entries.stream().map(StudyPlanEntry::getId).toList();
 
-        // Bulk-delete uncompleted blocks for this week
+        // Bulk-delete uncompleted blocks for this week, preserving completed ones
         LocalDate weekEnd = weekStart.plusDays(6);
         blockRepository.deleteUncompletedByEntryIdsAndDayBetween(entryIds, weekStart, weekEnd);
-        // Bulk-reset completedHours to 0
-        entryRepository.resetCompletedHoursByIds(entryIds);
         entityManager.flush();
-        // Sync in-memory state so the scheduler sees completedHours = 0
-        entries.forEach(e -> e.setCompletedHours(0));
+        // Recalculate completedHours from surviving completed blocks
+        Map<Long, Double> completedHoursMap = new HashMap<>();
+        for (StudyBlock b : blockRepository.findCompletedByEntryIds(entryIds)) {
+            completedHoursMap.merge(b.getStudyPlanEntry().getId(), b.getDuration(), Double::sum);
+        }
+        entries.forEach(e -> e.setCompletedHours(completedHoursMap.getOrDefault(e.getId(), 0.0)));
+        entryRepository.saveAll(entries);
+        entityManager.flush();
 
         // Start from today if current week, otherwise from weekStart (Monday)
         LocalDate startDate = weekStart.isAfter(LocalDate.now()) ? weekStart : LocalDate.now();
@@ -323,6 +327,10 @@ public class StudyPlanService {
         StudyBlock block = blockRepository.findById(blockId)
                 .orElseThrow(() -> new ResourceNotFoundException("StudyBlock", blockId));
 
+        if (block.getDay().isBefore(LocalDate.now())) {
+            throw new RuntimeException("Cannot edit a past block");
+        }
+
         // Save old time boundaries before applying updates
         java.time.LocalTime oldBlockStart = block.getStartTime();
         java.time.LocalTime oldBlockEnd = oldBlockStart.plusMinutes((long)(block.getDuration() * 60));
@@ -423,10 +431,15 @@ public class StudyPlanService {
     @Transactional
     public void clearAllBlocks(Long userId) {
         List<StudyPlanEntry> entries = entryRepository.findByUserId(userId);
-        blockRepository.deleteAllByUserId(userId);
+        blockRepository.deleteUncompletedByUserId(userId);
         entityManager.flush();
+        List<Long> entryIds = entries.stream().map(StudyPlanEntry::getId).toList();
+        Map<Long, Double> completedHoursMap = new HashMap<>();
+        for (StudyBlock b : blockRepository.findCompletedByEntryIds(entryIds)) {
+            completedHoursMap.merge(b.getStudyPlanEntry().getId(), b.getDuration(), Double::sum);
+        }
         for (StudyPlanEntry entry : entries) {
-            entry.setCompletedHours(0);
+            entry.setCompletedHours(completedHoursMap.getOrDefault(entry.getId(), 0.0));
             entryRepository.save(entry);
         }
     }
@@ -434,14 +447,16 @@ public class StudyPlanService {
     @Transactional
     public void clearBlocksByWeek(Long userId, LocalDate weekStart, String semester) {
         List<StudyPlanEntry> entries = entryRepository.findByUserIdAndWeekStartAndSemesterName(userId, weekStart, semester);
-        if (semester != null && !semester.isBlank()) {
-            blockRepository.deleteAllByUserIdAndWeekStartAndSemester(userId, weekStart, semester);
-        } else {
-            blockRepository.deleteAllByUserIdAndWeekStart(userId, weekStart);
-        }
+        if (entries.isEmpty()) return;
+        List<Long> entryIds = entries.stream().map(StudyPlanEntry::getId).toList();
+        blockRepository.deleteUncompletedByEntryIdsAndDayBetween(entryIds, weekStart, weekStart.plusDays(6));
         entityManager.flush();
+        Map<Long, Double> completedHoursMap = new HashMap<>();
+        for (StudyBlock b : blockRepository.findCompletedByEntryIds(entryIds)) {
+            completedHoursMap.merge(b.getStudyPlanEntry().getId(), b.getDuration(), Double::sum);
+        }
         for (StudyPlanEntry entry : entries) {
-            entry.setCompletedHours(0);
+            entry.setCompletedHours(completedHoursMap.getOrDefault(entry.getId(), 0.0));
             entryRepository.save(entry);
         }
     }

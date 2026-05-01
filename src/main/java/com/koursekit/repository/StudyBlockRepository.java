@@ -67,6 +67,10 @@ public interface StudyBlockRepository extends JpaRepository<StudyBlock, Long> {
     void deleteAllByUserId(@Param("userId") Long userId);
 
     @Modifying
+    @Query("DELETE FROM StudyBlock b WHERE b.studyPlanEntry.user.id = :userId AND b.completed = false")
+    void deleteUncompletedByUserId(@Param("userId") Long userId);
+
+    @Modifying
     @Query("DELETE FROM StudyBlock b WHERE b.studyPlanEntry.user.id = :userId AND b.studyPlanEntry.weekStart = :weekStart")
     void deleteAllByUserIdAndWeekStart(@Param("userId") Long userId, @Param("weekStart") LocalDate weekStart);
 
