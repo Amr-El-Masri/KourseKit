@@ -133,24 +133,27 @@ function PomodoroTimer() {
   const r    = 46;
   const circ = 2*Math.PI*r;
 
+  const modeIdxRef = useRef(modeIdx);
+  useEffect(() => { modeIdxRef.current = modeIdx; }, [modeIdx]);
+
   useEffect(() => {
-    if (running) {
-      intervalRef.current = setInterval(() => {
-        setTimeLeft(t => {
-          if (t <= 1) {
-            clearInterval(intervalRef.current);
-            setRunning(false);
-            if (modeIdx === 0) setSessions(s => s+1);
-            return 0;
-          }
-          return t-1;
-        });
-      }, 1000);
-    } else {
+    if (!running) {
       clearInterval(intervalRef.current);
+      return;
     }
+    intervalRef.current = setInterval(() => {
+      setTimeLeft(t => {
+        if (t <= 1) {
+          clearInterval(intervalRef.current);
+          setRunning(false);
+          if (modeIdxRef.current === 0) setSessions(s => s + 1);
+          return 0;
+        }
+        return t - 1;
+      });
+    }, 1000);
     return () => clearInterval(intervalRef.current);
-  }, [running, modeIdx]);
+  }, [running]);
 
   const switchMode = idx => {
     setRunning(false);
