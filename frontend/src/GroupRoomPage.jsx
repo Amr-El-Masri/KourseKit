@@ -375,7 +375,7 @@ function MessageBubble({ message, isOwn, showName, showTime, onDelete, onReact, 
         )}
         <div style={{ display:"flex", flexDirection:"column", alignItems: isOwn ? "flex-end" : "flex-start" }}>
           {message.attachmentUrl && !message.isDeleted && (
-            <div style={{ marginBottom: message.content ? 8 : 0 }} onClick={message.attachmentType === "AUDIO" ? handleClick : undefined}>
+            <div style={{ marginBottom: message.content ? 8 : 0 }} onClick={handleClick}>
               <DecryptedMedia message={message} isOwn={isOwn} onSrcReady={s => { mediaSrcRef.current = s; }} />
             </div>
           )}
@@ -395,6 +395,9 @@ function MessageBubble({ message, isOwn, showName, showTime, onDelete, onReact, 
             >
               {message.content}
             </div>
+          )}
+          {!message.content && message.attachmentUrl && (
+            <div onClick={handleClick} style={{ position:"absolute", inset:0, zIndex:0, cursor:"pointer" }} />
           )}
           {!message.content && !message.attachmentUrl && (
             <div onClick={handleClick} style={{ position:"absolute", inset:0, zIndex:0 }} />
