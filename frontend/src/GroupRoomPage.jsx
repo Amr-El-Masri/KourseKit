@@ -922,6 +922,7 @@ const startRecording = async () => {
     mediaRecorder.start();
     setRecording(true);
     setRecordingTime(0);
+    clearInterval(recordingTimerRef.current);
     recordingTimerRef.current = setInterval(() => {
       setRecordingTime(t => t + 1);
     }, 1000);
@@ -1002,6 +1003,18 @@ const stopRecording = () => {
     } catch (e) { setError(e.message); }
     setRenameLoading(false);
   };
+
+  const formatMsgDate = (ts) => {
+    const d = new Date(ts + "Z");
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    if (d.toDateString() === today.toDateString()) return "Today";
+    if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
+    return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+  };
+  const isSameDay = (ts1, ts2) =>
+    new Date(ts1 + "Z").toDateString() === new Date(ts2 + "Z").toDateString();
 
   const deleteGroup = () => {
     setConfirmAction({ message: "Delete this group? This cannot be undone.", onConfirm: async () => {
@@ -1238,31 +1251,43 @@ const stopRecording = () => {
                 No messages yet. Say hello!
               </div>
             )}
+
             {messages.map((m, i) => {
                 const prev = messages[i - 1];
                 const next = messages[i + 1];
                 const isOwn = String(m.senderId) === String(currentUserId);
-                const sameAsPrev = prev && String(prev.senderId) === String(m.senderId);
+                const sameAsPrev = prev && String(prev.senderId) === String(m.senderId) && isSameDay(prev.sentAt, m.sentAt);
                 const sameAsNext = next && String(next.senderId) === String(m.senderId);
+                const showDateSep = !m.isSystem && (i === 0 || !isSameDay(messages[i - 1].sentAt, m.sentAt));
                 return (
-                <MessageBubble
-                    key={m.id}
-                    message={m}
-                    isOwn={isOwn}
-                    showName={!isOwn && !sameAsPrev}
-                    showTime={!sameAsNext}
-                    onDelete={deleteMessage}
-                    onReact={reactToMessage}
-                    onReport={reportMessage}
-                    onPin={pinMessage}
-                    onViewProfile={(senderId) => { const mem = members.find(x => String(x.userId) === String(senderId)); if (mem) setViewingMember(mem); }}
-                    avatarOverride={members.find(x => String(x.userId) === String(m.senderId))?.avatar}
-                    currentUserId={currentUserId}
-                    selectedMessageId={selectedMessageId}
-                    setSelectedMessageId={setSelectedMessageId}
-                    msgRef={el => { if (el) messageRefs.current[m.id] = el; else delete messageRefs.current[m.id]; }}
-                    highlighted={highlightedMessageId === m.id}
-                />);})}
+                <div key={m.id}>
+                  {showDateSep && (
+                    <div style={{ display:"flex", alignItems:"center", gap:10, margin:"14px 0 10px", color:"var(--text2)", fontSize:11 }}>
+                      <div style={{ flex:1, height:1, background:"var(--border)" }} />
+                      <span style={{ fontWeight:600, padding:"3px 10px", background:"var(--surface2)", borderRadius:20, border:"1px solid var(--border)", whiteSpace:"nowrap" }}>
+                        {formatMsgDate(m.sentAt)}
+                      </span>
+                      <div style={{ flex:1, height:1, background:"var(--border)" }} />
+                    </div>
+                  )}
+                  <MessageBubble
+                      message={m}
+                      isOwn={isOwn}
+                      showName={!isOwn && !sameAsPrev}
+                      showTime={!sameAsNext}
+                      onDelete={deleteMessage}
+                      onReact={reactToMessage}
+                      onReport={reportMessage}
+                      onPin={pinMessage}
+                      onViewProfile={(senderId) => { const mem = members.find(x => String(x.userId) === String(senderId)); if (mem) setViewingMember(mem); }}
+                      avatarOverride={members.find(x => String(x.userId) === String(m.senderId))?.avatar}
+                      currentUserId={currentUserId}
+                      selectedMessageId={selectedMessageId}
+                      setSelectedMessageId={setSelectedMessageId}
+                      msgRef={el => { if (el) messageRefs.current[m.id] = el; else delete messageRefs.current[m.id]; }}
+                      highlighted={highlightedMessageId === m.id}
+                  />
+                </div>);})}
             <div ref={messagesEndRef} />
 
             {showReports && (
