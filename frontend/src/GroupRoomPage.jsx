@@ -546,7 +546,7 @@ function MessageBubble({ message, isOwn, showName, showTime, onDelete, onReact, 
   );
 }
 
-export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGroup }) {
+export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGroup, onRename }) {
   const [members,  setMembers]  = useState([]);
   const [messages, setMessages] = useState([]);
   const [input,    setInput]    = useState("");
@@ -998,7 +998,7 @@ const stopRecording = () => {
         method: "PATCH",
         body: JSON.stringify({ name: renameValue.trim() }),
       });
-      group.name = renameValue.trim();
+      onRename?.(renameValue.trim());
     } catch (e) { setError(e.message); }
     setRenameLoading(false);
   };

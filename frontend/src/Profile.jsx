@@ -1688,9 +1688,6 @@ const refetchSemesters = () =>
                 style={{ ...pf.input, resize:"vertical", fontFamily:"'DM Sans',sans-serif", lineHeight:1.6 }}
               />
 
-              <div style={{ fontSize:11, color:"var(--text3)", marginTop:-8, marginBottom:16 }}>
-                GPA and credits here are self-reported — once backend is connected, this will sync with your actual academic record.
-              </div>
 
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:4 }}>
                 <div>
@@ -1712,8 +1709,8 @@ const refetchSemesters = () =>
                   <input className="pf-input" value={draft.linkedin} onChange={e => set("linkedin", e.target.value)} placeholder="linkedin.com/in/..." style={pf.input} />
                 </div>
                 <div>
-                  <label style={pf.label}>GitHub</label>
-                  <input className="pf-input" value={draft.github} onChange={e => set("github", e.target.value)} placeholder="github.com/..." style={pf.input} />
+                  <label style={pf.label}>Other Link</label>
+                  <input className="pf-input" value={draft.github} onChange={e => set("github", e.target.value)} placeholder="e.g. portfolio.com, behance.net…" style={pf.input} />
                 </div>
               </div>
 
@@ -1730,7 +1727,7 @@ const refetchSemesters = () =>
                   {profile.graduationYear && <span style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20, background:"var(--surface2)", color:"var(--primary)", border:"1px solid var(--border)" }}>Class of {profile.graduationYear}</span>}
                   {profile.openToStudyGroups && <span style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20, background:"var(--success-bg)", color:"var(--success)", border:"1px solid color-mix(in srgb,var(--success) 30%,transparent)" }}>Open to study groups</span>}
                   {profile.linkedin && <a href={profile.linkedin.startsWith("http") ? profile.linkedin : `https://${profile.linkedin}`} target="_blank" rel="noreferrer" style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20, background:"var(--surface2)", color:"var(--accent)", border:"1px solid var(--border)", textDecoration:"none" }}>LinkedIn</a>}
-                  {profile.github && <a href={profile.github.startsWith("http") ? profile.github : `https://${profile.github}`} target="_blank" rel="noreferrer" style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20, background:"var(--surface2)", color:"var(--accent)", border:"1px solid var(--border)", textDecoration:"none" }}>GitHub</a>}
+                  {profile.github && <a href={profile.github.startsWith("http") ? profile.github : `https://${profile.github}`} target="_blank" rel="noreferrer" style={{ fontSize:11, fontWeight:600, padding:"3px 10px", borderRadius:20, background:"var(--surface2)", color:"var(--accent)", border:"1px solid var(--border)", textDecoration:"none" }}>Link</a>}
                   {profile.interests && profile.interests.split(",").map(t => t.trim()).filter(Boolean).map(tag => (
                     <span key={tag} style={{ fontSize:11, fontWeight:500, padding:"3px 10px", borderRadius:20, background:"var(--surface3,var(--surface2))", color:"var(--text2)", border:"1px solid var(--border)" }}>{tag}</span>
                   ))}

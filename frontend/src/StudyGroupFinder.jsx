@@ -527,6 +527,12 @@ export default function StudyGroupFinder({ courses = [] }) {
         setOpenGroup(g);
         localStorage.setItem("kk_last_group", JSON.stringify(g));
       }}
+      onRename={(newName) => {
+        const updated = { ...openGroup, name: newName };
+        setOpenGroup(updated);
+        localStorage.setItem("kk_last_group", JSON.stringify(updated));
+        setMyGroups(prev => prev.map(g => g.id === openGroup.id ? { ...g, name: newName } : g));
+      }}
     />; }
 
   return (
