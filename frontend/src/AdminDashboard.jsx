@@ -9,6 +9,7 @@ export default function AdminDashboard({ token }) {
   const myId = getMyId(token);
   const [tab,     setTab]     = useState("users");
   const [reviewDropdownOpen, setReviewDropdownOpen] = useState(false);
+  const [forumTypeDropOpen,  setForumTypeDropOpen]  = useState(false);
 
   // users
   const [users,   setUsers]   = useState([]);
@@ -828,16 +829,24 @@ export default function AdminDashboard({ token }) {
       {/* forum tab */}
       {tab === "forum" && (
         <>
-          <div style={{ display:"flex", gap:6, marginBottom:12, width:"fit-content" }}>
-            {[{id:"posts",label:"Posts"},{id:"comments",label:"Comments"}].map(t => (
-              <button key={t.id} className="kk-tab" data-active={forumType === t.id} onClick={() => { setForumType(t.id); setConfirmForumAction(null); setConfirmCommentAction(null); }} style={{
-                padding:"7px 16px", borderRadius:9, fontSize:13,
-                fontWeight: forumType === t.id ? 600 : 400, cursor:"pointer", transition:"all .15s",
-                border: forumType === t.id ? "1.5px solid var(--accent)" : "1.5px solid var(--border)",
-                background: forumType === t.id ? "color-mix(in srgb, var(--accent) 14%, var(--surface))" : "var(--surface)",
-                color:      forumType === t.id ? "var(--accent)" : "var(--text2)",
-              }}>{t.label}</button>
-            ))}
+          <div style={{ position:"relative", display:"inline-block", marginBottom:12 }}>
+            <button onClick={() => setForumTypeDropOpen(o => !o)} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 14px", background:"var(--surface)", border:"1px solid var(--border)", borderRadius:12, cursor:"pointer", fontFamily:"'DM Sans',sans-serif", fontSize:13, fontWeight:600, color:"var(--primary)", boxShadow:"0 1px 4px rgba(49,72,122,0.06)" }}>
+              {forumType === "posts" ? "Posts" : "Comments"}
+              <span style={{ fontSize:8, opacity:0.6, display:"inline-block", transform: forumTypeDropOpen ? "rotate(0deg)" : "rotate(-90deg)", transition:"transform 0.15s" }}>▼</span>
+            </button>
+            {forumTypeDropOpen && (
+              <div style={{ position:"absolute", top:"calc(100% + 6px)", left:0, background:"var(--surface)", borderRadius:12, boxShadow:"0 8px 32px rgba(49,72,122,0.15)", border:"1px solid var(--border)", zIndex:200, padding:6, minWidth:140 }}>
+                {[{id:"posts",label:"Posts"},{id:"comments",label:"Comments"}].map(opt => (
+                  <div key={opt.id} onClick={() => { setForumType(opt.id); setForumTypeDropOpen(false); setConfirmForumAction(null); setConfirmCommentAction(null); }}
+                    className="kk-option"
+                    style={{ padding:"9px 14px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, transition:"background .15s",
+                      background: forumType === opt.id ? "var(--divider)" : "transparent",
+                      color:      forumType === opt.id ? "var(--accent)"  : "var(--primary)" }}>
+                    {opt.label}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <div style={{ display:"flex", gap:6, marginBottom:16, width:"fit-content" }}>
             {[{id:"flagged",label:"Flagged"},{id:"reported",label:"Reported"}].map(t => (

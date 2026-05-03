@@ -164,12 +164,15 @@ public class AuthService {
         if (waspreviouslyused(user, newpass)) { throw new IllegalArgumentException("You can't use a previously used password."); }
         String newhash = passhasher.hash(newpass);
         user.setPass(newhash);
+        user.setTokenIssuedAfter(LocalDateTime.now());
         userrepo.save(user);
         passhistoryrepo.save(new PassHistory(user, newhash));
 
+        String newToken = jwtutil.generate(user.getId(), user.getEmail(), user.getRole(), false);
         AuthResponse response = new AuthResponse();
         response.setsuccess(true);
         response.setmessage("Password changed successfully.");
+        response.settoken(newToken);
         return response;
     }
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Send, Trash2, UserPlus, UserCheck, X, Heart, ThumbsUp, Flag, AlertTriangle, Paperclip, Image, FileText, Music, File as FileIcon, Mic, MicOff, Pin, ArrowDown } from "lucide-react";
 import { useTheme } from "./ThemeContext";
-import { initE2EE, fetchMemberPublicKeys, encryptMessage, decryptMessage, encryptFile, decryptFile, restoreFromBackup } from "./e2ee";
+import { initE2EE, fetchMemberPublicKeys, encryptMessage, decryptMessage, encryptFile, decryptFile } from "./e2ee";
 import { StudentProfileView } from "./StudentDirectoryPanel";
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
@@ -579,10 +579,6 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
   const memberKeysRef = useRef({});
   const [e2eeReady, setE2eeReady] = useState(false);
   const [isKicked, setIsKicked] = useState(false);
-  const [restoreModal, setRestoreModal] = useState(null); // { encryptedPrivateKey }
-  const [restorePassword, setRestorePassword] = useState("");
-  const [restoreError, setRestoreError] = useState("");
-  const [restoreLoading, setRestoreLoading] = useState(false);
 
   // Task 1: init E2EE — load or generate keypair from IndexedDB, upload public key
   useEffect(() => {
@@ -593,19 +589,6 @@ export default function GroupRoomPage({ group, onBack, myGroups = [], onSwitchGr
     }).catch(() => setE2eeReady(true)); // degrade gracefully
   }, []);
 
-  const handleRestore = async () => {
-    if (!restorePassword) return;
-    setRestoreLoading(true); setRestoreError("");
-    try {
-      const { privateKey, publicKey } = await restoreFromBackup(restoreModal.encryptedPrivateKey, restorePassword, String(currentUserId), apiFetch);
-      privateKeyRef.current = privateKey;
-      memberKeysRef.current[String(currentUserId)] = publicKey;
-      setRestoreModal(null); setRestorePassword("");
-      setE2eeReady(true);
-    } catch {
-      setRestoreError("Wrong password or corrupted backup.");
-    } finally { setRestoreLoading(false); }
-  };
 
   const scrollToMessage = (messageId) => {
     const el = messageRefs.current[messageId];
@@ -1078,34 +1061,6 @@ const stopRecording = () => {
         .btn-msg-close:hover { background: var(--surface2) !important; }
       `}</style>
 
-      {restoreModal && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center" }}>
-          <div style={{ background:"var(--surface)", borderRadius:16, padding:28, width:360, boxShadow:"0 8px 32px rgba(0,0,0,0.18)" }}>
-            <div style={{ fontFamily:"'Fraunces',serif", fontSize:20, color:"var(--primary)", marginBottom:8 }}>Restore Encryption Keys</div>
-            <div style={{ fontSize:13, color:"var(--text2)", marginBottom:18, lineHeight:1.5 }}>
-              A backup of your private key was found on the server. Enter your backup password to decrypt your messages on this device.
-            </div>
-            <input
-              type="password"
-              value={restorePassword}
-              onChange={e => { setRestorePassword(e.target.value); setRestoreError(""); }}
-              onKeyDown={e => e.key === "Enter" && handleRestore()}
-              placeholder="Backup password"
-              style={{ width:"100%", padding:"10px 14px", borderRadius:9, border:"1.5px solid var(--border)", background:"var(--surface2)", color:"var(--text)", fontSize:13, fontFamily:"'DM Sans',sans-serif", outline:"none", marginBottom:8, boxSizing:"border-box" }}
-            />
-            {restoreError && <div style={{ fontSize:12, color:"var(--error)", marginBottom:8 }}>{restoreError}</div>}
-            <div style={{ display:"flex", gap:8, marginTop:4 }}>
-              <button onClick={handleRestore} disabled={restoreLoading || !restorePassword} style={{ flex:1, padding:"10px 0", borderRadius:9, border:"none", background:"var(--primary)", color:"#fff", fontWeight:600, fontSize:13, cursor: restoreLoading || !restorePassword ? "not-allowed" : "pointer", opacity: restoreLoading || !restorePassword ? 0.6 : 1 }}>
-                {restoreLoading ? "Restoring…" : "Restore"}
-              </button>
-              <button onClick={() => { setRestoreModal(null); setRestorePassword(""); setRestoreError(""); setE2eeReady(true); }} style={{ flex:1, padding:"10px 0", borderRadius:9, border:"1.5px solid var(--border)", background:"var(--surface)", color:"var(--text2)", fontWeight:500, fontSize:13, cursor:"pointer" }}>
-                Skip
-              </button>
-            </div>
-            <div style={{ fontSize:11, color:"var(--text3)", marginTop:10, lineHeight:1.4 }}>Skipping means old messages on this device can't be decrypted.</div>
-          </div>
-        </div>
-      )}
 
       <div style={{ marginBottom: 20, flexShrink: 0 }}>
         <button

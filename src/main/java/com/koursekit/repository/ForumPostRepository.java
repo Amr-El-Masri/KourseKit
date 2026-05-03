@@ -5,6 +5,8 @@ import com.koursekit.model.ReviewStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface ForumPostRepository extends JpaRepository<ForumPost, Long> {
@@ -25,4 +27,7 @@ public interface ForumPostRepository extends JpaRepository<ForumPost, Long> {
     Page<ForumPost> findByStatusInOrderByCreatedAtDesc(List<ReviewStatus> statuses, Pageable pageable);
 
     List<ForumPost> findByUserId(String userId);
+
+    @Query("SELECT DISTINCT p FROM ForumPost p JOIN ForumComment c ON c.post.id = p.id WHERE c.userId = :userId")
+    List<ForumPost> findPostsCommentedByUser(@Param("userId") String userId);
 }

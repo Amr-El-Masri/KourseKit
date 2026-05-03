@@ -177,6 +177,7 @@ export default function Settings({ onLogout }) {
       });
       const data = await res.json();
       if (data.success) {
+        if (data.token) localStorage.setItem("kk_token", data.token);
         setPasssuccess(true);
         setChanging(false);
         setCurrent(""); setNewpass(""); setConfirm(""); setPasserror("");

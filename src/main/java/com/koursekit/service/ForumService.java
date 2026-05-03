@@ -210,8 +210,15 @@ public class ForumService {
 
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<ForumPost> getPostsByUser(String userId) {
-        List<ForumPost> posts = postRepo.findByUserId(userId);
-        posts.forEach(this::enrichPost);
-        return posts;
+        java.util.Set<Long> seen = new java.util.HashSet<>();
+        List<ForumPost> all = new java.util.ArrayList<>();
+        for (ForumPost p : postRepo.findByUserId(userId)) {
+            if (seen.add(p.getId())) all.add(p);
+        }
+        for (ForumPost p : postRepo.findPostsCommentedByUser(userId)) {
+            if (seen.add(p.getId())) all.add(p);
+        }
+        all.forEach(this::enrichPost);
+        return all;
     }
 }
