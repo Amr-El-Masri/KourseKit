@@ -101,7 +101,7 @@ const DEFAULT_PROFILE = {
   lastName:     "",
   email:        "",
   faculty:      "Arts & Sciences",
-  major:        "Computer Science",
+  major:        "",
   minorFaculty: "",
   minor:        false,
   minorName:    "",

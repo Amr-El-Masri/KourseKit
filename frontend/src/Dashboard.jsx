@@ -28,6 +28,13 @@ const AVATAR_ICONS = [
 ];
 
 const DAYS_OF_WEEK = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+const utcToLocalInput = iso => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const p = n => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
 const GC_COMP_TYPES = ["Midterm Exam","Final Exam","Assignment","Project","Quiz","Lab","Presentation","Attendance","Participation","Other"];
 
 function inferGCType(name) {
@@ -115,32 +122,34 @@ function SemesterSelect({ value, onChange, semesters }) {
 
 
 function PomodoroTimer() {
+  const [durations, setDurations] = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem("kk_pomodoro") || "{}");
+      return { focus: s.focus ?? 25, short: s.short ?? 5, long: s.long ?? 15 };
+    } catch { return { focus: 25, short: 5, long: 15 }; }
+  });
+  const [draft, setDraft] = useState(durations);
+  const [showOpts, setShowOpts] = useState(false);
+
   const MODES = [
-    { label:"Focus",      duration:25*60, color:"var(--primary)", bg:"#eef2fb" },
-    { label:"Short Break",duration:5*60,  color:"var(--accent2)", bg:"#eef7f0" },
-    { label:"Long Break", duration:15*60, color:"var(--text2)", bg:"#F0EEF7" },
+    { label:"Focus",       key:"focus", color:"var(--primary)" },
+    { label:"Short Break", key:"short", color:"var(--accent2)" },
+    { label:"Long Break",  key:"long",  color:"var(--text2)"   },
   ];
-  const [modeIdx,   setModeIdx]   = useState(0);
-  const [timeLeft,  setTimeLeft]  = useState(MODES[0].duration);
-  const [running,   setRunning]   = useState(false);
-  const [sessions,  setSessions]  = useState(0);
-  const intervalRef = useRef(null);
 
-  const mode = MODES[modeIdx];
-  const mins = String(Math.floor(timeLeft/60)).padStart(2,"0");
-  const secs = String(timeLeft%60).padStart(2,"0");
-  const pct  = 1 - timeLeft/mode.duration;
-  const r    = 46;
-  const circ = 2*Math.PI*r;
+  const [modeIdx,  setModeIdx]  = useState(0);
+  const [timeLeft, setTimeLeft] = useState(durations.focus * 60);
+  const [running,  setRunning]  = useState(false);
+  const [sessions, setSessions] = useState(0);
+  const intervalRef  = useRef(null);
+  const modeIdxRef   = useRef(modeIdx);
+  const durationsRef = useRef(durations);
 
-  const modeIdxRef = useRef(modeIdx);
   useEffect(() => { modeIdxRef.current = modeIdx; }, [modeIdx]);
+  useEffect(() => { durationsRef.current = durations; }, [durations]);
 
   useEffect(() => {
-    if (!running) {
-      clearInterval(intervalRef.current);
-      return;
-    }
+    if (!running) { clearInterval(intervalRef.current); return; }
     intervalRef.current = setInterval(() => {
       setTimeLeft(t => {
         if (t <= 1) {
@@ -155,34 +164,56 @@ function PomodoroTimer() {
     return () => clearInterval(intervalRef.current);
   }, [running]);
 
+  const mode = MODES[modeIdx];
+  const dur  = durations[mode.key] * 60;
+  const mins = String(Math.floor(timeLeft / 60)).padStart(2, "0");
+  const secs = String(timeLeft % 60).padStart(2, "0");
+  const pct  = dur > 0 ? 1 - timeLeft / dur : 0;
+  const r = 46, circ = 2 * Math.PI * r;
+
   const switchMode = idx => {
     setRunning(false);
     setModeIdx(idx);
-    setTimeLeft(MODES[idx].duration);
+    const key = MODES[idx].key;
+    setTimeLeft(durations[key] * 60);
   };
 
-  const reset = () => { setRunning(false); setTimeLeft(mode.duration); };
+  const reset = () => { setRunning(false); setTimeLeft(dur); };
+
+  const saveOptions = () => {
+    const validated = {
+      focus: Math.max(1, Math.min(120, Number(draft.focus) || 25)),
+      short: Math.max(1, Math.min(60,  Number(draft.short) || 5)),
+      long:  Math.max(1, Math.min(120, Number(draft.long)  || 15)),
+    };
+    setDurations(validated);
+    setDraft(validated);
+    localStorage.setItem("kk_pomodoro", JSON.stringify(validated));
+    setRunning(false);
+    setTimeLeft(validated[mode.key] * 60);
+    setShowOpts(false);
+  };
 
   return (
-      <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14,paddingTop:6}}>
-        <div style={{display:"flex",gap:4,background:"var(--surface2)",padding:4,borderRadius:12,width:"100%"}}>
-          {MODES.map((m,i) => (
-              <button key={m.label} className="kk-tab" data-active={modeIdx===i} onClick={() => switchMode(i)} style={{
-                flex:1, padding:"6px 0", border:"none", borderRadius:8, fontSize:11, fontWeight:600,
-                cursor:"pointer", fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
-                background: modeIdx===i ? `color-mix(in srgb, ${m.color} 15%, transparent)` : "transparent",
-                color: modeIdx===i ? m.color : "var(--text2)",
-              }}>{m.label}</button>
-          ))}
-        </div>
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14,paddingTop:6}}>
+      <div style={{display:"flex",gap:4,background:"var(--surface2)",padding:4,borderRadius:12,width:"100%"}}>
+        {MODES.map((m,i) => (
+          <button key={m.label} className="kk-tab" data-active={modeIdx===i} onClick={() => switchMode(i)} style={{
+            flex:1,padding:"6px 0",border:"none",borderRadius:8,fontSize:11,fontWeight:600,
+            cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all .15s",
+            background: modeIdx===i ? `color-mix(in srgb, ${m.color} 15%, transparent)` : "transparent",
+            color: modeIdx===i ? m.color : "var(--text2)",
+          }}>{m.label}</button>
+        ))}
+      </div>
 
-        <div key={modeIdx} className="card-anim" style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14,width:"100%"}}>
+      <div key={`${modeIdx}-${durations[mode.key]}`} className="card-anim" style={{display:"flex",flexDirection:"column",alignItems:"center",gap:14,width:"100%"}}>
         <div style={{position:"relative",width:120,height:120}}>
           <svg width="120" height="120" style={{transform:"rotate(-90deg)"}}>
             <circle cx="60" cy="60" r={r} fill="none" stroke="#D9E1F1" strokeWidth="8"/>
             <circle cx="60" cy="60" r={r} fill="none" stroke={mode.color} strokeWidth="8"
-                    strokeDasharray={`${pct*circ} ${circ}`} strokeLinecap="round"
-                    style={{transition:"stroke-dasharray 0.5s ease"}}/>
+              strokeDasharray={`${pct*circ} ${circ}`} strokeLinecap="round"
+              style={{transition:"stroke-dasharray 0.5s ease"}}/>
           </svg>
           <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
             <div style={{fontFamily:"'Fraunces',serif",fontSize:26,fontWeight:700,color:mode.color,lineHeight:1}}>{mins}:{secs}</div>
@@ -193,19 +224,41 @@ function PomodoroTimer() {
         <div style={{display:"flex",gap:10}}>
           <button className="kk-pill" onClick={reset} style={{padding:"7px 14px",background:"var(--surface2)",border:"1px solid var(--border)",borderRadius:9,fontSize:12,cursor:"pointer",color:"var(--text2)",fontFamily:"'DM Sans',sans-serif",transition:"all .15s"}}>↺ Reset</button>
           <button className="kk-pill" onClick={() => setRunning(r => !r)} style={{
-            padding:"7px 22px", background:running?"color-mix(in srgb, #e07070 15%, transparent)":`color-mix(in srgb, ${mode.color} 15%, transparent)`, color:running?"#e07070":mode.color,
-            border:`1px solid color-mix(in srgb, ${running?"#e07070":mode.color} 30%, transparent)`, borderRadius:9, fontSize:13, fontWeight:600, cursor:"pointer",
-            fontFamily:"'DM Sans',sans-serif", transition:"all .15s",
+            padding:"7px 22px",
+            background: running ? "color-mix(in srgb, #e07070 15%, transparent)" : `color-mix(in srgb, ${mode.color} 15%, transparent)`,
+            color: running ? "#e07070" : mode.color,
+            border: `1px solid color-mix(in srgb, ${running?"#e07070":mode.color} 30%, transparent)`,
+            borderRadius:9,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all .15s",
           }}>{running ? <><Pause size={13} style={{verticalAlign:"middle",marginRight:4}}/>Pause</> : <><Play size={13} style={{verticalAlign:"middle",marginRight:4}}/>Start</>}</button>
         </div>
 
         <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text2)"}}>
-          <span></span>
           <span style={{color:"var(--primary)",fontWeight:600}}>{sessions}</span>
           <span>session{sessions!==1?"s":""} completed</span>
+          <button onClick={() => { setShowOpts(o => !o); setDraft(durations); }} style={{marginLeft:4,background:"none",border:"none",cursor:"pointer",fontSize:11,color:"var(--text3)",padding:0,fontFamily:"inherit"}}>
+            {showOpts ? "✕ cancel" : "⚙ options"}
+          </button>
         </div>
-        </div>
+
+        {showOpts && (
+          <div style={{width:"100%",background:"var(--surface2)",borderRadius:10,padding:"12px 14px",border:"1px solid var(--border)"}}>
+            <div style={{fontSize:11,fontWeight:700,color:"var(--text2)",textTransform:"uppercase",letterSpacing:"0.06em",marginBottom:10}}>Timer Durations (minutes)</div>
+            {[{key:"focus",label:"Focus"},{key:"short",label:"Short Break"},{key:"long",label:"Long Break"}].map(({key,label}) => (
+              <div key={key} style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+                <span style={{fontSize:12,color:"var(--text)"}}>{label}</span>
+                <input type="number" min="1" max="120" value={draft[key]}
+                  onChange={e => setDraft(d => ({...d, [key]: e.target.value}))}
+                  style={{width:56,padding:"4px 8px",border:"1px solid var(--border)",borderRadius:6,fontSize:12,fontFamily:"inherit",background:"var(--surface)",color:"var(--text)",textAlign:"center",outline:"none"}}
+                />
+              </div>
+            ))}
+            <button onClick={saveOptions} style={{width:"100%",marginTop:4,padding:"7px 0",background:`color-mix(in srgb, var(--primary) 15%, transparent)`,color:"var(--primary)",border:"1px solid color-mix(in srgb, var(--primary) 30%, transparent)",borderRadius:8,fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"}}>
+              Apply
+            </button>
+          </div>
+        )}
       </div>
+    </div>
   );
 }
 
@@ -1368,7 +1421,7 @@ export default function Dashboard({ onLogout }) {
                     <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,width:"100%",color:isToday(d)?"#fff":d?"var(--text)":"transparent",fontWeight:isToday(d)?700:400}}>{d||""}</div>
                     {dayTasks.map((t,ti)=>{
                       const color = t.done?"var(--success)":new Date(t.due)<new Date()?"var(--error)":"var(--text2)";
-                      return <div key={ti} onMouseEnter={e=>{const rect=e.target.getBoundingClientRect();setHoveredTask({task:t,x:rect.left,y:rect.bottom+4,above:rect.bottom+120>window.innerHeight});}} onMouseLeave={()=>setHoveredTask(null)} onClick={()=>{setEditingTask(t);setActivePage("tasks");}} style={{width:"90%",height:3,borderRadius:2,background:color,marginBottom:1,cursor:"pointer",transition:"height .1s"}} className="cal-task-line" />;
+                      return <div key={ti} onMouseEnter={e=>{const rect=e.target.getBoundingClientRect();setHoveredTask({task:t,x:rect.left,y:rect.bottom+4,above:rect.bottom+120>window.innerHeight});}} onMouseLeave={()=>setHoveredTask(null)} onClick={()=>{setEditingTask({...t,due:utcToLocalInput(t.due)});setActivePage("tasks");}} style={{width:"90%",height:3,borderRadius:2,background:color,marginBottom:1,cursor:"pointer",transition:"height .1s"}} className="cal-task-line" />;
                     })}
                   </div>
                 );
